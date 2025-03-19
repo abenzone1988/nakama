@@ -31,7 +31,7 @@ import {SegmentModule} from 'ngx-segment-analytics';
 import {SessionInterceptor} from './session.interceptor';
 import {AuthenticationErrorInterceptor} from './authentication-error.interceptor';
 import {LoginComponent} from './login/login.component';
-import {BaseComponent} from './base/base.component';
+import {BaseModule} from './base/base.module';
 import {SortNumbersPipe, StatusComponent} from './status/status.component';
 import {ConfigComponent} from './config/config.component';
 import {ConfigParams} from './console.service';
@@ -72,7 +72,6 @@ import {QRCodeModule} from 'angularx-qrcode';
   declarations: [
     AppComponent,
     SortNumbersPipe,
-    BaseComponent,
     LoginComponent,
     StatusComponent,
     ConfigComponent,
@@ -110,6 +109,7 @@ import {QRCodeModule} from 'angularx-qrcode';
   imports: [
     NgxFileDropModule,
     AppRoutingModule,
+    BaseModule,
     BrowserModule,
     BrowserAnimationsModule,
     HttpClientModule,
