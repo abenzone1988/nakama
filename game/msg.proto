@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package game;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/heroiclabs/nakama/v3/game";
+
+option java_multiple_files = true;
+option java_outer_classname = "GameMsg";
+option java_package = "com.huohuaji.star";
+
+option csharp_namespace = "Game.Protobuf";
+
+message RedeemGiftRequest{
+  string gift_code = 1;
+}
+
+message RedeemGiftResponse{
+  int32 code = 1;
+  string msg = 2;
+}
+
+message FeedbackRequest {
+  int32 issues = 1;
+  string description = 2;
+}
+
+message AuthenticateWechatRequest{
+  string code = 1;
+}
+
+message AuthenticateTiktokRequest{
+  string code = 1;
+  string anonymous_code = 2;
+}
+
+message SubmitBeInvitedRequest {
+  string inviter_id = 1;
+}
+
+message ListInviteeResponse{
+  repeated string invitee_ids = 1;
+}
+
+message ClaimInviteRewardRequest{
+  repeated string invitee_ids = 1;
+}
+
+message GetGameTimeResponse{
+  google.protobuf.Timestamp game_time = 1;
+}
