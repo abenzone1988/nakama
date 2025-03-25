@@ -59,6 +59,18 @@ type SocialConfig interface {
 	GetFacebookInstantGame() SocialConfigFacebookInstantGame
 	GetFacebookLimitedLogin() SocialConfigFacebookLimitedLogin
 	GetApple() SocialConfigApple
+	GetTikTok() SocialConfigTikTok
+	GetWechat() SocialConfigWechat
+}
+
+type SocialConfigTikTok interface {
+	GetAppId() string
+	GetAppSecret() string
+}
+
+type SocialConfigWechat interface {
+	GetAppId() string
+	GetAppSecret() string
 }
 
 // SocialConfigSteam is configuration relevant to Steam.

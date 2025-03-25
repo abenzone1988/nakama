@@ -18,17 +18,18 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
 	"github.com/heroiclabs/nakama-common/runtime"
 	"github.com/heroiclabs/nakama/v3/flags"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/yaml.v3"
-	"net/url"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
 )
 
 // Config interface is the Nakama core configuration.
@@ -458,7 +459,7 @@ func convertRuntimeEnv(logger *zap.Logger, existingEnv map[string]string, mergeE
 }
 
 type config struct {
-	Name             string             `yaml:"name" json:"name" usage:"Nakama server’s node name - must be unique."`
+	Name             string             `yaml:"name" json:"name" usage:"Nakama server's node name - must be unique."`
 	Config           []string           `yaml:"config" json:"config" usage:"The absolute file path to configuration YAML file."`
 	ShutdownGraceSec int                `yaml:"shutdown_grace_sec" json:"shutdown_grace_sec" usage:"Maximum number of seconds to wait for the server to complete work before shutting down. Default is 0 seconds. If 0 the server will shut down immediately when it receives a termination signal."`
 	Datadir          string             `yaml:"data_dir" json:"data_dir" usage:"An absolute path to a writeable folder where Nakama will store its data."`
@@ -944,6 +945,16 @@ type SocialConfig struct {
 	FacebookInstantGame  *SocialConfigFacebookInstantGame  `yaml:"facebook_instant_game" json:"facebook_instant_game" usage:"Facebook Instant Game configuration."`
 	FacebookLimitedLogin *SocialConfigFacebookLimitedLogin `yaml:"facebook_limited_login" json:"facebook_limited_login" usage:"Facebook Limited Login configuration."`
 	Apple                *SocialConfigApple                `yaml:"apple" json:"apple" usage:"Apple Sign In configuration."`
+	Wechat               *SocialConfigWeChat               `yaml:"wechat" json:"wechat" usage:"Wechat configuration."`
+	TikTok               *SocialConfigTikTok               `yaml:"tiktok" json:"tiktok" usage:"TikTok configuration."`
+}
+
+func (cfg *SocialConfig) GetWechat() runtime.SocialConfigWechat {
+	return cfg.Wechat
+}
+
+func (cfg *SocialConfig) GetTikTok() runtime.SocialConfigTikTok {
+	return cfg.TikTok
 }
 
 func (cfg *SocialConfig) GetSteam() runtime.SocialConfigSteam {
@@ -1003,6 +1014,32 @@ func (s SocialConfigSteam) GetPublisherKey() string {
 
 func (s SocialConfigSteam) GetAppID() int {
 	return s.AppID
+}
+
+type SocialConfigWeChat struct {
+	AppId     string `yaml:"app_id"`
+	AppSecret string `yaml:"app_secret"`
+}
+
+func (c *SocialConfigWeChat) GetAppId() string {
+	return c.AppId
+}
+
+func (c *SocialConfigWeChat) GetAppSecret() string {
+	return c.AppSecret
+}
+
+type SocialConfigTikTok struct {
+	AppId     string `yaml:"app_id"`
+	AppSecret string `yaml:"app_secret"`
+}
+
+func (c *SocialConfigTikTok) GetAppId() string {
+	return c.AppId
+}
+
+func (c *SocialConfigTikTok) GetAppSecret() string {
+	return c.AppSecret
 }
 
 var _ runtime.SocialConfigFacebookInstantGame = &SocialConfigFacebookInstantGame{}

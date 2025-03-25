@@ -618,6 +618,84 @@
         ]
       }
     },
+    "/v2/account/authenticate/tiktok": {
+      "post": {
+        "summary": "Authenticate a user with TikTok code.",
+        "operationId": "Nakama_AuthenticateTikTok",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiSession"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "anonymousCode",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ],
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/account/authenticate/wechat": {
+      "post": {
+        "summary": "Authenticate a user with Wechat code.",
+        "operationId": "Nakama_AuthenticateWechat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiSession"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ],
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ]
+      }
+    },
     "/v2/account/link/apple": {
       "post": {
         "summary": "Add an Apple ID to the social profiles on the current user's account.",
@@ -1702,6 +1780,96 @@
         ]
       }
     },
+    "/v2/game/feedback": {
+      "post": {
+        "summary": "User Feedback",
+        "operationId": "Nakama_Feedback",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameFeedbackRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/redeem_gift": {
+      "post": {
+        "summary": "Redeem a Gift by code",
+        "operationId": "Nakama_RedeemGift",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameRedeemGiftResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameRedeemGiftRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/time": {
+      "get": {
+        "summary": "Get Server Time",
+        "operationId": "Nakama_GetGameTime",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetGameTimeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/group": {
       "get": {
         "summary": "List groups based on given filters.",
@@ -2498,6 +2666,97 @@
             "type": "string"
           }
         ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/invite/claim": {
+      "post": {
+        "summary": "Claim invite reward for a user.",
+        "operationId": "Nakama_ClaimInviteReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimInviteRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/invite/submit": {
+      "post": {
+        "summary": "Submit an invitation request.",
+        "operationId": "Nakama_SubmitBeInvited",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameSubmitBeInvitedRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/invitee/list": {
+      "get": {
+        "summary": "List invitee information for a user.",
+        "operationId": "Nakama_ListInvitee",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameListInviteeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
         "tags": [
           "Nakama"
         ]
@@ -5422,6 +5681,77 @@
         }
       },
       "description": "Write objects to the storage engine."
+    },
+    "gameClaimInviteRewardRequest": {
+      "type": "object",
+      "properties": {
+        "inviteeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "gameFeedbackRequest": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "gameGetGameTimeResponse": {
+      "type": "object",
+      "properties": {
+        "gameTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "gameListInviteeResponse": {
+      "type": "object",
+      "properties": {
+        "inviteeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "gameRedeemGiftRequest": {
+      "type": "object",
+      "properties": {
+        "giftCode": {
+          "type": "string"
+        }
+      }
+    },
+    "gameRedeemGiftResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "gameSubmitBeInvitedRequest": {
+      "type": "object",
+      "properties": {
+        "inviterId": {
+          "type": "string"
+        }
+      }
     },
     "protobufAny": {
       "type": "object",
