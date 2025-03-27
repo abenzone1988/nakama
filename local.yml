@@ -2,7 +2,7 @@ name: nakama-node-jp
 
 database:
   address:
-    - "root@192.168.102.223:26257"
+    - "root@192.168.102.223:26258"
 logger:
   level: "debug"
 

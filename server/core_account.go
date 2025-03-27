@@ -523,3 +523,17 @@ func DeleteAccount(ctx context.Context, logger *zap.Logger, db *sql.DB, config C
 
 	return nil
 }
+
+// FindUserByDeviceID 通过微信是将 OpenID作为deviceid 进行认证 查找用户ID
+func FindUserByDeviceID(ctx context.Context, logger *zap.Logger, db *sql.DB, openID string) (uuid.UUID, error) {
+	var userID uuid.UUID
+	query := "SELECT user_id FROM user_device WHERE id = $1"
+	err := db.QueryRowContext(ctx, query, openID).Scan(&userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Error("user not found ", zap.String("openid", openID))
+		}
+		return uuid.Nil, err
+	}
+	return userID, nil
+}

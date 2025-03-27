@@ -50,3 +50,28 @@ message ClaimInviteRewardRequest{
 message GetGameTimeResponse{
   google.protobuf.Timestamp game_time = 1;
 }
+
+
+// Mark one or more notifications Read for the current user.
+message ReadNotificationsRequest {
+  // The id of notifications.
+  repeated string ids = 1;
+}
+
+// Get Notifications Attachments
+message GetNotificationsAttachmentsRequest {
+  // The id of notifications.
+  repeated string ids = 1;
+}
+
+// Get Notifications Attachments
+message GetNotificationsAttachmentsResponse {
+  repeated Reward rewards = 1;  // 商品数组
+}
+
+// 定义单个商品结构
+message Reward {
+  string Id = 1;  // 商品ID
+  int32 Num = 2;  // 商品数量
+}
+

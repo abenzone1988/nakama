@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
@@ -8,18 +9,25 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/gofrs/uuid/v5"
+	"github.com/heroiclabs/nakama-common/api"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
-	push_token = "sparkinfi"
+	push_token                  = "sparkinfi"
+	sub_err_code_user_not_found = 172935494
+	NotificationCodeWechatGift  = 1
 )
 
 // WechatResponse 微信接口统一返回格式
 type WechatResponse struct {
-	ErrCode int    `json:"ErrCode"`
-	ErrMsg  string `json:"ErrMsg"`
+	ErrCode    int    `json:"ErrCode"`
+	ErrMsg     string `json:"ErrMsg"`
+	SubErrCode int    `json:"SubErrCode"`
 }
 
 // WechatGoodsItem 物品信息
@@ -53,7 +61,6 @@ type WechatPushMessage struct {
 
 // verifyWechatSignature 验证请求是否来自微信服务器
 func (s *ApiServer) verifyWechatSignature(signature, timestamp, nonce string) (bool, error) {
-
 	// 1. 将token、timestamp、nonce三个参数进行字典序排序
 	params := []string{push_token, timestamp, nonce}
 	sort.Strings(params)
@@ -68,70 +75,149 @@ func (s *ApiServer) verifyWechatSignature(signature, timestamp, nonce string) (b
 	return hashcode == signature, nil
 }
 
-// HandleWechatVerify 处理微信服务器发来的验证请求
-// 当配置消息推送URL时，微信服务器会发送一个验证请求
-func (s *ApiServer) HandleWechatVerify(w http.ResponseWriter, r *http.Request) {
-	// 处理GET请求（微信服务器验证）
-	if r.Method == "GET" {
-		// 获取请求参数
-		signature := r.URL.Query().Get("signature")
-		timestamp := r.URL.Query().Get("timestamp")
-		nonce := r.URL.Query().Get("nonce")
-		echostr := r.URL.Query().Get("echostr")
+// handleWechatGetRequest 处理微信服务器的GET验证请求
+func (s *ApiServer) handleWechatGetRequest(w http.ResponseWriter, r *http.Request) {
+	signature := r.URL.Query().Get("signature")
+	timestamp := r.URL.Query().Get("timestamp")
+	nonce := r.URL.Query().Get("nonce")
+	echostr := r.URL.Query().Get("echostr")
 
-		// 验证签名
-		valid, err := s.verifyWechatSignature(signature, timestamp, nonce)
-		if err != nil {
-			s.logger.Warn("微信消息推送Token验证失败", zap.Error(err))
-			http.Error(w, "Token configuration missing", http.StatusInternalServerError)
-			return
-		}
+	valid, err := s.verifyWechatSignature(signature, timestamp, nonce)
+	if err != nil {
+		s.logger.Warn("微信消息推送Token验证失败", zap.Error(err))
+		http.Error(w, "Token configuration missing", http.StatusInternalServerError)
+		return
+	}
 
-		if valid {
-			// 验证成功，返回echostr
-			s.logger.Info("微信消息推送验证成功")
-			w.Write([]byte(echostr))
+	if valid {
+		s.logger.Info("微信消息推送验证成功")
+		w.Write([]byte(echostr))
+	} else {
+		s.logger.Warn("微信消息推送验证失败")
+		http.Error(w, "Signature verification failed", http.StatusBadRequest)
+	}
+}
+
+// verifyPostSignature 验证POST请求的签名
+func (s *ApiServer) verifyPostSignature(w http.ResponseWriter, r *http.Request) bool {
+	signature := r.URL.Query().Get("signature")
+	timestamp := r.URL.Query().Get("timestamp")
+	nonce := r.URL.Query().Get("nonce")
+
+	valid, err := s.verifyWechatSignature(signature, timestamp, nonce)
+	if err != nil {
+		s.logger.Warn("微信消息推送Token验证失败", zap.Error(err))
+		s.writeWechatResponse(w, WechatResponse{
+			ErrCode: -1,
+			ErrMsg:  "Token configuration missing",
+		})
+		return false
+	}
+
+	if !valid {
+		s.logger.Warn("微信消息推送验证失败")
+		s.writeWechatResponse(w, WechatResponse{
+			ErrCode: -1,
+			ErrMsg:  "Signature verification failed",
+		})
+		return false
+	}
+
+	return true
+}
+
+// writeWechatResponse 写入微信响应
+func (s *ApiServer) writeWechatResponse(w http.ResponseWriter, response WechatResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// sendGiftNotification 发送礼物通知
+func (s *ApiServer) sendGiftNotification(ctx context.Context, userID uuid.UUID, orderId string, goods []WechatGoodsItem, giftTypeId int, sendTime int64) error {
+	notifications := make(map[uuid.UUID][]*api.Notification)
+	content := map[string]interface{}{
+		"goods":    goods,
+		"giftType": giftTypeId,
+	}
+	contentJson, err := json.Marshal(content)
+	if err != nil {
+		return fmt.Errorf("failed to marshal notification content: %v", err)
+	}
+
+	// 使用订单ID生成UUID
+	notificationId := uuid.NewV5(uuid.NamespaceURL, orderId)
+
+	notifications[userID] = []*api.Notification{{
+		Id:         notificationId.String(),
+		Subject:    "wechat_gift_delivery",
+		Content:    string(contentJson),
+		Code:       int32(giftTypeId),
+		CreateTime: timestamppb.New(time.Unix(sendTime, 0)),
+		Persistent: true,
+		SenderId:   uuid.Nil.String(),
+	}}
+
+	return NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
+}
+
+// handleDeliverGoods 处理发货请求
+func (s *ApiServer) handleDeliverGoods(w http.ResponseWriter, r *http.Request, miniGame *WechatMiniGameInfo) {
+	s.logger.Info("收到小游戏发货请求",
+		zap.String("orderId", miniGame.OrderId),
+		zap.String("openId", miniGame.ToUserOpenid),
+		zap.Int("zone", miniGame.Zone),
+		zap.Any("goods", miniGame.GoodsList))
+
+	// 1. 查找用户
+	userID, err := FindUserByDeviceID(r.Context(), s.logger, s.db, miniGame.ToUserOpenid)
+	if err != nil {
+		s.logger.Error("查找用户失败", zap.Error(err))
+		if err.Error() == fmt.Sprintf("user not found for openid: %s", miniGame.ToUserOpenid) {
+			s.writeWechatResponse(w, WechatResponse{
+				ErrCode:    -1,
+				ErrMsg:     "User not found",
+				SubErrCode: sub_err_code_user_not_found,
+			})
 		} else {
-			// 验证失败
-			s.logger.Warn("微信消息推送验证失败")
-			http.Error(w, "Signature verification failed", http.StatusBadRequest)
+			s.writeWechatResponse(w, WechatResponse{
+				ErrCode: -1,
+				ErrMsg:  "Internal error",
+			})
 		}
 		return
 	}
 
-	// 处理POST请求（微信消息推送）
-	if r.Method == "POST" {
-		// 首先验证签名
-		signature := r.URL.Query().Get("signature")
-		timestamp := r.URL.Query().Get("timestamp")
-		nonce := r.URL.Query().Get("nonce")
+	// 2. 发送通知
+	if err := s.sendGiftNotification(r.Context(), userID, miniGame.OrderId, miniGame.GoodsList, miniGame.GiftTypeId, miniGame.SendTime); err != nil {
+		s.logger.Error("发送通知失败", zap.Error(err))
+		s.writeWechatResponse(w, WechatResponse{
+			ErrCode: -1,
+			ErrMsg:  "Failed to send notification",
+		})
+		return
+	}
 
-		valid, err := s.verifyWechatSignature(signature, timestamp, nonce)
-		if err != nil {
-			s.logger.Warn("微信消息推送Token验证失败", zap.Error(err))
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(WechatResponse{
-				ErrCode: -1,
-				ErrMsg:  "Token configuration missing",
-			})
-			return
-		}
+	s.writeWechatResponse(w, WechatResponse{
+		ErrCode: 0,
+		ErrMsg:  "Success",
+	})
+}
 
-		if !valid {
-			s.logger.Warn("微信消息推送验证失败")
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(WechatResponse{
-				ErrCode: -1,
-				ErrMsg:  "Signature verification failed",
-			})
+// HandleWechatVerify 处理微信服务器发来的验证请求
+func (s *ApiServer) HandleWechatVerify(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		s.handleWechatGetRequest(w, r)
+		return
+	case "POST":
+		if !s.verifyPostSignature(w, r) {
 			return
 		}
 
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			s.logger.Error("读取微信消息推送请求失败", zap.Error(err))
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(WechatResponse{
+			s.writeWechatResponse(w, WechatResponse{
 				ErrCode: -1,
 				ErrMsg:  "Failed to read request body",
 			})
@@ -139,53 +225,30 @@ func (s *ApiServer) HandleWechatVerify(w http.ResponseWriter, r *http.Request) {
 		}
 		defer r.Body.Close()
 
-		// 解析推送消息
 		var pushMsg WechatPushMessage
 		if err := json.Unmarshal(body, &pushMsg); err != nil {
 			s.logger.Error("解析微信消息推送失败", zap.Error(err), zap.String("body", string(body)))
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(WechatResponse{
+			s.writeWechatResponse(w, WechatResponse{
 				ErrCode: -1,
 				ErrMsg:  "Failed to parse message",
 			})
 			return
 		}
 
-		// 处理不同类型的消息
 		switch pushMsg.Event {
 		case "minigame_deliver_goods":
-			// 处理发货请求
-			s.logger.Info("收到小游戏发货请求",
-				zap.String("orderId", pushMsg.MiniGame.OrderId),
-				zap.String("openId", pushMsg.MiniGame.ToUserOpenid),
-				zap.Int("zone", pushMsg.MiniGame.Zone),
-				zap.Any("goods", pushMsg.MiniGame.GoodsList))
-
-			// TODO: 在这里处理实际的发货逻辑
-			// 1. 验证订单是否已经处理过
-			// 2. 发放物品到用户账户
-			// 3. 记录发货日志
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(WechatResponse{
-				ErrCode: 0,
-				ErrMsg:  "Success",
-			})
-			return
+			s.handleDeliverGoods(w, r, &pushMsg.MiniGame)
 		default:
 			s.logger.Info("收到其他类型的微信消息推送",
 				zap.String("event", pushMsg.Event),
 				zap.String("msgType", pushMsg.MsgType))
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(WechatResponse{
+			s.writeWechatResponse(w, WechatResponse{
 				ErrCode: 0,
 				ErrMsg:  "Success",
 			})
 		}
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(WechatResponse{
+	default:
+		s.writeWechatResponse(w, WechatResponse{
 			ErrCode: -1,
 			ErrMsg:  "Method not allowed",
 		})
