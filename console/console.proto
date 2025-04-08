@@ -466,6 +466,43 @@ service Console {
       body: "*"
     };
   }
+
+  // 创建公告
+  rpc CreateAnnouncement (CreateAnnouncementRequest) returns (Announcement) {
+    option (google.api.http) = {
+      post: "/v2/console/announcement"
+      body: "*"
+    };
+  }
+
+  // 更新公告
+  rpc UpdateAnnouncement (UpdateAnnouncementRequest) returns (Announcement) {
+    option (google.api.http) = {
+      put: "/v2/console/announcement/{id}"
+      body: "*"
+    };
+  }
+
+  // 删除公告
+  rpc DeleteAnnouncement (AnnouncementId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v2/console/announcement/{id}"
+    };
+  }
+
+  // 获取公告列表
+  rpc ListAnnouncements (ListAnnouncementsRequest) returns (AnnouncementList) {
+    option (google.api.http) = {
+      get: "/v2/console/announcements"
+    };
+  }
+
+  // 获取单个公告
+  rpc GetAnnouncement (AnnouncementId) returns (Announcement) {
+    option (google.api.http) = {
+      get: "/v2/console/announcement/{id}"
+    };
+  }
 }
 
 // API Explorer List of Endpoints response message
@@ -1227,4 +1264,68 @@ message StorageListObject {
   google.protobuf.Timestamp create_time = 7;
   // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the object was last updated.
   google.protobuf.Timestamp update_time = 8;
+}
+
+// 公告消息体定义
+message Announcement {
+  // 公告ID
+  string id = 1;
+  // 公告标题
+  string title = 2;
+  // 公告内容
+  string content = 3;
+  // 发布时间
+  google.protobuf.Timestamp create_time = 4;
+  // 更新时间
+  google.protobuf.Timestamp update_time = 5;
+  // 图片URL
+  string img = 6;
+  // 状态 0:草稿 1:已发布 2:已下线
+  int32 status = 7;
+}
+
+message AnnouncementList {
+  // 公告列表
+  repeated Announcement announcements = 1;
+  // 总数
+  int32 total_count = 2;
+  // 下一页游标
+  string next_cursor = 3;
+}
+
+message CreateAnnouncementRequest {
+  // 公告标题
+  string title = 1;
+  // 公告内容
+  string content = 2;
+  // 图片URL
+  string img = 3;
+  // 状态 0:草稿 1:已发布 2:已下线
+  int32 status = 4;
+}
+
+message UpdateAnnouncementRequest {
+  // 公告ID
+  string id = 1;
+  // 公告标题
+  string title = 2;
+  // 公告内容
+  string content = 3;
+  // 图片URL
+  string img = 4;
+  // 状态 0:草稿 1:已发布 2:已下线
+  int32 status = 5;
+}
+
+message ListAnnouncementsRequest {
+  // 状态过滤 -1:全部 0:草稿 1:已发布 2:已下线
+  int32 status = 1;
+  // 每页数量
+  int32 limit = 2;
+  // 游标
+  string cursor = 3;
+}
+
+message AnnouncementId {
+  string id = 1;
 }

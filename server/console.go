@@ -141,6 +141,13 @@ var restrictedMethods = map[string]console.UserRole{
 	"/nakama.console.Console/ListUsers":      console.UserRole_USER_ROLE_ADMIN,
 	"/nakama.console.Console/ResetUserMfa":   console.UserRole_USER_ROLE_ADMIN,
 	"/nakama.console.Console/RequireUserMfa": console.UserRole_USER_ROLE_ADMIN,
+
+	// Announcement
+	"/nakama.console.Console/CreateAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/UpdateAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/DeleteAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/GetAnnouncement":    console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/ListAnnouncements":  console.UserRole_USER_ROLE_READONLY,
 }
 
 type ctxConsoleIdKey struct{}

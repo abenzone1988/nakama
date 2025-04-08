@@ -921,6 +921,205 @@
         ]
       }
     },
+    "/v2/console/announcement": {
+      "post": {
+        "summary": "创建公告",
+        "operationId": "Console_CreateAnnouncement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleAnnouncement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/consoleCreateAnnouncementRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/announcement/{id}": {
+      "get": {
+        "summary": "获取单个公告",
+        "operationId": "Console_GetAnnouncement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleAnnouncement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      },
+      "delete": {
+        "summary": "删除公告",
+        "operationId": "Console_DeleteAnnouncement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      },
+      "put": {
+        "summary": "更新公告",
+        "operationId": "Console_UpdateAnnouncement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleAnnouncement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "公告ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "title": "公告标题"
+                },
+                "content": {
+                  "type": "string",
+                  "title": "公告内容"
+                },
+                "img": {
+                  "type": "string",
+                  "title": "图片URL"
+                },
+                "status": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "状态 0:草稿 1:已发布 2:已下线"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/announcements": {
+      "get": {
+        "summary": "获取公告列表",
+        "operationId": "Console_ListAnnouncements",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleAnnouncementList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": "状态过滤 -1:全部 0:草稿 1:已发布 2:已下线",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "limit",
+            "description": "每页数量",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "description": "游标",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/api/endpoints": {
       "get": {
         "summary": "API Explorer - list all endpoints",
@@ -3568,6 +3767,65 @@
       },
       "title": "Add a new console user"
     },
+    "consoleAnnouncement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "公告ID"
+        },
+        "title": {
+          "type": "string",
+          "title": "公告标题"
+        },
+        "content": {
+          "type": "string",
+          "title": "公告内容"
+        },
+        "create_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "发布时间"
+        },
+        "update_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "更新时间"
+        },
+        "img": {
+          "type": "string",
+          "title": "图片URL"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态 0:草稿 1:已发布 2:已下线"
+        }
+      },
+      "title": "公告消息体定义"
+    },
+    "consoleAnnouncementList": {
+      "type": "object",
+      "properties": {
+        "announcements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/consoleAnnouncement"
+          },
+          "title": "公告列表"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数"
+        },
+        "next_cursor": {
+          "type": "string",
+          "title": "下一页游标"
+        }
+      }
+    },
     "consoleApiEndpointDescriptor": {
       "type": "object",
       "properties": {
@@ -3702,6 +3960,28 @@
         }
       },
       "description": "A console user session."
+    },
+    "consoleCreateAnnouncementRequest": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "title": "公告标题"
+        },
+        "content": {
+          "type": "string",
+          "title": "公告内容"
+        },
+        "img": {
+          "type": "string",
+          "title": "图片URL"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态 0:草稿 1:已发布 2:已下线"
+        }
+      }
     },
     "consoleDeleteChannelMessagesResponse": {
       "type": "object",

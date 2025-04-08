@@ -60,6 +60,7 @@ export class BaseComponent implements OnInit, OnDestroy {
     {navItem: 'leaderboards', routerLink: ['/leaderboards'], label: 'Leaderboards', minRole: UserRole.USER_ROLE_READONLY, icon: 'leaderboard', group: 'accounts'},
     {navItem: 'chat', routerLink: ['/chat'], label: 'Chat Messages', minRole: UserRole.USER_ROLE_READONLY, icon: 'chat', group: 'accounts'},
     {navItem: 'notifications', routerLink: ['/notifications'], label: 'Notifications', minRole: UserRole.USER_ROLE_READONLY, icon: 'notification', group: 'accounts'},
+    {navItem: 'announcements', routerLink: ['/announcements'], label: 'Announcements', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'announcement', group: 'accounts'},
 
     {navItem: 'purchases', routerLink: ['/purchases'], label: 'Purchases', minRole: UserRole.USER_ROLE_READONLY, icon: 'purchases', group: 'accounts'},
     {navItem: 'subscriptions', routerLink: ['/subscriptions'], label: 'Subscriptions', minRole: UserRole.USER_ROLE_READONLY, icon: 'subscriptions', group: 'accounts'},

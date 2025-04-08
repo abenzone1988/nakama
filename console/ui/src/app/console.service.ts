@@ -65,6 +65,32 @@ export interface AddUserRequest {
   username?:string
 }
 
+export interface Announcement {
+  // 公告内容
+  content?:string
+  // 发布时间
+  create_time?:string
+  // 公告ID
+  id?:string
+  // 图片URL
+  img?:string
+  // 状态 0:草稿 1:已发布 2:已下线
+  status?:number
+  // 公告标题
+  title?:string
+  // 更新时间
+  update_time?:string
+}
+
+export interface AnnouncementList {
+  // 公告列表
+  announcements?:Array<Announcement>
+  // 下一页游标
+  next_cursor?:string
+  // 总数
+  total_count?:number
+}
+
 export interface ApiEndpointDescriptor {
   body_template?:string
   method?:string
@@ -146,6 +172,17 @@ export interface ConsoleSession {
   mfa_code?:string
   // A session token (JWT) for the console user.
   token?:string
+}
+
+export interface CreateAnnouncementRequest {
+  // 公告内容
+  content?:string
+  // 图片URL
+  img?:string
+  // 状态 0:草稿 1:已发布 2:已下线
+  status?:number
+  // 公告标题
+  title?:string
 }
 
 export interface DeleteChannelMessagesResponse {
@@ -424,6 +461,17 @@ export interface UpdateAccountRequest {
   username?:string
   // Wallet.
   wallet?:string
+}
+
+export interface UpdateAnnouncementRequest {
+  // 公告内容
+  content?:string
+  // 图片URL
+  img?:string
+  // 状态 0:草稿 1:已发布 2:已下线
+  status?:number
+  // 公告标题
+  title?:string
 }
 
 export interface UpdateGroupRequest {
@@ -1137,6 +1185,53 @@ export class ConsoleService {
     const urlPath = `/v2/console/all`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
     return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** 创建公告 */
+  createAnnouncement(auth_token: string, body: CreateAnnouncementRequest): Observable<Announcement> {
+    const urlPath = `/v2/console/announcement`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.post<Announcement>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** 删除公告 */
+  deleteAnnouncement(auth_token: string, id: string): Observable<any> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/announcement/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** 获取单个公告 */
+  getAnnouncement(auth_token: string, id: string): Observable<Announcement> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/announcement/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.get<Announcement>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** 更新公告 */
+  updateAnnouncement(auth_token: string, id: string, body: UpdateAnnouncementRequest): Observable<Announcement> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/announcement/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.put<Announcement>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** 获取公告列表 */
+  listAnnouncements(auth_token: string, status?: number, limit?: number, cursor?: string): Observable<AnnouncementList> {
+    const urlPath = `/v2/console/announcements`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    if (status) {
+      params = params.set('status', String(status));
+    }
+    if (limit) {
+      params = params.set('limit', String(limit));
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    return this.httpClient.get<AnnouncementList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   /** API Explorer - list all endpoints */

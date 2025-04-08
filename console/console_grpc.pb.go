@@ -107,6 +107,11 @@ const (
 	Console_UpdateAccount_FullMethodName             = "/nakama.console.Console/UpdateAccount"
 	Console_UpdateGroup_FullMethodName               = "/nakama.console.Console/UpdateGroup"
 	Console_WriteStorageObject_FullMethodName        = "/nakama.console.Console/WriteStorageObject"
+	Console_CreateAnnouncement_FullMethodName        = "/nakama.console.Console/CreateAnnouncement"
+	Console_UpdateAnnouncement_FullMethodName        = "/nakama.console.Console/UpdateAnnouncement"
+	Console_DeleteAnnouncement_FullMethodName        = "/nakama.console.Console/DeleteAnnouncement"
+	Console_ListAnnouncements_FullMethodName         = "/nakama.console.Console/ListAnnouncements"
+	Console_GetAnnouncement_FullMethodName           = "/nakama.console.Console/GetAnnouncement"
 )
 
 // ConsoleClient is the client API for Console service.
@@ -251,6 +256,16 @@ type ConsoleClient interface {
 	UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Write a new storage object or replace an existing one.
 	WriteStorageObject(ctx context.Context, in *WriteStorageObjectRequest, opts ...grpc.CallOption) (*api.StorageObjectAck, error)
+	// 创建公告
+	CreateAnnouncement(ctx context.Context, in *CreateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error)
+	// 更新公告
+	UpdateAnnouncement(ctx context.Context, in *UpdateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error)
+	// 删除公告
+	DeleteAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 获取公告列表
+	ListAnnouncements(ctx context.Context, in *ListAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
+	// 获取单个公告
+	GetAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*Announcement, error)
 }
 
 type consoleClient struct {
@@ -882,6 +897,51 @@ func (c *consoleClient) WriteStorageObject(ctx context.Context, in *WriteStorage
 	return out, nil
 }
 
+func (c *consoleClient) CreateAnnouncement(ctx context.Context, in *CreateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error) {
+	out := new(Announcement)
+	err := c.cc.Invoke(ctx, Console_CreateAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) UpdateAnnouncement(ctx context.Context, in *UpdateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error) {
+	out := new(Announcement)
+	err := c.cc.Invoke(ctx, Console_UpdateAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) DeleteAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_DeleteAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ListAnnouncements(ctx context.Context, in *ListAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error) {
+	out := new(AnnouncementList)
+	err := c.cc.Invoke(ctx, Console_ListAnnouncements_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*Announcement, error) {
+	out := new(Announcement)
+	err := c.cc.Invoke(ctx, Console_GetAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConsoleServer is the server API for Console service.
 // All implementations must embed UnimplementedConsoleServer
 // for forward compatibility
@@ -1024,6 +1084,16 @@ type ConsoleServer interface {
 	UpdateGroup(context.Context, *UpdateGroupRequest) (*emptypb.Empty, error)
 	// Write a new storage object or replace an existing one.
 	WriteStorageObject(context.Context, *WriteStorageObjectRequest) (*api.StorageObjectAck, error)
+	// 创建公告
+	CreateAnnouncement(context.Context, *CreateAnnouncementRequest) (*Announcement, error)
+	// 更新公告
+	UpdateAnnouncement(context.Context, *UpdateAnnouncementRequest) (*Announcement, error)
+	// 删除公告
+	DeleteAnnouncement(context.Context, *AnnouncementId) (*emptypb.Empty, error)
+	// 获取公告列表
+	ListAnnouncements(context.Context, *ListAnnouncementsRequest) (*AnnouncementList, error)
+	// 获取单个公告
+	GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error)
 	mustEmbedUnimplementedConsoleServer()
 }
 
@@ -1237,6 +1307,21 @@ func (UnimplementedConsoleServer) UpdateGroup(context.Context, *UpdateGroupReque
 }
 func (UnimplementedConsoleServer) WriteStorageObject(context.Context, *WriteStorageObjectRequest) (*api.StorageObjectAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteStorageObject not implemented")
+}
+func (UnimplementedConsoleServer) CreateAnnouncement(context.Context, *CreateAnnouncementRequest) (*Announcement, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) UpdateAnnouncement(context.Context, *UpdateAnnouncementRequest) (*Announcement, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) DeleteAnnouncement(context.Context, *AnnouncementId) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) ListAnnouncements(context.Context, *ListAnnouncementsRequest) (*AnnouncementList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAnnouncements not implemented")
+}
+func (UnimplementedConsoleServer) GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAnnouncement not implemented")
 }
 func (UnimplementedConsoleServer) mustEmbedUnimplementedConsoleServer() {}
 
@@ -2493,6 +2578,96 @@ func _Console_WriteStorageObject_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_CreateAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAnnouncementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CreateAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CreateAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CreateAnnouncement(ctx, req.(*CreateAnnouncementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_UpdateAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAnnouncementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).UpdateAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_UpdateAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).UpdateAnnouncement(ctx, req.(*UpdateAnnouncementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_DeleteAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnnouncementId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_DeleteAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteAnnouncement(ctx, req.(*AnnouncementId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ListAnnouncements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAnnouncementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListAnnouncements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListAnnouncements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListAnnouncements(ctx, req.(*ListAnnouncementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnnouncementId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetAnnouncement(ctx, req.(*AnnouncementId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Console_ServiceDesc is the grpc.ServiceDesc for Console service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2775,6 +2950,26 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WriteStorageObject",
 			Handler:    _Console_WriteStorageObject_Handler,
+		},
+		{
+			MethodName: "CreateAnnouncement",
+			Handler:    _Console_CreateAnnouncement_Handler,
+		},
+		{
+			MethodName: "UpdateAnnouncement",
+			Handler:    _Console_UpdateAnnouncement_Handler,
+		},
+		{
+			MethodName: "DeleteAnnouncement",
+			Handler:    _Console_DeleteAnnouncement_Handler,
+		},
+		{
+			MethodName: "ListAnnouncements",
+			Handler:    _Console_ListAnnouncements_Handler,
+		},
+		{
+			MethodName: "GetAnnouncement",
+			Handler:    _Console_GetAnnouncement_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
