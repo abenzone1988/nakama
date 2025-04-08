@@ -67,6 +67,7 @@ import {NotificationsComponent} from './account/notifications/notifications.comp
 import {NotificationsListComponent} from './notifications/notifications-list.component';
 import {MfaSetupComponent} from './mfa-setup/mfa-setup.component';
 import {QRCodeModule} from 'angularx-qrcode';
+import {AccountsModule} from './accounts/accounts.module';
 
 @NgModule({
   declarations: [
@@ -79,7 +80,6 @@ import {QRCodeModule} from 'angularx-qrcode';
     RuntimeComponent,
     StorageListComponent,
     StorageObjectComponent,
-    AccountListComponent,
     AccountComponent,
     ProfileComponent,
     AuthenticationComponent,
@@ -110,12 +110,13 @@ import {QRCodeModule} from 'angularx-qrcode';
     NgxFileDropModule,
     AppRoutingModule,
     BaseModule,
+    AccountsModule,
     BrowserModule,
     BrowserAnimationsModule,
     HttpClientModule,
     NgbModule,
     NgxChartsModule,
-    SegmentModule.forRoot({ apiKey: environment.segment_write_key, debug: !environment.production, loadOnInitialization: !environment.nt }),
+    SegmentModule.forRoot({ apiKey: environment.segment_write_key, debug: !environment.production, loadOnInitialization: false }),
     NoopAnimationsModule,
     ReactiveFormsModule,
     FormsModule,

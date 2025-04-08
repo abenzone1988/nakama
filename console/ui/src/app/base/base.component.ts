@@ -32,6 +32,7 @@ import {SegmentService} from 'ngx-segment-analytics';
 import {ConsoleService, UserRole} from '../console.service';
 import {Globals} from '../globals';
 import {environment} from '../../environments/environment';
+import { TranslationService } from '../services/translation.service';
 
 @Component({
   templateUrl: './base.component.html',
@@ -43,6 +44,7 @@ export class BaseComponent implements OnInit, OnDestroy {
   private segmentRouterSub: Subscription;
   public loading = true;
   public error = '';
+  public currentLang: string = 'en';
 
   public routes = [
     // 系统状态和配置组
@@ -72,6 +74,7 @@ export class BaseComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private segment: SegmentService,
     private readonly authService: AuthenticationService,
+    private readonly translationService: TranslationService,
   ) {
     this.loading = false;
     // Buffer router events every 2 seconds, to reduce loading screen jitter
@@ -103,9 +106,17 @@ export class BaseComponent implements OnInit, OnDestroy {
       }
       return true;
     })).subscribe((nav: NavigationEnd) => {
-      if (nav && !environment.nt) {
-        segment.page(nav.url);
+      if (nav && !environment.nt && environment.segment_write_key) {
+        try {
+          segment.page(nav.url);
+        } catch (e) {
+          console.error('Error tracking page view:', e);
+        }
       }
+    });
+
+    this.translationService.getCurrentLang().subscribe(lang => {
+      this.currentLang = lang;
     });
   }
 
@@ -139,6 +150,10 @@ export class BaseComponent implements OnInit, OnDestroy {
   }
 
   onSidebarNavChange(changeEvent: NgbNavChangeEvent): void {}
+
+  switchLanguage(lang: string): void {
+    this.translationService.setLanguage(lang);
+  }
 }
 
 @Injectable({providedIn: 'root'})
