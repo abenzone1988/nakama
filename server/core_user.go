@@ -18,6 +18,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -287,4 +288,21 @@ func fetchUserID(ctx context.Context, db *sql.DB, usernames []string) ([]string,
 	}
 
 	return ids, nil
+}
+
+// IsUserInactive 检查用户是否超过指定天数未登录
+func IsUserInactive(ctx context.Context, db *sql.DB, userID uuid.UUID, days int) (bool, error) {
+	var updateTime pgtype.Timestamptz
+	query := "SELECT update_time FROM users WHERE id = $1"
+
+	err := db.QueryRowContext(ctx, query, userID).Scan(&updateTime)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+
+	inactiveThreshold := time.Now().AddDate(0, 0, -days)
+	return updateTime.Time.Before(inactiveThreshold), nil
 }

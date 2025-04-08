@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"go.uber.org/zap"
@@ -80,4 +82,16 @@ func SaveData(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metri
 	}
 
 	return nil
+}
+
+// parseTime 解析时间字符串，支持UTC和自定义格式
+func parseTime(timeStr string) (time.Time, error) {
+	// 尝试解析UTC格式
+	t, err := time.Parse(time.RFC3339, timeStr)
+	if err == nil {
+		return t, nil
+	}
+
+	// UTC格式解析失败，尝试解析自定义格式
+	return time.Parse("2006:01:02:15:04:05", timeStr)
 }

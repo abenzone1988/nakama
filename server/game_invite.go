@@ -94,7 +94,8 @@ func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvite
 }
 
 type HomeData struct {
-	CurLevelId string `json:"curLevelId"`
+	CurLevelId             string `json:"curLevelId"`
+	LastGetOnHookTimestamp string `json:"lastGetOnHookTimestamp"`
 }
 
 func (f *HomeData) GetCollection() string {
@@ -107,6 +108,7 @@ func (f *HomeData) GetKey() string {
 
 func (f *HomeData) Init() {
 	f.CurLevelId = ""
+	f.LastGetOnHookTimestamp = ""
 }
 
 func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.ListInviteeResponse, error) {
