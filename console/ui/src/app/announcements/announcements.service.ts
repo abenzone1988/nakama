@@ -14,7 +14,7 @@ export class AnnouncementsService {
     status?: number;
   }): Observable<AnnouncementList> {
     return this.consoleService.listAnnouncements(
-      localStorage.getItem('token') || '',
+      '',
       params.status,
       params.limit,
       params.cursor
@@ -22,11 +22,11 @@ export class AnnouncementsService {
   }
 
   getAnnouncement(id: string): Observable<Announcement> {
-    return this.consoleService.getAnnouncement(localStorage.getItem('token') || '', id);
+    return this.consoleService.getAnnouncement('', id);
   }
 
   createAnnouncement(data: Partial<Announcement>): Observable<Announcement> {
-    return this.consoleService.createAnnouncement(localStorage.getItem('token') || '', {
+    return this.consoleService.createAnnouncement( '', {
       content: data.content || '',
       img: data.img || '',
       status: data.status || 0,
@@ -35,7 +35,7 @@ export class AnnouncementsService {
   }
 
   updateAnnouncement(id: string, data: Partial<Announcement>): Observable<Announcement> {
-    return this.consoleService.updateAnnouncement(localStorage.getItem('token') || '', id, {
+    return this.consoleService.updateAnnouncement('', id, {
       content: data.content || '',
       img: data.img || '',
       status: data.status || 0,
@@ -44,6 +44,6 @@ export class AnnouncementsService {
   }
 
   deleteAnnouncement(id: string): Observable<void> {
-    return this.consoleService.deleteAnnouncement(localStorage.getItem('token') || '', id);
+    return this.consoleService.deleteAnnouncement('', id);
   }
-} 
+}

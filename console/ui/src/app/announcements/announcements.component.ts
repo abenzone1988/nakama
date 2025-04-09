@@ -16,6 +16,7 @@ export class AnnouncementsComponent implements OnInit {
   pageSize = 10;
   statusFilter = '';
   cursor = '';
+  cursorCache: { [page: number]: string } = { 1: '' };  // 缓存每页的 cursor
 
   form: FormGroup;
   editingAnnouncement: Announcement | null = null;
@@ -46,14 +47,24 @@ export class AnnouncementsComponent implements OnInit {
       cursor: this.cursor,
     };
     if (this.statusFilter !== '') {
-      params['status'] = parseInt(this.statusFilter, 10);
+      params.status = parseInt(this.statusFilter, 10);
+    } else {
+      params.status = -1;
     }
+
+    console.log('加载公告列表，参数：', params);
 
     this.announcementsService.getAnnouncements(params).subscribe({
       next: (response) => {
+        console.log('获取公告列表成功：', response);
         this.announcements = response.announcements || [];
         this.totalCount = response.total_count || 0;
-        this.cursor = response.next_cursor || '';
+        // 缓存下一页的 cursor
+        if (response.next_cursor) {
+          this.cursorCache[this.currentPage + 1] = response.next_cursor;
+          console.log('缓存下一页 cursor：', this.currentPage + 1, response.next_cursor);
+        }
+
         this.loading = false;
       },
       error: (error) => {
@@ -94,9 +105,7 @@ export class AnnouncementsComponent implements OnInit {
     if (this.form.invalid) {
       return;
     }
-
     const data = this.form.value;
-    
     if (this.editingAnnouncement) {
       this.announcementsService.updateAnnouncement(this.editingAnnouncement.id || '', data).subscribe({
         next: () => {
@@ -145,6 +154,24 @@ export class AnnouncementsComponent implements OnInit {
   }
 
   onPageChange(page: number): void {
+    console.log('页码变更：', page, '当前页：', this.currentPage);
+
+    // 向后翻页
+    if (page > this.currentPage) {
+      this.cursor = this.cursorCache[page] || '';
+    }
+    // 向前翻页或回到第一页
+    else {
+      // 如果是回到第一页，直接重置 cursor
+      if (page === 1) {
+        this.cursor = '';
+      }
+      // 否则使用缓存的 cursor
+      else {
+        this.cursor = this.cursorCache[page] || '';
+      }
+    }
+
     this.currentPage = page;
     this.loadAnnouncements();
   }
@@ -152,6 +179,7 @@ export class AnnouncementsComponent implements OnInit {
   onStatusFilterChange(): void {
     this.currentPage = 1;
     this.cursor = '';
+    this.cursorCache = { 1: '' };  // 重置 cursor 缓存
     this.loadAnnouncements();
   }
 
@@ -172,4 +200,4 @@ export class AnnouncementsComponent implements OnInit {
     };
     return classMap[status] || 'badge-secondary';
   }
-} 
+}

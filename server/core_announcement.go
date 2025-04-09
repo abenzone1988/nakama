@@ -155,24 +155,41 @@ WHERE id = $1`
 }
 
 func AnnouncementList(ctx context.Context, logger *zap.Logger, db *sql.DB, status int32, limit int32, cursor string) (*console.AnnouncementList, error) {
+	// 先构建条件
+	conditions := "WHERE 1=1"
 	params := make([]interface{}, 0, 3)
+	paramCount := 0
+
+	if status >= 0 {
+		paramCount++
+		params = append(params, status)
+		conditions += " AND status = $" + strconv.Itoa(paramCount)
+	}
+
+	// 先查询总数
+	countQuery := "SELECT COUNT(*) FROM announcement " + conditions
+	var totalCount int32
+	err := db.QueryRowContext(ctx, countQuery, params...).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Error counting announcements", zap.Error(err))
+		return nil, err
+	}
+
+	// 构建分页查询
 	query := `
 SELECT id, title, content, img, status, create_time, update_time
 FROM announcement
-WHERE 1=1`
-
-	if status >= 0 {
-		params = append(params, status)
-		query += " AND status = $" + strconv.Itoa(len(params))
-	}
+` + conditions
 
 	if cursor != "" {
+		paramCount++
 		params = append(params, cursor)
-		query += " AND create_time < (SELECT create_time FROM announcement WHERE id = $" + strconv.Itoa(len(params)) + ")"
+		query += " AND create_time < (SELECT create_time FROM announcement WHERE id = $" + strconv.Itoa(paramCount) + ")"
 	}
 
+	paramCount++
 	params = append(params, limit)
-	query += " ORDER BY create_time DESC LIMIT $" + strconv.Itoa(len(params))
+	query += " ORDER BY create_time DESC LIMIT $" + strconv.Itoa(paramCount)
 
 	rows, err := db.QueryContext(ctx, query, params...)
 	if err != nil {
@@ -214,7 +231,7 @@ WHERE 1=1`
 
 	result := &console.AnnouncementList{
 		Announcements: announcements,
-		TotalCount:    int32(len(announcements)),
+		TotalCount:    totalCount,
 	}
 
 	if len(announcements) == int(limit) {
