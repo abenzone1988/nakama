@@ -825,4 +825,9 @@ service Nakama {
   rpc GetGameTime (google.protobuf.Empty) returns (game.GetGameTimeResponse) {
     option (google.api.http).get = "/v2/game/time";
   }
+
+  // List published announcements
+  rpc ListPublishedAnnouncements (game.ListPublishedAnnouncementsRequest) returns (game.ListPublishedAnnouncementsResponse) {
+    option (google.api.http).get = "/v2/game/announcements";
+  }
 }

@@ -51,27 +51,26 @@ message GetGameTimeResponse{
   google.protobuf.Timestamp game_time = 1;
 }
 
-
-// Mark one or more notifications Read for the current user.
-message ReadNotificationsRequest {
-  // The id of notifications.
-  repeated string ids = 1;
+// 获取已发布公告请求
+message ListPublishedAnnouncementsRequest {
+  int32 limit = 1;  // 每页数量
+  string cursor = 2;  // 分页游标
 }
 
-// Get Notifications Attachments
-message GetNotificationsAttachmentsRequest {
-  // The id of notifications.
-  repeated string ids = 1;
+// 公告信息
+message AnnouncementInfo {
+  string id = 1;  // 公告ID
+  string title = 2;  // 标题
+  string content = 3;  // 内容
+  string img = 4;  // 图片URL
+  google.protobuf.Timestamp create_time = 5;  // 创建时间
+  google.protobuf.Timestamp update_time = 6;  // 更新时间
 }
 
-// Get Notifications Attachments
-message GetNotificationsAttachmentsResponse {
-  repeated Reward rewards = 1;  // 商品数组
-}
-
-// 定义单个商品结构
-message Reward {
-  string Id = 1;  // 商品ID
-  int32 Num = 2;  // 商品数量
+// 获取已发布公告响应
+message ListPublishedAnnouncementsResponse {
+  repeated AnnouncementInfo announcements = 1;  // 公告列表
+  int32 total_count = 2;  // 总数
+  string next_cursor = 3;  // 下一页游标
 }
 

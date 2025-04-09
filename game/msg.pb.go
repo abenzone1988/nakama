@@ -442,29 +442,29 @@ func (x *GetGameTimeResponse) GetGameTime() *timestamppb.Timestamp {
 	return nil
 }
 
-// Mark one or more notifications Read for the current user.
-type ReadNotificationsRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The id of notifications.
-	Ids           []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+// 获取已发布公告请求
+type ListPublishedAnnouncementsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`  // 每页数量
+	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"` // 分页游标
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ReadNotificationsRequest) Reset() {
-	*x = ReadNotificationsRequest{}
+func (x *ListPublishedAnnouncementsRequest) Reset() {
+	*x = ListPublishedAnnouncementsRequest{}
 	mi := &file_msg_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ReadNotificationsRequest) String() string {
+func (x *ListPublishedAnnouncementsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ReadNotificationsRequest) ProtoMessage() {}
+func (*ListPublishedAnnouncementsRequest) ProtoMessage() {}
 
-func (x *ReadNotificationsRequest) ProtoReflect() protoreflect.Message {
+func (x *ListPublishedAnnouncementsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_msg_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -476,41 +476,52 @@ func (x *ReadNotificationsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ReadNotificationsRequest.ProtoReflect.Descriptor instead.
-func (*ReadNotificationsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListPublishedAnnouncementsRequest.ProtoReflect.Descriptor instead.
+func (*ListPublishedAnnouncementsRequest) Descriptor() ([]byte, []int) {
 	return file_msg_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *ReadNotificationsRequest) GetIds() []string {
+func (x *ListPublishedAnnouncementsRequest) GetLimit() int32 {
 	if x != nil {
-		return x.Ids
+		return x.Limit
 	}
-	return nil
+	return 0
 }
 
-// Get Notifications Attachments
-type GetNotificationsAttachmentsRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The id of notifications.
-	Ids           []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+func (x *ListPublishedAnnouncementsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// 公告信息
+type AnnouncementInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                   // 公告ID
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                             // 标题
+	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`                         // 内容
+	Img           string                 `protobuf:"bytes,4,opt,name=img,proto3" json:"img,omitempty"`                                 // 图片URL
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"` // 创建时间
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"` // 更新时间
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetNotificationsAttachmentsRequest) Reset() {
-	*x = GetNotificationsAttachmentsRequest{}
+func (x *AnnouncementInfo) Reset() {
+	*x = AnnouncementInfo{}
 	mi := &file_msg_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetNotificationsAttachmentsRequest) String() string {
+func (x *AnnouncementInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetNotificationsAttachmentsRequest) ProtoMessage() {}
+func (*AnnouncementInfo) ProtoMessage() {}
 
-func (x *GetNotificationsAttachmentsRequest) ProtoReflect() protoreflect.Message {
+func (x *AnnouncementInfo) ProtoReflect() protoreflect.Message {
 	mi := &file_msg_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -522,114 +533,112 @@ func (x *GetNotificationsAttachmentsRequest) ProtoReflect() protoreflect.Message
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetNotificationsAttachmentsRequest.ProtoReflect.Descriptor instead.
-func (*GetNotificationsAttachmentsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use AnnouncementInfo.ProtoReflect.Descriptor instead.
+func (*AnnouncementInfo) Descriptor() ([]byte, []int) {
 	return file_msg_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *GetNotificationsAttachmentsRequest) GetIds() []string {
-	if x != nil {
-		return x.Ids
-	}
-	return nil
-}
-
-// Get Notifications Attachments
-type GetNotificationsAttachmentsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rewards       []*Reward              `protobuf:"bytes,1,rep,name=rewards,proto3" json:"rewards,omitempty"` // 商品数组
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNotificationsAttachmentsResponse) Reset() {
-	*x = GetNotificationsAttachmentsResponse{}
-	mi := &file_msg_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNotificationsAttachmentsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNotificationsAttachmentsResponse) ProtoMessage() {}
-
-func (x *GetNotificationsAttachmentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNotificationsAttachmentsResponse.ProtoReflect.Descriptor instead.
-func (*GetNotificationsAttachmentsResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *GetNotificationsAttachmentsResponse) GetRewards() []*Reward {
-	if x != nil {
-		return x.Rewards
-	}
-	return nil
-}
-
-// 定义单个商品结构
-type Reward struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=Id,proto3" json:"Id,omitempty"`    // 商品ID
-	Num           int32                  `protobuf:"varint,2,opt,name=Num,proto3" json:"Num,omitempty"` // 商品数量
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Reward) Reset() {
-	*x = Reward{}
-	mi := &file_msg_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Reward) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Reward) ProtoMessage() {}
-
-func (x *Reward) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Reward.ProtoReflect.Descriptor instead.
-func (*Reward) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *Reward) GetId() string {
+func (x *AnnouncementInfo) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Reward) GetNum() int32 {
+func (x *AnnouncementInfo) GetTitle() string {
 	if x != nil {
-		return x.Num
+		return x.Title
+	}
+	return ""
+}
+
+func (x *AnnouncementInfo) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *AnnouncementInfo) GetImg() string {
+	if x != nil {
+		return x.Img
+	}
+	return ""
+}
+
+func (x *AnnouncementInfo) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *AnnouncementInfo) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+// 获取已发布公告响应
+type ListPublishedAnnouncementsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Announcements []*AnnouncementInfo    `protobuf:"bytes,1,rep,name=announcements,proto3" json:"announcements,omitempty"`              // 公告列表
+	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"` // 总数
+	NextCursor    string                 `protobuf:"bytes,3,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`  // 下一页游标
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPublishedAnnouncementsResponse) Reset() {
+	*x = ListPublishedAnnouncementsResponse{}
+	mi := &file_msg_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPublishedAnnouncementsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPublishedAnnouncementsResponse) ProtoMessage() {}
+
+func (x *ListPublishedAnnouncementsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPublishedAnnouncementsResponse.ProtoReflect.Descriptor instead.
+func (*ListPublishedAnnouncementsResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListPublishedAnnouncementsResponse) GetAnnouncements() []*AnnouncementInfo {
+	if x != nil {
+		return x.Announcements
+	}
+	return nil
+}
+
+func (x *ListPublishedAnnouncementsResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
 	}
 	return 0
+}
+
+func (x *ListPublishedAnnouncementsResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
 }
 
 var File_msg_proto protoreflect.FileDescriptor
@@ -674,27 +683,42 @@ var file_msg_proto_rawDesc = string([]byte{
 	0x61, 0x6d, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a,
 	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
 	0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x08, 0x67, 0x61, 0x6d, 0x65,
-	0x54, 0x69, 0x6d, 0x65, 0x22, 0x2c, 0x0a, 0x18, 0x52, 0x65, 0x61, 0x64, 0x4e, 0x6f, 0x74, 0x69,
-	0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x03, 0x69,
-	0x64, 0x73, 0x22, 0x36, 0x0a, 0x22, 0x47, 0x65, 0x74, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63,
-	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x41, 0x74, 0x74, 0x61, 0x63, 0x68, 0x6d, 0x65, 0x6e, 0x74,
-	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x69, 0x64, 0x73, 0x18,
-	0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x03, 0x69, 0x64, 0x73, 0x22, 0x4d, 0x0a, 0x23, 0x47, 0x65,
-	0x74, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x41, 0x74,
-	0x74, 0x61, 0x63, 0x68, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x26, 0x0a, 0x07, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64,
-	0x52, 0x07, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73, 0x22, 0x2a, 0x0a, 0x06, 0x52, 0x65, 0x77,
-	0x61, 0x72, 0x64, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x02, 0x49, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x4e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05,
-	0x52, 0x03, 0x4e, 0x75, 0x6d, 0x42, 0x54, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x68, 0x75, 0x6f,
-	0x68, 0x75, 0x61, 0x6a, 0x69, 0x2e, 0x73, 0x74, 0x61, 0x72, 0x42, 0x07, 0x47, 0x61, 0x6d, 0x65,
-	0x4d, 0x73, 0x67, 0x50, 0x01, 0x5a, 0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b,
-	0x61, 0x6d, 0x61, 0x2f, 0x76, 0x33, 0x2f, 0x67, 0x61, 0x6d, 0x65, 0xaa, 0x02, 0x0d, 0x47, 0x61,
-	0x6d, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x54, 0x69, 0x6d, 0x65, 0x22, 0x51, 0x0a, 0x21, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x75, 0x62, 0x6c,
+	0x69, 0x73, 0x68, 0x65, 0x64, 0x41, 0x6e, 0x6e, 0x6f, 0x75, 0x6e, 0x63, 0x65, 0x6d, 0x65, 0x6e,
+	0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x6c, 0x69, 0x6d,
+	0x69, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x12,
+	0x16, 0x0a, 0x06, 0x63, 0x75, 0x72, 0x73, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x63, 0x75, 0x72, 0x73, 0x6f, 0x72, 0x22, 0xde, 0x01, 0x0a, 0x10, 0x41, 0x6e, 0x6e, 0x6f,
+	0x75, 0x6e, 0x63, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x0e, 0x0a, 0x02,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x14, 0x0a, 0x05,
+	0x74, 0x69, 0x74, 0x6c, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x74, 0x69, 0x74,
+	0x6c, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x12, 0x10, 0x0a, 0x03,
+	0x69, 0x6d, 0x67, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x69, 0x6d, 0x67, 0x12, 0x3b,
+	0x0a, 0x0b, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52,
+	0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x0b, 0x75,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x75, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x22, 0xa4, 0x01, 0x0a, 0x22, 0x4c, 0x69, 0x73,
+	0x74, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x73, 0x68, 0x65, 0x64, 0x41, 0x6e, 0x6e, 0x6f, 0x75, 0x6e,
+	0x63, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x3c, 0x0a, 0x0d, 0x61, 0x6e, 0x6e, 0x6f, 0x75, 0x6e, 0x63, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73,
+	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x41, 0x6e,
+	0x6e, 0x6f, 0x75, 0x6e, 0x63, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0d,
+	0x61, 0x6e, 0x6e, 0x6f, 0x75, 0x6e, 0x63, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x12, 0x1f, 0x0a,
+	0x0b, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x5f, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x0a, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x1f,
+	0x0a, 0x0b, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x63, 0x75, 0x72, 0x73, 0x6f, 0x72, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x0a, 0x6e, 0x65, 0x78, 0x74, 0x43, 0x75, 0x72, 0x73, 0x6f, 0x72, 0x42,
+	0x54, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x68, 0x75, 0x6f, 0x68, 0x75, 0x61, 0x6a, 0x69, 0x2e,
+	0x73, 0x74, 0x61, 0x72, 0x42, 0x07, 0x47, 0x61, 0x6d, 0x65, 0x4d, 0x73, 0x67, 0x50, 0x01, 0x5a,
+	0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f,
+	0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2f, 0x76, 0x33,
+	0x2f, 0x67, 0x61, 0x6d, 0x65, 0xaa, 0x02, 0x0d, 0x47, 0x61, 0x6d, 0x65, 0x2e, 0x50, 0x72, 0x6f,
+	0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -709,31 +733,32 @@ func file_msg_proto_rawDescGZIP() []byte {
 	return file_msg_proto_rawDescData
 }
 
-var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_msg_proto_goTypes = []any{
-	(*RedeemGiftRequest)(nil),                   // 0: game.RedeemGiftRequest
-	(*RedeemGiftResponse)(nil),                  // 1: game.RedeemGiftResponse
-	(*FeedbackRequest)(nil),                     // 2: game.FeedbackRequest
-	(*AuthenticateWechatRequest)(nil),           // 3: game.AuthenticateWechatRequest
-	(*AuthenticateTiktokRequest)(nil),           // 4: game.AuthenticateTiktokRequest
-	(*SubmitBeInvitedRequest)(nil),              // 5: game.SubmitBeInvitedRequest
-	(*ListInviteeResponse)(nil),                 // 6: game.ListInviteeResponse
-	(*ClaimInviteRewardRequest)(nil),            // 7: game.ClaimInviteRewardRequest
-	(*GetGameTimeResponse)(nil),                 // 8: game.GetGameTimeResponse
-	(*ReadNotificationsRequest)(nil),            // 9: game.ReadNotificationsRequest
-	(*GetNotificationsAttachmentsRequest)(nil),  // 10: game.GetNotificationsAttachmentsRequest
-	(*GetNotificationsAttachmentsResponse)(nil), // 11: game.GetNotificationsAttachmentsResponse
-	(*Reward)(nil),                              // 12: game.Reward
-	(*timestamppb.Timestamp)(nil),               // 13: google.protobuf.Timestamp
+	(*RedeemGiftRequest)(nil),                  // 0: game.RedeemGiftRequest
+	(*RedeemGiftResponse)(nil),                 // 1: game.RedeemGiftResponse
+	(*FeedbackRequest)(nil),                    // 2: game.FeedbackRequest
+	(*AuthenticateWechatRequest)(nil),          // 3: game.AuthenticateWechatRequest
+	(*AuthenticateTiktokRequest)(nil),          // 4: game.AuthenticateTiktokRequest
+	(*SubmitBeInvitedRequest)(nil),             // 5: game.SubmitBeInvitedRequest
+	(*ListInviteeResponse)(nil),                // 6: game.ListInviteeResponse
+	(*ClaimInviteRewardRequest)(nil),           // 7: game.ClaimInviteRewardRequest
+	(*GetGameTimeResponse)(nil),                // 8: game.GetGameTimeResponse
+	(*ListPublishedAnnouncementsRequest)(nil),  // 9: game.ListPublishedAnnouncementsRequest
+	(*AnnouncementInfo)(nil),                   // 10: game.AnnouncementInfo
+	(*ListPublishedAnnouncementsResponse)(nil), // 11: game.ListPublishedAnnouncementsResponse
+	(*timestamppb.Timestamp)(nil),              // 12: google.protobuf.Timestamp
 }
 var file_msg_proto_depIdxs = []int32{
-	13, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
-	12, // 1: game.GetNotificationsAttachmentsResponse.rewards:type_name -> game.Reward
-	2,  // [2:2] is the sub-list for method output_type
-	2,  // [2:2] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	12, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
+	12, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
+	12, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
+	10, // 3: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
+	4,  // [4:4] is the sub-list for method output_type
+	4,  // [4:4] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_msg_proto_init() }
@@ -747,7 +772,7 @@ func file_msg_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_msg_proto_rawDesc), len(file_msg_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
