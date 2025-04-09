@@ -503,6 +503,13 @@ service Console {
       get: "/v2/console/announcement/{id}"
     };
   }
+
+  // 搜索公告
+  rpc SearchAnnouncements (SearchAnnouncementsRequest) returns (AnnouncementList) {
+    option (google.api.http) = {
+      get: "/v2/console/announcements/search"
+    };
+  }
 }
 
 // API Explorer List of Endpoints response message
@@ -1328,4 +1335,13 @@ message ListAnnouncementsRequest {
 
 message AnnouncementId {
   string id = 1;
+}
+
+message SearchAnnouncementsRequest {
+  // 搜索关键词
+  string query = 1;
+  // 每页数量
+  int32 limit = 2;
+  // 游标
+  string cursor = 3;
 }

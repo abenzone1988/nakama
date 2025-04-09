@@ -240,3 +240,88 @@ FROM announcement
 
 	return result, nil
 }
+
+func AnnouncementSearch(ctx context.Context, logger *zap.Logger, db *sql.DB, query string, limit int32, cursor string) (*console.AnnouncementList, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	// 构建搜索条件
+	conditions := "WHERE (title ILIKE $1 OR content ILIKE $1)"
+	params := []interface{}{"%" + query + "%"}
+	paramCount := 1
+
+	// 先查询总数
+	countQuery := "SELECT COUNT(*) FROM announcement " + conditions
+	var totalCount int32
+	err := db.QueryRowContext(ctx, countQuery, params...).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Error counting announcements in search", zap.Error(err))
+		return nil, err
+	}
+
+	// 构建分页查询
+	selectQuery := `
+SELECT id, title, content, img, status, create_time, update_time
+FROM announcement
+` + conditions
+
+	if cursor != "" {
+		paramCount++
+		params = append(params, cursor)
+		selectQuery += " AND create_time < (SELECT create_time FROM announcement WHERE id = $" + strconv.Itoa(paramCount) + ")"
+	}
+
+	paramCount++
+	params = append(params, limit)
+	selectQuery += " ORDER BY create_time DESC LIMIT $" + strconv.Itoa(paramCount)
+
+	rows, err := db.QueryContext(ctx, selectQuery, params...)
+	if err != nil {
+		logger.Error("Error searching announcements", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	announcements := make([]*console.Announcement, 0, limit)
+	var nextCursor string
+
+	for rows.Next() {
+		var announcement console.Announcement
+		var createTime, updateTime time.Time
+		err = rows.Scan(
+			&announcement.Id,
+			&announcement.Title,
+			&announcement.Content,
+			&announcement.Img,
+			&announcement.Status,
+			&createTime,
+			&updateTime)
+
+		if err != nil {
+			logger.Error("Error scanning announcement row in search", zap.Error(err))
+			return nil, err
+		}
+
+		announcement.CreateTime = timestamppb.New(createTime)
+		announcement.UpdateTime = timestamppb.New(updateTime)
+		announcements = append(announcements, &announcement)
+		nextCursor = announcement.Id
+	}
+
+	if err = rows.Err(); err != nil {
+		logger.Error("Error iterating announcement rows in search", zap.Error(err))
+		return nil, err
+	}
+
+	result := &console.AnnouncementList{
+		Announcements: announcements,
+		TotalCount:    totalCount,
+	}
+
+	if len(announcements) == int(limit) {
+		result.NextCursor = nextCursor
+	}
+
+	return result, nil
+}

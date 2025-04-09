@@ -17,6 +17,7 @@ export class AnnouncementsComponent implements OnInit {
   statusFilter = '';
   cursor = '';
   cursorCache: { [page: number]: string } = { 1: '' };  // 缓存每页的 cursor
+  searchQuery = '';  // 添加搜索关键词属性
 
   form: FormGroup;
   editingAnnouncement: Announcement | null = null;
@@ -42,36 +43,54 @@ export class AnnouncementsComponent implements OnInit {
 
   loadAnnouncements(): void {
     this.loading = true;
-    const params: any = {
-      limit: this.pageSize,
-      cursor: this.cursor,
-    };
-    if (this.statusFilter !== '') {
-      params.status = parseInt(this.statusFilter, 10);
-    } else {
-      params.status = -1;
-    }
-
-    console.log('加载公告列表，参数：', params);
-
-    this.announcementsService.getAnnouncements(params).subscribe({
-      next: (response) => {
-        console.log('获取公告列表成功：', response);
-        this.announcements = response.announcements || [];
-        this.totalCount = response.total_count || 0;
-        // 缓存下一页的 cursor
-        if (response.next_cursor) {
-          this.cursorCache[this.currentPage + 1] = response.next_cursor;
-          console.log('缓存下一页 cursor：', this.currentPage + 1, response.next_cursor);
+    if (this.searchQuery) {
+      // 如果有搜索关键词，调用搜索方法
+      const params = {
+        query: this.searchQuery,
+        limit: this.pageSize,
+        cursor: this.cursor,
+      };
+      this.announcementsService.searchAnnouncements(params).subscribe({
+        next: (response) => {
+          this.announcements = response.announcements || [];
+          this.totalCount = response.total_count || 0;
+          if (response.next_cursor) {
+            this.cursorCache[this.currentPage + 1] = response.next_cursor;
+          }
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('搜索公告失败', error);
+          this.loading = false;
         }
-
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('加载公告列表失败', error);
-        this.loading = false;
+      });
+    } else {
+      // 原有的加载逻辑
+      const params: any = {
+        limit: this.pageSize,
+        cursor: this.cursor,
+      };
+      if (this.statusFilter !== '') {
+        params.status = parseInt(this.statusFilter, 10);
+      } else {
+        params.status = -1;
       }
-    });
+
+      this.announcementsService.getAnnouncements(params).subscribe({
+        next: (response) => {
+          this.announcements = response.announcements || [];
+          this.totalCount = response.total_count || 0;
+          if (response.next_cursor) {
+            this.cursorCache[this.currentPage + 1] = response.next_cursor;
+          }
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('加载公告列表失败', error);
+          this.loading = false;
+        }
+      });
+    }
   }
 
   openModal(content: any, announcement?: Announcement): void {
@@ -199,5 +218,17 @@ export class AnnouncementsComponent implements OnInit {
       2: 'badge-danger'
     };
     return classMap[status] || 'badge-secondary';
+  }
+
+  onSearch(): void {
+    this.currentPage = 1;
+    this.cursor = '';
+    this.cursorCache = { 1: '' };
+    this.loadAnnouncements();
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.onSearch();
   }
 }

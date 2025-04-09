@@ -1,86 +1,109 @@
 <h2 class="pb-1">公告管理</h2>
-<div class="container-fluid">
-  <div class="row">
-    <div class="col">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">公告列表</h5>
-          <div class="d-flex gap-3">
-            <select class="form-select" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()">
-              <option value="">全部状态</option>
-              <option value="0">草稿</option>
-              <option value="1">已发布</option>
-              <option value="2">已下线</option>
-            </select>
-            <button class="btn btn-primary" (click)="openModal(announcementModal)">
-              新增公告
-            </button>
-          </div>
+<h6 class="pb-3">总计: {{totalCount}} 条记录</h6>
+
+<div class="row no-gutters mb-4">
+  <div class="col d-flex justify-content-between no-gutters align-items-center">
+    <div class="col-md-9">
+      <div class="input-group">
+        <input type="text" class="form-control border-right-0" 
+               [(ngModel)]="searchQuery" 
+               placeholder="搜索公告标题或内容..."
+               (keyup.enter)="onSearch()">
+        <div class="input-group-append" *ngIf="searchQuery">
+          <span class="input-group-text bg-transparent border-left-0" style="cursor: pointer;" (click)="clearSearch()">
+            <i class="bi bi-x"></i>
+          </span>
         </div>
-
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>标题</th>
-                  <th>内容</th>
-                  <th>图片</th>
-                  <th>状态</th>
-                  <th>创建时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let announcement of announcements">
-                  <td>{{announcement.title}}</td>
-                  <td>
-                    <div class="text-truncate" style="max-width: 200px;">
-                      {{announcement.content}}
-                    </div>
-                  </td>
-                  <td>
-                    <img *ngIf="announcement.img" [src]="announcement.img"
-                         class="img-thumbnail" style="max-width: 50px;">
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getStatusClass(announcement.status)">
-                      {{getStatusText(announcement.status)}}
-                    </span>
-                  </td>
-                  <td>{{announcement.create_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                  <td>
-                    <div class="btn-group">
-                      <button class="btn btn-sm btn-outline-primary"
-                              (click)="openModal(announcementModal, announcement)">
-                        编辑
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger"
-                              (click)="deleteAnnouncement(announcement)">
-                        删除
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mt-3">
-            <div>
-              总计: {{totalCount}} 条记录
+        <div class="input-group-append">
+          <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-radius" (click)="onSearch()">搜索</button>
+            <div class="btn-group" ngbDropdown role="group">
+              <button type="button" class="btn btn-primary dropdown-toggle-split" ngbDropdownToggle></button>
+              <div class="dropdown-menu" ngbDropdownMenu>
+                <button type="button" ngbDropdownItem (click)="onStatusFilterChange()" [class.active]="statusFilter === ''">全部状态</button>
+                <button type="button" ngbDropdownItem (click)="statusFilter = '0'; onStatusFilterChange()" [class.active]="statusFilter === '0'">草稿</button>
+                <button type="button" ngbDropdownItem (click)="statusFilter = '1'; onStatusFilterChange()" [class.active]="statusFilter === '1'">已发布</button>
+                <button type="button" ngbDropdownItem (click)="statusFilter = '2'; onStatusFilterChange()" [class.active]="statusFilter === '2'">已下线</button>
+              </div>
             </div>
-            <ngb-pagination
-              [(page)]="currentPage"
-              [collectionSize]="totalCount"
-              [pageSize]="pageSize"
-              (pageChange)="onPageChange($event)"
-            ></ngb-pagination>
           </div>
         </div>
       </div>
     </div>
+    <div class="col-md-3 justify-content-end text-right">
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" (click)="openModal(announcementModal)">新增公告</button>
+      </div>
+    </div>
   </div>
+</div>
+
+<div class="row no-gutters">
+  <div class="col">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover table-bordered mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>标题</th>
+                <th>内容</th>
+                <th>图片</th>
+                <th>状态</th>
+                <th style="width: 180px">创建时间</th>
+                <th style="width: 120px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="announcements.length === 0">
+                <td colspan="6" class="text-muted text-center">暂无公告数据</td>
+              </tr>
+              <tr *ngFor="let announcement of announcements">
+                <td>{{announcement.title}}</td>
+                <td>
+                  <div class="text-truncate" style="max-width: 200px;">
+                    {{announcement.content}}
+                  </div>
+                </td>
+                <td>
+                  <img *ngIf="announcement.img" [src]="announcement.img"
+                       class="img-thumbnail" style="max-width: 50px;">
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getStatusClass(announcement.status)">
+                    {{getStatusText(announcement.status)}}
+                  </span>
+                </td>
+                <td>{{announcement.create_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                <td>
+                  <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary"
+                            (click)="openModal(announcementModal, announcement)">
+                      编辑
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                            (click)="deleteAnnouncement(announcement)">
+                      删除
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+  <ngb-pagination
+    [(page)]="currentPage"
+    [collectionSize]="totalCount"
+    [pageSize]="pageSize"
+    (pageChange)="onPageChange($event)"
+    class="mb-0"
+  ></ngb-pagination>
 </div>
 
 <!-- 新增/编辑公告模态框 -->

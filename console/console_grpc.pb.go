@@ -112,6 +112,7 @@ const (
 	Console_DeleteAnnouncement_FullMethodName        = "/nakama.console.Console/DeleteAnnouncement"
 	Console_ListAnnouncements_FullMethodName         = "/nakama.console.Console/ListAnnouncements"
 	Console_GetAnnouncement_FullMethodName           = "/nakama.console.Console/GetAnnouncement"
+	Console_SearchAnnouncements_FullMethodName       = "/nakama.console.Console/SearchAnnouncements"
 )
 
 // ConsoleClient is the client API for Console service.
@@ -266,6 +267,8 @@ type ConsoleClient interface {
 	ListAnnouncements(ctx context.Context, in *ListAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
 	// 获取单个公告
 	GetAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*Announcement, error)
+	// 搜索公告
+	SearchAnnouncements(ctx context.Context, in *SearchAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
 }
 
 type consoleClient struct {
@@ -942,6 +945,15 @@ func (c *consoleClient) GetAnnouncement(ctx context.Context, in *AnnouncementId,
 	return out, nil
 }
 
+func (c *consoleClient) SearchAnnouncements(ctx context.Context, in *SearchAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error) {
+	out := new(AnnouncementList)
+	err := c.cc.Invoke(ctx, Console_SearchAnnouncements_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConsoleServer is the server API for Console service.
 // All implementations must embed UnimplementedConsoleServer
 // for forward compatibility
@@ -1094,6 +1106,8 @@ type ConsoleServer interface {
 	ListAnnouncements(context.Context, *ListAnnouncementsRequest) (*AnnouncementList, error)
 	// 获取单个公告
 	GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error)
+	// 搜索公告
+	SearchAnnouncements(context.Context, *SearchAnnouncementsRequest) (*AnnouncementList, error)
 	mustEmbedUnimplementedConsoleServer()
 }
 
@@ -1322,6 +1336,9 @@ func (UnimplementedConsoleServer) ListAnnouncements(context.Context, *ListAnnoun
 }
 func (UnimplementedConsoleServer) GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) SearchAnnouncements(context.Context, *SearchAnnouncementsRequest) (*AnnouncementList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchAnnouncements not implemented")
 }
 func (UnimplementedConsoleServer) mustEmbedUnimplementedConsoleServer() {}
 
@@ -2668,6 +2685,24 @@ func _Console_GetAnnouncement_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_SearchAnnouncements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchAnnouncementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).SearchAnnouncements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_SearchAnnouncements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).SearchAnnouncements(ctx, req.(*SearchAnnouncementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Console_ServiceDesc is the grpc.ServiceDesc for Console service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2970,6 +3005,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAnnouncement",
 			Handler:    _Console_GetAnnouncement_Handler,
+		},
+		{
+			MethodName: "SearchAnnouncements",
+			Handler:    _Console_SearchAnnouncements_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

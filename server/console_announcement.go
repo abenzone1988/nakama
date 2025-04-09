@@ -122,3 +122,21 @@ func (s *ConsoleServer) ListAnnouncements(ctx context.Context, in *console.ListA
 
 	return announcements, nil
 }
+
+func (s *ConsoleServer) SearchAnnouncements(ctx context.Context, in *console.SearchAnnouncementsRequest) (*console.AnnouncementList, error) {
+	// 参数验证
+	if in.Query == "" {
+		return nil, status.Error(codes.InvalidArgument, "搜索关键词不能为空")
+	}
+	if in.Limit <= 0 || in.Limit > 100 {
+		in.Limit = 20
+	}
+
+	announcements, err := AnnouncementSearch(ctx, s.logger, s.db, in.Query, in.Limit, in.Cursor)
+	if err != nil {
+		s.logger.Error("搜索公告失败", zap.Error(err))
+		return nil, status.Error(codes.Internal, "搜索公告失败")
+	}
+
+	return announcements, nil
+}

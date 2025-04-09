@@ -46,4 +46,17 @@ export class AnnouncementsService {
   deleteAnnouncement(id: string): Observable<void> {
     return this.consoleService.deleteAnnouncement('', id);
   }
+
+  searchAnnouncements(params: {
+    query: string;
+    limit?: number;
+    cursor?: string;
+  }): Observable<AnnouncementList> {
+    return this.consoleService.searchAnnouncements(
+      '',
+      params.query,
+      params.limit,
+      params.cursor
+    );
+  }
 }

@@ -1234,6 +1234,22 @@ export class ConsoleService {
     return this.httpClient.get<AnnouncementList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
+  /** 搜索公告 */
+  searchAnnouncements(auth_token: string, query?: string, limit?: number, cursor?: string): Observable<AnnouncementList> {
+    const urlPath = `/v2/console/announcements/search`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    if (query) {
+      params = params.set('query', query);
+    }
+    if (limit) {
+      params = params.set('limit', String(limit));
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    return this.httpClient.get<AnnouncementList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
   /** API Explorer - list all endpoints */
   listApiEndpoints(auth_token: string): Observable<ApiEndpointList> {
     const urlPath = `/v2/console/api/endpoints`;

@@ -10,3 +10,33 @@
     }
   }
 } 
+
+.dropdown-radius {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.dropdown-toggle-split {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.input-group-text {
+  border-left: 0;
+}
+
+.table {
+  margin-bottom: 0;
+  
+  th {
+    background-color: #f8f9fa;
+  }
+  
+  td {
+    vertical-align: middle;
+  }
+}
+
+.badge {
+  font-size: 85%;
+} 
