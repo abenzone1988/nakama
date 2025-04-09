@@ -2,45 +2,40 @@
 <h6 class="pb-3">总计: {{totalCount}} 条记录</h6>
 
 <div class="row no-gutters mb-4">
-  <div class="col d-flex justify-content-between no-gutters align-items-center">
-    <div class="col-md-9">
-      <div class="input-group">
-        <input type="text" class="form-control border-right-0" 
-               [(ngModel)]="searchQuery" 
-               placeholder="搜索公告标题或内容..."
-               (keyup.enter)="onSearch()">
-        <div class="input-group-append" *ngIf="searchQuery">
-          <span class="input-group-text bg-transparent border-left-0" style="cursor: pointer;" (click)="clearSearch()">
-            <i class="bi bi-x"></i>
-          </span>
-        </div>
-        <div class="input-group-append">
-          <div class="btn-group">
-            <button type="button" class="btn btn-primary dropdown-radius" (click)="onSearch()">搜索</button>
-            <div class="btn-group" ngbDropdown role="group">
-              <button type="button" class="btn btn-primary dropdown-toggle-split" ngbDropdownToggle></button>
-              <div class="dropdown-menu" ngbDropdownMenu>
-                <button type="button" ngbDropdownItem (click)="onStatusFilterChange()" [class.active]="statusFilter === ''">全部状态</button>
-                <button type="button" ngbDropdownItem (click)="statusFilter = '0'; onStatusFilterChange()" [class.active]="statusFilter === '0'">草稿</button>
-                <button type="button" ngbDropdownItem (click)="statusFilter = '1'; onStatusFilterChange()" [class.active]="statusFilter === '1'">已发布</button>
-                <button type="button" ngbDropdownItem (click)="statusFilter = '2'; onStatusFilterChange()" [class.active]="statusFilter === '2'">已下线</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 justify-content-end text-right">
-      <div class="btn-group">
-        <button type="button" class="btn btn-primary" (click)="openModal(announcementModal)">新增公告</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row no-gutters">
   <div class="col">
     <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <!-- 状态筛选 -->
+          <select class="form-select" style="width: 120px;" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()">
+            <option value="">全部状态</option>
+            <option value="0">草稿</option>
+            <option value="1">已发布</option>
+            <option value="2">已下线</option>
+          </select>
+        </div>
+        <div class="d-flex gap-3">
+          <!-- 搜索框 -->
+          <div class="input-group" style="width: 300px;">
+            <input type="text" class="form-control" 
+                   [(ngModel)]="searchQuery" 
+                   placeholder="搜索公告标题或内容..."
+                   (keyup.enter)="onSearch()">
+            <button class="btn btn-outline-secondary" type="button" (click)="clearSearch()"
+                    *ngIf="searchQuery">
+              <i class="bi bi-x"></i> 清除
+            </button>
+            <button class="btn btn-outline-primary" type="button" (click)="onSearch()">
+              <i class="bi bi-search"></i> 搜索
+            </button>
+          </div>
+          <!-- 新增按钮 -->
+          <button class="btn btn-primary" (click)="openModal(announcementModal)">
+            新增公告
+          </button>
+        </div>
+      </div>
+
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-sm table-hover table-bordered mb-0">
