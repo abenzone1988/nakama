@@ -1780,6 +1780,46 @@
         ]
       }
     },
+    "/v2/game/announcements": {
+      "get": {
+        "summary": "List published announcements",
+        "operationId": "Nakama_ListPublishedAnnouncements",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameListPublishedAnnouncementsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "description": "每页数量",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "description": "分页游标",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/feedback": {
       "post": {
         "summary": "User Feedback",
@@ -5682,6 +5722,38 @@
       },
       "description": "Write objects to the storage engine."
     },
+    "gameAnnouncementInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "公告ID"
+        },
+        "title": {
+          "type": "string",
+          "title": "标题"
+        },
+        "content": {
+          "type": "string",
+          "title": "内容"
+        },
+        "img": {
+          "type": "string",
+          "title": "图片URL"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "创建时间"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "更新时间"
+        }
+      },
+      "title": "公告信息"
+    },
     "gameClaimInviteRewardRequest": {
       "type": "object",
       "properties": {
@@ -5724,6 +5796,29 @@
           }
         }
       }
+    },
+    "gameListPublishedAnnouncementsResponse": {
+      "type": "object",
+      "properties": {
+        "announcements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameAnnouncementInfo"
+          },
+          "title": "公告列表"
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数"
+        },
+        "nextCursor": {
+          "type": "string",
+          "title": "下一页游标"
+        }
+      },
+      "title": "获取已发布公告响应"
     },
     "gameRedeemGiftRequest": {
       "type": "object",

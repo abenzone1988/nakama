@@ -130,6 +130,7 @@ const (
 	Nakama_ListInvitee_FullMethodName                       = "/nakama.api.Nakama/ListInvitee"
 	Nakama_ClaimInviteReward_FullMethodName                 = "/nakama.api.Nakama/ClaimInviteReward"
 	Nakama_GetGameTime_FullMethodName                       = "/nakama.api.Nakama/GetGameTime"
+	Nakama_ListPublishedAnnouncements_FullMethodName        = "/nakama.api.Nakama/ListPublishedAnnouncements"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -318,6 +319,8 @@ type NakamaClient interface {
 	ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Get Server Time
 	GetGameTime(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetGameTimeResponse, error)
+	// List published announcements
+	ListPublishedAnnouncements(ctx context.Context, in *game.ListPublishedAnnouncementsRequest, opts ...grpc.CallOption) (*game.ListPublishedAnnouncementsResponse, error)
 }
 
 type nakamaClient struct {
@@ -1147,6 +1150,15 @@ func (c *nakamaClient) GetGameTime(ctx context.Context, in *emptypb.Empty, opts 
 	return out, nil
 }
 
+func (c *nakamaClient) ListPublishedAnnouncements(ctx context.Context, in *game.ListPublishedAnnouncementsRequest, opts ...grpc.CallOption) (*game.ListPublishedAnnouncementsResponse, error) {
+	out := new(game.ListPublishedAnnouncementsResponse)
+	err := c.cc.Invoke(ctx, Nakama_ListPublishedAnnouncements_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1333,6 +1345,8 @@ type NakamaServer interface {
 	ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*emptypb.Empty, error)
 	// Get Server Time
 	GetGameTime(context.Context, *emptypb.Empty) (*game.GetGameTimeResponse, error)
+	// List published announcements
+	ListPublishedAnnouncements(context.Context, *game.ListPublishedAnnouncementsRequest) (*game.ListPublishedAnnouncementsResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1612,6 +1626,9 @@ func (UnimplementedNakamaServer) ClaimInviteReward(context.Context, *game.ClaimI
 }
 func (UnimplementedNakamaServer) GetGameTime(context.Context, *emptypb.Empty) (*game.GetGameTimeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGameTime not implemented")
+}
+func (UnimplementedNakamaServer) ListPublishedAnnouncements(context.Context, *game.ListPublishedAnnouncementsRequest) (*game.ListPublishedAnnouncementsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPublishedAnnouncements not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3264,6 +3281,24 @@ func _Nakama_GetGameTime_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_ListPublishedAnnouncements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ListPublishedAnnouncementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ListPublishedAnnouncements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ListPublishedAnnouncements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ListPublishedAnnouncements(ctx, req.(*game.ListPublishedAnnouncementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3634,6 +3669,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetGameTime",
 			Handler:    _Nakama_GetGameTime_Handler,
+		},
+		{
+			MethodName: "ListPublishedAnnouncements",
+			Handler:    _Nakama_ListPublishedAnnouncements_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
