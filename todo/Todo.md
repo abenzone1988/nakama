@@ -70,3 +70,26 @@
 - [ ] 数据库迁移脚本
 - [ ] 配置更新
 - [ ] 部署文档更新
+
+
+# 系统邮件功能
+## 系统邮件数据结构
+
+`
+CREATE TABLE IF NOT EXISTS system_notification (
+      PRIMARY KEY (id),
+      id SERIAL NOT NULL UNIQUE,
+      subject VARCHAR(255) NOT NULL,
+      content JSONB NOT NULL DEFAULT '{}',
+      code    SMALLINT NOT NULL DEFAULT 0, -- Notification code .
+      create_time TIMESTAMPTZ DEFAULT current_timestamp,
+      effective_time TIMESTAMPTZ,
+      expiry_time TIMESTAMPTZ
+);
+`
+在core_notification.go中添加系统邮件code定义。
+NotificationCodeSystemMail
+
+### 添加core_system_notification.go 添加数据库增删改查接口
+### 添加console_system_notification.go 添加系统邮件api供 console/ui 管理后台页面调用
+### 在console/ui/src中添加管理后台，主要是对系统邮件的增删改查操作。

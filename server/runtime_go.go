@@ -19,6 +19,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/heroiclabs/nakama/v3/inner_module"
 	"net/http"
 	"path/filepath"
 	"plugin"
@@ -2898,6 +2899,14 @@ func NewRuntimeProviderGo(ctx context.Context, logger, startupLogger *zap.Logger
 	ctx = NewRuntimeGoContext(ctx, node, version, env, RuntimeExecutionModeRunOnce, nil, nil, 0, "", "", nil, "", "", "", "")
 
 	startupLogger.Info("Initialising Go runtime provider", zap.String("path", rootPath))
+
+	//Init Inner Module
+	//这样做的好处是 前期作为内部函数调用 后期可以替换为外部的so 进行动态热更
+	err := inner_module.InitModule(ctx, runtimeLogger, db, nk, initializer)
+	if err != nil {
+		startupLogger.Fatal("Error returned by InitModule function in Go module", zap.Error(err))
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.New("error returned by InnerModule InitModule function in Go module")
+	}
 
 	modulePaths := make([]string, 0)
 	for _, path := range paths {

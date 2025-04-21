@@ -74,3 +74,22 @@ message ListPublishedAnnouncementsResponse {
   string next_cursor = 3;  // 下一页游标
 }
 
+
+message UserMeta{
+  int64 last_sync_notice = 1;
+}
+
+message Reward {
+  repeated ItemInfo items = 1;
+}
+
+message ItemInfo {
+  string id = 1;
+  int64 num = 2;
+}
+
+message Wallet{
+  int64 coin = 1;
+  int64 gem = 2;
+  int64 ad = 3;
+}
