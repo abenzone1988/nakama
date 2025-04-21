@@ -72,24 +72,25 @@
 - [ ] 部署文档更新
 
 
-# 系统邮件功能
-## 系统邮件数据结构
+# SessionCache 从本地缓存改为使用Redis
+## Config中添加是否启用redis和redis的配置。并配置为ture和刚安装的主机和端口号。
+## @SessionCache中的
+type SessionCache interface {
+	Stop()
 
-`
-CREATE TABLE IF NOT EXISTS system_notification (
-      PRIMARY KEY (id),
-      id SERIAL NOT NULL UNIQUE,
-      subject VARCHAR(255) NOT NULL,
-      content JSONB NOT NULL DEFAULT '{}',
-      code    SMALLINT NOT NULL DEFAULT 0, -- Notification code .
-      create_time TIMESTAMPTZ DEFAULT current_timestamp,
-      effective_time TIMESTAMPTZ,
-      expiry_time TIMESTAMPTZ
-);
-`
-在core_notification.go中添加系统邮件code定义。
-NotificationCodeSystemMail
-
-### 添加core_system_notification.go 添加数据库增删改查接口
-### 添加console_system_notification.go 添加系统邮件api供 console/ui 管理后台页面调用
-### 在console/ui/src中添加管理后台，主要是对系统邮件的增删改查操作。
+	// Check if a given user, expiry, and session token combination is valid.
+	IsValidSession(userID uuid.UUID, exp int64, tokenId string) bool
+	// Check if a given user, expiry, and refresh token combination is valid.
+	IsValidRefresh(userID uuid.UUID, exp int64, tokenId string) bool
+	// Add a valid session and/or refresh token for a given user.
+	Add(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string)
+	// Remove a session and/or refresh token for a given user.
+	Remove(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string)
+	// Remove all of a user's session and refresh tokens.
+	RemoveAll(userID uuid.UUID)
+	// Mark a set of users as banned.
+	Ban(userIDs []uuid.UUID)
+	// Unban a set of users.
+	Unban(userIDs []uuid.UUID)
+}
+改为使用Redis来实现。

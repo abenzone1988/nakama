@@ -747,6 +747,9 @@ type SessionConfig struct {
 	SingleMatch           bool   `yaml:"single_match" json:"single_match" usage:"Only allow one match per user. Older matches receive a leave. Requires single socket to enable. Default false."`
 	SingleParty           bool   `yaml:"single_party" json:"single_party" usage:"Only allow one party per user. Older parties receive a leave. Requires single socket to enable. Default false."`
 	SingleSession         bool   `yaml:"single_session" json:"single_session" usage:"Only allow one session token per user. Older session tokens are invalidated in the session cache. Default false."`
+	UseRedis              bool   `yaml:"use_redis" json:"use_redis" usage:"Use Redis for session cache instead of local cache. Default false."`
+	RedisAddress          string `yaml:"redis_address" json:"redis_address" usage:"Redis server address for session cache."`
+	RedisPassword         string `yaml:"redis_password" json:"redis_password" usage:"Redis server password for session cache."`
 }
 
 func (cfg *SessionConfig) GetEncryptionKey() string {

@@ -176,7 +176,21 @@ func main() {
 	// Start up server components.
 	metrics := server.NewLocalMetrics(logger, startupLogger, db, config)
 	sessionRegistry := server.NewLocalSessionRegistry(metrics)
-	sessionCache := server.NewLocalSessionCache(config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
+
+	var sessionCache server.SessionCache
+	if config.GetSession().UseRedis {
+		sessionCache = server.NewRedisSessionCache(
+			logger,
+			config.GetSession().RedisAddress,
+			config.GetSession().RedisPassword,
+			config.GetSession().TokenExpirySec,
+			config.GetSession().RefreshTokenExpirySec,
+			config.GetSession().SingleSession,
+		)
+	} else {
+		sessionCache = server.NewLocalSessionCache(config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
+	}
+
 	consoleSessionCache := server.NewLocalSessionCache(config.GetConsole().TokenExpirySec, 0)
 	loginAttemptCache := server.NewLocalLoginAttemptCache()
 	statusRegistry := server.NewLocalStatusRegistry(logger, config, sessionRegistry, jsonpbMarshaler)
