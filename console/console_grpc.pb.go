@@ -113,6 +113,11 @@ const (
 	Console_ListAnnouncements_FullMethodName         = "/nakama.console.Console/ListAnnouncements"
 	Console_GetAnnouncement_FullMethodName           = "/nakama.console.Console/GetAnnouncement"
 	Console_SearchAnnouncements_FullMethodName       = "/nakama.console.Console/SearchAnnouncements"
+	Console_ListSystemNotifications_FullMethodName   = "/nakama.console.Console/ListSystemNotifications"
+	Console_CreateSystemNotification_FullMethodName  = "/nakama.console.Console/CreateSystemNotification"
+	Console_UpdateSystemNotification_FullMethodName  = "/nakama.console.Console/UpdateSystemNotification"
+	Console_GetSystemNotification_FullMethodName     = "/nakama.console.Console/GetSystemNotification"
+	Console_DeleteSystemNotification_FullMethodName  = "/nakama.console.Console/DeleteSystemNotification"
 )
 
 // ConsoleClient is the client API for Console service.
@@ -257,18 +262,28 @@ type ConsoleClient interface {
 	UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Write a new storage object or replace an existing one.
 	WriteStorageObject(ctx context.Context, in *WriteStorageObjectRequest, opts ...grpc.CallOption) (*api.StorageObjectAck, error)
-	// 创建公告
+	// Create announcement
 	CreateAnnouncement(ctx context.Context, in *CreateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error)
-	// 更新公告
+	// Update announcement
 	UpdateAnnouncement(ctx context.Context, in *UpdateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error)
-	// 删除公告
+	// Delete announcement
 	DeleteAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// 获取公告列表
+	// List announcements
 	ListAnnouncements(ctx context.Context, in *ListAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
-	// 获取单个公告
+	// Get single announcement
 	GetAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*Announcement, error)
-	// 搜索公告
+	// Search announcements
 	SearchAnnouncements(ctx context.Context, in *SearchAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
+	// List system notifications
+	ListSystemNotifications(ctx context.Context, in *ListSystemNoticeRequest, opts ...grpc.CallOption) (*ListSystemNoticeResponse, error)
+	// Create system notification
+	CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Update system notification
+	UpdateSystemNotification(ctx context.Context, in *SystemNotice, opts ...grpc.CallOption) (*SystemNotice, error)
+	// Get single system notification
+	GetSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*SystemNotice, error)
+	// Delete system notification
+	DeleteSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type consoleClient struct {
@@ -954,6 +969,51 @@ func (c *consoleClient) SearchAnnouncements(ctx context.Context, in *SearchAnnou
 	return out, nil
 }
 
+func (c *consoleClient) ListSystemNotifications(ctx context.Context, in *ListSystemNoticeRequest, opts ...grpc.CallOption) (*ListSystemNoticeResponse, error) {
+	out := new(ListSystemNoticeResponse)
+	err := c.cc.Invoke(ctx, Console_ListSystemNotifications_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_CreateSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) UpdateSystemNotification(ctx context.Context, in *SystemNotice, opts ...grpc.CallOption) (*SystemNotice, error) {
+	out := new(SystemNotice)
+	err := c.cc.Invoke(ctx, Console_UpdateSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*SystemNotice, error) {
+	out := new(SystemNotice)
+	err := c.cc.Invoke(ctx, Console_GetSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) DeleteSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_DeleteSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConsoleServer is the server API for Console service.
 // All implementations must embed UnimplementedConsoleServer
 // for forward compatibility
@@ -1096,18 +1156,28 @@ type ConsoleServer interface {
 	UpdateGroup(context.Context, *UpdateGroupRequest) (*emptypb.Empty, error)
 	// Write a new storage object or replace an existing one.
 	WriteStorageObject(context.Context, *WriteStorageObjectRequest) (*api.StorageObjectAck, error)
-	// 创建公告
+	// Create announcement
 	CreateAnnouncement(context.Context, *CreateAnnouncementRequest) (*Announcement, error)
-	// 更新公告
+	// Update announcement
 	UpdateAnnouncement(context.Context, *UpdateAnnouncementRequest) (*Announcement, error)
-	// 删除公告
+	// Delete announcement
 	DeleteAnnouncement(context.Context, *AnnouncementId) (*emptypb.Empty, error)
-	// 获取公告列表
+	// List announcements
 	ListAnnouncements(context.Context, *ListAnnouncementsRequest) (*AnnouncementList, error)
-	// 获取单个公告
+	// Get single announcement
 	GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error)
-	// 搜索公告
+	// Search announcements
 	SearchAnnouncements(context.Context, *SearchAnnouncementsRequest) (*AnnouncementList, error)
+	// List system notifications
+	ListSystemNotifications(context.Context, *ListSystemNoticeRequest) (*ListSystemNoticeResponse, error)
+	// Create system notification
+	CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*emptypb.Empty, error)
+	// Update system notification
+	UpdateSystemNotification(context.Context, *SystemNotice) (*SystemNotice, error)
+	// Get single system notification
+	GetSystemNotification(context.Context, *SystemNotificationId) (*SystemNotice, error)
+	// Delete system notification
+	DeleteSystemNotification(context.Context, *SystemNotificationId) (*emptypb.Empty, error)
 	mustEmbedUnimplementedConsoleServer()
 }
 
@@ -1339,6 +1409,21 @@ func (UnimplementedConsoleServer) GetAnnouncement(context.Context, *Announcement
 }
 func (UnimplementedConsoleServer) SearchAnnouncements(context.Context, *SearchAnnouncementsRequest) (*AnnouncementList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchAnnouncements not implemented")
+}
+func (UnimplementedConsoleServer) ListSystemNotifications(context.Context, *ListSystemNoticeRequest) (*ListSystemNoticeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSystemNotifications not implemented")
+}
+func (UnimplementedConsoleServer) CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSystemNotification not implemented")
+}
+func (UnimplementedConsoleServer) UpdateSystemNotification(context.Context, *SystemNotice) (*SystemNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSystemNotification not implemented")
+}
+func (UnimplementedConsoleServer) GetSystemNotification(context.Context, *SystemNotificationId) (*SystemNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSystemNotification not implemented")
+}
+func (UnimplementedConsoleServer) DeleteSystemNotification(context.Context, *SystemNotificationId) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSystemNotification not implemented")
 }
 func (UnimplementedConsoleServer) mustEmbedUnimplementedConsoleServer() {}
 
@@ -2703,6 +2788,96 @@ func _Console_SearchAnnouncements_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_ListSystemNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSystemNoticeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListSystemNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListSystemNotifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListSystemNotifications(ctx, req.(*ListSystemNoticeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_CreateSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSystemNotificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CreateSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CreateSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CreateSystemNotification(ctx, req.(*CreateSystemNotificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_UpdateSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemNotice)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).UpdateSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_UpdateSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).UpdateSystemNotification(ctx, req.(*SystemNotice))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemNotificationId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetSystemNotification(ctx, req.(*SystemNotificationId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_DeleteSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemNotificationId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_DeleteSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteSystemNotification(ctx, req.(*SystemNotificationId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Console_ServiceDesc is the grpc.ServiceDesc for Console service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3009,6 +3184,26 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SearchAnnouncements",
 			Handler:    _Console_SearchAnnouncements_Handler,
+		},
+		{
+			MethodName: "ListSystemNotifications",
+			Handler:    _Console_ListSystemNotifications_Handler,
+		},
+		{
+			MethodName: "CreateSystemNotification",
+			Handler:    _Console_CreateSystemNotification_Handler,
+		},
+		{
+			MethodName: "UpdateSystemNotification",
+			Handler:    _Console_UpdateSystemNotification_Handler,
+		},
+		{
+			MethodName: "GetSystemNotification",
+			Handler:    _Console_GetSystemNotification_Handler,
+		},
+		{
+			MethodName: "DeleteSystemNotification",
+			Handler:    _Console_DeleteSystemNotification_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

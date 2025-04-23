@@ -830,4 +830,44 @@ service Nakama {
   rpc ListPublishedAnnouncements (game.ListPublishedAnnouncementsRequest) returns (game.ListPublishedAnnouncementsResponse) {
     option (google.api.http).get = "/v2/game/announcements";
   }
+
+  // Mark notifications as read
+  rpc MarkNotificationsRead(MarkNotificationsReadRequest) returns (MarkNotificationsReadResponse) {
+    option (google.api.http) = {
+      post: "/v2/notification/read"
+      body: "*"
+    };
+  }
+
+  // Claim notification attachments
+  rpc ClaimNotificationAttachments(ClaimNotificationAttachmentsRequest) returns (ClaimNotificationAttachmentsResponse) {
+    option (google.api.http) = {
+      post: "/v2/notification/claim"
+      body: "*"
+    };
+  }
+}
+
+// Mark notifications as read
+message MarkNotificationsReadRequest {
+  // The ids of notifications to mark as read
+  repeated string ids = 1;
+}
+
+// Mark notifications as read response
+message MarkNotificationsReadResponse {
+  // Number of notifications marked as read
+  int32 marked_count = 1;
+}
+
+// Claim notification attachments
+message ClaimNotificationAttachmentsRequest {
+  // The ids of notifications to claim attachments from
+  repeated string ids = 1;
+}
+
+// Claim notification attachments response 
+message ClaimNotificationAttachmentsResponse {
+  // Number of attachments claimed
+  int32 claimed_count = 1;
 }

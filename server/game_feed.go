@@ -260,6 +260,18 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		return nil, err
 	}
 
+	// 如果时间戳为空，直接判断体力值
+	if staminaData.UpdateTimestamp == "" {
+		if staminaData.Stamina >= 30 {
+			scenes = append(scenes, &Scene{
+				Scene:      SceneStaminaFull,
+				ContentIDs: []string{ContentStaminaFull},
+				Extra:      "",
+			})
+		}
+		return scenes, nil
+	}
+
 	// 解析updateTimestamp
 	updateTime, err := parseTime(staminaData.UpdateTimestamp)
 	if err != nil {

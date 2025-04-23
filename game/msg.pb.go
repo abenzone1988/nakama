@@ -685,102 +685,6 @@ func (x *UserMeta) GetLastSyncNotice() int64 {
 	return 0
 }
 
-type Reward struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*ItemInfo            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Reward) Reset() {
-	*x = Reward{}
-	mi := &file_msg_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Reward) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Reward) ProtoMessage() {}
-
-func (x *Reward) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Reward.ProtoReflect.Descriptor instead.
-func (*Reward) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *Reward) GetItems() []*ItemInfo {
-	if x != nil {
-		return x.Items
-	}
-	return nil
-}
-
-type ItemInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Num           int64                  `protobuf:"varint,2,opt,name=num,proto3" json:"num,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ItemInfo) Reset() {
-	*x = ItemInfo{}
-	mi := &file_msg_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ItemInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ItemInfo) ProtoMessage() {}
-
-func (x *ItemInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ItemInfo.ProtoReflect.Descriptor instead.
-func (*ItemInfo) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *ItemInfo) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *ItemInfo) GetNum() int64 {
-	if x != nil {
-		return x.Num
-	}
-	return 0
-}
-
 type Wallet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Coin          int64                  `protobuf:"varint,1,opt,name=coin,proto3" json:"coin,omitempty"`
@@ -792,7 +696,7 @@ type Wallet struct {
 
 func (x *Wallet) Reset() {
 	*x = Wallet{}
-	mi := &file_msg_proto_msgTypes[15]
+	mi := &file_msg_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -804,7 +708,7 @@ func (x *Wallet) String() string {
 func (*Wallet) ProtoMessage() {}
 
 func (x *Wallet) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[15]
+	mi := &file_msg_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -817,7 +721,7 @@ func (x *Wallet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Wallet.ProtoReflect.Descriptor instead.
 func (*Wallet) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{15}
+	return file_msg_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Wallet) GetCoin() int64 {
@@ -837,6 +741,59 @@ func (x *Wallet) GetGem() int64 {
 func (x *Wallet) GetAd() int64 {
 	if x != nil {
 		return x.Ad
+	}
+	return 0
+}
+
+// Game Item
+type Item struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Num           int64                  `protobuf:"varint,2,opt,name=num,proto3" json:"num,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Item) Reset() {
+	*x = Item{}
+	mi := &file_msg_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Item) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Item) ProtoMessage() {}
+
+func (x *Item) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Item.ProtoReflect.Descriptor instead.
+func (*Item) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *Item) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Item) GetNum() int64 {
+	if x != nil {
+		return x.Num
 	}
 	return 0
 }
@@ -916,23 +873,19 @@ var file_msg_proto_rawDesc = string([]byte{
 	0x34, 0x0a, 0x08, 0x55, 0x73, 0x65, 0x72, 0x4d, 0x65, 0x74, 0x61, 0x12, 0x28, 0x0a, 0x10, 0x6c,
 	0x61, 0x73, 0x74, 0x5f, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x6e, 0x6f, 0x74, 0x69, 0x63, 0x65, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0e, 0x6c, 0x61, 0x73, 0x74, 0x53, 0x79, 0x6e, 0x63, 0x4e,
-	0x6f, 0x74, 0x69, 0x63, 0x65, 0x22, 0x2e, 0x0a, 0x06, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x12,
-	0x24, 0x0a, 0x05, 0x69, 0x74, 0x65, 0x6d, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0e,
-	0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x49, 0x74, 0x65, 0x6d, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x05,
-	0x69, 0x74, 0x65, 0x6d, 0x73, 0x22, 0x2c, 0x0a, 0x08, 0x49, 0x74, 0x65, 0x6d, 0x49, 0x6e, 0x66,
-	0x6f, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69,
-	0x64, 0x12, 0x10, 0x0a, 0x03, 0x6e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03,
-	0x6e, 0x75, 0x6d, 0x22, 0x3e, 0x0a, 0x06, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0x12, 0x0a,
-	0x04, 0x63, 0x6f, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x04, 0x63, 0x6f, 0x69,
-	0x6e, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x65, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03,
-	0x67, 0x65, 0x6d, 0x12, 0x0e, 0x0a, 0x02, 0x61, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52,
-	0x02, 0x61, 0x64, 0x42, 0x54, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x68, 0x75, 0x6f, 0x68, 0x75,
-	0x61, 0x6a, 0x69, 0x2e, 0x73, 0x74, 0x61, 0x72, 0x42, 0x07, 0x47, 0x61, 0x6d, 0x65, 0x4d, 0x73,
-	0x67, 0x50, 0x01, 0x5a, 0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b, 0x61, 0x6d,
-	0x61, 0x2f, 0x76, 0x33, 0x2f, 0x67, 0x61, 0x6d, 0x65, 0xaa, 0x02, 0x0d, 0x47, 0x61, 0x6d, 0x65,
-	0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x6f, 0x74, 0x69, 0x63, 0x65, 0x22, 0x3e, 0x0a, 0x06, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x04, 0x63,
+	0x6f, 0x69, 0x6e, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x65, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x03, 0x67, 0x65, 0x6d, 0x12, 0x0e, 0x0a, 0x02, 0x61, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x03, 0x52, 0x02, 0x61, 0x64, 0x22, 0x28, 0x0a, 0x04, 0x49, 0x74, 0x65, 0x6d, 0x12, 0x0e, 0x0a,
+	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x10, 0x0a,
+	0x03, 0x6e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x6e, 0x75, 0x6d, 0x42,
+	0x54, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x68, 0x75, 0x6f, 0x68, 0x75, 0x61, 0x6a, 0x69, 0x2e,
+	0x73, 0x74, 0x61, 0x72, 0x42, 0x07, 0x47, 0x61, 0x6d, 0x65, 0x4d, 0x73, 0x67, 0x50, 0x01, 0x5a,
+	0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f,
+	0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2f, 0x76, 0x33,
+	0x2f, 0x67, 0x61, 0x6d, 0x65, 0xaa, 0x02, 0x0d, 0x47, 0x61, 0x6d, 0x65, 0x2e, 0x50, 0x72, 0x6f,
+	0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -947,7 +900,7 @@ func file_msg_proto_rawDescGZIP() []byte {
 	return file_msg_proto_rawDescData
 }
 
-var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_msg_proto_goTypes = []any{
 	(*RedeemGiftRequest)(nil),                  // 0: game.RedeemGiftRequest
 	(*RedeemGiftResponse)(nil),                 // 1: game.RedeemGiftResponse
@@ -962,22 +915,20 @@ var file_msg_proto_goTypes = []any{
 	(*AnnouncementInfo)(nil),                   // 10: game.AnnouncementInfo
 	(*ListPublishedAnnouncementsResponse)(nil), // 11: game.ListPublishedAnnouncementsResponse
 	(*UserMeta)(nil),                           // 12: game.UserMeta
-	(*Reward)(nil),                             // 13: game.Reward
-	(*ItemInfo)(nil),                           // 14: game.ItemInfo
-	(*Wallet)(nil),                             // 15: game.Wallet
-	(*timestamppb.Timestamp)(nil),              // 16: google.protobuf.Timestamp
+	(*Wallet)(nil),                             // 13: game.Wallet
+	(*Item)(nil),                               // 14: game.Item
+	(*timestamppb.Timestamp)(nil),              // 15: google.protobuf.Timestamp
 }
 var file_msg_proto_depIdxs = []int32{
-	16, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
-	16, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
-	16, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
+	15, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
+	15, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
+	15, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
 	10, // 3: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
-	14, // 4: game.Reward.items:type_name -> game.ItemInfo
-	5,  // [5:5] is the sub-list for method output_type
-	5,  // [5:5] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	4,  // [4:4] is the sub-list for method output_type
+	4,  // [4:4] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_msg_proto_init() }
@@ -991,7 +942,7 @@ func file_msg_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_msg_proto_rawDesc), len(file_msg_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

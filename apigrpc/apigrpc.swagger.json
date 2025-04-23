@@ -4852,6 +4852,16 @@
         "persistent": {
           "type": "boolean",
           "description": "True if this notification was persisted to the database."
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Status of notification 0 unread, 1 read. 2 attachment recived."
+        },
+        "expiryTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired."
         }
       },
       "description": "A notification in the server."

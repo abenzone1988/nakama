@@ -66,28 +66,28 @@ export interface AddUserRequest {
 }
 
 export interface Announcement {
-  // 公告内容
+  // Announcement content
   content?:string
-  // 发布时间
+  // Creation time
   create_time?:string
-  // 公告ID
+  // Announcement ID
   id?:string
-  // 图片URL
+  // Image URL
   img?:string
-  // 状态 0:草稿 1:已发布 2:已下线
+  // Status 0:draft 1:published 2:offline
   status?:number
-  // 公告标题
+  // Announcement title
   title?:string
-  // 更新时间
+  // Update time
   update_time?:string
 }
 
 export interface AnnouncementList {
-  // 公告列表
+  // Announcement list
   announcements?:Array<Announcement>
-  // 下一页游标
+  // Next page cursor
   next_cursor?:string
-  // 总数
+  // Total count
   total_count?:number
 }
 
@@ -175,14 +175,23 @@ export interface ConsoleSession {
 }
 
 export interface CreateAnnouncementRequest {
-  // 公告内容
+  // Announcement content
   content?:string
-  // 图片URL
+  // Image URL
   img?:string
-  // 状态 0:草稿 1:已发布 2:已下线
+  // Status 0:draft 1:published 2:offline
   status?:number
-  // 公告标题
+  // Announcement title
   title?:string
+}
+
+export interface CreateSystemNotificationRequest {
+  // Notification content
+  notice?:SystemNotice
+  // Target user ID list
+  target?:Array<string>
+  // Type 0:all users 1:specific users
+  type?:number
 }
 
 export interface DeleteChannelMessagesResponse {
@@ -281,6 +290,17 @@ export enum ListChannelMessagesRequestType {
   DIRECT = 3,
 }
 
+export interface ListSystemNoticeResponse {
+  // Next page cursor
+  next_cursor?:string
+  // Notification list
+  notifications?:Array<SystemNotice>
+  // Previous page cursor
+  prev_cursor?:string
+  // Total count
+  total_count?:number
+}
+
 /** A list of realtime matches, with their node names. */
 export interface MatchList {
   matches?:Array<MatchListMatch>
@@ -302,6 +322,13 @@ export interface MatchState {
   tick?:string
 }
 
+export interface NoticeContent {
+  // Notification description
+  description?:string
+  // Reward items
+  rewards?:GameItem
+}
+
 export interface Notification {
   // Category code for this notification.
   code?:number
@@ -309,12 +336,16 @@ export interface Notification {
   content?:string
   // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was created.
   create_time?:string
+  // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired.
+  expiry_time?:string
   // ID of the Notification.
   id?:string
   // True if this notification was persisted to the database.
   persistent?:boolean
   // ID of the sender, if a user. Otherwise 'null'.
   sender_id?:string
+  // Status of notification 0 unread, 1 read. 2 attachment recived.
+  status?:number
   // Subject of the notification.
   subject?:string
   // User id.
@@ -431,6 +462,23 @@ export interface StorageListObject {
   version?:string
 }
 
+export interface SystemNotice {
+  // Status code
+  code?:number
+  // Notification content
+  content?:NoticeContent
+  // Creation time
+  create?:string
+  // Effective time
+  effective?:string
+  // Expiry time
+  expiry?:string
+  // Notification ID
+  id?:string
+  // Notification subject
+  subject?:string
+}
+
 export interface UnlinkDeviceRequest {
   // Device ID to unlink.
   device_id?:string
@@ -464,13 +512,13 @@ export interface UpdateAccountRequest {
 }
 
 export interface UpdateAnnouncementRequest {
-  // 公告内容
+  // Announcement content
   content?:string
-  // 图片URL
+  // Image URL
   img?:string
-  // 状态 0:草稿 1:已发布 2:已下线
+  // Status 0:draft 1:published 2:offline
   status?:number
-  // 公告标题
+  // Announcement title
   title?:string
 }
 
@@ -489,6 +537,21 @@ export interface UpdateGroupRequest {
   name?:string
   // Anyone can join open groups, otherwise only admins can accept members.
   open?:boolean
+}
+
+export interface UpdateSystemNotificationRequest {
+  // Status code
+  code?:number
+  // Notification content
+  content?:NoticeContent
+  // Creation time
+  create?:string
+  // Effective time
+  effective?:string
+  // Expiry time
+  expiry?:string
+  // Notification subject
+  subject?:string
 }
 
 /** A single group-role pair. */
@@ -757,12 +820,16 @@ export interface ApiNotification {
   content?:string
   // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was created.
   create_time?:string
+  // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired.
+  expiry_time?:string
   // ID of the Notification.
   id?:string
   // True if this notification was persisted to the database.
   persistent?:boolean
   // ID of the sender, if a user. Otherwise 'null'.
   sender_id?:string
+  // Status of notification 0 unread, 1 read. 2 attachment recived.
+  status?:number
   // Subject of the notification.
   subject?:string
 }
@@ -941,6 +1008,11 @@ export interface ApiValidatedSubscription {
   update_time?:string
   // Subscription User ID.
   user_id?:string
+}
+
+export interface GameItem {
+  id?:string
+  num?:string
 }
 
 /** A user session associated to a stream, usually through a list operation or a join/leave event. */
@@ -1187,14 +1259,14 @@ export class ConsoleService {
     return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
-  /** 创建公告 */
+  /** Create announcement */
   createAnnouncement(auth_token: string, body: CreateAnnouncementRequest): Observable<Announcement> {
     const urlPath = `/v2/console/announcement`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
     return this.httpClient.post<Announcement>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
-  /** 删除公告 */
+  /** Delete announcement */
   deleteAnnouncement(auth_token: string, id: string): Observable<any> {
     id = encodeURIComponent(String(id))
     const urlPath = `/v2/console/announcement/${id}`;
@@ -1202,7 +1274,7 @@ export class ConsoleService {
     return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
-  /** 获取单个公告 */
+  /** Get single announcement */
   getAnnouncement(auth_token: string, id: string): Observable<Announcement> {
     id = encodeURIComponent(String(id))
     const urlPath = `/v2/console/announcement/${id}`;
@@ -1210,7 +1282,7 @@ export class ConsoleService {
     return this.httpClient.get<Announcement>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
-  /** 更新公告 */
+  /** Update announcement */
   updateAnnouncement(auth_token: string, id: string, body: UpdateAnnouncementRequest): Observable<Announcement> {
     id = encodeURIComponent(String(id))
     const urlPath = `/v2/console/announcement/${id}`;
@@ -1218,7 +1290,7 @@ export class ConsoleService {
     return this.httpClient.put<Announcement>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
-  /** 获取公告列表 */
+  /** List announcements */
   listAnnouncements(auth_token: string, status?: number, limit?: number, cursor?: string): Observable<AnnouncementList> {
     const urlPath = `/v2/console/announcements`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1234,7 +1306,7 @@ export class ConsoleService {
     return this.httpClient.get<AnnouncementList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
-  /** 搜索公告 */
+  /** Search announcements */
   searchAnnouncements(auth_token: string, query?: string, limit?: number, cursor?: string): Observable<AnnouncementList> {
     const urlPath = `/v2/console/announcements/search`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1681,6 +1753,53 @@ export class ConsoleService {
       params = params.set('cursor', cursor);
     }
     return this.httpClient.get<ApiSubscriptionList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Create system notification */
+  createSystemNotification(auth_token: string, body: CreateSystemNotificationRequest): Observable<any> {
+    const urlPath = `/v2/console/system_notification`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.post(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Delete system notification */
+  deleteSystemNotification(auth_token: string, id: string): Observable<any> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/system_notification/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Get single system notification */
+  getSystemNotification(auth_token: string, id: string): Observable<SystemNotice> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/system_notification/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.get<SystemNotice>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Update system notification */
+  updateSystemNotification(auth_token: string, id: string, body: UpdateSystemNotificationRequest): Observable<SystemNotice> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/system_notification/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.put<SystemNotice>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** List system notifications */
+  listSystemNotifications(auth_token: string, filter?: string, cursor?: string, limit?: number): Observable<ListSystemNoticeResponse> {
+    const urlPath = `/v2/console/system_notifications`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    if (filter) {
+      params = params.set('filter', filter);
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    if (limit) {
+      params = params.set('limit', String(limit));
+    }
+    return this.httpClient.get<ListSystemNoticeResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   /** Delete console user. */

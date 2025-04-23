@@ -79,17 +79,15 @@ message UserMeta{
   int64 last_sync_notice = 1;
 }
 
-message Reward {
-  repeated ItemInfo items = 1;
-}
-
-message ItemInfo {
-  string id = 1;
-  int64 num = 2;
-}
-
 message Wallet{
   int64 coin = 1;
   int64 gem = 2;
   int64 ad = 3;
 }
+
+// Game Item
+message Item {
+  string id = 1;
+  int64 num = 2;
+}
+

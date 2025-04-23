@@ -148,6 +148,13 @@ var restrictedMethods = map[string]console.UserRole{
 	"/nakama.console.Console/DeleteAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
 	"/nakama.console.Console/GetAnnouncement":    console.UserRole_USER_ROLE_READONLY,
 	"/nakama.console.Console/ListAnnouncements":  console.UserRole_USER_ROLE_READONLY,
+
+	// System Notification
+	"/nakama.console.Console/CreateSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/UpdateSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/DeleteSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/GetSystemNotification":    console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/ListSystemNotifications":  console.UserRole_USER_ROLE_READONLY,
 }
 
 type ctxConsoleIdKey struct{}

@@ -923,7 +923,7 @@
     },
     "/v2/console/announcement": {
       "post": {
-        "summary": "创建公告",
+        "summary": "Create announcement",
         "operationId": "Console_CreateAnnouncement",
         "responses": {
           "200": {
@@ -956,7 +956,7 @@
     },
     "/v2/console/announcement/{id}": {
       "get": {
-        "summary": "获取单个公告",
+        "summary": "Get single announcement",
         "operationId": "Console_GetAnnouncement",
         "responses": {
           "200": {
@@ -985,7 +985,7 @@
         ]
       },
       "delete": {
-        "summary": "删除公告",
+        "summary": "Delete announcement",
         "operationId": "Console_DeleteAnnouncement",
         "responses": {
           "200": {
@@ -1015,7 +1015,7 @@
         ]
       },
       "put": {
-        "summary": "更新公告",
+        "summary": "Update announcement",
         "operationId": "Console_UpdateAnnouncement",
         "responses": {
           "200": {
@@ -1034,7 +1034,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "公告ID",
+            "description": "Announcement ID",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1048,20 +1048,20 @@
               "properties": {
                 "title": {
                   "type": "string",
-                  "title": "公告标题"
+                  "title": "Announcement title"
                 },
                 "content": {
                   "type": "string",
-                  "title": "公告内容"
+                  "title": "Announcement content"
                 },
                 "img": {
                   "type": "string",
-                  "title": "图片URL"
+                  "title": "Image URL"
                 },
                 "status": {
                   "type": "integer",
                   "format": "int32",
-                  "title": "状态 0:草稿 1:已发布 2:已下线"
+                  "title": "Status 0:draft 1:published 2:offline"
                 }
               }
             }
@@ -1074,7 +1074,7 @@
     },
     "/v2/console/announcements": {
       "get": {
-        "summary": "获取公告列表",
+        "summary": "List announcements",
         "operationId": "Console_ListAnnouncements",
         "responses": {
           "200": {
@@ -1093,7 +1093,7 @@
         "parameters": [
           {
             "name": "status",
-            "description": "状态过滤 -1:全部 0:草稿 1:已发布 2:已下线",
+            "description": "Status filter -1:all 0:draft 1:published 2:offline",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1101,7 +1101,7 @@
           },
           {
             "name": "limit",
-            "description": "每页数量",
+            "description": "Items per page",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1109,7 +1109,7 @@
           },
           {
             "name": "cursor",
-            "description": "游标",
+            "description": "Cursor",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1122,7 +1122,7 @@
     },
     "/v2/console/announcements/search": {
       "get": {
-        "summary": "搜索公告",
+        "summary": "Search announcements",
         "operationId": "Console_SearchAnnouncements",
         "responses": {
           "200": {
@@ -1141,14 +1141,14 @@
         "parameters": [
           {
             "name": "query",
-            "description": "搜索关键词",
+            "description": "Search keyword",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "limit",
-            "description": "每页数量",
+            "description": "Items per page",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1156,7 +1156,7 @@
           },
           {
             "name": "cursor",
-            "description": "游标",
+            "description": "Cursor",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2869,6 +2869,219 @@
         ]
       }
     },
+    "/v2/console/system_notification": {
+      "post": {
+        "summary": "Create system notification",
+        "operationId": "Console_CreateSystemNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/consoleCreateSystemNotificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/system_notification/{id}": {
+      "get": {
+        "summary": "Get single system notification",
+        "operationId": "Console_GetSystemNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleSystemNotice"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Notification ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      },
+      "delete": {
+        "summary": "Delete system notification",
+        "operationId": "Console_DeleteSystemNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Notification ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      },
+      "put": {
+        "summary": "Update system notification",
+        "operationId": "Console_UpdateSystemNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleSystemNotice"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Notification ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "subject": {
+                  "type": "string",
+                  "title": "Notification subject"
+                },
+                "content": {
+                  "$ref": "#/definitions/consoleNoticeContent",
+                  "title": "Notification content"
+                },
+                "create": {
+                  "type": "string",
+                  "format": "date-time",
+                  "title": "Creation time"
+                },
+                "effective": {
+                  "type": "string",
+                  "format": "date-time",
+                  "title": "Effective time"
+                },
+                "expiry": {
+                  "type": "string",
+                  "format": "date-time",
+                  "title": "Expiry time"
+                },
+                "code": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Status code"
+                }
+              },
+              "title": "System notification message definition"
+            }
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/system_notifications": {
+      "get": {
+        "summary": "List system notifications",
+        "operationId": "Console_ListSystemNotifications",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleListSystemNoticeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "filter",
+            "description": "Filter condition",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "description": "Cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "Items per page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/user": {
       "get": {
         "summary": "List (and optionally filter) users.",
@@ -3819,37 +4032,37 @@
       "properties": {
         "id": {
           "type": "string",
-          "title": "公告ID"
+          "title": "Announcement ID"
         },
         "title": {
           "type": "string",
-          "title": "公告标题"
+          "title": "Announcement title"
         },
         "content": {
           "type": "string",
-          "title": "公告内容"
+          "title": "Announcement content"
         },
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "title": "发布时间"
+          "title": "Creation time"
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "title": "更新时间"
+          "title": "Update time"
         },
         "img": {
           "type": "string",
-          "title": "图片URL"
+          "title": "Image URL"
         },
         "status": {
           "type": "integer",
           "format": "int32",
-          "title": "状态 0:草稿 1:已发布 2:已下线"
+          "title": "Status 0:draft 1:published 2:offline"
         }
       },
-      "title": "公告消息体定义"
+      "title": "Announcement message definition"
     },
     "consoleAnnouncementList": {
       "type": "object",
@@ -3860,16 +4073,16 @@
             "type": "object",
             "$ref": "#/definitions/consoleAnnouncement"
           },
-          "title": "公告列表"
+          "title": "Announcement list"
         },
         "total_count": {
           "type": "integer",
           "format": "int32",
-          "title": "总数"
+          "title": "Total count"
         },
         "next_cursor": {
           "type": "string",
-          "title": "下一页游标"
+          "title": "Next page cursor"
         }
       }
     },
@@ -4013,20 +4226,41 @@
       "properties": {
         "title": {
           "type": "string",
-          "title": "公告标题"
+          "title": "Announcement title"
         },
         "content": {
           "type": "string",
-          "title": "公告内容"
+          "title": "Announcement content"
         },
         "img": {
           "type": "string",
-          "title": "图片URL"
+          "title": "Image URL"
         },
         "status": {
           "type": "integer",
           "format": "int32",
-          "title": "状态 0:草稿 1:已发布 2:已下线"
+          "title": "Status 0:draft 1:published 2:offline"
+        }
+      }
+    },
+    "consoleCreateSystemNotificationRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Type 0:all users 1:specific users"
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Target user ID list"
+        },
+        "notice": {
+          "$ref": "#/definitions/consoleSystemNotice",
+          "title": "Notification content"
         }
       }
     },
@@ -4068,6 +4302,32 @@
       ],
       "default": "UNKNOWN"
     },
+    "consoleListSystemNoticeResponse": {
+      "type": "object",
+      "properties": {
+        "notifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/consoleSystemNotice"
+          },
+          "title": "Notification list"
+        },
+        "next_cursor": {
+          "type": "string",
+          "title": "Next page cursor"
+        },
+        "prev_cursor": {
+          "type": "string",
+          "title": "Previous page cursor"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Total count"
+        }
+      }
+    },
     "consoleMatchListMatch": {
       "type": "object",
       "properties": {
@@ -4103,6 +4363,19 @@
         }
       },
       "title": "Match state"
+    },
+    "consoleNoticeContent": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "title": "Notification description"
+        },
+        "rewards": {
+          "$ref": "#/definitions/gameItem",
+          "title": "Reward items"
+        }
+      }
     },
     "consoleRuntimeInfo": {
       "type": "object",
@@ -4315,6 +4588,44 @@
       },
       "description": "An object within the storage engine."
     },
+    "consoleSystemNotice": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "Notification ID"
+        },
+        "subject": {
+          "type": "string",
+          "title": "Notification subject"
+        },
+        "content": {
+          "$ref": "#/definitions/consoleNoticeContent",
+          "title": "Notification content"
+        },
+        "create": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Creation time"
+        },
+        "effective": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Effective time"
+        },
+        "expiry": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expiry time"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Status code"
+        }
+      },
+      "title": "System notification message definition"
+    },
     "consoleUserList": {
       "type": "object",
       "properties": {
@@ -4420,6 +4731,19 @@
         }
       },
       "description": "List of wallet ledger items for a particular user."
+    },
+    "gameItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "num": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "Game Item"
     },
     "googlerpcStatus": {
       "type": "object",
@@ -4544,6 +4868,16 @@
         "persistent": {
           "type": "boolean",
           "description": "True if this notification was persisted to the database."
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Status of notification 0 unread, 1 read. 2 attachment recived."
+        },
+        "expiry_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired."
         }
       },
       "description": "A notification in the server."
@@ -4847,6 +5181,16 @@
         "user_id": {
           "type": "string",
           "description": "User id."
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Status of notification 0 unread, 1 read. 2 attachment recived."
+        },
+        "expiry_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired."
         }
       }
     },

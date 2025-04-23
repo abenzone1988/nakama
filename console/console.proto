@@ -26,6 +26,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
+import "msg.proto";
 
 option go_package = "github.com/heroiclabs/nakama/v3/console";
 
@@ -466,8 +467,7 @@ service Console {
       body: "*"
     };
   }
-
-  // 创建公告
+  // Create announcement
   rpc CreateAnnouncement (CreateAnnouncementRequest) returns (Announcement) {
     option (google.api.http) = {
       post: "/v2/console/announcement"
@@ -475,7 +475,7 @@ service Console {
     };
   }
 
-  // 更新公告
+  // Update announcement
   rpc UpdateAnnouncement (UpdateAnnouncementRequest) returns (Announcement) {
     option (google.api.http) = {
       put: "/v2/console/announcement/{id}"
@@ -483,33 +483,71 @@ service Console {
     };
   }
 
-  // 删除公告
+  // Delete announcement
   rpc DeleteAnnouncement (AnnouncementId) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v2/console/announcement/{id}"
     };
   }
 
-  // 获取公告列表
+  // List announcements
   rpc ListAnnouncements (ListAnnouncementsRequest) returns (AnnouncementList) {
     option (google.api.http) = {
       get: "/v2/console/announcements"
     };
   }
 
-  // 获取单个公告
+  // Get single announcement
   rpc GetAnnouncement (AnnouncementId) returns (Announcement) {
     option (google.api.http) = {
       get: "/v2/console/announcement/{id}"
     };
   }
 
-  // 搜索公告
+  // Search announcements
   rpc SearchAnnouncements (SearchAnnouncementsRequest) returns (AnnouncementList) {
     option (google.api.http) = {
       get: "/v2/console/announcements/search"
     };
   }
+
+  // List system notifications
+  rpc ListSystemNotifications (ListSystemNoticeRequest) returns (ListSystemNoticeResponse) {
+    option (google.api.http) = {
+      get: "/v2/console/system_notifications"
+    };
+  }
+
+  // Create system notification
+  rpc CreateSystemNotification (CreateSystemNotificationRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v2/console/system_notification"
+      body: "*"
+    };
+  }
+
+  // Update system notification
+  rpc UpdateSystemNotification (SystemNotice) returns (SystemNotice) {
+    option (google.api.http) = {
+      put: "/v2/console/system_notification/{id}"
+      body: "*"
+    };
+  }
+
+  // Get single system notification
+  rpc GetSystemNotification (SystemNotificationId) returns (SystemNotice) {
+    option (google.api.http) = {
+      get: "/v2/console/system_notification/{id}"
+    };
+  }
+
+  // Delete system notification
+  rpc DeleteSystemNotification (SystemNotificationId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v2/console/system_notification/{id}"
+    };
+  }
+
 }
 
 // API Explorer List of Endpoints response message
@@ -998,6 +1036,10 @@ message Notification {
   bool persistent = 7;
   // User id.
   string user_id = 8;
+  // Status of notification 0 unread, 1 read. 2 attachment recived.
+  int32 status = 9;
+  // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired.
+  google.protobuf.Timestamp expiry_time = 10;
 }
 
 message NotificationList {
@@ -1273,63 +1315,63 @@ message StorageListObject {
   google.protobuf.Timestamp update_time = 8;
 }
 
-// 公告消息体定义
+// Announcement message definition
 message Announcement {
-  // 公告ID
+  // Announcement ID
   string id = 1;
-  // 公告标题
+  // Announcement title
   string title = 2;
-  // 公告内容
+  // Announcement content
   string content = 3;
-  // 发布时间
+  // Creation time
   google.protobuf.Timestamp create_time = 4;
-  // 更新时间
+  // Update time
   google.protobuf.Timestamp update_time = 5;
-  // 图片URL
+  // Image URL
   string img = 6;
-  // 状态 0:草稿 1:已发布 2:已下线
+  // Status 0:draft 1:published 2:offline
   int32 status = 7;
 }
 
 message AnnouncementList {
-  // 公告列表
+  // Announcement list
   repeated Announcement announcements = 1;
-  // 总数
+  // Total count
   int32 total_count = 2;
-  // 下一页游标
+  // Next page cursor
   string next_cursor = 3;
 }
 
 message CreateAnnouncementRequest {
-  // 公告标题
+  // Announcement title
   string title = 1;
-  // 公告内容
+  // Announcement content
   string content = 2;
-  // 图片URL
+  // Image URL
   string img = 3;
-  // 状态 0:草稿 1:已发布 2:已下线
+  // Status 0:draft 1:published 2:offline
   int32 status = 4;
 }
 
 message UpdateAnnouncementRequest {
-  // 公告ID
+  // Announcement ID
   string id = 1;
-  // 公告标题
+  // Announcement title
   string title = 2;
-  // 公告内容
+  // Announcement content
   string content = 3;
-  // 图片URL
+  // Image URL
   string img = 4;
-  // 状态 0:草稿 1:已发布 2:已下线
+  // Status 0:draft 1:published 2:offline
   int32 status = 5;
 }
 
 message ListAnnouncementsRequest {
-  // 状态过滤 -1:全部 0:草稿 1:已发布 2:已下线
+  // Status filter -1:all 0:draft 1:published 2:offline
   int32 status = 1;
-  // 每页数量
+  // Items per page
   int32 limit = 2;
-  // 游标
+  // Cursor
   string cursor = 3;
 }
 
@@ -1338,10 +1380,93 @@ message AnnouncementId {
 }
 
 message SearchAnnouncementsRequest {
-  // 搜索关键词
+  // Search keyword
   string query = 1;
-  // 每页数量
+  // Items per page
   int32 limit = 2;
-  // 游标
+  // Cursor
+  string cursor = 3;
+}
+
+// System notification message definition
+message SystemNotice {
+  // Notification ID
+  string id = 1;
+  // Notification subject
+  string subject = 2;
+  // Notification content
+  NoticeContent content = 3;
+  // Creation time
+  google.protobuf.Timestamp create = 4;
+  // Effective time
+  google.protobuf.Timestamp effective = 5;
+  // Expiry time
+  google.protobuf.Timestamp expiry = 6;
+  // Status code
+  int32 code = 7;
+}
+
+message NoticeContent {
+  // Notification description
+  string description = 1;
+  // Reward items
+  game.Item rewards = 2;
+}
+
+message SystemNotificationId {
+  // Notification ID
+  string id = 1;
+}
+
+message CreateSystemNotificationRequest {
+  // Type 0:all users 1:specific users
+  int32 type = 1;
+  // Target user ID list
+  repeated string target = 2;
+  // Notification content
+  SystemNotice notice = 3;
+}
+
+message UpdateSystemNotificationRequest {
+  // Notification ID
+  string id = 1;
+  // Notification subject
+  string subject = 2;
+  // Notification content
+  NoticeContent content = 3;
+  // Effective time
+  google.protobuf.Timestamp effective = 4;
+  // Expiry time
+  google.protobuf.Timestamp expiry = 5;
+  // Status code
+  int32 code = 6;
+}
+
+message ListSystemNoticeRequest {
+  // Filter condition
+  string filter = 1;
+  // Cursor
+  string cursor = 2;
+  // Items per page
+  int32 limit = 3;
+}
+
+message ListSystemNoticeResponse {
+  // Notification list
+  repeated SystemNotice notifications = 1;
+  // Next page cursor
+  string next_cursor = 2;
+  // Previous page cursor
+  string prev_cursor = 3;
+  // Total count
+  int32 total_count = 4;
+}
+
+message SearchSystemNotificationsRequest {
+  // Search keyword
+  string query = 1;
+  // Items per page
+  int32 limit = 2;
+  // Cursor
   string cursor = 3;
 }
