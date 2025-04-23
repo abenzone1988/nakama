@@ -51,6 +51,11 @@ func (s *ApiServer) ListNotifications(ctx context.Context, in *api.ListNotificat
 		}
 	}
 
+	//
+	if err := SyncSystemNotifications(ctx, s.logger, s.db, s.statusRegistry, userID); err != nil {
+		s.logger.Error("Sync System Notice error ", zap.Error(err))
+	}
+
 	limit := 1
 	if in.GetLimit() != nil {
 		if in.GetLimit().Value < 1 || in.GetLimit().Value > 100 {

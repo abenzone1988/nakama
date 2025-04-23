@@ -1756,10 +1756,10 @@ export class ConsoleService {
   }
 
   /** Create system notification */
-  createSystemNotification(auth_token: string, body: CreateSystemNotificationRequest): Observable<any> {
+  createSystemNotification(auth_token: string, body: CreateSystemNotificationRequest): Observable<SystemNotice> {
     const urlPath = `/v2/console/system_notification`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
-    return this.httpClient.post(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+    return this.httpClient.post<SystemNotice>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   /** Delete system notification */

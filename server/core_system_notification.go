@@ -19,6 +19,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/gofrs/uuid/v5"
+	"github.com/heroiclabs/nakama-common/api"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"strconv"
 	"time"
 
@@ -317,4 +321,139 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 	}
 
 	return notification, nil
+}
+
+func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, id uuid.UUID) error {
+	// 获取用户元数据
+	userMeta, _, err := GetUserMeta(ctx, logger, db, statusRegistry)
+	if err != nil {
+		logger.Error("获取用户元数据失败", zap.Error(err))
+		return status.Error(codes.Internal, "获取用户元数据失败")
+	}
+
+	// 查询新的系统通知
+	notices, err := QuerySystemNotifications(ctx, db, logger, userMeta.LastSyncNotice)
+	if err != nil {
+		logger.Error("查询系统通知失败", zap.Error(err))
+		return err
+	}
+
+	if len(notices) == 0 {
+		return nil
+	}
+
+	// 构建通知列表
+	notifications := make([]*api.Notification, 0, len(notices))
+	var latestSyncTime int64 = userMeta.LastSyncNotice
+
+	for _, notice := range notices {
+		contentJson, err := json.Marshal(notice.GetContent())
+		if err != nil {
+			logger.Error("序列化通知内容失败", zap.Error(err))
+			continue
+		}
+
+		createTime := notice.GetCreate().AsTime().UTC().Unix()
+		if createTime > latestSyncTime {
+			latestSyncTime = createTime
+		}
+
+		notifications = append(notifications, &api.Notification{
+			Id:         uuid.Must(uuid.NewV4()).String(),
+			Subject:    notice.GetSubject(),
+			Content:    string(contentJson),
+			SenderId:   uuid.Nil.String(),
+			Code:       NotificationSystemNotice,
+			Persistent: true,
+			CreateTime: notice.GetCreate(),
+			ExpiryTime: notice.GetExpiry(),
+		})
+	}
+
+	// 更新用户的最后同步时间
+	userMeta.LastSyncNotice = latestSyncTime
+	if err := SaveUserMeta(ctx, logger, db, userMeta); err != nil {
+		logger.Error("更新用户元数据失败", zap.Error(err))
+	}
+
+	// 保存通知到用户的通知列表
+	if err := NotificationSave(ctx, logger, db, map[uuid.UUID][]*api.Notification{id: notifications}); err != nil {
+		logger.Error("保存用户通知失败", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logger, lastSyncTime int64) ([]*console.SystemNotice, error) {
+	// 使用时间戳查询，考虑时间精度问题
+	query := `
+		SELECT
+			id,
+			subject,
+			content,
+			create_time,
+			effective_time,
+			expiry_time,
+			code
+		FROM system_notification
+		WHERE
+			EXTRACT(EPOCH FROM date_trunc('second', create_time)) > $1
+			AND (effective_time IS NULL OR effective_time <= CURRENT_TIMESTAMP)
+			AND (expiry_time IS NULL OR expiry_time > CURRENT_TIMESTAMP)
+		ORDER BY create_time ASC
+	`
+
+	rows, err := db.QueryContext(ctx, query, lastSyncTime)
+	if err != nil {
+		logger.Error("查询系统通知失败", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	notifications := make([]*console.SystemNotice, 0)
+	for rows.Next() {
+		var id string
+		var subject string
+		var contentStr string
+		var createTime pgtype.Timestamptz
+		var effectiveTime pgtype.Timestamptz
+		var expiryTime pgtype.Timestamptz
+		var code int32
+
+		if err = rows.Scan(&id, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &code); err != nil {
+			logger.Error("扫描系统通知数据失败", zap.Error(err))
+			return nil, err
+		}
+
+		var content console.NoticeContent
+		if err := json.Unmarshal([]byte(contentStr), &content); err != nil {
+			logger.Error("解析通知内容失败", zap.Error(err))
+			return nil, err
+		}
+
+		notification := &console.SystemNotice{
+			Id:      id,
+			Subject: subject,
+			Content: &content,
+			Create:  timestamppb.New(createTime.Time),
+			Code:    code,
+		}
+
+		if effectiveTime.Valid {
+			notification.Effective = timestamppb.New(effectiveTime.Time)
+		}
+		if expiryTime.Valid {
+			notification.Expiry = timestamppb.New(expiryTime.Time)
+		}
+
+		notifications = append(notifications, notification)
+	}
+
+	if err = rows.Err(); err != nil {
+		logger.Error("遍历系统通知数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	return notifications, nil
 }

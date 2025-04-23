@@ -277,7 +277,7 @@ type ConsoleClient interface {
 	// List system notifications
 	ListSystemNotifications(ctx context.Context, in *ListSystemNoticeRequest, opts ...grpc.CallOption) (*ListSystemNoticeResponse, error)
 	// Create system notification
-	CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*SystemNotice, error)
 	// Update system notification
 	UpdateSystemNotification(ctx context.Context, in *SystemNotice, opts ...grpc.CallOption) (*SystemNotice, error)
 	// Get single system notification
@@ -978,8 +978,8 @@ func (c *consoleClient) ListSystemNotifications(ctx context.Context, in *ListSys
 	return out, nil
 }
 
-func (c *consoleClient) CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *consoleClient) CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*SystemNotice, error) {
+	out := new(SystemNotice)
 	err := c.cc.Invoke(ctx, Console_CreateSystemNotification_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1171,7 +1171,7 @@ type ConsoleServer interface {
 	// List system notifications
 	ListSystemNotifications(context.Context, *ListSystemNoticeRequest) (*ListSystemNoticeResponse, error)
 	// Create system notification
-	CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*emptypb.Empty, error)
+	CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*SystemNotice, error)
 	// Update system notification
 	UpdateSystemNotification(context.Context, *SystemNotice) (*SystemNotice, error)
 	// Get single system notification
@@ -1413,7 +1413,7 @@ func (UnimplementedConsoleServer) SearchAnnouncements(context.Context, *SearchAn
 func (UnimplementedConsoleServer) ListSystemNotifications(context.Context, *ListSystemNoticeRequest) (*ListSystemNoticeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSystemNotifications not implemented")
 }
-func (UnimplementedConsoleServer) CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*emptypb.Empty, error) {
+func (UnimplementedConsoleServer) CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*SystemNotice, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSystemNotification not implemented")
 }
 func (UnimplementedConsoleServer) UpdateSystemNotification(context.Context, *SystemNotice) (*SystemNotice, error) {

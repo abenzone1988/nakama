@@ -519,7 +519,7 @@ service Console {
   }
 
   // Create system notification
-  rpc CreateSystemNotification (CreateSystemNotificationRequest) returns (google.protobuf.Empty) {
+  rpc CreateSystemNotification (CreateSystemNotificationRequest) returns (SystemNotice) {
     option (google.api.http) = {
       post: "/v2/console/system_notification"
       body: "*"
