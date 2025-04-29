@@ -49,6 +49,7 @@ import {MfaSetupComponent} from './mfa-setup/mfa-setup.component';
 import {NotificationsListComponent} from './notifications/notifications-list.component';
 import {NotificationsComponent, NotificationsResolver} from './account/notifications/notifications.component';
 import {AnnouncementsComponent} from './announcements/announcements.component';
+import {SystemNotificationsComponent} from './system-notifications/system-notifications.component';
 
 const routes: Routes = [
   {
@@ -103,7 +104,8 @@ const routes: Routes = [
       {path: 'purchases', component: PurchasesListComponent, resolve: [PurchasesResolver]},
       {path: 'subscriptions', component: SubscriptionsListComponent, resolve: [SubscriptionsResolver]},
       {path: 'settings/mfa', component: MfaSetupComponent, resolve: []},
-      {path: 'announcements', component: AnnouncementsComponent}
+      {path: 'announcements', component: AnnouncementsComponent},
+      {path: 'system-notifications', component: SystemNotificationsComponent}
     ]},
   {
     path: 'login', component: LoginComponent, canActivate: [LoginGuard],

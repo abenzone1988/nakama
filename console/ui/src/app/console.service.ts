@@ -326,7 +326,7 @@ export interface NoticeContent {
   // Notification description
   description?:string
   // Reward items
-  rewards?:GameItem
+  rewards?:Array<GameItem>
 }
 
 export interface Notification {

@@ -120,6 +120,15 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	params := make([]interface{}, 0)
 	paramCount := 0
 
+	// 先查询总数
+	countQuery := "SELECT COUNT(*) FROM system_notification " + conditions
+	var totalCount int32
+	err := db.QueryRowContext(ctx, countQuery, params...).Scan(&totalCount)
+	if err != nil {
+		logger.Error("Error counting announcements", zap.Error(err))
+		return nil, err
+	}
+
 	query := `
 		SELECT id, subject, content, create_time, effective_time, expiry_time, code
 		FROM system_notification
@@ -198,6 +207,7 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	return &console.ListSystemNoticeResponse{
 		Notifications: notifications,
 		NextCursor:    nextCursor,
+		TotalCount:    totalCount,
 	}, nil
 }
 

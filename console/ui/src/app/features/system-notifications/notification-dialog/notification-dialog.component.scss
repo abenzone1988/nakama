@@ -1,0 +1,12 @@
+.notification-dialog {
+  .notification-content {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .notification-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+} 

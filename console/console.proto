@@ -1410,7 +1410,7 @@ message NoticeContent {
   // Notification description
   string description = 1;
   // Reward items
-  game.Item rewards = 2;
+  repeated game.Item rewards = 2;
 }
 
 message SystemNotificationId {

@@ -255,7 +255,7 @@ ORDER BY create_time ASC, id ASC` + limitQuery
 			hasNextPage = true
 			break
 		}
-		no := &api.Notification{Persistent: true, CreateTime: &timestamppb.Timestamp{}}
+		no := &api.Notification{Persistent: true, CreateTime: &timestamppb.Timestamp{}, ExpiryTime: &timestamppb.Timestamp{}}
 		var createTime pgtype.Timestamptz
 		var expiryTime pgtype.Timestamptz
 		if err := rows.Scan(&no.Id, &no.Subject, &no.Content, &no.Code, &no.SenderId, &no.Status, &createTime, &expiryTime); err != nil {
@@ -266,7 +266,9 @@ ORDER BY create_time ASC, id ASC` + limitQuery
 
 		lastCreateTime = createTime.Time.UnixNano()
 		no.CreateTime.Seconds = createTime.Time.Unix()
-		no.ExpiryTime.Seconds = expiryTime.Time.Unix()
+		if expiryTime.Valid {
+			no.ExpiryTime.Seconds = expiryTime.Time.Unix()
+		}
 		if no.SenderId == uuid.Nil.String() {
 			no.SenderId = ""
 		}
@@ -484,7 +486,7 @@ func NotificationMarkRead(ctx context.Context, logger *zap.Logger, db *sql.DB, u
 		return 0, nil
 	}
 
-	query := "UPDATE notification SET status = 1 WHERE user_id = $1 AND id = ANY($2) AND status = 0"
+	query := "UPDATE notification SET status = 1 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status = 0"
 	result, err := db.ExecContext(ctx, query, userID, notificationIDs)
 	if err != nil {
 		logger.Error("Could not mark notifications as read.", zap.Error(err))
@@ -507,7 +509,7 @@ func NotificationClaimAttachments(ctx context.Context, logger *zap.Logger, db *s
 	}
 
 	// 首先检查是否有已领取状态的通知
-	query := "SELECT id FROM notification WHERE user_id = $1 AND id = ANY($2::text[]) AND status = 2"
+	query := "SELECT id FROM notification WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status = 2"
 	rows, err := db.QueryContext(ctx, query, userID, notificationIDs)
 	if err != nil {
 		logger.Error("Error checking notification status", zap.Error(err))
@@ -521,7 +523,7 @@ func NotificationClaimAttachments(ctx context.Context, logger *zap.Logger, db *s
 	}
 
 	// 更新未读或已读状态的通知为已领取状态
-	query = "UPDATE notification SET status = 2 WHERE user_id = $1 AND id = ANY($2::text[]) AND status < 2"
+	query = "UPDATE notification SET status = 2 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status < 2"
 	result, err := db.ExecContext(ctx, query, userID, notificationIDs)
 	if err != nil {
 		logger.Error("Error claiming notification attachments", zap.Error(err))

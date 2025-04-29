@@ -52,7 +52,6 @@ export class BaseComponent implements OnInit, OnDestroy {
     {navItem: 'users', routerLink: ['/users'], label: 'User Management', minRole: UserRole.USER_ROLE_ADMIN, icon: 'user-management', group: 'system'},
     {navItem: 'config', routerLink: ['/config'], label: 'Configuration', minRole: UserRole.USER_ROLE_DEVELOPER, icon: 'configuration', group: 'system'},
     {navItem: 'modules', routerLink: ['/modules'], label: 'Runtime Modules', minRole: UserRole.USER_ROLE_DEVELOPER, icon: 'runtime-modules', group: 'system'},
-    
     // 用户和账户管理组
     {navItem: 'accounts', routerLink: ['/accounts'], label: 'Accounts', minRole: UserRole.USER_ROLE_READONLY, icon: 'accounts', group: 'accounts'},
     {navItem: 'groups', routerLink: ['/groups'], label: 'Groups', minRole: UserRole.USER_ROLE_READONLY, icon: 'groups', group: 'accounts'},
@@ -61,11 +60,10 @@ export class BaseComponent implements OnInit, OnDestroy {
     {navItem: 'chat', routerLink: ['/chat'], label: 'Chat Messages', minRole: UserRole.USER_ROLE_READONLY, icon: 'chat', group: 'accounts'},
     {navItem: 'notifications', routerLink: ['/notifications'], label: 'Notifications', minRole: UserRole.USER_ROLE_READONLY, icon: 'notification', group: 'accounts'},
     {navItem: 'announcements', routerLink: ['/announcements'], label: 'Announcements', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'announcement', group: 'accounts'},
-
+    {navItem: 'system-notifications', routerLink: ['/system-notifications'], label: 'SystemNotice', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'system-notifications', group: 'accounts'},
     {navItem: 'purchases', routerLink: ['/purchases'], label: 'Purchases', minRole: UserRole.USER_ROLE_READONLY, icon: 'purchases', group: 'accounts'},
     {navItem: 'subscriptions', routerLink: ['/subscriptions'], label: 'Subscriptions', minRole: UserRole.USER_ROLE_READONLY, icon: 'subscriptions', group: 'accounts'},
     {navItem: 'matches', routerLink: ['/matches'], label: 'Matches', minRole: UserRole.USER_ROLE_READONLY, icon: 'running-matches', group: 'accounts'},
-    
     // 开发工具组
     {navItem: 'apiexplorer', routerLink: ['/apiexplorer'], label: 'API Explorer', minRole: UserRole.USER_ROLE_DEVELOPER, icon: 'api-explorer', group: 'dev'},
   ];

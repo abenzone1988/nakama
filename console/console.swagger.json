@@ -4371,7 +4371,11 @@
           "title": "Notification description"
         },
         "rewards": {
-          "$ref": "#/definitions/gameItem",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameItem"
+          },
           "title": "Reward items"
         }
       }

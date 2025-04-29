@@ -1,0 +1,198 @@
+<h2 class="pb-1">System notifications</h2>
+<h6 class="pb-3">{{notificationsCount}} notifications found. </h6>
+
+<div class="row no-gutters mb-4">
+  <div class="col d-flex justify-content-between no-gutters align-items-center">
+    <div class="col-md-9">
+      <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
+        <div class="input-group">
+          <input type="text" class="form-control border-right-0" formControlName="filter" placeholder="Filter by Subject"/>
+          <div class="input-group-append">
+            <button type="submit" class="btn btn-primary dropdown-radius">Search</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-md-3 justify-content-end text-right">
+      <div class="btn-group page-btns" role="group">
+        <button type="button" class="btn btn-outline-secondary" (click)="onPageChange(1)" [disabled]="notifications.length === 0">
+          <img src="/static/svg/page-first.svg" alt="" width="20" height="">
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1">
+          <img src="/static/svg/page-prev.svg" alt="" width="20" height="">
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage * pageSize >= totalCount">
+          <img src="/static/svg/page-next.svg" alt="" width="20" height="">
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row no-gutters mb-4">
+  <div class="col d-flex justify-content-between no-gutters align-items-center">
+    <button type="button" class="btn btn-success radius" (click)="openModal(content)">Add</button>
+  </div>
+</div>
+
+<ngb-alert [dismissible]="false" type="danger" class="mb-3" *ngIf="error">
+  <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">Error when querying accounts: {{error}}</h6>
+</ngb-alert>
+
+
+<ngb-alert [dismissible]="false" type="danger" class="mb-3" *ngIf="showError">
+  <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">Error Sending System Notifications : {{errorMessage}}</h6>
+</ngb-alert>
+
+<ngb-alert [dismissible]="false" type="primary" class="mb-3" *ngIf="showSuccess">
+  <img src="/static/svg/mail.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">  Notification sent successfully!</h6>
+</ngb-alert>
+
+
+<div class="row no-gutters">
+  <table class="table table-sm table-hover table-bordered">
+    <thead class="thead-light">
+      <tr>
+<!--        <th style="width: 120px">ID</th>-->
+        <th style="width: 120px">标题</th>
+        <th>内容</th>
+        <th style="width: 180px">创建时间</th>
+        <th style="width: 180px">过期时间</th>
+        <th style="width: 90px" *ngIf="operateAllowed()">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngIf="notifications.length === 0">
+        <td colSpan="5" class="text-muted">No System Notifications found </td>
+      </tr>
+      <tr *ngFor="let u of notifications; index as i;">
+       <td > {{u.id}}</td>
+        <td >{{u.subject}}</td>
+        <td >{{u.content}}</td>
+        <td >{{u.create }}</td>
+        <td >{{u.expiry }}</td>
+        <td *ngIf="operateAllowed() && u.id !== systemUserId" class="text-center">
+          <button type="button" class="btn btn-sm btn-danger" (click)="deleteNotification( u);">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title" id="modal-basic-title">New</h4>
+    <button type="button" class="close" aria-describedby="modal-title" (click)="modal.dismiss()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <form  [formGroup]="notificationForm">
+      <div class="mb-3 row align-items-center">
+        <label class="col-sm-2 col-form-label">对象</label>
+        <div class="col-sm-10">
+          <select class="form-control" formControlName="type">
+            <option value="0">全体</option>
+            <option value="1">特定</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-3 row align-items-center">
+        <label class="col-sm-2 col-form-label">标题</label>
+        <div class="col-sm-10">
+          <div class="input-group">
+            <input class="form-control" formControlName="subject" />
+            <!-- 添加右侧间隔，这里使用 offset-md-2 类 -->
+            <div class="input-group-append offset-md-2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-3 row">
+        <label class="col-sm-2 col-form-label">详情</label>
+        <div class="col-sm-10">
+          <div class="input-group">
+            <!-- 使用textarea代替input -->
+            <textarea class="form-control" formControlName="desc"></textarea>
+            <!-- 添加右侧间隔 -->
+            <div class="input-group-append offset-md-2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-3" *ngIf="n.type.value == 1">
+        <label>目标</label>
+        <div formArrayName="targetIds">
+          <div *ngFor="let targetId of n.targetIds.controls; let i = index" class="input-group mb-2">
+            <!-- 直接绑定到 FormControl -->
+            <input type="text" class="form-control" [formControlName]="i" placeholder="Enter Target ID">
+            <div class="input-group-append">
+              <button type="button" class="btn btn-outline-secondary btn-danger" (click)="removeTargetId(i)">Remove</button>
+            </div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button class="btn btn-success" type="button" (click)="addTargetId()">添加用户Id</button>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label>附件</label>
+        <div formArrayName="items">
+          <div *ngFor="let item of n.items.controls; let i = index" [formGroupName]="i" class="input-group mb-2">
+            <img class="item-icon form-spacing" [src]="getIconById(item.value.id)" alt="{{item.value.id}}">
+            <select formControlName="id" class="form-control form-spacing">
+              <option *ngFor="let defaultItem of defaultItems" [value]="defaultItem.id">
+                {{ defaultItem.name }}
+              </option>
+            </select>
+            <input type="number" class="form-control form-spacing" formControlName="num">
+            <button type="button" class="btn btn-danger" (click)="removeItem(i)">Remove</button>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button type="button" class="btn btn-success" (click)="addItem()">添加道具</button>
+        </div>
+      </div>
+      <div class="mb-3 row align-items-center">
+        <label class="col-sm-3 col-form-label">是否过期</label>
+        <div class="col-sm-9">
+          <input class="form-check-input" type="checkbox" formControlName="enableExpiry">
+        </div>
+      </div>
+      <div class="mb-3 row align-items-center" >
+        <label class="col-sm-2 col-form-label">过期时间</label>
+        <div class="input-group col-sm-5">
+          <input
+            id="dateOfExpire"
+            class="form-control"
+            placeholder="yyyy-mm-dd"
+            name="dp"
+            formControlName="expireDate"
+            [footerTemplate]="footerTemplate"
+            ngbDatepicker
+            #dp="ngbDatepicker"
+          />
+          <ng-template #footerTemplate>
+            <hr class="my-0" />
+            <button class="btn btn-primary btn-sm m-2 float-start" (click)="setToday(); dp.close()">Today</button>
+            <button class="btn btn-secondary btn-sm m-2 float-end" (click)="dp.close()">Close</button>
+          </ng-template>
+          <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dp.toggle()" type="button"></button>
+        </div>
+      <div class="col-sm-5">
+        <ngb-timepicker [minuteStep]="15" formControlName="expireTime" [meridian]="true"/>
+      </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-dark" (click)="onSubmit()">确认</button>
+    <button type="button" class="btn btn-secondary ml-2" >取消</button>
+  </div>
+</ng-template>
+
+

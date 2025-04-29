@@ -3168,6 +3168,74 @@
         ]
       }
     },
+    "/v2/notification/claim": {
+      "post": {
+        "summary": "Claim notification attachments",
+        "operationId": "Nakama_ClaimNotificationAttachments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiClaimNotificationAttachmentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Claim notification attachments.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiClaimNotificationAttachmentsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/notification/read": {
+      "post": {
+        "summary": "Mark notifications as read",
+        "operationId": "Nakama_MarkNotificationsRead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiMarkNotificationsReadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Mark notifications as read.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiMarkNotificationsReadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/rpc/{id}": {
       "get": {
         "summary": "Execute a Lua function on the server.",
@@ -4370,6 +4438,29 @@
       },
       "description": "A list of channel messages, usually a result of a list operation."
     },
+    "apiClaimNotificationAttachmentsRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notification IDs to claim."
+        }
+      },
+      "description": "Claim notification attachments."
+    },
+    "apiClaimNotificationAttachmentsResponse": {
+      "type": "object",
+      "properties": {
+        "claimedcount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Claimed count."
+        }
+      }
+    },
     "apiCreateGroupRequest": {
       "type": "object",
       "properties": {
@@ -4738,6 +4829,29 @@
         }
       },
       "description": "List user subscriptions."
+    },
+    "apiMarkNotificationsReadRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notification IDs to mark as read."
+        }
+      },
+      "description": "Mark notifications as read."
+    },
+    "apiMarkNotificationsReadResponse": {
+      "type": "object",
+      "properties": {
+        "markedcount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Marked count."
+        }
+      }
     },
     "apiMatch": {
       "type": "object",

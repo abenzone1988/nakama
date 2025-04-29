@@ -848,26 +848,3 @@ service Nakama {
   }
 }
 
-// Mark notifications as read
-message MarkNotificationsReadRequest {
-  // The ids of notifications to mark as read
-  repeated string ids = 1;
-}
-
-// Mark notifications as read response
-message MarkNotificationsReadResponse {
-  // Number of notifications marked as read
-  int32 marked_count = 1;
-}
-
-// Claim notification attachments
-message ClaimNotificationAttachmentsRequest {
-  // The ids of notifications to claim attachments from
-  repeated string ids = 1;
-}
-
-// Claim notification attachments response 
-message ClaimNotificationAttachmentsResponse {
-  // Number of attachments claimed
-  int32 claimed_count = 1;
-}

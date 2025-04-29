@@ -23,8 +23,8 @@ const (
 	SceneStaminaFull   = 2 // 体力恢复场景
 
 	// 场景内容ID
-	ContentOfflineIncome = "CONTENT584758018" // 离线收益场景内容ID
-	ContentStaminaFull   = "CONTENT556955394" // 体力恢复场景内容ID
+	ContentOfflineIncome = "CONTENT621161474" // 离线收益场景内容ID
+	ContentStaminaFull   = "CONTENT611333890" // 体力恢复场景内容ID
 
 	// 测试模式
 	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景

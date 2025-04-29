@@ -51,7 +51,7 @@
         <td *ngIf="deleteAllowed()" class="text-center"><button type="button" class="btn btn-sm btn-danger" (click)="deleteNotification($event, i, n);">Delete</button></td>
       </tr>
       <tr *ngIf="notificationsRowsOpen[i]" class="open-row">
-        <td colspan="6">
+        <td colspan="9">
           <div class="p-2">
             <div><small><b>Content</b></small></div>
             <div>
@@ -61,7 +61,7 @@
         </td>
       </tr>
     </ng-template>
-    <tr *ngIf="notifications.length === 0"><td colspan="6" class="text-muted">No notifications were found.</td></tr>
+    <tr *ngIf="notifications.length === 0"><td colspan="9" class="text-muted">No notifications were found.</td></tr>
     </tbody>
   </table>
 </div>
