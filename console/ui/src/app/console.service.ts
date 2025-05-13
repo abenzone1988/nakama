@@ -463,18 +463,18 @@ export interface StorageListObject {
 }
 
 export interface SystemNotice {
-  // Status code
-  code?:number
   // Notification content
   content?:NoticeContent
   // Creation time
-  create?:string
+  create_time?:string
   // Effective time
-  effective?:string
+  effective_time?:string
   // Expiry time
-  expiry?:string
+  expiry_time?:string
   // Notification ID
   id?:string
+  // Status code
+  status?:number
   // Notification subject
   subject?:string
 }
@@ -540,16 +540,16 @@ export interface UpdateGroupRequest {
 }
 
 export interface UpdateSystemNotificationRequest {
-  // Status code
-  code?:number
   // Notification content
   content?:NoticeContent
   // Creation time
-  create?:string
+  create_time?:string
   // Effective time
-  effective?:string
+  effective_time?:string
   // Expiry time
-  expiry?:string
+  expiry_time?:string
+  // Status code
+  status?:number
   // Notification subject
   subject?:string
 }

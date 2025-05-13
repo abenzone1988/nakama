@@ -63,7 +63,8 @@ export class SystemNotificationsComponent implements OnInit {
     this.formItems = this.formBuilder.array([]);
     this.items = this.formBuilder.array([]);
     this.searchForm = this.formBuilder.group({
-      filter: ['']
+      filter: [''],
+      status: ['']
     });
 
     this.notificationForm = this.formBuilder.group({
@@ -108,8 +109,6 @@ export class SystemNotificationsComponent implements OnInit {
         this.error = err;
       }
     });
-
-    this.loadNotifications();
   }
 
   get s(): any {
@@ -176,26 +175,13 @@ export class SystemNotificationsComponent implements OnInit {
   }
 
   private loadSearchResults(): void {
-    const params = {
+    const params: any = {
       query: this.searchQuery,
       limit: this.pageSize,
       cursor: this.cursor,
     };
 
-    this.notificationsService.getNotifications(params).subscribe({
-      next: (response: NotificationResponse) => {
-        this.notifications = response.notifications || [];
-        this.totalCount = response.total_count || 0;
-        if (response.next_cursor) {
-          this.cursorCache[this.currentPage + 1] = response.next_cursor;
-        }
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('搜索通知失败', error);
-        this.loading = false;
-      }
-    });
+    this.fetchNotifications(params, true);
   }
 
   private loadNotificationsList(): void {
@@ -205,10 +191,12 @@ export class SystemNotificationsComponent implements OnInit {
     };
     if (this.statusFilter !== '') {
       params.status = parseInt(this.statusFilter, 10);
-    } else {
-      params.status = -1;
     }
 
+    this.fetchNotifications(params, false);
+  }
+
+  private fetchNotifications(params: any, isSearch: boolean): void {
     this.notificationsService.getNotifications(params).subscribe({
       next: (response: NotificationResponse) => {
         this.notifications = response.notifications || [];
@@ -219,7 +207,7 @@ export class SystemNotificationsComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        console.error('加载通知列表失败', error);
+        console.error(isSearch ? '搜索通知失败' : '加载通知列表失败', error);
         this.loading = false;
       }
     });
@@ -263,17 +251,6 @@ export class SystemNotificationsComponent implements OnInit {
     });
   }
 
-  add(content: TemplateRef<any>): void {
-    this.modalService.open(content, {centered: true}).result.then(
-      (result) => {
-        this.closeResult = `Closed with: ${result}`;
-      },
-      (reason) => {
-        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
-      },
-    );
-  }
-
   private getDismissReason(reason: any): string {
     switch (reason) {
       case ModalDismissReasons.ESC:
@@ -301,43 +278,6 @@ export class SystemNotificationsComponent implements OnInit {
         num: group.get('num')?.value?.toString(),
       };
     });
-  }
-
-  onNotifyClick(): void {
-    const formValue = this.notificationForm.value;
-    const notice: SystemNotice = {
-      code: formValue.code,
-      subject: formValue.subject,
-      content: {
-        description: formValue.desc,
-        rewards: this.convertItemsToGameItems(),
-      },
-      expiry: formValue.enableExpiry ? this.toTimeString(formValue.expireDate, formValue.expireTime) : null
-    };
-
-    const createSystemNotificationRequest: CreateSystemNotificationRequest = {
-      type: formValue.type,
-      target: formValue.targetIds,
-      notice
-    };
-
-    this.consoleService.createSystemNotification('', createSystemNotificationRequest).subscribe(
-      (response) => {
-        console.log('System notification create successfully', response);
-        this.showSuccess = true;
-        this.showError = false;
-        setTimeout(() => this.showSuccess = false, 3000); // 3秒后隐藏提示
-        this.search(0);
-        this.modalService.dismissAll();
-      },
-      (error) => {
-        console.error('Error system notification create notification', error);
-        this.errorMessage = error || 'An error occurred while sending notification';
-        this.showError = true;
-        this.showSuccess = false;
-        setTimeout(() => this.showError = false, 3000); // 3秒后隐藏提示
-      }
-    );
   }
 
   addTargetId(): void {
@@ -377,23 +317,12 @@ export class SystemNotificationsComponent implements OnInit {
     return this.authService.sessionRole <= UserRole.USER_ROLE_DEVELOPER;
   }
 
-  deleteNotice($event: MouseEvent, i: number, u: SystemNotice): void {
-    this.consoleService.deleteSystemNotification('', u.id).subscribe(() => {
-      this.error = '';
-      this.notifications.splice(i, 1);
-      this.notificationsCount--;
-    }, err => {
-      this.error = err;
-    });
-  }
-
   openModal(content: any, notification?: SystemNotice): void {
     this.editingNotification = notification || null;
     if (notification) {
       this.notificationForm.patchValue({
         subject: notification.subject,
         content: notification.content || { description: '', rewards: [] },
-        code: notification.code || 0,
       });
       this.formItems.clear();
       if (notification.content?.rewards) {
@@ -440,13 +369,12 @@ export class SystemNotificationsComponent implements OnInit {
     }
     const formValue = this.notificationForm.value;
     const notice: SystemNotice = {
-      code: formValue.code,
       subject: formValue.subject,
       content: {
         description: formValue.desc,
         rewards: this.convertItemsToGameItems(),
       },
-      expiry: formValue.enableExpiry ? this.toTimeString(formValue.expireDate, formValue.expireTime) : null
+      expiry_time: formValue.enableExpiry ? this.toTimeString(formValue.expireDate, formValue.expireTime) : undefined
     };
 
     if (this.editingNotification?.id) {
@@ -454,7 +382,7 @@ export class SystemNotificationsComponent implements OnInit {
         next: () => {
           this.showSuccess = true;
           this.showError = false;
-          setTimeout(() => this.showSuccess = false, 3000); // 3秒后隐藏提示
+          setTimeout(() => this.showSuccess = false, 3000);
           this.search(0);
           this.modalService.dismissAll();
           this.loadNotifications();
@@ -462,7 +390,7 @@ export class SystemNotificationsComponent implements OnInit {
         error: (error) => {
           this.showSuccess = false;
           this.showError = true;
-          setTimeout(() => this.showError = false, 3000); // 3秒后隐藏提示
+          setTimeout(() => this.showError = false, 3000);
           this.search(0);
           console.error('更新失败', error);
         }
@@ -477,7 +405,7 @@ export class SystemNotificationsComponent implements OnInit {
         next: () => {
           this.showSuccess = true;
           this.showError = false;
-          setTimeout(() => this.showSuccess = false, 3000); // 3秒后隐藏提示
+          setTimeout(() => this.showSuccess = false, 3000);
           this.search(0);
           this.modalService.dismissAll();
           this.loadNotifications();
@@ -485,7 +413,7 @@ export class SystemNotificationsComponent implements OnInit {
         error: (error) => {
           this.showSuccess = false;
           this.showError = true;
-          setTimeout(() => this.showError = false, 3000); // 3秒后隐藏提示
+          setTimeout(() => this.showError = false, 3000);
           this.search(0);
           console.error('创建失败', error);
         }
@@ -499,9 +427,8 @@ export class SystemNotificationsComponent implements OnInit {
     }
     this.deleteConfirmService.openDeleteConfirmModal(
       () => {
-        this.notificationsService.deleteNotification(notification.id).subscribe({
+        this.notificationsService.deleteNotification(notification.id!).subscribe({
           next: () => {
-
             this.loadNotifications();
           },
           error: (error) => {
@@ -516,11 +443,9 @@ export class SystemNotificationsComponent implements OnInit {
   }
 
   onSearch(): void {
-    if (!this.searchQuery.trim()) {
-      return;
-    }
+    this.searchQuery = this.searchForm.get('filter')?.value || '';
+    this.statusFilter = this.searchForm.get('status')?.value || '';
     this.isSearchMode = true;
-    this.statusFilter = '';
     this.currentPage = 1;
     this.cursor = '';
     this.cursorCache = { 1: '' };
@@ -528,7 +453,9 @@ export class SystemNotificationsComponent implements OnInit {
   }
 
   clearSearch(): void {
+    this.searchForm.reset();
     this.searchQuery = '';
+    this.statusFilter = '';
     this.isSearchMode = false;
     this.currentPage = 1;
     this.cursor = '';

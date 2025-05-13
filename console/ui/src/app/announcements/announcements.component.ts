@@ -54,26 +54,13 @@ export class AnnouncementsComponent implements OnInit {
   }
 
   private loadSearchResults(): void {
-    const params = {
+    const params: any = {
       query: this.searchQuery,
       limit: this.pageSize,
       cursor: this.cursor,
     };
 
-    this.announcementsService.searchAnnouncements(params).subscribe({
-      next: (response) => {
-        this.announcements = response.announcements || [];
-        this.totalCount = response.total_count || 0;
-        if (response.next_cursor) {
-          this.cursorCache[this.currentPage + 1] = response.next_cursor;
-        }
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('搜索公告失败', error);
-        this.loading = false;
-      }
-    });
+    this.fetchAnnouncements(params, true);
   }
 
   private loadAnnouncementsList(): void {
@@ -87,7 +74,15 @@ export class AnnouncementsComponent implements OnInit {
       params.status = -1;
     }
 
-    this.announcementsService.getAnnouncements(params).subscribe({
+    this.fetchAnnouncements(params, false);
+  }
+
+  private fetchAnnouncements(params: any, isSearch: boolean): void {
+    const request = isSearch 
+      ? this.announcementsService.searchAnnouncements(params)
+      : this.announcementsService.getAnnouncements(params);
+
+    request.subscribe({
       next: (response) => {
         this.announcements = response.announcements || [];
         this.totalCount = response.total_count || 0;
@@ -97,7 +92,7 @@ export class AnnouncementsComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        console.error('加载公告列表失败', error);
+        console.error(isSearch ? '搜索公告失败' : '加载公告列表失败', error);
         this.loading = false;
       }
     });
