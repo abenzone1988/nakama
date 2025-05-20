@@ -1,8 +1,8 @@
-name: nakama-node-jp
+name: nakama-dyxjsm
 
 database:
   address:
-    - "root@192.168.102.223:26258"
+    - "root:sparkinfi123!@118.145.205.131:5432/dyxjsm"
 logger:
   level: "debug"
 
