@@ -3004,22 +3004,22 @@
                   "$ref": "#/definitions/consoleNoticeContent",
                   "title": "Notification content"
                 },
-                "create": {
+                "create_time": {
                   "type": "string",
                   "format": "date-time",
                   "title": "Creation time"
                 },
-                "effective": {
+                "effective_time": {
                   "type": "string",
                   "format": "date-time",
                   "title": "Effective time"
                 },
-                "expiry": {
+                "expiry_time": {
                   "type": "string",
                   "format": "date-time",
                   "title": "Expiry time"
                 },
-                "code": {
+                "status": {
                   "type": "integer",
                   "format": "int32",
                   "title": "Status code"
@@ -4606,22 +4606,22 @@
           "$ref": "#/definitions/consoleNoticeContent",
           "title": "Notification content"
         },
-        "create": {
+        "create_time": {
           "type": "string",
           "format": "date-time",
           "title": "Creation time"
         },
-        "effective": {
+        "effective_time": {
           "type": "string",
           "format": "date-time",
           "title": "Effective time"
         },
-        "expiry": {
+        "expiry_time": {
           "type": "string",
           "format": "date-time",
           "title": "Expiry time"
         },
-        "code": {
+        "status": {
           "type": "integer",
           "format": "int32",
           "title": "Status code"

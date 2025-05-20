@@ -1397,13 +1397,13 @@ message SystemNotice {
   // Notification content
   NoticeContent content = 3;
   // Creation time
-  google.protobuf.Timestamp create = 4;
+  google.protobuf.Timestamp create_time = 4;
   // Effective time
-  google.protobuf.Timestamp effective = 5;
+  google.protobuf.Timestamp effective_time = 5;
   // Expiry time
-  google.protobuf.Timestamp expiry = 6;
+  google.protobuf.Timestamp expiry_time = 6;
   // Status code
-  int32 code = 7;
+  int32 status = 7;
 }
 
 message NoticeContent {

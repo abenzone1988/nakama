@@ -98,18 +98,17 @@ func SystemNotificationCreate(ctx context.Context, db *sql.DB, logger *zap.Logge
 	}
 
 	notification := &console.SystemNotice{
-		Id:      id,
-		Subject: subject,
-		Content: &noticeContent,
-		Create:  timestamppb.New(createTime.Time),
-		Code:    code,
+		Id:         id,
+		Subject:    subject,
+		Content:    &noticeContent,
+		CreateTime: timestamppb.New(createTime.Time),
 	}
 
 	if dbEffectiveTime.Valid {
-		notification.Effective = timestamppb.New(dbEffectiveTime.Time)
+		notification.EffectiveTime = timestamppb.New(dbEffectiveTime.Time)
 	}
 	if dbExpiryTime.Valid {
-		notification.Expiry = timestamppb.New(dbExpiryTime.Time)
+		notification.ExpiryTime = timestamppb.New(dbExpiryTime.Time)
 	}
 
 	return notification, nil
@@ -182,18 +181,17 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		}
 
 		notification := &console.SystemNotice{
-			Id:      id,
-			Subject: subject,
-			Content: &content,
-			Create:  timestamppb.New(createTime.Time),
-			Code:    code,
+			Id:         id,
+			Subject:    subject,
+			Content:    &content,
+			CreateTime: timestamppb.New(createTime.Time),
 		}
 
 		if effectiveTime.Valid {
-			notification.Effective = timestamppb.New(effectiveTime.Time)
+			notification.EffectiveTime = timestamppb.New(effectiveTime.Time)
 		}
 		if expiryTime.Valid {
-			notification.Expiry = timestamppb.New(expiryTime.Time)
+			notification.ExpiryTime = timestamppb.New(expiryTime.Time)
 		}
 
 		notifications = append(notifications, notification)
@@ -258,18 +256,17 @@ func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logge
 	}
 
 	notification := &console.SystemNotice{
-		Id:      notificationId,
-		Subject: subject,
-		Content: &noticeContent,
-		Create:  timestamppb.New(createTime.Time),
-		Code:    code,
+		Id:         notificationId,
+		Subject:    subject,
+		Content:    &noticeContent,
+		CreateTime: timestamppb.New(createTime.Time),
 	}
 
 	if dbEffectiveTime.Valid {
-		notification.Effective = timestamppb.New(dbEffectiveTime.Time)
+		notification.EffectiveTime = timestamppb.New(dbEffectiveTime.Time)
 	}
 	if dbExpiryTime.Valid {
-		notification.Expiry = timestamppb.New(dbExpiryTime.Time)
+		notification.ExpiryTime = timestamppb.New(dbExpiryTime.Time)
 	}
 
 	return notification, nil
@@ -316,18 +313,17 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 	}
 
 	notification := &console.SystemNotice{
-		Id:      notificationId,
-		Subject: subject,
-		Content: &content,
-		Create:  timestamppb.New(createTime.Time),
-		Code:    code,
+		Id:         notificationId,
+		Subject:    subject,
+		Content:    &content,
+		CreateTime: timestamppb.New(createTime.Time),
 	}
 
 	if effectiveTime.Valid {
-		notification.Effective = timestamppb.New(effectiveTime.Time)
+		notification.EffectiveTime = timestamppb.New(effectiveTime.Time)
 	}
 	if expiryTime.Valid {
-		notification.Expiry = timestamppb.New(expiryTime.Time)
+		notification.ExpiryTime = timestamppb.New(expiryTime.Time)
 	}
 
 	return notification, nil
@@ -363,7 +359,7 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 			continue
 		}
 
-		createTime := notice.GetCreate().AsTime().UTC().Unix()
+		createTime := notice.GetCreateTime().AsTime().UTC().Unix()
 		if createTime > latestSyncTime {
 			latestSyncTime = createTime
 		}
@@ -375,8 +371,8 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 			SenderId:   uuid.Nil.String(),
 			Code:       NotificationSystemNotice,
 			Persistent: true,
-			CreateTime: notice.GetCreate(),
-			ExpiryTime: notice.GetExpiry(),
+			CreateTime: notice.GetCreateTime(),
+			ExpiryTime: notice.GetExpiryTime(),
 		})
 	}
 
@@ -443,18 +439,17 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 		}
 
 		notification := &console.SystemNotice{
-			Id:      id,
-			Subject: subject,
-			Content: &content,
-			Create:  timestamppb.New(createTime.Time),
-			Code:    code,
+			Id:         id,
+			Subject:    subject,
+			Content:    &content,
+			CreateTime: timestamppb.New(createTime.Time),
 		}
 
 		if effectiveTime.Valid {
-			notification.Effective = timestamppb.New(effectiveTime.Time)
+			notification.EffectiveTime = timestamppb.New(effectiveTime.Time)
 		}
 		if expiryTime.Valid {
-			notification.Expiry = timestamppb.New(expiryTime.Time)
+			notification.ExpiryTime = timestamppb.New(expiryTime.Time)
 		}
 
 		notifications = append(notifications, notification)

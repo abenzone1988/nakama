@@ -62,7 +62,7 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 	}
 
 	// 创建系统通知
-	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetSubject(), string(contentJson), notice.GetEffective(), notice.GetExpiry(), notice.GetCode())
+	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetSubject(), string(contentJson), notice.GetEffectiveTime(), notice.GetExpiryTime(), 0)
 	if err != nil {
 		s.logger.Error("创建系统通知失败", zap.Error(err))
 		return nil, status.Error(codes.Internal, "创建系统通知失败")
@@ -75,7 +75,7 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 			Subject:    notice.GetSubject(),
 			Content:    string(contentJson),
 			SenderId:   uuid.Nil.String(),
-			Code:       notice.GetCode(),
+			Code:       0,
 			Persistent: false,
 		}
 		if err := NotificationSendAll(ctx, s.logger, s.db, s.tracker, s.router, notification); err != nil {
@@ -102,7 +102,7 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 				Subject:    notice.GetSubject(),
 				Content:    string(contentJson),
 				SenderId:   uuid.Nil.String(),
-				Code:       notice.GetCode(),
+				Code:       0,
 				Persistent: true,
 			}}
 		}
@@ -154,7 +154,7 @@ func (s *ConsoleServer) UpdateSystemNotification(ctx context.Context, in *consol
 		return nil, status.Error(codes.InvalidArgument, "通知内容格式错误")
 	}
 
-	notification, err := SystemNotificationUpdate(ctx, s.db, s.logger, in.GetId(), in.GetSubject(), string(contentJson), in.GetEffective(), in.GetExpiry(), in.GetCode())
+	notification, err := SystemNotificationUpdate(ctx, s.db, s.logger, in.GetId(), in.GetSubject(), string(contentJson), in.GetEffectiveTime(), in.GetExpiryTime(), 0)
 	if err != nil {
 		if err == ErrSystemNotificationNotFound {
 			return nil, status.Error(codes.NotFound, "通知不存在")
