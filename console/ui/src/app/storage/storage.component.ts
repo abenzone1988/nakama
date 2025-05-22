@@ -57,12 +57,6 @@ export class StorageListComponent implements OnInit {
 
     this.nextCursor = qp.get('cursor');
 
-    if (this.nextCursor && this.nextCursor !== '') {
-      this.search(1);
-    } else if (this.f.collection.value || this.f.user_id.value) {
-      this.search(0);
-    }
-
     this.route.data.subscribe(
       d => {
         this.collections.length = 0;
@@ -77,6 +71,14 @@ export class StorageListComponent implements OnInit {
       err => {
         this.error = err;
       });
+
+    if (this.objects.length === 0) {
+      if (this.nextCursor && this.nextCursor !== '') {
+        this.search(1);
+      } else if (this.f.collection.value || this.f.user_id.value) {
+        this.search(0);
+      }
+    }
   }
 
   disableSearch(): boolean {
