@@ -25,6 +25,8 @@ const (
 	// 场景内容ID
 	ContentOfflineIncome = "CONTENT621161474" // 离线收益场景内容ID
 	ContentStaminaFull   = "CONTENT611333890" // 体力恢复场景内容ID
+	ContentExitNoLevel   = "CONTENT663576322" // 退出游戏，无中途退出关卡场景内容ID
+	ContentExitWithLevel = "CONTENT605195010" // 退出游戏，有中途退出关卡场景内容ID
 
 	// 测试模式
 	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景
@@ -68,6 +70,23 @@ func (s *StaminaData) GetKey() string {
 func (s *StaminaData) Init() {
 	s.Stamina = 0
 	s.UpdateTimestamp = time.Now().UTC().Format(time.RFC3339)
+}
+
+// NetReconnectData 重连数据
+type NetReconnectData struct {
+	BattleType int `json:"battleType"` // 战斗类型
+}
+
+func (s *NetReconnectData) GetCollection() string {
+	return "Battle"
+}
+
+func (s *NetReconnectData) GetKey() string {
+	return "Reconnect"
+}
+
+func (s *NetReconnectData) Init() {
+	s.BattleType = 0
 }
 
 // getSignature 计算签名
@@ -253,37 +272,58 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		})
 	}
 
-	return scenes, nil
-
-	// 3. 查询体力数据
-	staminaData := &StaminaData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, staminaData); err != nil {
-		s.logger.Error("读取Stamina数据失败", zap.Error(err))
+	// 3. 查询重连数据
+	reconnectData := &NetReconnectData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, reconnectData); err != nil {
+		s.logger.Error("读取Reconnect数据失败", zap.Error(err))
 		return nil, err
 	}
 
-	// 解析updateTimestamp
-	updateTime, err := parseTime(staminaData.UpdateTimestamp)
-	if err != nil {
-		s.logger.Error("解析时间格式失败", zap.Error(err))
-		return nil, err
-	}
-
-	//s.logger.Info("体力恢复时间间隔", zap.Float64("Minutes", time.Since(updateTime).Minutes()))
-
-	// 计算体力恢复
-	minutesPassed := time.Since(updateTime).Minutes()
-	recoveredStamina := int(minutesPassed / 20) // 每20分钟恢复1点体力
-	currentStamina := staminaData.Stamina + recoveredStamina
-
-	// 如果体力达到上限30
-	if currentStamina >= 30 {
+	if reconnectData.BattleType == 0 {
+		// 非关卡退出
 		scenes = append(scenes, &Scene{
-			Scene:      SceneStaminaFull,
-			ContentIDs: []string{ContentStaminaFull},
+			Scene:      3,
+			ContentIDs: []string{ContentExitNoLevel},
+			Extra:      "",
+		})
+	} else {
+		// 关卡退出
+		scenes = append(scenes, &Scene{
+			Scene:      3,
+			ContentIDs: []string{ContentExitWithLevel},
 			Extra:      "",
 		})
 	}
+
+	// 3. 查询体力数据 暂时不用
+	// staminaData := &StaminaData{}
+	// if err := LoadData(ctx, s.logger, s.db, userID, staminaData); err != nil {
+	// 	s.logger.Error("读取Stamina数据失败", zap.Error(err))
+	// 	return nil, err
+	// }
+
+	// // 解析updateTimestamp
+	// updateTime, err := parseTime(staminaData.UpdateTimestamp)
+	// if err != nil {
+	// 	s.logger.Error("解析时间格式失败", zap.Error(err))
+	// 	return nil, err
+	// }
+
+	// //s.logger.Info("体力恢复时间间隔", zap.Float64("Minutes", time.Since(updateTime).Minutes()))
+
+	// // 计算体力恢复
+	// minutesPassed := time.Since(updateTime).Minutes()
+	// recoveredStamina := int(minutesPassed / 20) // 每20分钟恢复1点体力
+	// currentStamina := staminaData.Stamina + recoveredStamina
+
+	// // 如果体力达到上限30
+	// if currentStamina >= 30 {
+	// 	scenes = append(scenes, &Scene{
+	// 		Scene:      SceneStaminaFull,
+	// 		ContentIDs: []string{ContentStaminaFull},
+	// 		Extra:      "",
+	// 	})
+	// }
 
 	return scenes, nil
 }
