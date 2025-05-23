@@ -2,7 +2,7 @@ name: nakama-node-xjsm
 
 database:
   address:
-    - "root@192.168.102.223:26257/xjsm"
+    - "root@118.145.200.91:26258/nakama"
 logger:
   level: "debug"
 

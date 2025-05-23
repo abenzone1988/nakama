@@ -418,6 +418,17 @@ func countDatabase(ctx context.Context, logger *zap.Logger, db *sql.DB, tableNam
 		return int32(count.Int64)
 	}
 
+	// If both fast counts failed, try approximate count using crdb_internal
+	if err := db.QueryRowContext(ctx, "SELECT sum(estimated_row_count) FROM crdb_internal.table_row_statistics WHERE table_name = $1", tableName).Scan(&count); err != nil {
+		logger.Warn("Error counting storage objects with approximate count.", zap.Error(err))
+		if err == context.Canceled {
+			return 0
+		}
+	}
+	if count.Valid && count.Int64 > 0 {
+		return int32(count.Int64)
+	}
+
 	// If both fast counts failed, returned NULL, returned 0 or -1 try a full count.
 	// NOTE: PostgreSQL parses the expression count(*) as a special case taking no
 	// arguments, while count(1) takes an argument and PostgreSQL has to check that
