@@ -248,29 +248,29 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 	}
 
 	// 2. 查询离线收益数据s
-	homeData := &HomeData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
-		s.logger.Error("读取Home数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	// 解析lastGetOnHookTimestamp
-	lastGetTime, err := parseTime(homeData.LastGetOnHookTimestamp)
-	if err != nil {
-		s.logger.Error("解析时间格式失败", zap.Error(err))
-		return nil, err
-	}
-
-	//s.logger.Info("离线收益时间间隔", zap.Float64("Hours", time.Since(lastGetTime).Hours()))
-
-	// 判断是否超过8小时
-	if time.Since(lastGetTime).Hours() >= 8 {
-		scenes = append(scenes, &Scene{
-			Scene:      SceneOfflineIncome,
-			ContentIDs: []string{ContentOfflineIncome},
-			Extra:      "",
-		})
-	}
+	//homeData := &HomeData{}
+	//if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
+	//	s.logger.Error("读取Home数据失败", zap.Error(err))
+	//	return nil, err
+	//}
+	//
+	//// 解析lastGetOnHookTimestamp
+	//lastGetTime, err := parseTime(homeData.LastGetOnHookTimestamp)
+	//if err != nil {
+	//	s.logger.Error("解析时间格式失败", zap.Error(err))
+	//	return nil, err
+	//}
+	//
+	////s.logger.Info("离线收益时间间隔", zap.Float64("Hours", time.Since(lastGetTime).Hours()))
+	//
+	//// 判断是否超过8小时
+	//if time.Since(lastGetTime).Hours() >= 8 {
+	//	scenes = append(scenes, &Scene{
+	//		Scene:      SceneOfflineIncome,
+	//		ContentIDs: []string{ContentOfflineIncome},
+	//		Extra:      "",
+	//	})
+	//}
 
 	// 3. 查询重连数据
 	reconnectData := &NetReconnectData{}
