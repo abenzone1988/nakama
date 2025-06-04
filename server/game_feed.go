@@ -23,16 +23,16 @@ const (
 	SceneStaminaFull   = 2 // 体力恢复场景
 
 	// 场景内容ID
-	ContentOfflineIncome = "CONTENT621161474" // 离线收益场景内容ID
-	ContentStaminaFull   = "CONTENT611333890" // 体力恢复场景内容ID
-	ContentExitNoLevel   = "CONTENT663576322" // 退出游戏，无中途退出关卡场景内容ID
-	ContentExitWithLevel = "CONTENT605195010" // 退出游戏，有中途退出关卡场景内容ID
+	ContentOfflineIncome = "CONTENT963547906" // 离线收益场景内容ID
+	ContentStaminaFull   = "CONTENT586019330" // 体力恢复场景内容ID
+	ContentExitNoLevel   = "CONTENT605203970" // 退出游戏，无中途退出关卡场景内容ID
+	ContentExitWithLevel = "CONTENT586019586" // 退出游戏，有中途退出关卡场景内容ID
 
 	// 测试模式
-	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景
+	TestModeEnabled = true // 是否启用测试模式，启用后将返回所有场景
 )
 
-const TestSecret = "HpF584757762CNY"
+const TestSecret = "Mkj586019074Fdh"
 
 // Scene 场景信息
 type Scene struct {
@@ -166,6 +166,7 @@ func (s *ApiServer) writeFeedResponse(w http.ResponseWriter, r *http.Request, re
 
 // HandleSceneList 处理场景列表查询请求
 func (s *ApiServer) HandleSceneList(w http.ResponseWriter, r *http.Request) {
+
 	// 1. 验证请求方法
 	if r.Method != http.MethodGet {
 		s.writeFeedResponse(w, r, SceneListResponse{
@@ -240,8 +241,18 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		s.logger.Info("测试模式：返回所有场景")
 		return []*Scene{
 			{
-				Scene:      SceneOfflineIncome,
+				Scene:      1,
 				ContentIDs: []string{ContentOfflineIncome},
+				Extra:      "",
+			},
+			{
+				Scene:      2,
+				ContentIDs: []string{ContentStaminaFull},
+				Extra:      "",
+			},
+			{
+				Scene:      3,
+				ContentIDs: []string{ContentExitNoLevel, ContentExitWithLevel},
 				Extra:      "",
 			},
 		}, nil
