@@ -18,15 +18,11 @@ const (
 	ErrNoInvalidParam    = 28001007 // 参数错误
 	ErrNoSignatureFailed = 28006009 // 校验签名失败
 
-	// 场景类型
-	SceneOfflineIncome = 1 // 离线收益场景
-	SceneStaminaFull   = 2 // 体力恢复场景
-
 	// 场景内容ID
 	ContentOfflineIncome = "CONTENT621161474" // 离线收益场景内容ID
-	ContentStaminaFull   = "CONTENT611333890" // 体力恢复场景内容ID
-	ContentExitNoLevel   = "CONTENT663576322" // 退出游戏，无中途退出关卡场景内容ID
-	ContentExitWithLevel = "CONTENT605195010" // 退出游戏，有中途退出关卡场景内容ID
+	//ContentStaminaFull   = "CONTENT611333890" // 体力恢复场景内容ID
+	ContentReFight = "CONTENT663576322" // 退出游戏，无中途退出关卡场景内容ID
+	//ContentExitWithLevel = "CONTENT605195010" // 退出游戏，有中途退出关卡场景内容ID
 
 	// 测试模式
 	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景
@@ -166,6 +162,7 @@ func (s *ApiServer) writeFeedResponse(w http.ResponseWriter, r *http.Request, re
 
 // HandleSceneList 处理场景列表查询请求
 func (s *ApiServer) HandleSceneList(w http.ResponseWriter, r *http.Request) {
+
 	// 1. 验证请求方法
 	if r.Method != http.MethodGet {
 		s.writeFeedResponse(w, r, SceneListResponse{
@@ -240,60 +237,75 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		s.logger.Info("测试模式：返回所有场景")
 		return []*Scene{
 			{
-				Scene:      SceneOfflineIncome,
+				Scene:      1,
 				ContentIDs: []string{ContentOfflineIncome},
+				Extra:      "",
+			},
+			{
+				Scene:      3,
+				ContentIDs: []string{ContentReFight},
 				Extra:      "",
 			},
 		}, nil
 	}
 
 	// 2. 查询离线收益数据s
-	//homeData := &HomeData{}
-	//if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
-	//	s.logger.Error("读取Home数据失败", zap.Error(err))
+	homeData := &HomeData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
+		s.logger.Error("读取Home数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	if homeData.CurLevelId < "L1010" {
+		return []*Scene{}, nil
+	}
+
+	// 解析lastGetOnHookTimestamp
+	lastGetTime, err := parseTime(homeData.LastGetOnHookTimestamp)
+	if err != nil {
+		s.logger.Error("解析时间格式失败", zap.Error(err))
+		return nil, err
+	}
+
+	//s.logger.Info("离线收益时间间隔", zap.Float64("Hours", time.Since(lastGetTime).Hours()))
+
+	// 判断是否超过8小时
+	if time.Since(lastGetTime).Hours() >= 8 {
+		scenes = append(scenes, &Scene{
+			Scene:      1,
+			ContentIDs: []string{ContentOfflineIncome},
+			Extra:      "",
+		})
+	}
+
+	// 3. 查询重连数据
+	//reconnectData := &NetReconnectData{}
+	//if err := LoadData(ctx, s.logger, s.db, userID, reconnectData); err != nil {
+	//	s.logger.Error("读取Reconnect数据失败", zap.Error(err))
 	//	return nil, err
 	//}
 	//
-	//// 解析lastGetOnHookTimestamp
-	//lastGetTime, err := parseTime(homeData.LastGetOnHookTimestamp)
-	//if err != nil {
-	//	s.logger.Error("解析时间格式失败", zap.Error(err))
-	//	return nil, err
-	//}
-	//
-	////s.logger.Info("离线收益时间间隔", zap.Float64("Hours", time.Since(lastGetTime).Hours()))
-	//
-	//// 判断是否超过8小时
-	//if time.Since(lastGetTime).Hours() >= 8 {
+	//if reconnectData.BattleType == 0 {
+	//	// 非关卡退出
 	//	scenes = append(scenes, &Scene{
-	//		Scene:      SceneOfflineIncome,
-	//		ContentIDs: []string{ContentOfflineIncome},
+	//		Scene:      3,
+	//		ContentIDs: []string{ContentExitNoLevel},
+	//		Extra:      "",
+	//	})
+	//} else {
+	//	// 关卡退出
+	//	scenes = append(scenes, &Scene{
+	//		Scene:      3,
+	//		ContentIDs: []string{ContentExitWithLevel},
 	//		Extra:      "",
 	//	})
 	//}
 
-	// 3. 查询重连数据
-	reconnectData := &NetReconnectData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, reconnectData); err != nil {
-		s.logger.Error("读取Reconnect数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	if reconnectData.BattleType == 0 {
-		// 非关卡退出
-		scenes = append(scenes, &Scene{
-			Scene:      3,
-			ContentIDs: []string{ContentExitNoLevel},
-			Extra:      "",
-		})
-	} else {
-		// 关卡退出
-		scenes = append(scenes, &Scene{
-			Scene:      3,
-			ContentIDs: []string{ContentExitWithLevel},
-			Extra:      "",
-		})
-	}
+	scenes = append(scenes, &Scene{
+		Scene:      3,
+		ContentIDs: []string{ContentReFight},
+		Extra:      "",
+	})
 
 	// 3. 查询体力数据 暂时不用
 	// staminaData := &StaminaData{}
