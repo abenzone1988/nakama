@@ -53,6 +53,24 @@ type StaminaData struct {
 	UpdateTimestamp string `json:"updateTimestamp"`
 }
 
+type ByteDirectPlay struct {
+	SceneTimestamps map[int64]string `json:"scene_timestamps"` // 记录每个场景的最后返回时间
+}
+
+func (f *ByteDirectPlay) GetCollection() string {
+	return "ByteGame"
+}
+
+func (f *ByteDirectPlay) GetKey() string {
+	return "DirectPlay"
+}
+
+func (f *ByteDirectPlay) Init() {
+	if f.SceneTimestamps == nil {
+		f.SceneTimestamps = make(map[int64]string)
+	}
+}
+
 func (s *StaminaData) GetCollection() string {
 	return "Home"
 }
@@ -247,7 +265,17 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		}, nil
 	}
 
-	// 2. 查询离线收益数据s
+	// 读取 ByteDirectPlay 数据
+	directPlay := &ByteDirectPlay{}
+	if err := LoadData(ctx, s.logger, s.db, userID, directPlay); err != nil {
+		s.logger.Error("读取 ByteDirectPlay 数据失败", zap.Error(err))
+		directPlay.Init()
+	}
+
+	currentTime := time.Now().UTC()
+	currentDate := currentTime.Format("2006-01-02")
+
+	// 2. 查询离线收益数据
 	homeData := &HomeData{}
 	if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
 		s.logger.Error("读取Home数据失败", zap.Error(err))
@@ -261,75 +289,34 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		return nil, err
 	}
 
-	//s.logger.Info("离线收益时间间隔", zap.Float64("Hours", time.Since(lastGetTime).Hours()))
-
-	// 判断是否超过8小时
+	// 判断是否超过8小时且今天未返回过该场景
 	if time.Since(lastGetTime).Hours() >= 8 {
-		scenes = append(scenes, &Scene{
-			Scene:      1,
-			ContentIDs: []string{ContentOfflineIncome},
-			Extra:      "",
-		})
+		lastSceneTime := directPlay.SceneTimestamps[1]
+		if lastSceneTime == "" || !strings.HasPrefix(lastSceneTime, currentDate) {
+			scenes = append(scenes, &Scene{
+				Scene:      1,
+				ContentIDs: []string{ContentOfflineIncome},
+				Extra:      "",
+			})
+			directPlay.SceneTimestamps[1] = currentTime.Format(time.RFC3339)
+		}
 	}
 
-	// 3. 查询重连数据
-	//reconnectData := &NetReconnectData{}
-	//if err := LoadData(ctx, s.logger, s.db, userID, reconnectData); err != nil {
-	//	s.logger.Error("读取Reconnect数据失败", zap.Error(err))
-	//	return nil, err
-	//}
-	//
-	//if reconnectData.BattleType == 0 {
-	//	// 非关卡退出
-	//	scenes = append(scenes, &Scene{
-	//		Scene:      3,
-	//		ContentIDs: []string{ContentExitNoLevel},
-	//		Extra:      "",
-	//	})
-	//} else {
-	//	// 关卡退出
-	//	scenes = append(scenes, &Scene{
-	//		Scene:      3,
-	//		ContentIDs: []string{ContentExitWithLevel},
-	//		Extra:      "",
-	//	})
-	//}
+	// 检查重新进入关卡场景
+	lastReFightTime := directPlay.SceneTimestamps[3]
+	if lastReFightTime == "" || !strings.HasPrefix(lastReFightTime, currentDate) {
+		scenes = append(scenes, &Scene{
+			Scene:      3,
+			ContentIDs: []string{ContentReFight},
+			Extra:      "",
+		})
+		directPlay.SceneTimestamps[3] = currentTime.Format(time.RFC3339)
+	}
 
-	scenes = append(scenes, &Scene{
-		Scene:      3,
-		ContentIDs: []string{ContentReFight},
-		Extra:      "",
-	})
-
-	// 3. 查询体力数据 暂时不用
-	// staminaData := &StaminaData{}
-	// if err := LoadData(ctx, s.logger, s.db, userID, staminaData); err != nil {
-	// 	s.logger.Error("读取Stamina数据失败", zap.Error(err))
-	// 	return nil, err
-	// }
-
-	// // 解析updateTimestamp
-	// updateTime, err := parseTime(staminaData.UpdateTimestamp)
-	// if err != nil {
-	// 	s.logger.Error("解析时间格式失败", zap.Error(err))
-	// 	return nil, err
-	// }
-
-	// //s.logger.Info("体力恢复时间间隔", zap.Float64("Minutes", time.Since(updateTime).Minutes()))
-
-	// // 计算体力恢复
-	// minutesPassed := time.Since(updateTime).Minutes()
-	// recoveredStamina := int(minutesPassed / 20) // 每20分钟恢复1点体力
-	// currentStamina := staminaData.Stamina + recoveredStamina
-
-	// // 如果体力达到上限30
-	// if currentStamina >= 30 {
-	// 	scenes = append(scenes, &Scene{
-	// 		Scene:      SceneStaminaFull,
-	// 		ContentIDs: []string{ContentStaminaFull},
-	// 		Extra:      "",
-	// 	})
-	// }
+	// 保存更新后的 ByteDirectPlay 数据
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, directPlay); err != nil {
+		s.logger.Error("保存 ByteDirectPlay 数据失败", zap.Error(err))
+	}
 
 	return scenes, nil
 }
