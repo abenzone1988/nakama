@@ -44,7 +44,7 @@ var (
 )
 
 func (s *ApiServer) RpcFuncHttp(w http.ResponseWriter, r *http.Request) {
-	// Check first token then HTTP key for authentication, and add user info to the context.
+	// Check first token then HTTP key for authentication, and add user info to the context
 	queryParams := r.URL.Query()
 	var isTokenAuth bool
 	var userID uuid.UUID
