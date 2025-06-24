@@ -133,6 +133,11 @@ const (
 	Nakama_ListPublishedAnnouncements_FullMethodName        = "/nakama.api.Nakama/ListPublishedAnnouncements"
 	Nakama_MarkNotificationsRead_FullMethodName             = "/nakama.api.Nakama/MarkNotificationsRead"
 	Nakama_ClaimNotificationAttachments_FullMethodName      = "/nakama.api.Nakama/ClaimNotificationAttachments"
+	Nakama_SaveHomeLevelData_FullMethodName                 = "/nakama.api.Nakama/SaveHomeLevelData"
+	Nakama_GetHomeLevelData_FullMethodName                  = "/nakama.api.Nakama/GetHomeLevelData"
+	Nakama_UseWallet_FullMethodName                         = "/nakama.api.Nakama/UseWallet"
+	Nakama_AddWallet_FullMethodName                         = "/nakama.api.Nakama/AddWallet"
+	Nakama_GetReward_FullMethodName                         = "/nakama.api.Nakama/GetReward"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -327,6 +332,16 @@ type NakamaClient interface {
 	MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*api.MarkNotificationsReadResponse, error)
 	// Claim notification attachments
 	ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*api.ClaimNotificationAttachmentsResponse, error)
+	// Save home level data
+	SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLevelDataRequest, opts ...grpc.CallOption) (*game.SaveHomeLevelDataResponse, error)
+	// Get home level data
+	GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelDataRequest, opts ...grpc.CallOption) (*game.GetHomeLevelDataResponse, error)
+	// Use wallet currency
+	UseWallet(ctx context.Context, in *game.UseWalletRequest, opts ...grpc.CallOption) (*game.UseWalletResponse, error)
+	// Add wallet currency
+	AddWallet(ctx context.Context, in *game.AddWalletRequest, opts ...grpc.CallOption) (*game.AddWalletResponse, error)
+	// Get Reward
+	GetReward(ctx context.Context, in *game.GetRewardRequest, opts ...grpc.CallOption) (*game.GetRewardResponse, error)
 }
 
 type nakamaClient struct {
@@ -1183,6 +1198,51 @@ func (c *nakamaClient) ClaimNotificationAttachments(ctx context.Context, in *api
 	return out, nil
 }
 
+func (c *nakamaClient) SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLevelDataRequest, opts ...grpc.CallOption) (*game.SaveHomeLevelDataResponse, error) {
+	out := new(game.SaveHomeLevelDataResponse)
+	err := c.cc.Invoke(ctx, Nakama_SaveHomeLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelDataRequest, opts ...grpc.CallOption) (*game.GetHomeLevelDataResponse, error) {
+	out := new(game.GetHomeLevelDataResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetHomeLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UseWallet(ctx context.Context, in *game.UseWalletRequest, opts ...grpc.CallOption) (*game.UseWalletResponse, error) {
+	out := new(game.UseWalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_UseWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) AddWallet(ctx context.Context, in *game.AddWalletRequest, opts ...grpc.CallOption) (*game.AddWalletResponse, error) {
+	out := new(game.AddWalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_AddWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetReward(ctx context.Context, in *game.GetRewardRequest, opts ...grpc.CallOption) (*game.GetRewardResponse, error) {
+	out := new(game.GetRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1375,6 +1435,16 @@ type NakamaServer interface {
 	MarkNotificationsRead(context.Context, *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error)
 	// Claim notification attachments
 	ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error)
+	// Save home level data
+	SaveHomeLevelData(context.Context, *game.SaveHomeLevelDataRequest) (*game.SaveHomeLevelDataResponse, error)
+	// Get home level data
+	GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error)
+	// Use wallet currency
+	UseWallet(context.Context, *game.UseWalletRequest) (*game.UseWalletResponse, error)
+	// Add wallet currency
+	AddWallet(context.Context, *game.AddWalletRequest) (*game.AddWalletResponse, error)
+	// Get Reward
+	GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1663,6 +1733,21 @@ func (UnimplementedNakamaServer) MarkNotificationsRead(context.Context, *api.Mar
 }
 func (UnimplementedNakamaServer) ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimNotificationAttachments not implemented")
+}
+func (UnimplementedNakamaServer) SaveHomeLevelData(context.Context, *game.SaveHomeLevelDataRequest) (*game.SaveHomeLevelDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveHomeLevelData not implemented")
+}
+func (UnimplementedNakamaServer) GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHomeLevelData not implemented")
+}
+func (UnimplementedNakamaServer) UseWallet(context.Context, *game.UseWalletRequest) (*game.UseWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UseWallet not implemented")
+}
+func (UnimplementedNakamaServer) AddWallet(context.Context, *game.AddWalletRequest) (*game.AddWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddWallet not implemented")
+}
+func (UnimplementedNakamaServer) GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReward not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3369,6 +3454,96 @@ func _Nakama_ClaimNotificationAttachments_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_SaveHomeLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.SaveHomeLevelDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).SaveHomeLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_SaveHomeLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).SaveHomeLevelData(ctx, req.(*game.SaveHomeLevelDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetHomeLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetHomeLevelDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetHomeLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetHomeLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetHomeLevelData(ctx, req.(*game.GetHomeLevelDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UseWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UseWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UseWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UseWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UseWallet(ctx, req.(*game.UseWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_AddWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.AddWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).AddWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_AddWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).AddWallet(ctx, req.(*game.AddWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetReward(ctx, req.(*game.GetRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3751,6 +3926,26 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimNotificationAttachments",
 			Handler:    _Nakama_ClaimNotificationAttachments_Handler,
+		},
+		{
+			MethodName: "SaveHomeLevelData",
+			Handler:    _Nakama_SaveHomeLevelData_Handler,
+		},
+		{
+			MethodName: "GetHomeLevelData",
+			Handler:    _Nakama_GetHomeLevelData_Handler,
+		},
+		{
+			MethodName: "UseWallet",
+			Handler:    _Nakama_UseWallet_Handler,
+		},
+		{
+			MethodName: "AddWallet",
+			Handler:    _Nakama_AddWallet_Handler,
+		},
+		{
+			MethodName: "GetReward",
+			Handler:    _Nakama_GetReward_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

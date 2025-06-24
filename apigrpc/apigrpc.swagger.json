@@ -1854,6 +1854,72 @@
         ]
       }
     },
+    "/v2/game/homelevel/get": {
+      "post": {
+        "summary": "Get home level data",
+        "operationId": "Nakama_GetHomeLevelData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetHomeLevelDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGetHomeLevelDataRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/homelevel/save": {
+      "post": {
+        "summary": "Save home level data",
+        "operationId": "Nakama_SaveHomeLevelData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameSaveHomeLevelDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameSaveHomeLevelDataRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/redeem_gift": {
       "post": {
         "summary": "Redeem a Gift by code",
@@ -1887,6 +1953,39 @@
         ]
       }
     },
+    "/v2/game/reward/get": {
+      "post": {
+        "summary": "Get Reward",
+        "operationId": "Nakama_GetReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGetRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/time": {
       "get": {
         "summary": "Get Server Time",
@@ -1905,6 +2004,72 @@
             }
           }
         },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/wallet/add": {
+      "post": {
+        "summary": "Add wallet currency",
+        "operationId": "Nakama_AddWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameAddWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameAddWalletRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/wallet/use": {
+      "post": {
+        "summary": "Use wallet currency",
+        "operationId": "Nakama_UseWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUseWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUseWalletRequest"
+            }
+          }
+        ],
         "tags": [
           "Nakama"
         ]
@@ -5846,6 +6011,50 @@
       },
       "description": "Write objects to the storage engine."
     },
+    "gameAddWalletRequest": {
+      "type": "object",
+      "properties": {
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "title": "加钱包请求"
+    },
+    "gameAddWalletResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新后的钱包"
+        },
+        "walletPrevious": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新前的钱包"
+        }
+      },
+      "title": "加钱包响应"
+    },
     "gameAnnouncementInfo": {
       "type": "object",
       "properties": {
@@ -5889,6 +6098,18 @@
         }
       }
     },
+    "gameCurrencyType": {
+      "type": "string",
+      "enum": [
+        "CURRENCY_TYPE_UNSPECIFIED",
+        "CURRENCY_TYPE_COIN",
+        "CURRENCY_TYPE_GEM",
+        "CURRENCY_TYPE_AD"
+      ],
+      "default": "CURRENCY_TYPE_UNSPECIFIED",
+      "description": "- CURRENCY_TYPE_UNSPECIFIED: 未指定\n - CURRENCY_TYPE_COIN: 硬币\n - CURRENCY_TYPE_GEM: 宝石\n - CURRENCY_TYPE_AD: 广告币",
+      "title": "货币类型枚举"
+    },
     "gameFeedbackRequest": {
       "type": "object",
       "properties": {
@@ -5909,6 +6130,130 @@
           "format": "date-time"
         }
       }
+    },
+    "gameGetHomeLevelDataRequest": {
+      "type": "object",
+      "properties": {
+        "levelIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "要获取的关卡ID列表（为空则获取全部）"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "限制返回数量"
+        },
+        "cursor": {
+          "type": "string",
+          "title": "分页游标"
+        }
+      },
+      "title": "获取关卡数据请求"
+    },
+    "gameGetHomeLevelDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "levelData": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameHomeLevelData"
+          },
+          "title": "关卡数据列表"
+        },
+        "nextCursor": {
+          "type": "string",
+          "title": "下一页游标"
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总数量"
+        },
+        "maxLevelId": {
+          "type": "string",
+          "title": "最大关卡"
+        }
+      },
+      "title": "获取关卡数据响应"
+    },
+    "gameGetRewardRequest": {
+      "type": "object",
+      "properties": {
+        "rewardId": {
+          "type": "string",
+          "title": "奖励id"
+        }
+      },
+      "title": "获取奖励请求"
+    },
+    "gameGetRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新后的钱包"
+        },
+        "walletPrevious": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新前的钱包"
+        }
+      },
+      "title": "获取奖励响应"
+    },
+    "gameHomeLevelData": {
+      "type": "object",
+      "properties": {
+        "levelId": {
+          "type": "string",
+          "title": "关卡ID"
+        },
+        "hasChallenged": {
+          "type": "boolean",
+          "title": "是否挑战过"
+        },
+        "isPassed": {
+          "type": "boolean",
+          "title": "是否通过"
+        },
+        "remainHp": {
+          "type": "number",
+          "format": "float",
+          "title": "通关后剩余血量"
+        },
+        "rewardGot": {
+          "type": "integer",
+          "format": "int32",
+          "title": "奖励领取状态（位）"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "更新时间"
+        }
+      },
+      "title": "关卡数据结构"
     },
     "gameListInviteeResponse": {
       "type": "object",
@@ -5964,6 +6309,57 @@
         }
       }
     },
+    "gameSaveHomeLevelDataRequest": {
+      "type": "object",
+      "properties": {
+        "levelId": {
+          "type": "string",
+          "title": "关卡ID"
+        },
+        "hasChallenged": {
+          "type": "boolean",
+          "title": "是否挑战过"
+        },
+        "isPassed": {
+          "type": "boolean",
+          "title": "是否通过"
+        },
+        "remainHp": {
+          "type": "number",
+          "format": "float",
+          "title": "通关后剩余血量"
+        },
+        "rewardGot": {
+          "type": "integer",
+          "format": "int32",
+          "title": "奖励领取状态（位）"
+        }
+      },
+      "title": "保存关卡数据请求（单个关卡）"
+    },
+    "gameSaveHomeLevelDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "isNewRecord": {
+          "type": "boolean",
+          "title": "是否为新创建的关卡记录"
+        },
+        "maxLevelId": {
+          "type": "string",
+          "title": "最大关卡"
+        }
+      },
+      "title": "保存关卡数据响应"
+    },
     "gameSubmitBeInvitedRequest": {
       "type": "object",
       "properties": {
@@ -5971,6 +6367,66 @@
           "type": "string"
         }
       }
+    },
+    "gameUseWalletRequest": {
+      "type": "object",
+      "properties": {
+        "currencyType": {
+          "$ref": "#/definitions/gameCurrencyType",
+          "title": "货币类型"
+        },
+        "amount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "使用数量"
+        },
+        "reason": {
+          "type": "string",
+          "title": "使用原因"
+        }
+      },
+      "title": "使用钱包货币请求"
+    },
+    "gameUseWalletResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新后的钱包"
+        },
+        "walletPrevious": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新前的钱包"
+        }
+      },
+      "title": "使用钱包货币响应"
+    },
+    "gameWallet": {
+      "type": "object",
+      "properties": {
+        "coin": {
+          "type": "string",
+          "format": "int64"
+        },
+        "gem": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ad": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "钱包结构"
     },
     "protobufAny": {
       "type": "object",

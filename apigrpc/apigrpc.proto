@@ -846,5 +846,45 @@ service Nakama {
       body: "*"
     };
   }
+
+  // Save home level data
+  rpc SaveHomeLevelData(game.SaveHomeLevelDataRequest) returns (game.SaveHomeLevelDataResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/homelevel/save"
+      body: "*"
+    };
+  }
+
+  // Get home level data
+  rpc GetHomeLevelData(game.GetHomeLevelDataRequest) returns (game.GetHomeLevelDataResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/homelevel/get"
+      body: "*"
+    };
+  }
+
+  // Use wallet currency
+  rpc UseWallet(game.UseWalletRequest) returns (game.UseWalletResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/wallet/use"
+      body: "*"
+    };
+  }
+
+  // Add wallet currency
+  rpc AddWallet(game.AddWalletRequest) returns (game.AddWalletResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/wallet/add"
+      body: "*"
+    };
+  }
+
+  // Get Reward
+  rpc GetReward(game.GetRewardRequest) returns (game.GetRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/reward/get"
+      body: "*"
+    };
+  }
 }
 

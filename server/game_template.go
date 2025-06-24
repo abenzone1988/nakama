@@ -14,12 +14,14 @@ const tplCollection = "Tpl"
 type TemplateManager interface {
 	LoadData()
 	GetTplRedemption() *TableTplRedemption
+	GetTplReward() *TableTplReward
 }
 
 type LocalTemplateManager struct {
 	logger             *zap.Logger
 	db                 *sql.DB
 	tableTplRedemption *TableTplRedemption
+	tableTplReward     *TableTplReward
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -28,6 +30,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		logger:             logger,
 		db:                 db,
 		tableTplRedemption: NewTableTplRedemption(logger, jsonPath),
+		tableTplReward:     NewTableTplReward(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -37,8 +40,13 @@ func (t *LocalTemplateManager) GetTplRedemption() *TableTplRedemption {
 	return t.tableTplRedemption
 }
 
+func (t *LocalTemplateManager) GetTplReward() *TableTplReward {
+	return t.tableTplReward
+}
+
 func (t *LocalTemplateManager) LoadData() {
 	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
+	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {

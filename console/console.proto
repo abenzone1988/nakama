@@ -188,6 +188,11 @@ service Console {
     };
   }
 
+  // Reload template data
+  rpc ReloadTemplate (google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http).post = "/v2/console/template";
+  }
+
   // Delete (non-recorded) all user accounts.
   rpc DeleteAccounts (google.protobuf.Empty) returns (google.protobuf.Empty) {
     option (google.api.http).delete = "/v2/console/account";

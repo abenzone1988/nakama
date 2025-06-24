@@ -74,11 +74,12 @@ message ListPublishedAnnouncementsResponse {
   string next_cursor = 3;  // 下一页游标
 }
 
-
+// 玩家元数据
 message UserMeta{
   int64 last_sync_notice = 1;
 }
 
+// 钱包结构
 message Wallet{
   int64 coin = 1;
   int64 gem = 2;
@@ -91,3 +92,99 @@ message Item {
   int64 num = 2;
 }
 
+// 关卡数据结构
+message HomeLevelData {
+  string level_id = 1;  // 关卡ID
+  bool has_challenged = 2;  // 是否挑战过
+  bool is_passed = 3;  // 是否通过
+  float remain_hp = 4;  // 通关后剩余血量
+  int32 reward_got = 5;  // 奖励领取状态（位）
+  google.protobuf.Timestamp update_time = 6;  // 更新时间
+}
+
+// 保存关卡数据请求（单个关卡）
+message SaveHomeLevelDataRequest {
+  string level_id = 1;  // 关卡ID
+  bool has_challenged = 2;  // 是否挑战过
+  bool is_passed = 3;  // 是否通过
+  float remain_hp = 4;  // 通关后剩余血量
+  int32 reward_got = 5;  // 奖励领取状态（位）
+}
+
+// 保存关卡数据响应
+message SaveHomeLevelDataResponse {
+  int32 code = 1;  // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;  // 响应消息
+  bool is_new_record = 3;  // 是否为新创建的关卡记录
+  string max_level_id = 4;// 最大关卡
+}
+
+// 获取关卡数据请求
+message GetHomeLevelDataRequest {
+  repeated string level_ids = 1;  // 要获取的关卡ID列表（为空则获取全部）
+  int32 limit = 2;  // 限制返回数量
+  string cursor = 3;  // 分页游标
+}
+
+// 获取关卡数据响应
+message GetHomeLevelDataResponse {
+  int32 code = 1;  // 状态码
+  string msg = 2;  // 响应消息
+  repeated HomeLevelData level_data = 3;  // 关卡数据列表
+  string next_cursor = 4;  // 下一页游标
+  int32 total_count = 5;  // 总数量
+  string max_level_id = 6;// 最大关卡
+}
+
+//获取奖励请求
+message GetRewardRequest{
+  string reward_id  = 1; //奖励id
+}
+
+//加钱包请求
+message AddWalletRequest{
+  int32 coin = 1;
+  int32 gem = 2;
+  int32 ad = 3;
+  string reason = 4;
+}
+
+//加钱包响应
+message AddWalletResponse{
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  Wallet wallet_updated = 3;     // 更新后的钱包
+  Wallet wallet_previous = 4;    // 更新前的钱包
+}
+
+
+//获取奖励响应
+message GetRewardResponse{
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  Wallet wallet_updated = 3;     // 更新后的钱包
+  Wallet wallet_previous = 4;    // 更新前的钱包
+}
+
+// 货币类型枚举
+enum CurrencyType {
+  CURRENCY_TYPE_UNSPECIFIED = 0; // 未指定
+  CURRENCY_TYPE_COIN = 1;        // 硬币
+  CURRENCY_TYPE_GEM = 2;         // 宝石
+  CURRENCY_TYPE_AD = 3;          // 广告币
+}
+
+// 使用钱包货币请求
+message UseWalletRequest {
+  CurrencyType currency_type = 1; // 货币类型
+  int32 amount = 2;              // 使用数量
+  string reason = 3;             // 使用原因
+}
+
+// 使用钱包货币响应
+message UseWalletResponse {
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  Wallet wallet_updated = 3;     // 更新后的钱包
+  Wallet wallet_previous = 4;    // 更新前的钱包
+}

@@ -134,7 +134,7 @@ func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.L
 				if err := LoadData(ctx, s.logger, s.db, inviterID, homeData); err != nil {
 					return nil, err
 				}
-				if homeData.CurLevelId > "L1001" {
+				if homeData.CurLevelId > "L10011" {
 					resp.InviteeIds = append(resp.InviteeIds, v.Invitee)
 				}
 			}

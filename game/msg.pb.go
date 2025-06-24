@@ -22,6 +22,59 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 货币类型枚举
+type CurrencyType int32
+
+const (
+	CurrencyType_CURRENCY_TYPE_UNSPECIFIED CurrencyType = 0 // 未指定
+	CurrencyType_CURRENCY_TYPE_COIN        CurrencyType = 1 // 硬币
+	CurrencyType_CURRENCY_TYPE_GEM         CurrencyType = 2 // 宝石
+	CurrencyType_CURRENCY_TYPE_AD          CurrencyType = 3 // 广告币
+)
+
+// Enum value maps for CurrencyType.
+var (
+	CurrencyType_name = map[int32]string{
+		0: "CURRENCY_TYPE_UNSPECIFIED",
+		1: "CURRENCY_TYPE_COIN",
+		2: "CURRENCY_TYPE_GEM",
+		3: "CURRENCY_TYPE_AD",
+	}
+	CurrencyType_value = map[string]int32{
+		"CURRENCY_TYPE_UNSPECIFIED": 0,
+		"CURRENCY_TYPE_COIN":        1,
+		"CURRENCY_TYPE_GEM":         2,
+		"CURRENCY_TYPE_AD":          3,
+	}
+)
+
+func (x CurrencyType) Enum() *CurrencyType {
+	p := new(CurrencyType)
+	*p = x
+	return p
+}
+
+func (x CurrencyType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CurrencyType) Descriptor() protoreflect.EnumDescriptor {
+	return file_msg_proto_enumTypes[0].Descriptor()
+}
+
+func (CurrencyType) Type() protoreflect.EnumType {
+	return &file_msg_proto_enumTypes[0]
+}
+
+func (x CurrencyType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CurrencyType.Descriptor instead.
+func (CurrencyType) EnumDescriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{0}
+}
+
 type RedeemGiftRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	GiftCode      string                 `protobuf:"bytes,1,opt,name=gift_code,json=giftCode,proto3" json:"gift_code,omitempty"`
@@ -641,6 +694,7 @@ func (x *ListPublishedAnnouncementsResponse) GetNextCursor() string {
 	return ""
 }
 
+// 玩家元数据
 type UserMeta struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	LastSyncNotice int64                  `protobuf:"varint,1,opt,name=last_sync_notice,json=lastSyncNotice,proto3" json:"last_sync_notice,omitempty"`
@@ -685,6 +739,7 @@ func (x *UserMeta) GetLastSyncNotice() int64 {
 	return 0
 }
 
+// 钱包结构
 type Wallet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Coin          int64                  `protobuf:"varint,1,opt,name=coin,proto3" json:"coin,omitempty"`
@@ -798,6 +853,765 @@ func (x *Item) GetNum() int64 {
 	return 0
 }
 
+// 关卡数据结构
+type HomeLevelData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LevelId       string                 `protobuf:"bytes,1,opt,name=level_id,json=levelId,proto3" json:"level_id,omitempty"`                    // 关卡ID
+	HasChallenged bool                   `protobuf:"varint,2,opt,name=has_challenged,json=hasChallenged,proto3" json:"has_challenged,omitempty"` // 是否挑战过
+	IsPassed      bool                   `protobuf:"varint,3,opt,name=is_passed,json=isPassed,proto3" json:"is_passed,omitempty"`                // 是否通过
+	RemainHp      float32                `protobuf:"fixed32,4,opt,name=remain_hp,json=remainHp,proto3" json:"remain_hp,omitempty"`               // 通关后剩余血量
+	RewardGot     int32                  `protobuf:"varint,5,opt,name=reward_got,json=rewardGot,proto3" json:"reward_got,omitempty"`             // 奖励领取状态（位）
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`           // 更新时间
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HomeLevelData) Reset() {
+	*x = HomeLevelData{}
+	mi := &file_msg_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HomeLevelData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HomeLevelData) ProtoMessage() {}
+
+func (x *HomeLevelData) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HomeLevelData.ProtoReflect.Descriptor instead.
+func (*HomeLevelData) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *HomeLevelData) GetLevelId() string {
+	if x != nil {
+		return x.LevelId
+	}
+	return ""
+}
+
+func (x *HomeLevelData) GetHasChallenged() bool {
+	if x != nil {
+		return x.HasChallenged
+	}
+	return false
+}
+
+func (x *HomeLevelData) GetIsPassed() bool {
+	if x != nil {
+		return x.IsPassed
+	}
+	return false
+}
+
+func (x *HomeLevelData) GetRemainHp() float32 {
+	if x != nil {
+		return x.RemainHp
+	}
+	return 0
+}
+
+func (x *HomeLevelData) GetRewardGot() int32 {
+	if x != nil {
+		return x.RewardGot
+	}
+	return 0
+}
+
+func (x *HomeLevelData) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+// 保存关卡数据请求（单个关卡）
+type SaveHomeLevelDataRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LevelId       string                 `protobuf:"bytes,1,opt,name=level_id,json=levelId,proto3" json:"level_id,omitempty"`                    // 关卡ID
+	HasChallenged bool                   `protobuf:"varint,2,opt,name=has_challenged,json=hasChallenged,proto3" json:"has_challenged,omitempty"` // 是否挑战过
+	IsPassed      bool                   `protobuf:"varint,3,opt,name=is_passed,json=isPassed,proto3" json:"is_passed,omitempty"`                // 是否通过
+	RemainHp      float32                `protobuf:"fixed32,4,opt,name=remain_hp,json=remainHp,proto3" json:"remain_hp,omitempty"`               // 通关后剩余血量
+	RewardGot     int32                  `protobuf:"varint,5,opt,name=reward_got,json=rewardGot,proto3" json:"reward_got,omitempty"`             // 奖励领取状态（位）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveHomeLevelDataRequest) Reset() {
+	*x = SaveHomeLevelDataRequest{}
+	mi := &file_msg_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveHomeLevelDataRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveHomeLevelDataRequest) ProtoMessage() {}
+
+func (x *SaveHomeLevelDataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveHomeLevelDataRequest.ProtoReflect.Descriptor instead.
+func (*SaveHomeLevelDataRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SaveHomeLevelDataRequest) GetLevelId() string {
+	if x != nil {
+		return x.LevelId
+	}
+	return ""
+}
+
+func (x *SaveHomeLevelDataRequest) GetHasChallenged() bool {
+	if x != nil {
+		return x.HasChallenged
+	}
+	return false
+}
+
+func (x *SaveHomeLevelDataRequest) GetIsPassed() bool {
+	if x != nil {
+		return x.IsPassed
+	}
+	return false
+}
+
+func (x *SaveHomeLevelDataRequest) GetRemainHp() float32 {
+	if x != nil {
+		return x.RemainHp
+	}
+	return 0
+}
+
+func (x *SaveHomeLevelDataRequest) GetRewardGot() int32 {
+	if x != nil {
+		return x.RewardGot
+	}
+	return 0
+}
+
+// 保存关卡数据响应
+type SaveHomeLevelDataResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`                                    // 状态码 (0: 成功, 其他: 错误码)
+	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`                                       // 响应消息
+	IsNewRecord   bool                   `protobuf:"varint,3,opt,name=is_new_record,json=isNewRecord,proto3" json:"is_new_record,omitempty"` // 是否为新创建的关卡记录
+	MaxLevelId    string                 `protobuf:"bytes,4,opt,name=max_level_id,json=maxLevelId,proto3" json:"max_level_id,omitempty"`     // 最大关卡
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveHomeLevelDataResponse) Reset() {
+	*x = SaveHomeLevelDataResponse{}
+	mi := &file_msg_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveHomeLevelDataResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveHomeLevelDataResponse) ProtoMessage() {}
+
+func (x *SaveHomeLevelDataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveHomeLevelDataResponse.ProtoReflect.Descriptor instead.
+func (*SaveHomeLevelDataResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SaveHomeLevelDataResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *SaveHomeLevelDataResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *SaveHomeLevelDataResponse) GetIsNewRecord() bool {
+	if x != nil {
+		return x.IsNewRecord
+	}
+	return false
+}
+
+func (x *SaveHomeLevelDataResponse) GetMaxLevelId() string {
+	if x != nil {
+		return x.MaxLevelId
+	}
+	return ""
+}
+
+// 获取关卡数据请求
+type GetHomeLevelDataRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LevelIds      []string               `protobuf:"bytes,1,rep,name=level_ids,json=levelIds,proto3" json:"level_ids,omitempty"` // 要获取的关卡ID列表（为空则获取全部）
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`                      // 限制返回数量
+	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`                     // 分页游标
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHomeLevelDataRequest) Reset() {
+	*x = GetHomeLevelDataRequest{}
+	mi := &file_msg_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHomeLevelDataRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHomeLevelDataRequest) ProtoMessage() {}
+
+func (x *GetHomeLevelDataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHomeLevelDataRequest.ProtoReflect.Descriptor instead.
+func (*GetHomeLevelDataRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetHomeLevelDataRequest) GetLevelIds() []string {
+	if x != nil {
+		return x.LevelIds
+	}
+	return nil
+}
+
+func (x *GetHomeLevelDataRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetHomeLevelDataRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// 获取关卡数据响应
+type GetHomeLevelDataResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`                                // 状态码
+	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`                                   // 响应消息
+	LevelData     []*HomeLevelData       `protobuf:"bytes,3,rep,name=level_data,json=levelData,proto3" json:"level_data,omitempty"`      // 关卡数据列表
+	NextCursor    string                 `protobuf:"bytes,4,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`   // 下一页游标
+	TotalCount    int32                  `protobuf:"varint,5,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`  // 总数量
+	MaxLevelId    string                 `protobuf:"bytes,6,opt,name=max_level_id,json=maxLevelId,proto3" json:"max_level_id,omitempty"` // 最大关卡
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHomeLevelDataResponse) Reset() {
+	*x = GetHomeLevelDataResponse{}
+	mi := &file_msg_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHomeLevelDataResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHomeLevelDataResponse) ProtoMessage() {}
+
+func (x *GetHomeLevelDataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHomeLevelDataResponse.ProtoReflect.Descriptor instead.
+func (*GetHomeLevelDataResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetHomeLevelDataResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *GetHomeLevelDataResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *GetHomeLevelDataResponse) GetLevelData() []*HomeLevelData {
+	if x != nil {
+		return x.LevelData
+	}
+	return nil
+}
+
+func (x *GetHomeLevelDataResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+func (x *GetHomeLevelDataResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *GetHomeLevelDataResponse) GetMaxLevelId() string {
+	if x != nil {
+		return x.MaxLevelId
+	}
+	return ""
+}
+
+// 获取奖励请求
+type GetRewardRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RewardId      string                 `protobuf:"bytes,1,opt,name=reward_id,json=rewardId,proto3" json:"reward_id,omitempty"` //奖励id
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRewardRequest) Reset() {
+	*x = GetRewardRequest{}
+	mi := &file_msg_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRewardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRewardRequest) ProtoMessage() {}
+
+func (x *GetRewardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRewardRequest.ProtoReflect.Descriptor instead.
+func (*GetRewardRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetRewardRequest) GetRewardId() string {
+	if x != nil {
+		return x.RewardId
+	}
+	return ""
+}
+
+// 加钱包请求
+type AddWalletRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Coin          int32                  `protobuf:"varint,1,opt,name=coin,proto3" json:"coin,omitempty"`
+	Gem           int32                  `protobuf:"varint,2,opt,name=gem,proto3" json:"gem,omitempty"`
+	Ad            int32                  `protobuf:"varint,3,opt,name=ad,proto3" json:"ad,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddWalletRequest) Reset() {
+	*x = AddWalletRequest{}
+	mi := &file_msg_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddWalletRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddWalletRequest) ProtoMessage() {}
+
+func (x *AddWalletRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddWalletRequest.ProtoReflect.Descriptor instead.
+func (*AddWalletRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *AddWalletRequest) GetCoin() int32 {
+	if x != nil {
+		return x.Coin
+	}
+	return 0
+}
+
+func (x *AddWalletRequest) GetGem() int32 {
+	if x != nil {
+		return x.Gem
+	}
+	return 0
+}
+
+func (x *AddWalletRequest) GetAd() int32 {
+	if x != nil {
+		return x.Ad
+	}
+	return 0
+}
+
+func (x *AddWalletRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// 加钱包响应
+type AddWalletResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Code           int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`                                          // 状态码 (0: 成功, 其他: 错误码)
+	Msg            string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`                                             // 响应消息
+	WalletUpdated  *Wallet                `protobuf:"bytes,3,opt,name=wallet_updated,json=walletUpdated,proto3" json:"wallet_updated,omitempty"`    // 更新后的钱包
+	WalletPrevious *Wallet                `protobuf:"bytes,4,opt,name=wallet_previous,json=walletPrevious,proto3" json:"wallet_previous,omitempty"` // 更新前的钱包
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AddWalletResponse) Reset() {
+	*x = AddWalletResponse{}
+	mi := &file_msg_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddWalletResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddWalletResponse) ProtoMessage() {}
+
+func (x *AddWalletResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddWalletResponse.ProtoReflect.Descriptor instead.
+func (*AddWalletResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *AddWalletResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *AddWalletResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *AddWalletResponse) GetWalletUpdated() *Wallet {
+	if x != nil {
+		return x.WalletUpdated
+	}
+	return nil
+}
+
+func (x *AddWalletResponse) GetWalletPrevious() *Wallet {
+	if x != nil {
+		return x.WalletPrevious
+	}
+	return nil
+}
+
+// 获取奖励响应
+type GetRewardResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Code           int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`                                          // 状态码 (0: 成功, 其他: 错误码)
+	Msg            string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`                                             // 响应消息
+	WalletUpdated  *Wallet                `protobuf:"bytes,3,opt,name=wallet_updated,json=walletUpdated,proto3" json:"wallet_updated,omitempty"`    // 更新后的钱包
+	WalletPrevious *Wallet                `protobuf:"bytes,4,opt,name=wallet_previous,json=walletPrevious,proto3" json:"wallet_previous,omitempty"` // 更新前的钱包
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetRewardResponse) Reset() {
+	*x = GetRewardResponse{}
+	mi := &file_msg_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRewardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRewardResponse) ProtoMessage() {}
+
+func (x *GetRewardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRewardResponse.ProtoReflect.Descriptor instead.
+func (*GetRewardResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetRewardResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *GetRewardResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *GetRewardResponse) GetWalletUpdated() *Wallet {
+	if x != nil {
+		return x.WalletUpdated
+	}
+	return nil
+}
+
+func (x *GetRewardResponse) GetWalletPrevious() *Wallet {
+	if x != nil {
+		return x.WalletPrevious
+	}
+	return nil
+}
+
+// 使用钱包货币请求
+type UseWalletRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CurrencyType  CurrencyType           `protobuf:"varint,1,opt,name=currency_type,json=currencyType,proto3,enum=game.CurrencyType" json:"currency_type,omitempty"` // 货币类型
+	Amount        int32                  `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`                                                        // 使用数量
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`                                                         // 使用原因
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UseWalletRequest) Reset() {
+	*x = UseWalletRequest{}
+	mi := &file_msg_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UseWalletRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UseWalletRequest) ProtoMessage() {}
+
+func (x *UseWalletRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UseWalletRequest.ProtoReflect.Descriptor instead.
+func (*UseWalletRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *UseWalletRequest) GetCurrencyType() CurrencyType {
+	if x != nil {
+		return x.CurrencyType
+	}
+	return CurrencyType_CURRENCY_TYPE_UNSPECIFIED
+}
+
+func (x *UseWalletRequest) GetAmount() int32 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *UseWalletRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// 使用钱包货币响应
+type UseWalletResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Code           int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`                                          // 状态码 (0: 成功, 其他: 错误码)
+	Msg            string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`                                             // 响应消息
+	WalletUpdated  *Wallet                `protobuf:"bytes,3,opt,name=wallet_updated,json=walletUpdated,proto3" json:"wallet_updated,omitempty"`    // 更新后的钱包
+	WalletPrevious *Wallet                `protobuf:"bytes,4,opt,name=wallet_previous,json=walletPrevious,proto3" json:"wallet_previous,omitempty"` // 更新前的钱包
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UseWalletResponse) Reset() {
+	*x = UseWalletResponse{}
+	mi := &file_msg_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UseWalletResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UseWalletResponse) ProtoMessage() {}
+
+func (x *UseWalletResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UseWalletResponse.ProtoReflect.Descriptor instead.
+func (*UseWalletResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *UseWalletResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *UseWalletResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *UseWalletResponse) GetWalletUpdated() *Wallet {
+	if x != nil {
+		return x.WalletUpdated
+	}
+	return nil
+}
+
+func (x *UseWalletResponse) GetWalletPrevious() *Wallet {
+	if x != nil {
+		return x.WalletPrevious
+	}
+	return nil
+}
+
 var File_msg_proto protoreflect.FileDescriptor
 
 var file_msg_proto_rawDesc = string([]byte{
@@ -879,13 +1693,124 @@ var file_msg_proto_rawDesc = string([]byte{
 	0x52, 0x03, 0x67, 0x65, 0x6d, 0x12, 0x0e, 0x0a, 0x02, 0x61, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28,
 	0x03, 0x52, 0x02, 0x61, 0x64, 0x22, 0x28, 0x0a, 0x04, 0x49, 0x74, 0x65, 0x6d, 0x12, 0x0e, 0x0a,
 	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x10, 0x0a,
-	0x03, 0x6e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x6e, 0x75, 0x6d, 0x42,
-	0x54, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e, 0x68, 0x75, 0x6f, 0x68, 0x75, 0x61, 0x6a, 0x69, 0x2e,
-	0x73, 0x74, 0x61, 0x72, 0x42, 0x07, 0x47, 0x61, 0x6d, 0x65, 0x4d, 0x73, 0x67, 0x50, 0x01, 0x5a,
-	0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f,
-	0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2f, 0x76, 0x33,
-	0x2f, 0x67, 0x61, 0x6d, 0x65, 0xaa, 0x02, 0x0d, 0x47, 0x61, 0x6d, 0x65, 0x2e, 0x50, 0x72, 0x6f,
-	0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x03, 0x6e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x03, 0x6e, 0x75, 0x6d, 0x22,
+	0xe7, 0x01, 0x0a, 0x0d, 0x48, 0x6f, 0x6d, 0x65, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x44, 0x61, 0x74,
+	0x61, 0x12, 0x19, 0x0a, 0x08, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x49, 0x64, 0x12, 0x25, 0x0a, 0x0e,
+	0x68, 0x61, 0x73, 0x5f, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x64, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x0d, 0x68, 0x61, 0x73, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e,
+	0x67, 0x65, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x69, 0x73, 0x5f, 0x70, 0x61, 0x73, 0x73, 0x65, 0x64,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x69, 0x73, 0x50, 0x61, 0x73, 0x73, 0x65, 0x64,
+	0x12, 0x1b, 0x0a, 0x09, 0x72, 0x65, 0x6d, 0x61, 0x69, 0x6e, 0x5f, 0x68, 0x70, 0x18, 0x04, 0x20,
+	0x01, 0x28, 0x02, 0x52, 0x08, 0x72, 0x65, 0x6d, 0x61, 0x69, 0x6e, 0x48, 0x70, 0x12, 0x1d, 0x0a,
+	0x0a, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f, 0x67, 0x6f, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x09, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x47, 0x6f, 0x74, 0x12, 0x3b, 0x0a, 0x0b,
+	0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x75,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x22, 0xb5, 0x01, 0x0a, 0x18, 0x53, 0x61,
+	0x76, 0x65, 0x48, 0x6f, 0x6d, 0x65, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x5f,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x49,
+	0x64, 0x12, 0x25, 0x0a, 0x0e, 0x68, 0x61, 0x73, 0x5f, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e,
+	0x67, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0d, 0x68, 0x61, 0x73, 0x43, 0x68,
+	0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x69, 0x73, 0x5f, 0x70,
+	0x61, 0x73, 0x73, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x69, 0x73, 0x50,
+	0x61, 0x73, 0x73, 0x65, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x72, 0x65, 0x6d, 0x61, 0x69, 0x6e, 0x5f,
+	0x68, 0x70, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x52, 0x08, 0x72, 0x65, 0x6d, 0x61, 0x69, 0x6e,
+	0x48, 0x70, 0x12, 0x1d, 0x0a, 0x0a, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f, 0x67, 0x6f, 0x74,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x05, 0x52, 0x09, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x47, 0x6f,
+	0x74, 0x22, 0x87, 0x01, 0x0a, 0x19, 0x53, 0x61, 0x76, 0x65, 0x48, 0x6f, 0x6d, 0x65, 0x4c, 0x65,
+	0x76, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63,
+	0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x03, 0x6d, 0x73, 0x67, 0x12, 0x22, 0x0a, 0x0d, 0x69, 0x73, 0x5f, 0x6e, 0x65, 0x77, 0x5f,
+	0x72, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x69, 0x73,
+	0x4e, 0x65, 0x77, 0x52, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x12, 0x20, 0x0a, 0x0c, 0x6d, 0x61, 0x78,
+	0x5f, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x5f, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0a, 0x6d, 0x61, 0x78, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x49, 0x64, 0x22, 0x64, 0x0a, 0x17, 0x47,
+	0x65, 0x74, 0x48, 0x6f, 0x6d, 0x65, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x5f,
+	0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x08, 0x6c, 0x65, 0x76, 0x65, 0x6c,
+	0x49, 0x64, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x05, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x75, 0x72,
+	0x73, 0x6f, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x63, 0x75, 0x72, 0x73, 0x6f,
+	0x72, 0x22, 0xd8, 0x01, 0x0a, 0x18, 0x47, 0x65, 0x74, 0x48, 0x6f, 0x6d, 0x65, 0x4c, 0x65, 0x76,
+	0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12,
+	0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f,
+	0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x03, 0x6d, 0x73, 0x67, 0x12, 0x32, 0x0a, 0x0a, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x5f, 0x64, 0x61,
+	0x74, 0x61, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e,
+	0x48, 0x6f, 0x6d, 0x65, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x52, 0x09, 0x6c,
+	0x65, 0x76, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x12, 0x1f, 0x0a, 0x0b, 0x6e, 0x65, 0x78, 0x74,
+	0x5f, 0x63, 0x75, 0x72, 0x73, 0x6f, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x6e,
+	0x65, 0x78, 0x74, 0x43, 0x75, 0x72, 0x73, 0x6f, 0x72, 0x12, 0x1f, 0x0a, 0x0b, 0x74, 0x6f, 0x74,
+	0x61, 0x6c, 0x5f, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a,
+	0x74, 0x6f, 0x74, 0x61, 0x6c, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x20, 0x0a, 0x0c, 0x6d, 0x61,
+	0x78, 0x5f, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x5f, 0x69, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0a, 0x6d, 0x61, 0x78, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x49, 0x64, 0x22, 0x2f, 0x0a, 0x10,
+	0x47, 0x65, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x1b, 0x0a, 0x09, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x49, 0x64, 0x22, 0x60, 0x0a,
+	0x10, 0x41, 0x64, 0x64, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x69, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x04, 0x63, 0x6f, 0x69, 0x6e, 0x12, 0x10, 0x0a, 0x03, 0x67, 0x65, 0x6d, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x05, 0x52, 0x03, 0x67, 0x65, 0x6d, 0x12, 0x0e, 0x0a, 0x02, 0x61, 0x64, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x05, 0x52, 0x02, 0x61, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x61, 0x73, 0x6f,
+	0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x22,
+	0xa5, 0x01, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x12, 0x33, 0x0a, 0x0e, 0x77,
+	0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65,
+	0x74, 0x52, 0x0d, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64,
+	0x12, 0x35, 0x0a, 0x0f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x70, 0x72, 0x65, 0x76, 0x69,
+	0x6f, 0x75, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65,
+	0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x50,
+	0x72, 0x65, 0x76, 0x69, 0x6f, 0x75, 0x73, 0x22, 0xa5, 0x01, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x52,
+	0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a,
+	0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64,
+	0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
+	0x6d, 0x73, 0x67, 0x12, 0x33, 0x0a, 0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x75, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61,
+	0x6d, 0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x0d, 0x77, 0x61, 0x6c, 0x6c, 0x65,
+	0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x12, 0x35, 0x0a, 0x0f, 0x77, 0x61, 0x6c, 0x6c,
+	0x65, 0x74, 0x5f, 0x70, 0x72, 0x65, 0x76, 0x69, 0x6f, 0x75, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52,
+	0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x50, 0x72, 0x65, 0x76, 0x69, 0x6f, 0x75, 0x73, 0x22,
+	0x7b, 0x0a, 0x10, 0x55, 0x73, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x37, 0x0a, 0x0d, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x63, 0x79, 0x5f,
+	0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x12, 0x2e, 0x67, 0x61, 0x6d,
+	0x65, 0x2e, 0x43, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x63, 0x79, 0x54, 0x79, 0x70, 0x65, 0x52, 0x0c,
+	0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x63, 0x79, 0x54, 0x79, 0x70, 0x65, 0x12, 0x16, 0x0a, 0x06,
+	0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x61, 0x6d,
+	0x6f, 0x75, 0x6e, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x22, 0xa5, 0x01, 0x0a,
+	0x11, 0x55, 0x73, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05,
+	0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x12, 0x33, 0x0a, 0x0e, 0x77, 0x61, 0x6c, 0x6c,
+	0x65, 0x74, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x0d,
+	0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x12, 0x35, 0x0a,
+	0x0f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x70, 0x72, 0x65, 0x76, 0x69, 0x6f, 0x75, 0x73,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x57, 0x61,
+	0x6c, 0x6c, 0x65, 0x74, 0x52, 0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x50, 0x72, 0x65, 0x76,
+	0x69, 0x6f, 0x75, 0x73, 0x2a, 0x72, 0x0a, 0x0c, 0x43, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x63, 0x79,
+	0x54, 0x79, 0x70, 0x65, 0x12, 0x1d, 0x0a, 0x19, 0x43, 0x55, 0x52, 0x52, 0x45, 0x4e, 0x43, 0x59,
+	0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45,
+	0x44, 0x10, 0x00, 0x12, 0x16, 0x0a, 0x12, 0x43, 0x55, 0x52, 0x52, 0x45, 0x4e, 0x43, 0x59, 0x5f,
+	0x54, 0x59, 0x50, 0x45, 0x5f, 0x43, 0x4f, 0x49, 0x4e, 0x10, 0x01, 0x12, 0x15, 0x0a, 0x11, 0x43,
+	0x55, 0x52, 0x52, 0x45, 0x4e, 0x43, 0x59, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x47, 0x45, 0x4d,
+	0x10, 0x02, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x55, 0x52, 0x52, 0x45, 0x4e, 0x43, 0x59, 0x5f, 0x54,
+	0x59, 0x50, 0x45, 0x5f, 0x41, 0x44, 0x10, 0x03, 0x42, 0x54, 0x0a, 0x11, 0x63, 0x6f, 0x6d, 0x2e,
+	0x68, 0x75, 0x6f, 0x68, 0x75, 0x61, 0x6a, 0x69, 0x2e, 0x73, 0x74, 0x61, 0x72, 0x42, 0x07, 0x47,
+	0x61, 0x6d, 0x65, 0x4d, 0x73, 0x67, 0x50, 0x01, 0x5a, 0x24, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f,
+	0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2f, 0x76, 0x33, 0x2f, 0x67, 0x61, 0x6d, 0x65, 0xaa, 0x02,
+	0x0d, 0x47, 0x61, 0x6d, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -900,35 +1825,57 @@ func file_msg_proto_rawDescGZIP() []byte {
 	return file_msg_proto_rawDescData
 }
 
-var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_msg_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_msg_proto_goTypes = []any{
-	(*RedeemGiftRequest)(nil),                  // 0: game.RedeemGiftRequest
-	(*RedeemGiftResponse)(nil),                 // 1: game.RedeemGiftResponse
-	(*FeedbackRequest)(nil),                    // 2: game.FeedbackRequest
-	(*AuthenticateWechatRequest)(nil),          // 3: game.AuthenticateWechatRequest
-	(*AuthenticateTiktokRequest)(nil),          // 4: game.AuthenticateTiktokRequest
-	(*SubmitBeInvitedRequest)(nil),             // 5: game.SubmitBeInvitedRequest
-	(*ListInviteeResponse)(nil),                // 6: game.ListInviteeResponse
-	(*ClaimInviteRewardRequest)(nil),           // 7: game.ClaimInviteRewardRequest
-	(*GetGameTimeResponse)(nil),                // 8: game.GetGameTimeResponse
-	(*ListPublishedAnnouncementsRequest)(nil),  // 9: game.ListPublishedAnnouncementsRequest
-	(*AnnouncementInfo)(nil),                   // 10: game.AnnouncementInfo
-	(*ListPublishedAnnouncementsResponse)(nil), // 11: game.ListPublishedAnnouncementsResponse
-	(*UserMeta)(nil),                           // 12: game.UserMeta
-	(*Wallet)(nil),                             // 13: game.Wallet
-	(*Item)(nil),                               // 14: game.Item
-	(*timestamppb.Timestamp)(nil),              // 15: google.protobuf.Timestamp
+	(CurrencyType)(0),                          // 0: game.CurrencyType
+	(*RedeemGiftRequest)(nil),                  // 1: game.RedeemGiftRequest
+	(*RedeemGiftResponse)(nil),                 // 2: game.RedeemGiftResponse
+	(*FeedbackRequest)(nil),                    // 3: game.FeedbackRequest
+	(*AuthenticateWechatRequest)(nil),          // 4: game.AuthenticateWechatRequest
+	(*AuthenticateTiktokRequest)(nil),          // 5: game.AuthenticateTiktokRequest
+	(*SubmitBeInvitedRequest)(nil),             // 6: game.SubmitBeInvitedRequest
+	(*ListInviteeResponse)(nil),                // 7: game.ListInviteeResponse
+	(*ClaimInviteRewardRequest)(nil),           // 8: game.ClaimInviteRewardRequest
+	(*GetGameTimeResponse)(nil),                // 9: game.GetGameTimeResponse
+	(*ListPublishedAnnouncementsRequest)(nil),  // 10: game.ListPublishedAnnouncementsRequest
+	(*AnnouncementInfo)(nil),                   // 11: game.AnnouncementInfo
+	(*ListPublishedAnnouncementsResponse)(nil), // 12: game.ListPublishedAnnouncementsResponse
+	(*UserMeta)(nil),                           // 13: game.UserMeta
+	(*Wallet)(nil),                             // 14: game.Wallet
+	(*Item)(nil),                               // 15: game.Item
+	(*HomeLevelData)(nil),                      // 16: game.HomeLevelData
+	(*SaveHomeLevelDataRequest)(nil),           // 17: game.SaveHomeLevelDataRequest
+	(*SaveHomeLevelDataResponse)(nil),          // 18: game.SaveHomeLevelDataResponse
+	(*GetHomeLevelDataRequest)(nil),            // 19: game.GetHomeLevelDataRequest
+	(*GetHomeLevelDataResponse)(nil),           // 20: game.GetHomeLevelDataResponse
+	(*GetRewardRequest)(nil),                   // 21: game.GetRewardRequest
+	(*AddWalletRequest)(nil),                   // 22: game.AddWalletRequest
+	(*AddWalletResponse)(nil),                  // 23: game.AddWalletResponse
+	(*GetRewardResponse)(nil),                  // 24: game.GetRewardResponse
+	(*UseWalletRequest)(nil),                   // 25: game.UseWalletRequest
+	(*UseWalletResponse)(nil),                  // 26: game.UseWalletResponse
+	(*timestamppb.Timestamp)(nil),              // 27: google.protobuf.Timestamp
 }
 var file_msg_proto_depIdxs = []int32{
-	15, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
-	15, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
-	15, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
-	10, // 3: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
-	4,  // [4:4] is the sub-list for method output_type
-	4,  // [4:4] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	27, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
+	27, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
+	27, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
+	11, // 3: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
+	27, // 4: game.HomeLevelData.update_time:type_name -> google.protobuf.Timestamp
+	16, // 5: game.GetHomeLevelDataResponse.level_data:type_name -> game.HomeLevelData
+	14, // 6: game.AddWalletResponse.wallet_updated:type_name -> game.Wallet
+	14, // 7: game.AddWalletResponse.wallet_previous:type_name -> game.Wallet
+	14, // 8: game.GetRewardResponse.wallet_updated:type_name -> game.Wallet
+	14, // 9: game.GetRewardResponse.wallet_previous:type_name -> game.Wallet
+	0,  // 10: game.UseWalletRequest.currency_type:type_name -> game.CurrencyType
+	14, // 11: game.UseWalletResponse.wallet_updated:type_name -> game.Wallet
+	14, // 12: game.UseWalletResponse.wallet_previous:type_name -> game.Wallet
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_msg_proto_init() }
@@ -941,13 +1888,14 @@ func file_msg_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_msg_proto_rawDesc), len(file_msg_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   15,
+			NumEnums:      1,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_msg_proto_goTypes,
 		DependencyIndexes: file_msg_proto_depIdxs,
+		EnumInfos:         file_msg_proto_enumTypes,
 		MessageInfos:      file_msg_proto_msgTypes,
 	}.Build()
 	File_msg_proto = out.File

@@ -16,9 +16,9 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return err
 	}
 
-	//if err := initializer.RegisterAfterGetAccount(InitializeAccount); err != nil {
-	//	logger.Error("Unable to register: %v", err)
-	//	return err
-	//}
+	if err := initializer.RegisterAfterGetAccount(InitializeAccount); err != nil {
+		logger.Error("Unable to register: %v", err)
+		return err
+	}
 	return nil
 }

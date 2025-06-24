@@ -6842,7 +6842,7 @@ var file_console_proto_rawDesc = string([]byte{
 	0x18, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x5f, 0x48, 0x45, 0x41, 0x4c, 0x54, 0x48, 0x5f, 0x43,
 	0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54, 0x49, 0x4e, 0x47, 0x10, 0x02, 0x12, 0x1f, 0x0a, 0x1b, 0x53,
 	0x54, 0x41, 0x54, 0x55, 0x53, 0x5f, 0x48, 0x45, 0x41, 0x4c, 0x54, 0x48, 0x5f, 0x44, 0x49, 0x53,
-	0x43, 0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54, 0x49, 0x4e, 0x47, 0x10, 0x03, 0x32, 0xd7, 0x4d, 0x0a,
+	0x43, 0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54, 0x49, 0x4e, 0x47, 0x10, 0x03, 0x32, 0xb7, 0x4e, 0x0a,
 	0x07, 0x43, 0x6f, 0x6e, 0x73, 0x6f, 0x6c, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0c, 0x41, 0x75, 0x74,
 	0x68, 0x65, 0x6e, 0x74, 0x69, 0x63, 0x61, 0x74, 0x65, 0x12, 0x23, 0x2e, 0x6e, 0x61, 0x6b, 0x61,
 	0x6d, 0x61, 0x2e, 0x63, 0x6f, 0x6e, 0x73, 0x6f, 0x6c, 0x65, 0x2e, 0x41, 0x75, 0x74, 0x68, 0x65,
@@ -6973,7 +6973,13 @@ var file_console_proto_rawDesc = string([]byte{
 	0x69, 0x6f, 0x6e, 0x7d, 0x2a, 0x30, 0x2f, 0x76, 0x32, 0x2f, 0x63, 0x6f, 0x6e, 0x73, 0x6f, 0x6c,
 	0x65, 0x2f, 0x73, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x2f, 0x7b, 0x63, 0x6f, 0x6c, 0x6c, 0x65,
 	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x7d, 0x2f, 0x7b, 0x6b, 0x65, 0x79, 0x7d, 0x2f, 0x7b, 0x75, 0x73,
-	0x65, 0x72, 0x5f, 0x69, 0x64, 0x7d, 0x12, 0x5d, 0x0a, 0x0e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
+	0x65, 0x72, 0x5f, 0x69, 0x64, 0x7d, 0x12, 0x5e, 0x0a, 0x0e, 0x52, 0x65, 0x6c, 0x6f, 0x61, 0x64,
+	0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
+	0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x1c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x16,
+	0x22, 0x14, 0x2f, 0x76, 0x32, 0x2f, 0x63, 0x6f, 0x6e, 0x73, 0x6f, 0x6c, 0x65, 0x2f, 0x74, 0x65,
+	0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x12, 0x5d, 0x0a, 0x0e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
 	0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
 	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
 	0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
@@ -7732,152 +7738,154 @@ var file_console_proto_depIdxs = []int32{
 	27,  // 102: nakama.console.Console.DeleteGroupUser:input_type -> nakama.console.DeleteGroupUserRequest
 	107, // 103: nakama.console.Console.DeleteStorage:input_type -> google.protobuf.Empty
 	33,  // 104: nakama.console.Console.DeleteStorageObject:input_type -> nakama.console.DeleteStorageObjectRequest
-	107, // 105: nakama.console.Console.DeleteAccounts:input_type -> google.protobuf.Empty
-	38,  // 106: nakama.console.Console.DeleteLeaderboard:input_type -> nakama.console.LeaderboardRequest
-	31,  // 107: nakama.console.Console.DeleteLeaderboardRecord:input_type -> nakama.console.DeleteLeaderboardRecordRequest
-	32,  // 108: nakama.console.Console.DeleteNotification:input_type -> nakama.console.DeleteNotificationRequest
-	57,  // 109: nakama.console.Console.DeleteUser:input_type -> nakama.console.Username
-	34,  // 110: nakama.console.Console.DeleteWalletLedger:input_type -> nakama.console.DeleteWalletLedgerRequest
-	28,  // 111: nakama.console.Console.DemoteGroupMember:input_type -> nakama.console.UpdateGroupUserStateRequest
-	7,   // 112: nakama.console.Console.ExportAccount:input_type -> nakama.console.AccountId
-	9,   // 113: nakama.console.Console.ExportGroup:input_type -> nakama.console.GroupId
-	7,   // 114: nakama.console.Console.GetAccount:input_type -> nakama.console.AccountId
-	107, // 115: nakama.console.Console.GetConfig:input_type -> google.protobuf.Empty
-	7,   // 116: nakama.console.Console.GetFriends:input_type -> nakama.console.AccountId
-	9,   // 117: nakama.console.Console.GetGroup:input_type -> nakama.console.GroupId
-	9,   // 118: nakama.console.Console.GetMembers:input_type -> nakama.console.GroupId
-	7,   // 119: nakama.console.Console.GetGroups:input_type -> nakama.console.AccountId
-	38,  // 120: nakama.console.Console.GetLeaderboard:input_type -> nakama.console.LeaderboardRequest
-	48,  // 121: nakama.console.Console.GetMatchState:input_type -> nakama.console.MatchStateRequest
-	107, // 122: nakama.console.Console.GetRuntime:input_type -> google.protobuf.Empty
-	107, // 123: nakama.console.Console.GetStatus:input_type -> google.protobuf.Empty
-	108, // 124: nakama.console.Console.GetStorage:input_type -> nakama.api.ReadStorageObjectId
-	64,  // 125: nakama.console.Console.GetWalletLedger:input_type -> nakama.console.GetWalletLedgerRequest
-	65,  // 126: nakama.console.Console.GetNotification:input_type -> nakama.console.GetNotificationRequest
-	66,  // 127: nakama.console.Console.GetPurchase:input_type -> nakama.console.GetPurchaseRequest
-	67,  // 128: nakama.console.Console.GetSubscription:input_type -> nakama.console.GetSubscriptionRequest
-	107, // 129: nakama.console.Console.ListApiEndpoints:input_type -> google.protobuf.Empty
-	109, // 130: nakama.console.Console.ListLeaderboardRecords:input_type -> nakama.api.ListLeaderboardRecordsRequest
-	36,  // 131: nakama.console.Console.ListLeaderboards:input_type -> nakama.console.LeaderboardListRequest
-	46,  // 132: nakama.console.Console.ListStorage:input_type -> nakama.console.ListStorageRequest
-	107, // 133: nakama.console.Console.ListStorageCollections:input_type -> google.protobuf.Empty
-	39,  // 134: nakama.console.Console.ListAccounts:input_type -> nakama.console.ListAccountsRequest
-	40,  // 135: nakama.console.Console.ListChannelMessages:input_type -> nakama.console.ListChannelMessagesRequest
-	41,  // 136: nakama.console.Console.ListGroups:input_type -> nakama.console.ListGroupsRequest
-	43,  // 137: nakama.console.Console.ListNotifications:input_type -> nakama.console.ListNotificationsRequest
-	42,  // 138: nakama.console.Console.ListMatches:input_type -> nakama.console.ListMatchesRequest
-	44,  // 139: nakama.console.Console.ListPurchases:input_type -> nakama.console.ListPurchasesRequest
-	45,  // 140: nakama.console.Console.ListSubscriptions:input_type -> nakama.console.ListSubscriptionsRequest
-	107, // 141: nakama.console.Console.ListUsers:input_type -> google.protobuf.Empty
-	28,  // 142: nakama.console.Console.PromoteGroupMember:input_type -> nakama.console.UpdateGroupUserStateRequest
-	30,  // 143: nakama.console.Console.RequireUserMfa:input_type -> nakama.console.RequireUserMfaRequest
-	29,  // 144: nakama.console.Console.ResetUserMfa:input_type -> nakama.console.ResetUserMfaRequest
-	7,   // 145: nakama.console.Console.UnbanAccount:input_type -> nakama.console.AccountId
-	7,   // 146: nakama.console.Console.UnlinkCustom:input_type -> nakama.console.AccountId
-	54,  // 147: nakama.console.Console.UnlinkDevice:input_type -> nakama.console.UnlinkDeviceRequest
-	7,   // 148: nakama.console.Console.UnlinkEmail:input_type -> nakama.console.AccountId
-	7,   // 149: nakama.console.Console.UnlinkApple:input_type -> nakama.console.AccountId
-	7,   // 150: nakama.console.Console.UnlinkFacebook:input_type -> nakama.console.AccountId
-	7,   // 151: nakama.console.Console.UnlinkFacebookInstantGame:input_type -> nakama.console.AccountId
-	7,   // 152: nakama.console.Console.UnlinkGameCenter:input_type -> nakama.console.AccountId
-	7,   // 153: nakama.console.Console.UnlinkGoogle:input_type -> nakama.console.AccountId
-	7,   // 154: nakama.console.Console.UnlinkSteam:input_type -> nakama.console.AccountId
-	55,  // 155: nakama.console.Console.UpdateAccount:input_type -> nakama.console.UpdateAccountRequest
-	56,  // 156: nakama.console.Console.UpdateGroup:input_type -> nakama.console.UpdateGroupRequest
-	63,  // 157: nakama.console.Console.WriteStorageObject:input_type -> nakama.console.WriteStorageObjectRequest
-	71,  // 158: nakama.console.Console.CreateAnnouncement:input_type -> nakama.console.CreateAnnouncementRequest
-	72,  // 159: nakama.console.Console.UpdateAnnouncement:input_type -> nakama.console.UpdateAnnouncementRequest
-	74,  // 160: nakama.console.Console.DeleteAnnouncement:input_type -> nakama.console.AnnouncementId
-	73,  // 161: nakama.console.Console.ListAnnouncements:input_type -> nakama.console.ListAnnouncementsRequest
-	74,  // 162: nakama.console.Console.GetAnnouncement:input_type -> nakama.console.AnnouncementId
-	75,  // 163: nakama.console.Console.SearchAnnouncements:input_type -> nakama.console.SearchAnnouncementsRequest
-	81,  // 164: nakama.console.Console.ListSystemNotifications:input_type -> nakama.console.ListSystemNoticeRequest
-	79,  // 165: nakama.console.Console.CreateSystemNotification:input_type -> nakama.console.CreateSystemNotificationRequest
-	76,  // 166: nakama.console.Console.UpdateSystemNotification:input_type -> nakama.console.SystemNotice
-	78,  // 167: nakama.console.Console.GetSystemNotification:input_type -> nakama.console.SystemNotificationId
-	78,  // 168: nakama.console.Console.DeleteSystemNotification:input_type -> nakama.console.SystemNotificationId
-	23,  // 169: nakama.console.Console.Authenticate:output_type -> nakama.console.ConsoleSession
-	107, // 170: nakama.console.Console.AuthenticateLogout:output_type -> google.protobuf.Empty
-	18,  // 171: nakama.console.Console.AuthenticateMFASetup:output_type -> nakama.console.AuthenticateMFASetupResponse
-	107, // 172: nakama.console.Console.AddUser:output_type -> google.protobuf.Empty
-	107, // 173: nakama.console.Console.AddGroupUsers:output_type -> google.protobuf.Empty
-	107, // 174: nakama.console.Console.BanAccount:output_type -> google.protobuf.Empty
-	21,  // 175: nakama.console.Console.CallApiEndpoint:output_type -> nakama.console.CallApiEndpointResponse
-	21,  // 176: nakama.console.Console.CallRpcEndpoint:output_type -> nakama.console.CallApiEndpointResponse
-	107, // 177: nakama.console.Console.DeleteAllData:output_type -> google.protobuf.Empty
-	107, // 178: nakama.console.Console.DeleteAccount:output_type -> google.protobuf.Empty
-	51,  // 179: nakama.console.Console.DeleteChannelMessages:output_type -> nakama.console.DeleteChannelMessagesResponse
-	107, // 180: nakama.console.Console.DeleteFriend:output_type -> google.protobuf.Empty
-	107, // 181: nakama.console.Console.DeleteGroup:output_type -> google.protobuf.Empty
-	107, // 182: nakama.console.Console.DeleteGroupUser:output_type -> google.protobuf.Empty
-	107, // 183: nakama.console.Console.DeleteStorage:output_type -> google.protobuf.Empty
-	107, // 184: nakama.console.Console.DeleteStorageObject:output_type -> google.protobuf.Empty
-	107, // 185: nakama.console.Console.DeleteAccounts:output_type -> google.protobuf.Empty
-	107, // 186: nakama.console.Console.DeleteLeaderboard:output_type -> google.protobuf.Empty
-	107, // 187: nakama.console.Console.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	107, // 188: nakama.console.Console.DeleteNotification:output_type -> google.protobuf.Empty
-	107, // 189: nakama.console.Console.DeleteUser:output_type -> google.protobuf.Empty
-	107, // 190: nakama.console.Console.DeleteWalletLedger:output_type -> google.protobuf.Empty
-	107, // 191: nakama.console.Console.DemoteGroupMember:output_type -> google.protobuf.Empty
-	6,   // 192: nakama.console.Console.ExportAccount:output_type -> nakama.console.AccountExport
-	11,  // 193: nakama.console.Console.ExportGroup:output_type -> nakama.console.GroupExport
-	4,   // 194: nakama.console.Console.GetAccount:output_type -> nakama.console.Account
-	22,  // 195: nakama.console.Console.GetConfig:output_type -> nakama.console.Config
-	110, // 196: nakama.console.Console.GetFriends:output_type -> nakama.api.FriendList
-	96,  // 197: nakama.console.Console.GetGroup:output_type -> nakama.api.Group
-	111, // 198: nakama.console.Console.GetMembers:output_type -> nakama.api.GroupUserList
-	112, // 199: nakama.console.Console.GetGroups:output_type -> nakama.api.UserGroupList
-	35,  // 200: nakama.console.Console.GetLeaderboard:output_type -> nakama.console.Leaderboard
-	47,  // 201: nakama.console.Console.GetMatchState:output_type -> nakama.console.MatchState
-	60,  // 202: nakama.console.Console.GetRuntime:output_type -> nakama.console.RuntimeInfo
-	59,  // 203: nakama.console.Console.GetStatus:output_type -> nakama.console.StatusList
-	94,  // 204: nakama.console.Console.GetStorage:output_type -> nakama.api.StorageObject
-	62,  // 205: nakama.console.Console.GetWalletLedger:output_type -> nakama.console.WalletLedgerList
-	49,  // 206: nakama.console.Console.GetNotification:output_type -> nakama.console.Notification
-	113, // 207: nakama.console.Console.GetPurchase:output_type -> nakama.api.ValidatedPurchase
-	114, // 208: nakama.console.Console.GetSubscription:output_type -> nakama.api.ValidatedSubscription
-	15,  // 209: nakama.console.Console.ListApiEndpoints:output_type -> nakama.console.ApiEndpointList
-	115, // 210: nakama.console.Console.ListLeaderboardRecords:output_type -> nakama.api.LeaderboardRecordList
-	37,  // 211: nakama.console.Console.ListLeaderboards:output_type -> nakama.console.LeaderboardList
-	52,  // 212: nakama.console.Console.ListStorage:output_type -> nakama.console.StorageList
-	53,  // 213: nakama.console.Console.ListStorageCollections:output_type -> nakama.console.StorageCollectionsList
-	8,   // 214: nakama.console.Console.ListAccounts:output_type -> nakama.console.AccountList
-	116, // 215: nakama.console.Console.ListChannelMessages:output_type -> nakama.api.ChannelMessageList
-	10,  // 216: nakama.console.Console.ListGroups:output_type -> nakama.console.GroupList
-	50,  // 217: nakama.console.Console.ListNotifications:output_type -> nakama.console.NotificationList
-	12,  // 218: nakama.console.Console.ListMatches:output_type -> nakama.console.MatchList
-	117, // 219: nakama.console.Console.ListPurchases:output_type -> nakama.api.PurchaseList
-	118, // 220: nakama.console.Console.ListSubscriptions:output_type -> nakama.api.SubscriptionList
-	58,  // 221: nakama.console.Console.ListUsers:output_type -> nakama.console.UserList
-	107, // 222: nakama.console.Console.PromoteGroupMember:output_type -> google.protobuf.Empty
-	107, // 223: nakama.console.Console.RequireUserMfa:output_type -> google.protobuf.Empty
-	107, // 224: nakama.console.Console.ResetUserMfa:output_type -> google.protobuf.Empty
-	107, // 225: nakama.console.Console.UnbanAccount:output_type -> google.protobuf.Empty
-	107, // 226: nakama.console.Console.UnlinkCustom:output_type -> google.protobuf.Empty
-	107, // 227: nakama.console.Console.UnlinkDevice:output_type -> google.protobuf.Empty
-	107, // 228: nakama.console.Console.UnlinkEmail:output_type -> google.protobuf.Empty
-	107, // 229: nakama.console.Console.UnlinkApple:output_type -> google.protobuf.Empty
-	107, // 230: nakama.console.Console.UnlinkFacebook:output_type -> google.protobuf.Empty
-	107, // 231: nakama.console.Console.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	107, // 232: nakama.console.Console.UnlinkGameCenter:output_type -> google.protobuf.Empty
-	107, // 233: nakama.console.Console.UnlinkGoogle:output_type -> google.protobuf.Empty
-	107, // 234: nakama.console.Console.UnlinkSteam:output_type -> google.protobuf.Empty
-	107, // 235: nakama.console.Console.UpdateAccount:output_type -> google.protobuf.Empty
-	107, // 236: nakama.console.Console.UpdateGroup:output_type -> google.protobuf.Empty
-	119, // 237: nakama.console.Console.WriteStorageObject:output_type -> nakama.api.StorageObjectAck
-	69,  // 238: nakama.console.Console.CreateAnnouncement:output_type -> nakama.console.Announcement
-	69,  // 239: nakama.console.Console.UpdateAnnouncement:output_type -> nakama.console.Announcement
-	107, // 240: nakama.console.Console.DeleteAnnouncement:output_type -> google.protobuf.Empty
-	70,  // 241: nakama.console.Console.ListAnnouncements:output_type -> nakama.console.AnnouncementList
-	69,  // 242: nakama.console.Console.GetAnnouncement:output_type -> nakama.console.Announcement
-	70,  // 243: nakama.console.Console.SearchAnnouncements:output_type -> nakama.console.AnnouncementList
-	82,  // 244: nakama.console.Console.ListSystemNotifications:output_type -> nakama.console.ListSystemNoticeResponse
-	76,  // 245: nakama.console.Console.CreateSystemNotification:output_type -> nakama.console.SystemNotice
-	76,  // 246: nakama.console.Console.UpdateSystemNotification:output_type -> nakama.console.SystemNotice
-	76,  // 247: nakama.console.Console.GetSystemNotification:output_type -> nakama.console.SystemNotice
-	107, // 248: nakama.console.Console.DeleteSystemNotification:output_type -> google.protobuf.Empty
-	169, // [169:249] is the sub-list for method output_type
-	89,  // [89:169] is the sub-list for method input_type
+	107, // 105: nakama.console.Console.ReloadTemplate:input_type -> google.protobuf.Empty
+	107, // 106: nakama.console.Console.DeleteAccounts:input_type -> google.protobuf.Empty
+	38,  // 107: nakama.console.Console.DeleteLeaderboard:input_type -> nakama.console.LeaderboardRequest
+	31,  // 108: nakama.console.Console.DeleteLeaderboardRecord:input_type -> nakama.console.DeleteLeaderboardRecordRequest
+	32,  // 109: nakama.console.Console.DeleteNotification:input_type -> nakama.console.DeleteNotificationRequest
+	57,  // 110: nakama.console.Console.DeleteUser:input_type -> nakama.console.Username
+	34,  // 111: nakama.console.Console.DeleteWalletLedger:input_type -> nakama.console.DeleteWalletLedgerRequest
+	28,  // 112: nakama.console.Console.DemoteGroupMember:input_type -> nakama.console.UpdateGroupUserStateRequest
+	7,   // 113: nakama.console.Console.ExportAccount:input_type -> nakama.console.AccountId
+	9,   // 114: nakama.console.Console.ExportGroup:input_type -> nakama.console.GroupId
+	7,   // 115: nakama.console.Console.GetAccount:input_type -> nakama.console.AccountId
+	107, // 116: nakama.console.Console.GetConfig:input_type -> google.protobuf.Empty
+	7,   // 117: nakama.console.Console.GetFriends:input_type -> nakama.console.AccountId
+	9,   // 118: nakama.console.Console.GetGroup:input_type -> nakama.console.GroupId
+	9,   // 119: nakama.console.Console.GetMembers:input_type -> nakama.console.GroupId
+	7,   // 120: nakama.console.Console.GetGroups:input_type -> nakama.console.AccountId
+	38,  // 121: nakama.console.Console.GetLeaderboard:input_type -> nakama.console.LeaderboardRequest
+	48,  // 122: nakama.console.Console.GetMatchState:input_type -> nakama.console.MatchStateRequest
+	107, // 123: nakama.console.Console.GetRuntime:input_type -> google.protobuf.Empty
+	107, // 124: nakama.console.Console.GetStatus:input_type -> google.protobuf.Empty
+	108, // 125: nakama.console.Console.GetStorage:input_type -> nakama.api.ReadStorageObjectId
+	64,  // 126: nakama.console.Console.GetWalletLedger:input_type -> nakama.console.GetWalletLedgerRequest
+	65,  // 127: nakama.console.Console.GetNotification:input_type -> nakama.console.GetNotificationRequest
+	66,  // 128: nakama.console.Console.GetPurchase:input_type -> nakama.console.GetPurchaseRequest
+	67,  // 129: nakama.console.Console.GetSubscription:input_type -> nakama.console.GetSubscriptionRequest
+	107, // 130: nakama.console.Console.ListApiEndpoints:input_type -> google.protobuf.Empty
+	109, // 131: nakama.console.Console.ListLeaderboardRecords:input_type -> nakama.api.ListLeaderboardRecordsRequest
+	36,  // 132: nakama.console.Console.ListLeaderboards:input_type -> nakama.console.LeaderboardListRequest
+	46,  // 133: nakama.console.Console.ListStorage:input_type -> nakama.console.ListStorageRequest
+	107, // 134: nakama.console.Console.ListStorageCollections:input_type -> google.protobuf.Empty
+	39,  // 135: nakama.console.Console.ListAccounts:input_type -> nakama.console.ListAccountsRequest
+	40,  // 136: nakama.console.Console.ListChannelMessages:input_type -> nakama.console.ListChannelMessagesRequest
+	41,  // 137: nakama.console.Console.ListGroups:input_type -> nakama.console.ListGroupsRequest
+	43,  // 138: nakama.console.Console.ListNotifications:input_type -> nakama.console.ListNotificationsRequest
+	42,  // 139: nakama.console.Console.ListMatches:input_type -> nakama.console.ListMatchesRequest
+	44,  // 140: nakama.console.Console.ListPurchases:input_type -> nakama.console.ListPurchasesRequest
+	45,  // 141: nakama.console.Console.ListSubscriptions:input_type -> nakama.console.ListSubscriptionsRequest
+	107, // 142: nakama.console.Console.ListUsers:input_type -> google.protobuf.Empty
+	28,  // 143: nakama.console.Console.PromoteGroupMember:input_type -> nakama.console.UpdateGroupUserStateRequest
+	30,  // 144: nakama.console.Console.RequireUserMfa:input_type -> nakama.console.RequireUserMfaRequest
+	29,  // 145: nakama.console.Console.ResetUserMfa:input_type -> nakama.console.ResetUserMfaRequest
+	7,   // 146: nakama.console.Console.UnbanAccount:input_type -> nakama.console.AccountId
+	7,   // 147: nakama.console.Console.UnlinkCustom:input_type -> nakama.console.AccountId
+	54,  // 148: nakama.console.Console.UnlinkDevice:input_type -> nakama.console.UnlinkDeviceRequest
+	7,   // 149: nakama.console.Console.UnlinkEmail:input_type -> nakama.console.AccountId
+	7,   // 150: nakama.console.Console.UnlinkApple:input_type -> nakama.console.AccountId
+	7,   // 151: nakama.console.Console.UnlinkFacebook:input_type -> nakama.console.AccountId
+	7,   // 152: nakama.console.Console.UnlinkFacebookInstantGame:input_type -> nakama.console.AccountId
+	7,   // 153: nakama.console.Console.UnlinkGameCenter:input_type -> nakama.console.AccountId
+	7,   // 154: nakama.console.Console.UnlinkGoogle:input_type -> nakama.console.AccountId
+	7,   // 155: nakama.console.Console.UnlinkSteam:input_type -> nakama.console.AccountId
+	55,  // 156: nakama.console.Console.UpdateAccount:input_type -> nakama.console.UpdateAccountRequest
+	56,  // 157: nakama.console.Console.UpdateGroup:input_type -> nakama.console.UpdateGroupRequest
+	63,  // 158: nakama.console.Console.WriteStorageObject:input_type -> nakama.console.WriteStorageObjectRequest
+	71,  // 159: nakama.console.Console.CreateAnnouncement:input_type -> nakama.console.CreateAnnouncementRequest
+	72,  // 160: nakama.console.Console.UpdateAnnouncement:input_type -> nakama.console.UpdateAnnouncementRequest
+	74,  // 161: nakama.console.Console.DeleteAnnouncement:input_type -> nakama.console.AnnouncementId
+	73,  // 162: nakama.console.Console.ListAnnouncements:input_type -> nakama.console.ListAnnouncementsRequest
+	74,  // 163: nakama.console.Console.GetAnnouncement:input_type -> nakama.console.AnnouncementId
+	75,  // 164: nakama.console.Console.SearchAnnouncements:input_type -> nakama.console.SearchAnnouncementsRequest
+	81,  // 165: nakama.console.Console.ListSystemNotifications:input_type -> nakama.console.ListSystemNoticeRequest
+	79,  // 166: nakama.console.Console.CreateSystemNotification:input_type -> nakama.console.CreateSystemNotificationRequest
+	76,  // 167: nakama.console.Console.UpdateSystemNotification:input_type -> nakama.console.SystemNotice
+	78,  // 168: nakama.console.Console.GetSystemNotification:input_type -> nakama.console.SystemNotificationId
+	78,  // 169: nakama.console.Console.DeleteSystemNotification:input_type -> nakama.console.SystemNotificationId
+	23,  // 170: nakama.console.Console.Authenticate:output_type -> nakama.console.ConsoleSession
+	107, // 171: nakama.console.Console.AuthenticateLogout:output_type -> google.protobuf.Empty
+	18,  // 172: nakama.console.Console.AuthenticateMFASetup:output_type -> nakama.console.AuthenticateMFASetupResponse
+	107, // 173: nakama.console.Console.AddUser:output_type -> google.protobuf.Empty
+	107, // 174: nakama.console.Console.AddGroupUsers:output_type -> google.protobuf.Empty
+	107, // 175: nakama.console.Console.BanAccount:output_type -> google.protobuf.Empty
+	21,  // 176: nakama.console.Console.CallApiEndpoint:output_type -> nakama.console.CallApiEndpointResponse
+	21,  // 177: nakama.console.Console.CallRpcEndpoint:output_type -> nakama.console.CallApiEndpointResponse
+	107, // 178: nakama.console.Console.DeleteAllData:output_type -> google.protobuf.Empty
+	107, // 179: nakama.console.Console.DeleteAccount:output_type -> google.protobuf.Empty
+	51,  // 180: nakama.console.Console.DeleteChannelMessages:output_type -> nakama.console.DeleteChannelMessagesResponse
+	107, // 181: nakama.console.Console.DeleteFriend:output_type -> google.protobuf.Empty
+	107, // 182: nakama.console.Console.DeleteGroup:output_type -> google.protobuf.Empty
+	107, // 183: nakama.console.Console.DeleteGroupUser:output_type -> google.protobuf.Empty
+	107, // 184: nakama.console.Console.DeleteStorage:output_type -> google.protobuf.Empty
+	107, // 185: nakama.console.Console.DeleteStorageObject:output_type -> google.protobuf.Empty
+	107, // 186: nakama.console.Console.ReloadTemplate:output_type -> google.protobuf.Empty
+	107, // 187: nakama.console.Console.DeleteAccounts:output_type -> google.protobuf.Empty
+	107, // 188: nakama.console.Console.DeleteLeaderboard:output_type -> google.protobuf.Empty
+	107, // 189: nakama.console.Console.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	107, // 190: nakama.console.Console.DeleteNotification:output_type -> google.protobuf.Empty
+	107, // 191: nakama.console.Console.DeleteUser:output_type -> google.protobuf.Empty
+	107, // 192: nakama.console.Console.DeleteWalletLedger:output_type -> google.protobuf.Empty
+	107, // 193: nakama.console.Console.DemoteGroupMember:output_type -> google.protobuf.Empty
+	6,   // 194: nakama.console.Console.ExportAccount:output_type -> nakama.console.AccountExport
+	11,  // 195: nakama.console.Console.ExportGroup:output_type -> nakama.console.GroupExport
+	4,   // 196: nakama.console.Console.GetAccount:output_type -> nakama.console.Account
+	22,  // 197: nakama.console.Console.GetConfig:output_type -> nakama.console.Config
+	110, // 198: nakama.console.Console.GetFriends:output_type -> nakama.api.FriendList
+	96,  // 199: nakama.console.Console.GetGroup:output_type -> nakama.api.Group
+	111, // 200: nakama.console.Console.GetMembers:output_type -> nakama.api.GroupUserList
+	112, // 201: nakama.console.Console.GetGroups:output_type -> nakama.api.UserGroupList
+	35,  // 202: nakama.console.Console.GetLeaderboard:output_type -> nakama.console.Leaderboard
+	47,  // 203: nakama.console.Console.GetMatchState:output_type -> nakama.console.MatchState
+	60,  // 204: nakama.console.Console.GetRuntime:output_type -> nakama.console.RuntimeInfo
+	59,  // 205: nakama.console.Console.GetStatus:output_type -> nakama.console.StatusList
+	94,  // 206: nakama.console.Console.GetStorage:output_type -> nakama.api.StorageObject
+	62,  // 207: nakama.console.Console.GetWalletLedger:output_type -> nakama.console.WalletLedgerList
+	49,  // 208: nakama.console.Console.GetNotification:output_type -> nakama.console.Notification
+	113, // 209: nakama.console.Console.GetPurchase:output_type -> nakama.api.ValidatedPurchase
+	114, // 210: nakama.console.Console.GetSubscription:output_type -> nakama.api.ValidatedSubscription
+	15,  // 211: nakama.console.Console.ListApiEndpoints:output_type -> nakama.console.ApiEndpointList
+	115, // 212: nakama.console.Console.ListLeaderboardRecords:output_type -> nakama.api.LeaderboardRecordList
+	37,  // 213: nakama.console.Console.ListLeaderboards:output_type -> nakama.console.LeaderboardList
+	52,  // 214: nakama.console.Console.ListStorage:output_type -> nakama.console.StorageList
+	53,  // 215: nakama.console.Console.ListStorageCollections:output_type -> nakama.console.StorageCollectionsList
+	8,   // 216: nakama.console.Console.ListAccounts:output_type -> nakama.console.AccountList
+	116, // 217: nakama.console.Console.ListChannelMessages:output_type -> nakama.api.ChannelMessageList
+	10,  // 218: nakama.console.Console.ListGroups:output_type -> nakama.console.GroupList
+	50,  // 219: nakama.console.Console.ListNotifications:output_type -> nakama.console.NotificationList
+	12,  // 220: nakama.console.Console.ListMatches:output_type -> nakama.console.MatchList
+	117, // 221: nakama.console.Console.ListPurchases:output_type -> nakama.api.PurchaseList
+	118, // 222: nakama.console.Console.ListSubscriptions:output_type -> nakama.api.SubscriptionList
+	58,  // 223: nakama.console.Console.ListUsers:output_type -> nakama.console.UserList
+	107, // 224: nakama.console.Console.PromoteGroupMember:output_type -> google.protobuf.Empty
+	107, // 225: nakama.console.Console.RequireUserMfa:output_type -> google.protobuf.Empty
+	107, // 226: nakama.console.Console.ResetUserMfa:output_type -> google.protobuf.Empty
+	107, // 227: nakama.console.Console.UnbanAccount:output_type -> google.protobuf.Empty
+	107, // 228: nakama.console.Console.UnlinkCustom:output_type -> google.protobuf.Empty
+	107, // 229: nakama.console.Console.UnlinkDevice:output_type -> google.protobuf.Empty
+	107, // 230: nakama.console.Console.UnlinkEmail:output_type -> google.protobuf.Empty
+	107, // 231: nakama.console.Console.UnlinkApple:output_type -> google.protobuf.Empty
+	107, // 232: nakama.console.Console.UnlinkFacebook:output_type -> google.protobuf.Empty
+	107, // 233: nakama.console.Console.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	107, // 234: nakama.console.Console.UnlinkGameCenter:output_type -> google.protobuf.Empty
+	107, // 235: nakama.console.Console.UnlinkGoogle:output_type -> google.protobuf.Empty
+	107, // 236: nakama.console.Console.UnlinkSteam:output_type -> google.protobuf.Empty
+	107, // 237: nakama.console.Console.UpdateAccount:output_type -> google.protobuf.Empty
+	107, // 238: nakama.console.Console.UpdateGroup:output_type -> google.protobuf.Empty
+	119, // 239: nakama.console.Console.WriteStorageObject:output_type -> nakama.api.StorageObjectAck
+	69,  // 240: nakama.console.Console.CreateAnnouncement:output_type -> nakama.console.Announcement
+	69,  // 241: nakama.console.Console.UpdateAnnouncement:output_type -> nakama.console.Announcement
+	107, // 242: nakama.console.Console.DeleteAnnouncement:output_type -> google.protobuf.Empty
+	70,  // 243: nakama.console.Console.ListAnnouncements:output_type -> nakama.console.AnnouncementList
+	69,  // 244: nakama.console.Console.GetAnnouncement:output_type -> nakama.console.Announcement
+	70,  // 245: nakama.console.Console.SearchAnnouncements:output_type -> nakama.console.AnnouncementList
+	82,  // 246: nakama.console.Console.ListSystemNotifications:output_type -> nakama.console.ListSystemNoticeResponse
+	76,  // 247: nakama.console.Console.CreateSystemNotification:output_type -> nakama.console.SystemNotice
+	76,  // 248: nakama.console.Console.UpdateSystemNotification:output_type -> nakama.console.SystemNotice
+	76,  // 249: nakama.console.Console.GetSystemNotification:output_type -> nakama.console.SystemNotice
+	107, // 250: nakama.console.Console.DeleteSystemNotification:output_type -> google.protobuf.Empty
+	170, // [170:251] is the sub-list for method output_type
+	89,  // [89:170] is the sub-list for method input_type
 	89,  // [89:89] is the sub-list for extension type_name
 	89,  // [89:89] is the sub-list for extension extendee
 	0,   // [0:89] is the sub-list for field type_name

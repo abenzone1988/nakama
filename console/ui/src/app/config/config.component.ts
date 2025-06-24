@@ -42,6 +42,8 @@ export class ConfigComponent implements OnInit, OnDestroy {
   public deleteSuccess = false;
   public deleting = false;
   public confirmDeleteForm: UntypedFormGroup;
+  public reloadSuccess = false;
+  public reloadError = '';
 
   private apiConfig: ConfigParams;
 
@@ -165,6 +167,39 @@ export class ConfigComponent implements OnInit, OnDestroy {
       this.confirmDeleteForm,
       'Delete All Data' ,
      'Are you sure you want to delete all the database data?'
+    );
+  }
+
+
+  public openDeleteDataModal(modal): void {
+    this.modalService.open(modal, {centered: true}).result.then(() => {
+      this.deleteData();
+      this.confirmDeleteForm.controls.delete.setValue( '');
+    }, () => {
+      this.confirmDeleteForm.controls.delete.setValue( '');
+    });
+  }
+
+  public openReloadTplModal(modal): void {
+    this.modalService.open(modal, {centered: true}).result.then(() => {
+      this.reloadTemplate();
+    });
+  }
+
+  public reloadTemplate(): void {
+    this.reloadError = '';
+    this.reloadSuccess = false;
+    this.consoleService.reloadTemplate('').subscribe(
+      response => {
+        // Handle success case, can execute logic based on the data returned by the interface
+        console.log('Template reloaded successfully:', response);
+        this.reloadSuccess = true;
+      },
+      error => {
+        // Handle failure case
+        console.error('Failed to reload template:', error);
+        this.reloadError = error;
+      }
     );
   }
 

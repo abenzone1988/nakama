@@ -1802,6 +1802,13 @@ export class ConsoleService {
     return this.httpClient.get<ListSystemNoticeResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
+  /** Reload template data */
+  reloadTemplate(auth_token: string): Observable<any> {
+    const urlPath = `/v2/console/template`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.post(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
   /** Delete console user. */
   deleteUser(auth_token: string, username?: string): Observable<any> {
     const urlPath = `/v2/console/user`;

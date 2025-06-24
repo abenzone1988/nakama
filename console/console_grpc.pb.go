@@ -54,6 +54,7 @@ const (
 	Console_DeleteGroupUser_FullMethodName           = "/nakama.console.Console/DeleteGroupUser"
 	Console_DeleteStorage_FullMethodName             = "/nakama.console.Console/DeleteStorage"
 	Console_DeleteStorageObject_FullMethodName       = "/nakama.console.Console/DeleteStorageObject"
+	Console_ReloadTemplate_FullMethodName            = "/nakama.console.Console/ReloadTemplate"
 	Console_DeleteAccounts_FullMethodName            = "/nakama.console.Console/DeleteAccounts"
 	Console_DeleteLeaderboard_FullMethodName         = "/nakama.console.Console/DeleteLeaderboard"
 	Console_DeleteLeaderboardRecord_FullMethodName   = "/nakama.console.Console/DeleteLeaderboardRecord"
@@ -156,6 +157,8 @@ type ConsoleClient interface {
 	DeleteStorage(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete a storage object.
 	DeleteStorageObject(ctx context.Context, in *DeleteStorageObjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Reload template data
+	ReloadTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -432,6 +435,15 @@ func (c *consoleClient) DeleteStorage(ctx context.Context, in *emptypb.Empty, op
 func (c *consoleClient) DeleteStorageObject(ctx context.Context, in *DeleteStorageObjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Console_DeleteStorageObject_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ReloadTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_ReloadTemplate_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1050,6 +1062,8 @@ type ConsoleServer interface {
 	DeleteStorage(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete a storage object.
 	DeleteStorageObject(context.Context, *DeleteStorageObjectRequest) (*emptypb.Empty, error)
+	// Reload template data
+	ReloadTemplate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -1232,6 +1246,9 @@ func (UnimplementedConsoleServer) DeleteStorage(context.Context, *emptypb.Empty)
 }
 func (UnimplementedConsoleServer) DeleteStorageObject(context.Context, *DeleteStorageObjectRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteStorageObject not implemented")
+}
+func (UnimplementedConsoleServer) ReloadTemplate(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReloadTemplate not implemented")
 }
 func (UnimplementedConsoleServer) DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccounts not implemented")
@@ -1722,6 +1739,24 @@ func _Console_DeleteStorageObject_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).DeleteStorageObject(ctx, req.(*DeleteStorageObjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ReloadTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ReloadTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ReloadTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ReloadTemplate(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2948,6 +2983,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteStorageObject",
 			Handler:    _Console_DeleteStorageObject_Handler,
+		},
+		{
+			MethodName: "ReloadTemplate",
+			Handler:    _Console_ReloadTemplate_Handler,
 		},
 		{
 			MethodName: "DeleteAccounts",
