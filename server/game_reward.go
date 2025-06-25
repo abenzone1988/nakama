@@ -133,15 +133,15 @@ func (s *ApiServer) UseWallet(ctx context.Context, in *game.UseWalletRequest) (*
 
 	// 构造返回的钱包数据
 	previousWallet := &game.Wallet{
-		Coin: result.Previous["coin"],
-		Gem:  result.Previous["gem"],
-		Ad:   result.Previous["ad"],
+		Coin: int32(result.Previous["coin"]),
+		Gem:  int32(result.Previous["gem"]),
+		Ad:   int32(result.Previous["ad"]),
 	}
 
 	updatedWallet := &game.Wallet{
-		Coin: result.Updated["coin"],
-		Gem:  result.Updated["gem"],
-		Ad:   result.Updated["ad"],
+		Coin: int32(result.Updated["coin"]),
+		Gem:  int32(result.Updated["gem"]),
+		Ad:   int32(result.Updated["ad"]),
 	}
 
 	currencyKey := getCurrencyKey(in.GetCurrencyType())
@@ -248,15 +248,15 @@ func (s *ApiServer) GetReward(ctx context.Context, in *game.GetRewardRequest) (*
 
 	// 构造返回的钱包数据
 	previousWallet := &game.Wallet{
-		Coin: result.Previous["coin"],
-		Gem:  result.Previous["gem"],
-		Ad:   result.Previous["ad"],
+		Coin: int32(result.Previous["coin"]),
+		Gem:  int32(result.Previous["gem"]),
+		Ad:   int32(result.Previous["ad"]),
 	}
 
 	updatedWallet := &game.Wallet{
-		Coin: result.Updated["coin"],
-		Gem:  result.Updated["gem"],
-		Ad:   result.Updated["ad"],
+		Coin: int32(result.Updated["coin"]),
+		Gem:  int32(result.Updated["gem"]),
+		Ad:   int32(result.Updated["ad"]),
 	}
 
 	s.logger.Info("奖励获取成功",
@@ -293,6 +293,7 @@ func (s *ApiServer) AddWallet(ctx context.Context, in *game.AddWalletRequest) (*
 	adChange = int64(in.Ad)
 
 	record := fmt.Sprintf("加钱包: 金币 %d 钻石 %d 广告券 %d, 原因: %s", coinChange, gemChange, adChange, in.GetReason())
+	s.logger.Info("addWallet", zap.String("更新", record))
 
 	// 执行钱包更新（core_wallet.go会自动检查余额是否足够）
 	results, err := s.updatePlayerWallet(ctx, coinChange, gemChange, adChange, record)
@@ -312,21 +313,36 @@ func (s *ApiServer) AddWallet(ctx context.Context, in *game.AddWalletRequest) (*
 				Msg:  fmt.Sprintf("钱包更新失败"),
 			}, nil
 		}
+
+		s.logger.Error("钱包更新失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return &game.AddWalletResponse{
+			Code: 4,
+			Msg:  "钱包更新失败",
+		}, nil
+	}
+
+	// 从结果中获取钱包数据
+	if len(results) == 0 {
+		s.logger.Error("未找到钱包更新结果", zap.String("user_id", userID.String()))
+		return &game.AddWalletResponse{
+			Code: 5,
+			Msg:  "未找到钱包更新结果",
+		}, nil
 	}
 
 	result := results[0] // 只有一个用户的更新结果
 
 	// 构造返回的钱包数据
 	previousWallet := &game.Wallet{
-		Coin: result.Previous["coin"],
-		Gem:  result.Previous["gem"],
-		Ad:   result.Previous["ad"],
+		Coin: int32(result.Previous["coin"]),
+		Gem:  int32(result.Previous["gem"]),
+		Ad:   int32(result.Previous["ad"]),
 	}
 
 	updatedWallet := &game.Wallet{
-		Coin: result.Updated["coin"],
-		Gem:  result.Updated["gem"],
-		Ad:   result.Updated["ad"],
+		Coin: int32(result.Updated["coin"]),
+		Gem:  int32(result.Updated["gem"]),
+		Ad:   int32(result.Updated["ad"]),
 	}
 
 	return &game.AddWalletResponse{

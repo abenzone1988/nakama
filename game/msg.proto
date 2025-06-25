@@ -81,15 +81,15 @@ message UserMeta{
 
 // 钱包结构
 message Wallet{
-  int64 coin = 1;
-  int64 gem = 2;
-  int64 ad = 3;
+  int32 coin = 1;
+  int32 gem = 2;
+  int32 ad = 3;
 }
 
 // Game Item
 message Item {
   string id = 1;
-  int64 num = 2;
+  int32 num = 2;
 }
 
 // 关卡数据结构
