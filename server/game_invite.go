@@ -3,11 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"time"
 )
 
 type InviteRecord struct {
@@ -93,24 +94,6 @@ func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvite
 	return &emptypb.Empty{}, nil
 }
 
-type HomeData struct {
-	CurLevelId             string `json:"curLevelId"`
-	LastGetOnHookTimestamp string `json:"lastGetOnHookTimestamp"`
-}
-
-func (f *HomeData) GetCollection() string {
-	return "Home"
-}
-
-func (f *HomeData) GetKey() string {
-	return "HomeData"
-}
-
-func (f *HomeData) Init() {
-	f.CurLevelId = ""
-	f.LastGetOnHookTimestamp = ""
-}
-
 func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.ListInviteeResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	inviterData := &InviteData{}
@@ -130,11 +113,15 @@ func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.L
 				}
 				inviter := users.Users[0]
 				inviterID, _ := uuid.FromString(inviter.Id)
-				homeData := &HomeData{}
-				if err := LoadData(ctx, s.logger, s.db, inviterID, homeData); err != nil {
-					return nil, err
+
+				// 加载关卡数据
+				homeLevelData := &HomeLevelData{}
+				err := LoadData(ctx, s.logger, s.db, inviterID, homeLevelData)
+				if err != nil {
+					s.logger.Info("邀请人HomeLevelData 加载失败", zap.String("share_id", inviter.Id))
+					continue
 				}
-				if homeData.CurLevelId > "L10011" {
+				if homeLevelData.MaxLevelId >= "L10011" {
 					resp.InviteeIds = append(resp.InviteeIds, v.Invitee)
 				}
 			}

@@ -207,13 +207,6 @@ func (s *ApiServer) HandleSceneList(w http.ResponseWriter, r *http.Request) {
 
 // queryUserScenes 查询用户场景列表
 func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scene, error) {
-	// 1. 通过openid查询userId
-	userID, err := FindUserByDeviceID(ctx, s.logger, s.db, openid)
-	if err != nil {
-		s.logger.Error("查询用户ID失败", zap.Error(err), zap.String("openid", openid))
-		return nil, err
-	}
-
 	scenes := make([]*Scene, 0)
 
 	// 如果启用测试模式，直接返回所有场景
@@ -226,73 +219,6 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 				Extra:      "",
 			},
 		}, nil
-	}
-
-	// 2. 查询离线收益数据s
-	homeData := &HomeData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
-		s.logger.Error("读取Home数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	// 解析lastGetOnHookTimestamp
-	lastGetTime, err := parseTime(homeData.LastGetOnHookTimestamp)
-	if err != nil {
-		s.logger.Error("解析时间格式失败", zap.Error(err))
-		return nil, err
-	}
-
-	//s.logger.Info("离线收益时间间隔", zap.Float64("Hours", time.Since(lastGetTime).Hours()))
-
-	// 判断是否超过8小时
-	if time.Since(lastGetTime).Hours() >= 8 {
-		scenes = append(scenes, &Scene{
-			Scene:      SceneOfflineIncome,
-			ContentIDs: []string{ContentOfflineIncome},
-			Extra:      "",
-		})
-	}
-
-	// 3. 查询体力数据
-	staminaData := &StaminaData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, staminaData); err != nil {
-		s.logger.Error("读取Stamina数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	// 如果时间戳为空，直接判断体力值
-	if staminaData.UpdateTimestamp == "" {
-		if staminaData.Stamina >= 30 {
-			scenes = append(scenes, &Scene{
-				Scene:      SceneStaminaFull,
-				ContentIDs: []string{ContentStaminaFull},
-				Extra:      "",
-			})
-		}
-		return scenes, nil
-	}
-
-	// 解析updateTimestamp
-	updateTime, err := parseTime(staminaData.UpdateTimestamp)
-	if err != nil {
-		s.logger.Error("解析时间格式失败", zap.Error(err))
-		return nil, err
-	}
-
-	//s.logger.Info("体力恢复时间间隔", zap.Float64("Minutes", time.Since(updateTime).Minutes()))
-
-	// 计算体力恢复
-	minutesPassed := time.Since(updateTime).Minutes()
-	recoveredStamina := int(minutesPassed / 20) // 每20分钟恢复1点体力
-	currentStamina := staminaData.Stamina + recoveredStamina
-
-	// 如果体力达到上限30
-	if currentStamina >= 30 {
-		scenes = append(scenes, &Scene{
-			Scene:      SceneStaminaFull,
-			ContentIDs: []string{ContentStaminaFull},
-			Extra:      "",
-		})
 	}
 
 	return scenes, nil
