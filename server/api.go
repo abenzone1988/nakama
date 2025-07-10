@@ -27,7 +27,6 @@ import (
 	"math"
 	"net"
 	"net/http"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -116,12 +115,12 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 			}
 
 			// 使用 defer 捕获 panic
-			defer func() {
-				if r := recover(); r != nil {
-					stackInfo := string(debug.Stack())
-					logger.Error("Recovered from panic:", zap.Any("panic", r), zap.String("stack", stackInfo))
-				}
-			}()
+			//defer func() {
+			//	if r := recover(); r != nil {
+			//		stackInfo := string(debug.Stack())
+			//		logger.Error("Recovered from panic:", zap.Any("panic", r), zap.String("stack", stackInfo))
+			//	}
+			//}()
 			return handler(ctx, req)
 		}),
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -94,4 +95,18 @@ func parseTime(timeStr string) (time.Time, error) {
 
 	// UTC格式解析失败，尝试解析自定义格式
 	return time.Parse("2006:01:02:15:04:05", timeStr)
+}
+
+// parseDateTime 解析日期和时间字符串为 time.Time
+func parseDateTime(dateStr, timeStr string) (time.Time, error) {
+	// 组合日期和时间字符串
+	datetimeStr := fmt.Sprintf("%s %s", dateStr, timeStr)
+
+	// 在服务器本地时区中解析时间，确保配置的本地时间被正确理解
+	parsedTime, err := time.ParseInLocation("2006-01-02 15:04", datetimeStr, time.Local)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("解析时间失败 '%s': %w", datetimeStr, err)
+	}
+
+	return parsedTime, nil
 }

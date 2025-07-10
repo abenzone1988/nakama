@@ -188,3 +188,28 @@ message UseWalletResponse {
   Wallet wallet_updated = 3;     // 更新后的钱包
   Wallet wallet_previous = 4;    // 更新前的钱包
 }
+
+message Challenge{
+  int32 id = 1;
+  string activity_id = 2;
+  google.protobuf.Timestamp start = 3;
+  google.protobuf.Timestamp end = 4;
+  int32 max_part = 5;
+  string tournament_id = 6;      // 玩家当前参与的竞标赛ID，如果为空表示未参与
+  google.protobuf.Timestamp close = 7; //关闭 如果奖励没有领取变成邮件
+}
+
+message GetChallengeResponse{
+  repeated Challenge challenges = 1;
+}
+
+
+message JoinChallengeRequest{
+  int32 challenge_id = 1;
+}
+
+message JoinChallengeResponse{
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  Challenge challenge  = 3;
+}

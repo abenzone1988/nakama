@@ -39,6 +39,7 @@ type LeaderboardRankCache interface {
 	Delete(leaderboardId string, expiryUnix int64, ownerID uuid.UUID) bool
 	DeleteLeaderboard(leaderboardId string, expiryUnix int64) bool
 	TrimExpired(nowUnix int64) bool
+	Stop()
 }
 
 type LeaderboardWithExpiry struct {
@@ -447,6 +448,10 @@ func (l *LocalLeaderboardRankCache) TrimExpired(nowUnix int64) bool {
 	l.Unlock()
 
 	return true
+}
+
+func (l *LocalLeaderboardRankCache) Stop() {
+	// Local cache doesn't need cleanup
 }
 
 func leaderboardCacheInitWorker(

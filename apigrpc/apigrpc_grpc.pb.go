@@ -138,6 +138,8 @@ const (
 	Nakama_UseWallet_FullMethodName                         = "/nakama.api.Nakama/UseWallet"
 	Nakama_AddWallet_FullMethodName                         = "/nakama.api.Nakama/AddWallet"
 	Nakama_GetReward_FullMethodName                         = "/nakama.api.Nakama/GetReward"
+	Nakama_GetChallenge_FullMethodName                      = "/nakama.api.Nakama/GetChallenge"
+	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -342,6 +344,10 @@ type NakamaClient interface {
 	AddWallet(ctx context.Context, in *game.AddWalletRequest, opts ...grpc.CallOption) (*game.AddWalletResponse, error)
 	// Get Reward
 	GetReward(ctx context.Context, in *game.GetRewardRequest, opts ...grpc.CallOption) (*game.GetRewardResponse, error)
+	// Get Challenge
+	GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error)
+	// Join Challenge
+	JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest, opts ...grpc.CallOption) (*game.JoinChallengeResponse, error)
 }
 
 type nakamaClient struct {
@@ -1243,6 +1249,24 @@ func (c *nakamaClient) GetReward(ctx context.Context, in *game.GetRewardRequest,
 	return out, nil
 }
 
+func (c *nakamaClient) GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error) {
+	out := new(game.GetChallengeResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetChallenge_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest, opts ...grpc.CallOption) (*game.JoinChallengeResponse, error) {
+	out := new(game.JoinChallengeResponse)
+	err := c.cc.Invoke(ctx, Nakama_JoinChallenge_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1445,6 +1469,10 @@ type NakamaServer interface {
 	AddWallet(context.Context, *game.AddWalletRequest) (*game.AddWalletResponse, error)
 	// Get Reward
 	GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error)
+	// Get Challenge
+	GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error)
+	// Join Challenge
+	JoinChallenge(context.Context, *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1748,6 +1776,12 @@ func (UnimplementedNakamaServer) AddWallet(context.Context, *game.AddWalletReque
 }
 func (UnimplementedNakamaServer) GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReward not implemented")
+}
+func (UnimplementedNakamaServer) GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallenge not implemented")
+}
+func (UnimplementedNakamaServer) JoinChallenge(context.Context, *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinChallenge not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3544,6 +3578,42 @@ func _Nakama_GetReward_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChallenge(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_JoinChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.JoinChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).JoinChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_JoinChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).JoinChallenge(ctx, req.(*game.JoinChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3946,6 +4016,14 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetReward",
 			Handler:    _Nakama_GetReward_Handler,
+		},
+		{
+			MethodName: "GetChallenge",
+			Handler:    _Nakama_GetChallenge_Handler,
+		},
+		{
+			MethodName: "JoinChallenge",
+			Handler:    _Nakama_JoinChallenge_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -20,5 +20,10 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		logger.Error("Unable to register: %v", err)
 		return err
 	}
+
+	if err := nk.LeaderboardCreate(ctx, "PubGameTest", false, "desc", "set", "", nil, true); err != nil {
+		logger.Error("Create Leaderboard error", err.Error())
+	}
+
 	return nil
 }

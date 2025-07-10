@@ -1,0 +1,4 @@
+id,name,activityId,startDate,startTime,endDate,endTime,maxPart,status,description,durationSeconds,category,operator,sortOrder,rewardConfig,requirements
+C001,夏季挑战赛01,A1001,2025-07-09,10:00,2025-07-10,22:00,20,1,夏季限时挑战活动01,129600,1,best,1,"{""first"":{""gem"":1000,""coin"":5000},""second"":{""gem"":500,""coin"":3000},""third"":{""gem"":200,""coin"":1000}}","{""level"":10,""vip"":false}"
+C002,夏季挑战赛02,L10102,2025-07-12,10:00,2025-07-13,22:00,30,1,夏季限时挑战活动02,129600,1,best,1,"{""first"":{""gem"":1500,""coin"":7500},""second"":{""gem"":750,""coin"":4500},""third"":{""gem"":300,""coin"":1500}}","{""level"":15,""vip"":false}"
+C003,夏季挑战赛03,L10051,2025-07-14,10:00,2025-07-16,22:00,40,1,夏季限时挑战活动03,216000,1,best,1,"{""first"":{""gem"":2000,""coin"":10000,""items"":[""legendary_item""]},""second"":{""gem"":1000,""coin"":6000},""third"":{""gem"":500,""coin"":3000}}","{""level"":20,""vip"":true}" 

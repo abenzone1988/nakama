@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	. "github.com/heroiclabs/nakama/v3/template"
@@ -15,6 +16,7 @@ type TemplateManager interface {
 	LoadData()
 	GetTplRedemption() *TableTplRedemption
 	GetTplReward() *TableTplReward
+	GetTplChallenge() *TableTplChallenge
 }
 
 type LocalTemplateManager struct {
@@ -22,6 +24,7 @@ type LocalTemplateManager struct {
 	db                 *sql.DB
 	tableTplRedemption *TableTplRedemption
 	tableTplReward     *TableTplReward
+	tableTplChallenge  *TableTplChallenge
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -31,6 +34,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		db:                 db,
 		tableTplRedemption: NewTableTplRedemption(logger, jsonPath),
 		tableTplReward:     NewTableTplReward(logger, jsonPath),
+		tableTplChallenge:  NewTableTplChallenge(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -44,9 +48,14 @@ func (t *LocalTemplateManager) GetTplReward() *TableTplReward {
 	return t.tableTplReward
 }
 
+func (t *LocalTemplateManager) GetTplChallenge() *TableTplChallenge {
+	return t.tableTplChallenge
+}
+
 func (t *LocalTemplateManager) LoadData() {
 	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
+	t.tableTplChallenge.LoadData(t.StorageReadTpl("TplChallenge"))
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {

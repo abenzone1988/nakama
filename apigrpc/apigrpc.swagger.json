@@ -1820,6 +1820,62 @@
         ]
       }
     },
+    "/v2/game/challenges": {
+      "get": {
+        "summary": "Get Challenge",
+        "operationId": "Nakama_GetChallenge",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetChallengeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/challenges/join": {
+      "post": {
+        "summary": "Join Challenge",
+        "operationId": "Nakama_JoinChallenge",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameJoinChallengeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameJoinChallengeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/feedback": {
       "post": {
         "summary": "User Feedback",
@@ -6087,6 +6143,34 @@
       },
       "title": "公告信息"
     },
+    "gameChallenge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "maxPart": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tournamentId": {
+          "type": "string",
+          "title": "玩家当前参与的竞标赛ID，如果为空表示未参与"
+        }
+      }
+    },
     "gameClaimInviteRewardRequest": {
       "type": "object",
       "properties": {
@@ -6119,6 +6203,18 @@
         },
         "description": {
           "type": "string"
+        }
+      }
+    },
+    "gameGetChallengeResponse": {
+      "type": "object",
+      "properties": {
+        "challenges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameChallenge"
+          }
         }
       }
     },
@@ -6254,6 +6350,32 @@
         }
       },
       "title": "关卡数据结构"
+    },
+    "gameJoinChallengeRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "gameJoinChallengeResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "challenge": {
+          "$ref": "#/definitions/gameChallenge"
+        }
+      }
     },
     "gameListInviteeResponse": {
       "type": "object",

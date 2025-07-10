@@ -886,5 +886,18 @@ service Nakama {
       body: "*"
     };
   }
+
+  // Get Challenge
+  rpc GetChallenge(google.protobuf.Empty) returns (game.GetChallengeResponse) {
+    option (google.api.http).get = "/v2/game/challenges";
+  }
+
+  // Join Challenge
+  rpc JoinChallenge(game.JoinChallengeRequest) returns (game.JoinChallengeResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/challenges/join"
+      body: "*"
+    };
+  }
 }
 
