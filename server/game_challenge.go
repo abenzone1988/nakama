@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // ChallengeTournamentMetadata 挑战赛竞标赛元数据
@@ -198,7 +199,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 
 	// 获取或分配玩家的竞标赛ID
 	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, endTime, now)
-	if err != nil {
+	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
 			zap.String("user_id", userID.String()),
@@ -206,7 +207,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 
 		return &game.JoinChallengeResponse{
 			Code: 5,
-			Msg:  "无法加入挑战赛，系统错误",
+			Msg:  "无法加入挑战赛",
 		}, nil
 	}
 
@@ -216,11 +217,12 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		JoinedAt:     now.Truncate(time.Second),
 	}
 
-	// 保存更新后的领取历史记录
+	// 保存更新后的比赛数据
 	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
 	if err != nil {
 		return nil, err
 	}
+
 	return &game.JoinChallengeResponse{
 		Code: 0,
 		Challenge: &game.Challenge{
@@ -251,7 +253,7 @@ func (s *ApiServer) getOrAssignPlayerTournament(ctx context.Context, userID uuid
 	// 检查挑战赛是否处于活跃状态
 	if !isChallengeActive(now, startTime, endTime) {
 		// 挑战赛未开始或已结束，不分配新的竞标赛
-		return "", nil
+		return "", fmt.Errorf("挑战赛未开始或已结束")
 	}
 
 	// 为玩家分配竞标赛（查找空位或创建新的）
@@ -291,38 +293,102 @@ func (s *ApiServer) findPlayerExistingTournament(ctx context.Context, userID uui
 	return "", nil
 }
 
+// getTournamentCurrentPlayerCount 获取竞标赛当前实际玩家数量
+func (s *ApiServer) getTournamentCurrentPlayerCount(ctx context.Context, tournamentID string) (int32, error) {
+	// 使用TournamentRecordsList获取所有玩家记录，限制数量提高性能
+	records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, tournamentID, nil, wrapperspb.Int32(1000), "", 0)
+	if err != nil {
+		return 0, fmt.Errorf("获取竞标赛记录失败: %v", err)
+	}
+
+	count := int32(len(records.Records))
+	s.logger.Debug("获取竞标赛当前玩家数量",
+		zap.String("tournament_id", tournamentID),
+		zap.Int32("current_player_count", count))
+
+	return count, nil
+}
+
 // assignPlayerToChallengeTournament 为玩家分配到挑战赛竞标赛
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+
 	// 获取该挑战赛的所有竞标赛
 	tournaments, err := s.getChallengeTournaments(ctx, tplChallenge.ID, startTime, endTime)
 	if err != nil {
 		return "", err
 	}
 
+	s.logger.Info("查找可用竞标赛",
+		zap.String("user_id", userID.String()),
+		zap.Int32("challenge_id", tplChallenge.ID),
+		zap.Int("found_tournaments", len(tournaments)),
+		zap.Int32("max_participants", tplChallenge.MaxPart))
+
 	// 寻找有空位的竞标赛
 	for _, tournament := range tournaments {
-		if int32(tournament.Size) < tplChallenge.MaxPart {
+		// 获取竞标赛当前实际玩家数量
+		currentPlayerCount, err := s.getTournamentCurrentPlayerCount(ctx, tournament.Id)
+		if err != nil {
+			s.logger.Warn("获取竞标赛玩家数量失败，跳过此竞标赛",
+				zap.String("tournament_id", tournament.Id),
+				zap.Error(err))
+			continue
+		}
+
+		s.logger.Info("检查竞标赛空位情况",
+			zap.String("tournament_id", tournament.Id),
+			zap.Int32("current_players", currentPlayerCount),
+			zap.Int32("max_players", tplChallenge.MaxPart),
+			zap.Bool("has_space", currentPlayerCount < tplChallenge.MaxPart))
+
+		if currentPlayerCount < tplChallenge.MaxPart {
 			// 尝试加入该竞标赛
 			username := ctx.Value(ctxUsernameKey{}).(string)
 			err := TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
 			if err == nil {
-				s.logger.Info("玩家成功加入现有竞标赛",
-					zap.String("user_id", userID.String()),
-					zap.String("tournament_id", tournament.Id),
-					zap.Int32("challenge_id", tplChallenge.ID),
-					zap.Int32("current_size", int32(tournament.Size)+1),
-					zap.Int32("max_size", tplChallenge.MaxPart))
+				// 加入成功后，再次验证tournament人数，防止超员
+				finalPlayerCount, countErr := s.getTournamentCurrentPlayerCount(ctx, tournament.Id)
+				if countErr == nil {
+					s.logger.Info("玩家成功加入现有竞标赛",
+						zap.String("user_id", userID.String()),
+						zap.String("tournament_id", tournament.Id),
+						zap.Int32("challenge_id", tplChallenge.ID),
+						zap.Int32("final_size", finalPlayerCount),
+						zap.Int32("max_size", tplChallenge.MaxPart))
+
+					// 如果超员，记录警告但不回滚（因为TournamentJoin已经成功）
+					if finalPlayerCount > tplChallenge.MaxPart {
+						s.logger.Warn("竞标赛出现超员情况（并发导致）",
+							zap.String("tournament_id", tournament.Id),
+							zap.Int32("final_size", finalPlayerCount),
+							zap.Int32("max_size", tplChallenge.MaxPart))
+					}
+				}
 				return tournament.Id, nil
 			} else {
 				s.logger.Warn("加入现有竞标赛失败",
 					zap.String("tournament_id", tournament.Id),
 					zap.Error(err))
 			}
+		} else {
+			s.logger.Info("竞标赛已满员，跳过",
+				zap.String("tournament_id", tournament.Id),
+				zap.Int32("current_players", currentPlayerCount),
+				zap.Int32("max_players", tplChallenge.MaxPart))
 		}
 	}
 
 	// 没有可用的竞标赛，创建新的
-	newTournamentID, err := s.createNewChallengeTournament(ctx, tplChallenge, startTime, endTime, len(tournaments)+1)
+	// 使用持久化的批次号管理系统确保唯一性
+	batchNumber := s.GetNextChallengeBatch(tplChallenge.ID)
+
+	s.logger.Info("创建新竞标赛",
+		zap.String("user_id", userID.String()),
+		zap.Int32("challenge_id", tplChallenge.ID),
+		zap.Int32("batch_number", batchNumber),
+		zap.String("reason", "没有找到可用的竞标赛"))
+
+	newTournamentID, err := s.createNewChallengeTournament(ctx, tplChallenge, startTime, endTime, int(batchNumber))
 	if err != nil {
 		return "", fmt.Errorf("创建新竞标赛失败: %v", err)
 	}
@@ -338,7 +404,7 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 		zap.String("user_id", userID.String()),
 		zap.String("tournament_id", newTournamentID),
 		zap.Int32("challenge_id", tplChallenge.ID),
-		zap.Int("batch_number", len(tournaments)+1))
+		zap.Int32("batch_number", batchNumber))
 
 	return newTournamentID, nil
 }
@@ -347,6 +413,7 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 func (s *ApiServer) createNewChallengeTournament(ctx context.Context, tplChallenge *template.TplChallenge, startTime, endTime time.Time, batchNumber int) (string, error) {
 	// 构造标准化的竞标赛ID
 	// 格式: challenge_{challengeID}_{startTimestamp}_{batchNumber}
+	// batchNumber 使用持久化的递增序号确保唯一性
 	tournamentID := fmt.Sprintf("challenge_%d_%d_%03d",
 		tplChallenge.ID,
 		startTime.Unix(),
@@ -357,7 +424,7 @@ func (s *ApiServer) createNewChallengeTournament(ctx context.Context, tplChallen
 		ChallengeID:     tplChallenge.ID,
 		ChallengeType:   "server_managed", // 标识为服务器管理的竞标赛
 		CreatedBy:       "server",         // 明确标识创建者为服务器
-		BatchNumber:     batchNumber,
+		BatchNumber:     batchNumber,      // 持久化的递增批次号
 		StartTimestamp:  startTime.Unix(),
 		EndTimestamp:    endTime.Unix(),
 		MaxParticipants: tplChallenge.MaxPart,
@@ -378,7 +445,7 @@ func (s *ApiServer) createNewChallengeTournament(ctx context.Context, tplChallen
 	description := fmt.Sprintf("挑战赛 %s 的竞标赛，由服务器自动创建和管理", tplChallenge.Name)
 
 	// 创建Tournament（服务器作为创建者，无玩家拥有者）
-	err = TournamentCreate(ctx, s.logger, s.leaderboardCache, nil, // scheduler参数为nil，由系统管理
+	err = TournamentCreate(ctx, s.logger, s.leaderboardCache, s.leaderboardScheduler, // 使用正确的scheduler
 		tournamentID,              // id
 		false,                     // authoritative - 权威模式，服务器管理
 		sortOrder,                 // sortOrder
@@ -393,7 +460,7 @@ func (s *ApiServer) createNewChallengeTournament(ctx context.Context, tplChallen
 		duration,                  // duration
 		int(tplChallenge.MaxPart), // maxSize
 		100,                       // maxNumScore - 允许的最大提交次数
-		false,                     // joinRequired - 设为false，因为我们手动管理加入过程
+		true,                      // joinRequired - 修复：必须设为true以启用maxSize检查
 		true,                      // enableRanks - 启用排名
 	)
 
@@ -417,9 +484,7 @@ func (s *ApiServer) getChallengeTournaments(ctx context.Context, challengeID int
 	// 使用category和时间范围进行查询，避免哈希冲突导致的错误匹配
 	tournaments, err := TournamentList(ctx, s.logger, s.db, s.leaderboardCache,
 		int(challengeID), int(challengeID), // 精确匹配category范围
-		0, 0, //不用时间过滤
-		//int(startTime.Unix()), // 限制开始时间
-		//int(endTime.Unix()),   // 限制结束时间
+		int(startTime.Unix()), int(endTime.Unix()), // startTime=0(不限制), endTime=-1(显示进行中和未来的锦标赛)
 		100, // limit
 		nil) // cursor
 	if err != nil {
@@ -521,11 +586,20 @@ func (s *ApiServer) FindAvailableChallengeTournament(ctx context.Context, challe
 
 	// 按创建时间排序，优先加入较早创建的竞标赛
 	for _, tournament := range tournaments {
-		if int32(tournament.Size) < maxParticipants {
+		// 获取竞标赛当前实际玩家数量
+		currentPlayerCount, err := s.getTournamentCurrentPlayerCount(ctx, tournament.Id)
+		if err != nil {
+			s.logger.Warn("获取竞标赛玩家数量失败，跳过此竞标赛",
+				zap.String("tournament_id", tournament.Id),
+				zap.Error(err))
+			continue
+		}
+
+		if currentPlayerCount < maxParticipants {
 			s.logger.Debug("找到可用的挑战赛竞标赛",
 				zap.Int32("challenge_id", challengeID),
 				zap.String("tournament_id", tournament.Id),
-				zap.Int32("current_size", int32(tournament.Size)),
+				zap.Int32("current_size", currentPlayerCount),
 				zap.Int32("max_size", maxParticipants))
 			return tournament, nil
 		}

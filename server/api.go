@@ -69,6 +69,22 @@ type ctxTokenIssuedAtKey = ctxkeys.TokenIssuedAtKey
 
 type ctxFullMethodKey struct{}
 
+type ChallengeBatch struct {
+	Batch map[int32]int32 `json:"batch"`
+}
+
+func (f *ChallengeBatch) GetCollection() string {
+	return "system"
+}
+
+func (f *ChallengeBatch) GetKey() string {
+	return "challenge_batch"
+}
+
+func (f *ChallengeBatch) Init() {
+	f.Batch = map[int32]int32{}
+}
+
 type ApiServer struct {
 	apigrpc.UnimplementedNakamaServer
 	logger               *zap.Logger
@@ -79,6 +95,7 @@ type ApiServer struct {
 	storageIndex         StorageIndex
 	leaderboardCache     LeaderboardCache
 	leaderboardRankCache LeaderboardRankCache
+	leaderboardScheduler LeaderboardScheduler
 	sessionCache         SessionCache
 	sessionRegistry      SessionRegistry
 	statusRegistry       StatusRegistry
@@ -92,9 +109,14 @@ type ApiServer struct {
 	grpcServer           *grpc.Server
 	grpcGatewayServer    *http.Server
 	template             TemplateManager
+
+	// 批次号管理
+	challengeBatchMutex sync.RWMutex
+	challengeBatch      *ChallengeBatch
+	challengeBatchDirty bool // 标记是否需要保存
 }
 
-func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, version string, socialClient *social.Client, storageIndex StorageIndex, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, matchmaker Matchmaker, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, pipeline *Pipeline, runtime *Runtime, templateManger TemplateManager) *ApiServer {
+func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, version string, socialClient *social.Client, storageIndex StorageIndex, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, matchmaker Matchmaker, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, pipeline *Pipeline, runtime *Runtime, templateManger TemplateManager) *ApiServer {
 	var gatewayContextTimeoutMs string
 	if config.GetSocket().IdleTimeoutMs > 500 {
 		// Ensure the GRPC Gateway timeout is just under the idle timeout (if possible) to ensure it has priority.
@@ -144,6 +166,7 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 		socialClient:         socialClient,
 		leaderboardCache:     leaderboardCache,
 		leaderboardRankCache: leaderboardRankCache,
+		leaderboardScheduler: leaderboardScheduler,
 		storageIndex:         storageIndex,
 		sessionCache:         sessionCache,
 		sessionRegistry:      sessionRegistry,
@@ -345,10 +368,16 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 		}
 	}()
 
+	// 初始化挑战赛批次号管理
+	s.InitChallengeBatch()
+
 	return s
 }
 
 func (s *ApiServer) Stop() {
+	// 0. 保存挑战赛批次号数据
+	s.SaveChallengeBatch()
+
 	// 1. Stop GRPC Gateway server first as it sits above GRPC server. This also closes the underlying listener.
 	if err := s.grpcGatewayServer.Shutdown(context.Background()); err != nil {
 		s.logger.Error("API server gateway listener shutdown failed", zap.Error(err))
@@ -664,4 +693,73 @@ func handleRoutingError(ctx context.Context, mux *grpcgw.ServeMux, marshaler grp
 
 	// Set empty ServerMetadata to prevent logging error on nil metadata.
 	grpcgw.DefaultHTTPErrorHandler(grpcgw.NewServerMetadataContext(ctx, grpcgw.ServerMetadata{}), mux, marshaler, w, r, sterr)
+}
+
+// InitChallengeBatch 初始化挑战赛批次号管理
+func (s *ApiServer) InitChallengeBatch() {
+	s.challengeBatch = &ChallengeBatch{}
+	s.challengeBatch.Init()
+
+	// 从数据库加载批次号数据
+	err := LoadData(context.Background(), s.logger, s.db, uuid.Nil, s.challengeBatch)
+	if err != nil {
+		s.logger.Warn("加载挑战赛批次号数据失败，使用默认值", zap.Error(err))
+	}
+
+	s.logger.Info("挑战赛批次号管理器已初始化", zap.Int("loaded_challenges", len(s.challengeBatch.Batch)))
+}
+
+// GetNextChallengeBatch 获取下一个挑战赛批次号
+func (s *ApiServer) GetNextChallengeBatch(challengeID int32) int32 {
+	s.challengeBatchMutex.Lock()
+	defer s.challengeBatchMutex.Unlock()
+
+	// 获取当前批次号并自增
+	currentBatch, exists := s.challengeBatch.Batch[challengeID]
+	if !exists {
+		currentBatch = 0
+	}
+
+	nextBatch := currentBatch + 1
+	s.challengeBatch.Batch[challengeID] = nextBatch
+	s.challengeBatchDirty = true // 标记需要保存
+
+	s.logger.Info("分配新的挑战赛批次号",
+		zap.Int32("challenge_id", challengeID),
+		zap.Int32("current_batch", currentBatch),
+		zap.Int32("next_batch", nextBatch))
+
+	return nextBatch
+}
+
+// SaveChallengeBatch 保存挑战赛批次号数据
+func (s *ApiServer) SaveChallengeBatch() {
+	s.challengeBatchMutex.Lock()
+	defer s.challengeBatchMutex.Unlock()
+
+	if !s.challengeBatchDirty {
+		s.logger.Debug("挑战赛批次号数据无变化，跳过保存")
+		return
+	}
+
+	err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, s.challengeBatch)
+	if err != nil {
+		s.logger.Error("保存挑战赛批次号数据失败", zap.Error(err))
+		return
+	}
+
+	s.challengeBatchDirty = false
+	s.logger.Info("挑战赛批次号数据已保存", zap.Int("challenge_count", len(s.challengeBatch.Batch)))
+}
+
+// GetChallengeBatchInfo 获取挑战赛批次号信息（用于调试）
+func (s *ApiServer) GetChallengeBatchInfo() map[int32]int32 {
+	s.challengeBatchMutex.RLock()
+	defer s.challengeBatchMutex.RUnlock()
+
+	result := make(map[int32]int32, len(s.challengeBatch.Batch))
+	for k, v := range s.challengeBatch.Batch {
+		result[k] = v
+	}
+	return result
 }

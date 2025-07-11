@@ -117,7 +117,7 @@ nk.leaderboard_create(%q, %t, %q, %q, reset, metadata, %t)
 
 		apiServer := StartApiServer(logger, logger, db, protojsonMarshaler,
 			protojsonUnmarshaler, cfg, "3.0.0", nil, nil, rtData.leaderboardCache,
-			rtData.leaderboardRankCache, nil, sessionCache,
+			rtData.leaderboardRankCache, nil, nil, sessionCache,
 			nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime, nil)
 
 		WaitForSocket(nil, cfg)

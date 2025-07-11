@@ -2,9 +2,9 @@ name: nakama-node-jp
 
 database:
   address:
-    - "root@192.168.102.223:26257/hjdt"
+    - "root@192.168.102.223:26257/test"
 logger:
-  level: "debug"
+  level: "info"
 
 session:
   encryption_key: "defaultencryptionkey"
