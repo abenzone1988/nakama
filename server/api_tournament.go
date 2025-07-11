@@ -178,10 +178,14 @@ func (s *ApiServer) ListTournamentRecords(ctx context.Context, in *api.ListTourn
 
 	var limit *wrapperspb.Int32Value
 	if in.GetLimit() != nil {
-		if in.GetLimit().Value < 1 || in.GetLimit().Value > 100 {
+		// 当 ownerIds 不为空时，允许 limit = 0 来只查询指定的 ownerIds
+		if len(in.GetOwnerIds()) > 0 && in.GetLimit().Value == 0 {
+			limit = in.GetLimit()
+		} else if in.GetLimit().Value < 1 || in.GetLimit().Value > 100 {
 			return nil, status.Error(codes.InvalidArgument, "Invalid limit - limit must be between 1 and 100.")
+		} else {
+			limit = in.GetLimit()
 		}
-		limit = in.GetLimit()
 	} else if len(in.GetOwnerIds()) == 0 || in.GetCursor() == "" {
 		limit = &wrapperspb.Int32Value{Value: 10}
 	}
