@@ -210,11 +210,12 @@ message Challenge{
 message JoinChallengeStatus{
   int32 id = 1;
   string tournament_id = 2;
-  google.protobuf.Timestamp joined_at = 3;
-  bool rank_reward = 4;
-  bool low_score_reward = 5;
-  bool mid_score_reward = 6;
-  bool high_score_reward = 7;
+  string activity_id = 3;
+  google.protobuf.Timestamp joined_at = 4;
+  bool rank_reward = 5;
+  bool low_score_reward = 6;
+  bool mid_score_reward = 7;
+  bool high_score_reward = 8;
 }
 
 message GetChallengeResponse{

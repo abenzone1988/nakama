@@ -372,6 +372,25 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 	// Bulk fill in the ranks of any owner records requested.
 	rankCount := rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
 
+	// 如果排名缓存没有数据，尝试重建缓存
+	if rankCount == 0 && leaderboard.EnableRanks && len(ownerRecords) > 0 {
+		logger.Info("排名缓存为空，尝试重建缓存",
+			zap.String("leaderboard_id", leaderboardId),
+			zap.Int("owner_records_count", len(ownerRecords)))
+
+		// 手动重建排名缓存
+		err := rebuildRankCache(ctx, logger, db, rankCache, leaderboard, expiryTime)
+		if err != nil {
+			logger.Warn("重建排名缓存失败", zap.Error(err))
+		} else {
+			// 重新尝试填充排名
+			rankCount = rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
+			logger.Info("排名缓存重建完成",
+				zap.String("leaderboard_id", leaderboardId),
+				zap.Int64("rank_count", rankCount))
+		}
+	}
+
 	return &api.LeaderboardRecordList{
 		Records:      records,
 		OwnerRecords: ownerRecords,
@@ -997,6 +1016,50 @@ func disableLeaderboardRanks(ctx context.Context, logger *zap.Logger, db *sql.DB
 	}
 
 	rankCache.DeleteLeaderboard(l.Id, expiryTime)
+
+	return nil
+}
+
+// rebuildRankCache 重建指定比赛的排名缓存
+func rebuildRankCache(ctx context.Context, logger *zap.Logger, db *sql.DB, rankCache LeaderboardRankCache, leaderboard *Leaderboard, expiryTime int64) error {
+	// 查询该比赛的所有记录
+	query := `SELECT owner_id, score, subscore, num_score 
+FROM leaderboard_record 
+WHERE leaderboard_id = $1 AND expiry_time = $2`
+
+	rows, err := db.QueryContext(ctx, query, leaderboard.Id, time.Unix(expiryTime, 0).UTC())
+	if err != nil {
+		logger.Error("查询比赛记录失败", zap.Error(err))
+		return err
+	}
+	defer rows.Close()
+
+	var insertCount int
+	for rows.Next() {
+		var ownerID string
+		var score, subscore int64
+		var numScore int32
+
+		err = rows.Scan(&ownerID, &score, &subscore, &numScore)
+		if err != nil {
+			logger.Error("扫描比赛记录失败", zap.Error(err))
+			continue
+		}
+
+		// 将记录插入排名缓存
+		ownerUUID, err := uuid.FromString(ownerID)
+		if err != nil {
+			logger.Warn("无效的用户ID", zap.String("owner_id", ownerID))
+			continue
+		}
+
+		rankCache.Insert(leaderboard.Id, leaderboard.SortOrder, score, subscore, numScore, expiryTime, ownerUUID, leaderboard.EnableRanks)
+		insertCount++
+	}
+
+	logger.Info("排名缓存重建完成",
+		zap.String("leaderboard_id", leaderboard.Id),
+		zap.Int("inserted_records", insertCount))
 
 	return nil
 }

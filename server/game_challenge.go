@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -35,7 +34,9 @@ type ChallengeTournamentMetadata struct {
 type ChallengeStatus struct {
 	ID              int32     `json:"id"`
 	TournamentID    string    `json:"tournament_id"`
+	ActivityID      string    `json:"activity_id"`
 	JoinedAt        time.Time `json:"joined_at"`
+	OverAt          time.Time `json:"over_at"`
 	RankReward      bool      `json:"rank_reward"`       // 排名奖励是否已领取
 	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
 	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
@@ -143,6 +144,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		joinedStatus := &game.JoinChallengeStatus{
 			Id:              challengeStatus.ID,
 			TournamentId:    challengeStatus.TournamentID,
+			ActivityId:      challengeStatus.ActivityID,
 			JoinedAt:        timestamppb.New(challengeStatus.JoinedAt),
 			RankReward:      challengeStatus.RankReward,
 			LowScoreReward:  challengeStatus.LowScoreReward,
@@ -235,7 +237,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 	// 获取或分配玩家的竞标赛ID
-	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, overTime, now)
+	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, endTime, now)
 	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
@@ -249,9 +251,15 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	}
 
 	userMatch.Challenges[tplChallenge.ID] = &ChallengeStatus{
-		ID:           tplChallenge.ID,
-		TournamentID: tournamentID,
-		JoinedAt:     now.Truncate(time.Second),
+		ID:              tplChallenge.ID,
+		ActivityID:      tplChallenge.ActivityID,
+		TournamentID:    tournamentID,
+		JoinedAt:        now.Truncate(time.Second),
+		OverAt:          overTime.Truncate(time.Second),
+		HighScoreReward: false,
+		LowScoreReward:  false,
+		MidScoreReward:  false,
+		RankReward:      false,
 	}
 
 	//保存更新后的比赛数据
@@ -274,6 +282,250 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		},
 	}, nil
 
+}
+
+// ScoreRewardResult 积分奖励检查结果
+type ScoreRewardResult struct {
+	RewardIds    []string `json:"reward_ids"`
+	RewardTypes  []string `json:"reward_types"` // "low", "mid", "high"
+	HasNewReward bool     `json:"has_new_reward"`
+}
+
+// checkScoreRewards 检查积分等级奖励（公共逻辑）
+func (s *ApiServer) checkScoreRewards(challengeData *ChallengeStatus, ownerRecord *api.LeaderboardRecord, activityInfo *template.TplActivityInfo) *ScoreRewardResult {
+	result := &ScoreRewardResult{
+		RewardIds:   []string{},
+		RewardTypes: []string{},
+	}
+
+	if ownerRecord.Score >= int64(activityInfo.Condition01) && !challengeData.LowScoreReward {
+		result.RewardIds = append(result.RewardIds, activityInfo.Reward01)
+		result.RewardTypes = append(result.RewardTypes, "low")
+		result.HasNewReward = true
+	}
+	if ownerRecord.Score >= int64(activityInfo.Condition02) && !challengeData.MidScoreReward {
+		result.RewardIds = append(result.RewardIds, activityInfo.Reward02)
+		result.RewardTypes = append(result.RewardTypes, "mid")
+		result.HasNewReward = true
+	}
+	if ownerRecord.Score >= int64(activityInfo.Condition03) && !challengeData.HighScoreReward {
+		result.RewardIds = append(result.RewardIds, activityInfo.Reward03)
+		result.RewardTypes = append(result.RewardTypes, "high")
+		result.HasNewReward = true
+	}
+
+	return result
+}
+
+// applyScoreRewards 应用积分等级奖励（更新状态）
+func (s *ApiServer) applyScoreRewards(challengeData *ChallengeStatus, scoreResult *ScoreRewardResult) {
+	for _, rewardType := range scoreResult.RewardTypes {
+		switch rewardType {
+		case "low":
+			challengeData.LowScoreReward = true
+		case "mid":
+			challengeData.MidScoreReward = true
+		case "high":
+			challengeData.HighScoreReward = true
+		}
+	}
+}
+
+// checkAndSendExpiredChallengeRewardsForGetAccount 为GetAccount方法检查过期挑战赛奖励
+func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context.Context) error {
+	// 获取用户ID
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 创建并加载UserMatch对象
+	userMatch := &UserMatch{}
+	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
+	if err != nil {
+		// 如果加载失败，记录日志但不返回错误，避免影响GetAccount的正常流程
+		s.logger.Debug("加载用户挑战赛数据失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return nil
+	}
+
+	// 获取当前时间
+	now := time.Now()
+
+	// 调用现有的检查函数
+	hasRewardUpdate, err := s.checkAndSendExpiredChallengeRewards(ctx, userID, userMatch, now)
+	if err != nil {
+		s.logger.Error("检查过期挑战赛奖励失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return err
+	}
+
+	// 如果有奖励更新，保存数据
+	if hasRewardUpdate {
+		err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+		if err != nil {
+			s.logger.Error("保存挑战赛状态失败", zap.String("user_id", userID.String()), zap.Error(err))
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkAndSendExpiredChallengeRewards 检查活动结束后是否有奖励没有领取，没有领取的变成邮件
+func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, userID uuid.UUID, userMatch *UserMatch, now time.Time) (bool, error) {
+	hasRewardUpdate := false
+
+	for _, challenge := range userMatch.Challenges {
+		if challenge.TournamentID != "" && now.After(challenge.OverAt) {
+			// 获取用户在竞标赛中的记录
+			records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
+			if err != nil || len(records.OwnerRecords) == 0 {
+				s.logger.Info("没有提交成绩没有奖励")
+				continue
+			}
+			ownerRecord := records.OwnerRecords[0]
+
+			// 获取活动配置
+			activityInfo, found := s.template.GetTplActivityInfo().FindByKey(challenge.ActivityID)
+			if !found {
+				s.logger.Error("活动配置不存在", zap.String("activity_id", challenge.ActivityID))
+				continue
+			}
+
+			// 检查排名奖励
+			if !challenge.RankReward {
+				rankRewardSent, err := s.sendExpiredRankReward(ctx, userID, challenge, ownerRecord)
+				if err != nil {
+					s.logger.Error("发送过期排名奖励失败", zap.Error(err))
+				} else if rankRewardSent {
+					challenge.RankReward = true
+					hasRewardUpdate = true
+				}
+			}
+
+			// 检查积分等级奖励
+			scoreResult := s.checkScoreRewards(challenge, ownerRecord, &activityInfo)
+			if scoreResult.HasNewReward {
+				err := s.sendExpiredScoreRewards(ctx, userID, challenge, ownerRecord, scoreResult)
+				if err != nil {
+					s.logger.Error("发送过期积分奖励失败", zap.Error(err))
+				} else {
+					s.applyScoreRewards(challenge, scoreResult)
+					hasRewardUpdate = true
+				}
+			}
+		}
+	}
+
+	return hasRewardUpdate, nil
+}
+
+// sendExpiredRankReward 发送过期的排名奖励
+func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, ownerRecord *api.LeaderboardRecord) (bool, error) {
+	// 获取排名奖励配置
+	acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
+		return acReward.ActiveID == challenge.ActivityID
+	})
+
+	rewardId := ""
+	for _, acReward := range acRewards {
+		if int64(acReward.MinRank) <= ownerRecord.Rank && int64(acReward.MaxRank) >= ownerRecord.Rank {
+			s.logger.Info("找到过期排名奖励",
+				zap.Int32("minRank", acReward.MinRank),
+				zap.Int32("maxRank", acReward.MaxRank),
+				zap.String("reward_id", acReward.RewardID))
+			rewardId = acReward.RewardID
+			break
+		}
+	}
+
+	if rewardId == "" {
+		s.logger.Error("排名奖励不存在", zap.Int32("rank", int32(ownerRecord.Rank)), zap.String("activity_id", challenge.ActivityID))
+		return false, nil
+	}
+
+	// 解析奖励
+	rewards, err := ParseRewards(s.logger, s.template.GetTplReward(), []string{rewardId})
+	if err != nil {
+		s.logger.Error("解析排名奖励失败",
+			zap.String("reward_id", rewardId),
+			zap.Error(err))
+		return false, err
+	}
+
+	if len(rewards) == 0 {
+		s.logger.Error("排名奖励为空", zap.String("reward_id", rewardId))
+		return false, nil
+	}
+
+	// 直接使用 rewards 作为通知内容
+	description := fmt.Sprintf("恭喜您在挑战赛中获得第%d名！这是您的排名奖励。", ownerRecord.Rank)
+	return s.sendChallengeRewardNotification(ctx, userID, "挑战赛排名奖励", description, rewards)
+}
+
+// sendExpiredScoreRewards 发送过期的积分等级奖励
+func (s *ApiServer) sendExpiredScoreRewards(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, ownerRecord *api.LeaderboardRecord, scoreResult *ScoreRewardResult) error {
+	// 解析奖励
+	rewards, err := ParseRewards(s.logger, s.template.GetTplReward(), scoreResult.RewardIds)
+	if err != nil {
+		s.logger.Error("解析积分奖励失败",
+			zap.Strings("reward_ids", scoreResult.RewardIds),
+			zap.Error(err))
+		return err
+	}
+
+	if len(rewards) == 0 {
+		s.logger.Error("积分奖励为空", zap.Strings("reward_ids", scoreResult.RewardIds))
+		return nil
+	}
+
+	// 直接使用 rewards 作为通知内容
+	description := fmt.Sprintf("恭喜您在挑战赛中获得%d分！这是您的积分奖励。", ownerRecord.Score)
+	_, err = s.sendChallengeRewardNotification(ctx, userID, "挑战赛积分奖励", description, rewards)
+	return err
+}
+
+// sendChallengeRewardNotification 发送挑战赛奖励通知（公共方法）
+func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID uuid.UUID, subject string, description string, rewards []*game.Reward) (bool, error) {
+	// 组合描述和奖励作为通知内容
+	content := map[string]interface{}{
+		"description": description,
+		"rewards":     rewards,
+	}
+
+	contentBytes, err := json.Marshal(content)
+	if err != nil {
+		s.logger.Error("序列化通知内容失败", zap.Error(err))
+		return false, err
+	}
+
+	// 创建通知
+	notification := &api.Notification{
+		Id:         uuid.Must(uuid.NewV4()).String(),
+		Subject:    subject,
+		Content:    string(contentBytes),
+		Code:       NotificationSystemNotice,
+		SenderId:   uuid.Nil.String(),
+		CreateTime: timestamppb.Now(),
+		Persistent: true,
+	}
+
+	// 发送通知
+	notifications := make(map[uuid.UUID][]*api.Notification)
+	notifications[userID] = []*api.Notification{notification}
+
+	err = NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
+	if err != nil {
+		s.logger.Error("发送奖励通知失败",
+			zap.String("user_id", userID.String()),
+			zap.String("subject", subject),
+			zap.Error(err))
+		return false, err
+	}
+
+	s.logger.Info("成功发送挑战赛奖励通知",
+		zap.String("user_id", userID.String()),
+		zap.String("subject", subject),
+		zap.String("description", description),
+		zap.Int("rewards_count", len(rewards)))
+
+	return true, nil
 }
 
 func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error) {
@@ -314,31 +566,22 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 		return nil, status.Error(codes.InvalidArgument, "活动不存在")
 	}
 
-	var rewardIds []string
-	if ownerRecord.Score >= int64(activityInfo.Condition01) && !challengeData.LowScoreReward {
-		challengeData.LowScoreReward = true
-		rewardIds = append(rewardIds, activityInfo.Reward01)
-	}
-	if ownerRecord.Score >= int64(activityInfo.Condition02) && !challengeData.MidScoreReward {
-		challengeData.MidScoreReward = true
-		rewardIds = append(rewardIds, activityInfo.Reward02)
-	}
-	if ownerRecord.Score >= int64(activityInfo.Condition03) && !challengeData.HighScoreReward {
-		challengeData.HighScoreReward = true
-		rewardIds = append(rewardIds, activityInfo.Reward03)
-	}
-
-	// 解析奖励
-	rewards, err := s.parseRewards(rewardIds)
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("解析奖励失败: %v", err))
-	}
-
-	if len(rewards) == 0 {
+	// 使用公共逻辑检查积分奖励
+	scoreResult := s.checkScoreRewards(challengeData, ownerRecord, &activityInfo)
+	if !scoreResult.HasNewReward {
 		return &game.GainChallengeRewardResponse{
 			Code: 6,
 			Msg:  "没有可领取的奖励",
 		}, nil
+	}
+
+	// 应用积分奖励状态更新
+	s.applyScoreRewards(challengeData, scoreResult)
+
+	// 解析奖励并直接返回（主动领取不发送通知）
+	rewards, err := ParseRewards(s.logger, s.template.GetTplReward(), scoreResult.RewardIds)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("解析奖励失败: %v", err))
 	}
 
 	// 保存奖励状态更新
@@ -347,10 +590,11 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 		return nil, err
 	}
 
-	s.logger.Info("发放挑战赛奖励",
+	s.logger.Info("主动领取挑战赛奖励",
 		zap.Int32("challenge_id", in.ChallengeId),
 		zap.String("user_id", userID.String()),
-		zap.Strings("reward_ids", rewardIds),
+		zap.Strings("reward_ids", scoreResult.RewardIds),
+		zap.Strings("reward_types", scoreResult.RewardTypes),
 		zap.Int32("rank", int32(ownerRecord.Rank)))
 
 	return &game.GainChallengeRewardResponse{
@@ -785,112 +1029,4 @@ func (s *ApiServer) ListAllChallengeTournaments(ctx context.Context) (map[string
 		zap.Int("challenge_count", len(result)))
 
 	return result, nil
-}
-
-// parseRewards 解析奖励ID数组，返回奖励对象数组
-func (s *ApiServer) parseRewards(rewardIds []string) ([]*game.Reward, error) {
-	if len(rewardIds) == 0 {
-		return nil, nil
-	}
-
-	rewards := make([]*game.Reward, 0, len(rewardIds))
-
-	for _, rewardId := range rewardIds {
-		if rewardId == "" {
-			continue
-		}
-
-		tplReward, found := s.template.GetTplReward().FindByKey(rewardId)
-		if !found {
-			s.logger.Warn("奖励配置不存在",
-				zap.String("reward_id", rewardId))
-			continue
-		}
-
-		// 构造钱包奖励
-		walletReward := &game.Wallet{
-			Gem:  tplReward.Gem,
-			Coin: tplReward.Coin,
-			Ad:   tplReward.Coupon,
-		}
-
-		// 解析物品奖励
-		items, err := s.parseItemRewards(tplReward.Items, rewardId)
-		if err != nil {
-			s.logger.Warn("解析物品奖励失败",
-				zap.String("reward_id", rewardId),
-				zap.Error(err))
-			continue
-		}
-
-		// 构造奖励对象
-		reward := &game.Reward{
-			Wallet: walletReward,
-			Items:  items,
-		}
-
-		rewards = append(rewards, reward)
-	}
-
-	return rewards, nil
-}
-
-// parseItemRewards 解析物品奖励字符串 "90000_20,90001_30"
-func (s *ApiServer) parseItemRewards(itemsStr, rewardId string) ([]*game.Item, error) {
-	if itemsStr == "" || strings.TrimSpace(itemsStr) == "" {
-		return nil, nil
-	}
-
-	var items []*game.Item
-	itemStrings := strings.Split(itemsStr, ",")
-
-	for _, itemStr := range itemStrings {
-		itemStr = strings.TrimSpace(itemStr)
-		if itemStr == "" {
-			continue
-		}
-
-		parts := strings.Split(itemStr, "_")
-		if len(parts) != 2 {
-			s.logger.Warn("物品奖励格式错误",
-				zap.String("item_string", itemStr),
-				zap.String("reward_id", rewardId))
-			continue
-		}
-
-		itemID := strings.TrimSpace(parts[0])
-		numStr := strings.TrimSpace(parts[1])
-
-		num, err := strconv.ParseInt(numStr, 10, 32)
-		if err != nil {
-			s.logger.Warn("物品数量解析失败",
-				zap.String("item_string", itemStr),
-				zap.String("num_string", numStr),
-				zap.String("reward_id", rewardId),
-				zap.Error(err))
-			continue
-		}
-
-		item := &game.Item{
-			Id:  itemID,
-			Num: int32(num),
-		}
-		items = append(items, item)
-	}
-
-	return items, nil
-}
-
-// parseSingleReward 解析单个奖励ID，返回奖励对象（兼容性方法）
-func (s *ApiServer) parseSingleReward(rewardId string) (*game.Reward, error) {
-	rewards, err := s.parseRewards([]string{rewardId})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(rewards) == 0 {
-		return nil, fmt.Errorf("奖励不存在: %s", rewardId)
-	}
-
-	return rewards[0], nil
 }

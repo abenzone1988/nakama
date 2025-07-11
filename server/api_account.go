@@ -59,6 +59,9 @@ func (s *ApiServer) GetAccount(ctx context.Context, in *emptypb.Empty) (*api.Acc
 	// User-facing account retrieval does not expose disable time for now.
 	account.DisableTime = nil
 
+	// 检查过期挑战赛奖励
+	_ = s.checkAndSendExpiredChallengeRewardsForGetAccount(ctx)
+
 	// After hook.
 	if fn := s.runtime.AfterGetAccount(); fn != nil {
 		afterFn := func(clientIP, clientPort string) error {

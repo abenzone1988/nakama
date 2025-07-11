@@ -5,10 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama/v3/game"
+	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -107,4 +111,112 @@ func parseDateTime(datetimeStr string) (time.Time, error) {
 	}
 
 	return parsedTime, nil
+}
+
+// ParseRewards 解析奖励ID数组，返回奖励对象数组
+func ParseRewards(logger *zap.Logger, tplRewardTable *template.TableTplReward, rewardIds []string) ([]*game.Reward, error) {
+	if len(rewardIds) == 0 {
+		return nil, nil
+	}
+
+	rewards := make([]*game.Reward, 0, len(rewardIds))
+
+	for _, rewardId := range rewardIds {
+		if rewardId == "" {
+			continue
+		}
+
+		tplReward, found := tplRewardTable.FindByKey(rewardId)
+		if !found {
+			logger.Warn("奖励配置不存在",
+				zap.String("reward_id", rewardId))
+			continue
+		}
+
+		// 构造钱包奖励
+		walletReward := &game.Wallet{
+			Gem:  tplReward.Gem,
+			Coin: tplReward.Coin,
+			Ad:   tplReward.Coupon,
+		}
+
+		// 解析物品奖励
+		items, err := ParseItemRewards(logger, tplReward.Items, rewardId)
+		if err != nil {
+			logger.Warn("解析物品奖励失败",
+				zap.String("reward_id", rewardId),
+				zap.Error(err))
+			continue
+		}
+
+		// 构造奖励对象
+		reward := &game.Reward{
+			Wallet: walletReward,
+			Items:  items,
+		}
+
+		rewards = append(rewards, reward)
+	}
+
+	return rewards, nil
+}
+
+// ParseItemRewards 解析物品奖励字符串 "90000_20,90001_30"
+func ParseItemRewards(logger *zap.Logger, itemsStr, rewardId string) ([]*game.Item, error) {
+	if itemsStr == "" || strings.TrimSpace(itemsStr) == "" {
+		return nil, nil
+	}
+
+	var items []*game.Item
+	itemStrings := strings.Split(itemsStr, ",")
+
+	for _, itemStr := range itemStrings {
+		itemStr = strings.TrimSpace(itemStr)
+		if itemStr == "" {
+			continue
+		}
+
+		parts := strings.Split(itemStr, "_")
+		if len(parts) != 2 {
+			logger.Warn("物品奖励格式错误",
+				zap.String("item_string", itemStr),
+				zap.String("reward_id", rewardId))
+			continue
+		}
+
+		itemID := strings.TrimSpace(parts[0])
+		numStr := strings.TrimSpace(parts[1])
+
+		num, err := strconv.ParseInt(numStr, 10, 32)
+		if err != nil {
+			logger.Warn("物品数量解析失败",
+				zap.String("item_string", itemStr),
+				zap.String("num_string", numStr),
+				zap.String("reward_id", rewardId),
+				zap.Error(err))
+			continue
+		}
+
+		item := &game.Item{
+			Id:  itemID,
+			Num: int32(num),
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+// ParseSingleReward 解析单个奖励ID，返回奖励对象（兼容性方法）
+func ParseSingleReward(logger *zap.Logger, tplRewardTable *template.TableTplReward, rewardId string) (*game.Reward, error) {
+	rewards, err := ParseRewards(logger, tplRewardTable, []string{rewardId})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rewards) == 0 {
+		return nil, fmt.Errorf("奖励不存在: %s", rewardId)
+	}
+
+	return rewards[0], nil
 }
