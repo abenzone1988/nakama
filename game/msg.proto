@@ -92,6 +92,12 @@ message Item {
   int32 num = 2;
 }
 
+// 奖励数据
+message Reward{
+  Wallet wallet = 1;
+  repeated Item items = 2;
+}
+
 // 关卡数据结构
 message HomeLevelData {
   string level_id = 1;  // 关卡ID
@@ -192,15 +198,28 @@ message UseWalletResponse {
 message Challenge{
   int32 id = 1;
   string activity_id = 2;
-  google.protobuf.Timestamp start = 3;
-  google.protobuf.Timestamp end = 4;
-  int32 max_part = 5;
-  string tournament_id = 6;      // 玩家当前参与的竞标赛ID，如果为空表示未参与
-  google.protobuf.Timestamp close = 7; //关闭 如果奖励没有领取变成邮件
+  google.protobuf.Timestamp open = 3; //开始
+  google.protobuf.Timestamp close = 4; //关闭
+  google.protobuf.Timestamp end = 5; //结束提交分数
+  google.protobuf.Timestamp over = 6; //结束领取奖励
+  int32 max_part = 7;
+  string tournament_id = 8;      // 玩家当前参与的竞标赛ID，如果为空表示未参与
+
+}
+
+message JoinChallengeStatus{
+  int32 id = 1;
+  string tournament_id = 2;
+  google.protobuf.Timestamp joined_at = 3;
+  bool rank_reward = 4;
+  bool low_score_reward = 5;
+  bool mid_score_reward = 6;
+  bool high_score_reward = 7;
 }
 
 message GetChallengeResponse{
   repeated Challenge challenges = 1;
+  repeated JoinChallengeStatus joined = 2;
 }
 
 
@@ -212,4 +231,15 @@ message JoinChallengeResponse{
   int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
   string msg = 2;                // 响应消息
   Challenge challenge  = 3;
+}
+
+
+message GainChallengeRewardRequest{
+  int32 challenge_id = 1;
+}
+
+message GainChallengeRewardResponse{
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  repeated Reward reward = 3;     // 奖励
 }

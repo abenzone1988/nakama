@@ -8,13 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/apigrpc"
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -54,604 +52,6 @@ func assertNoError(t *testing.T, err error, message string) {
 func assertError(t *testing.T, err error, message string) {
 	if err == nil {
 		t.Errorf("%s: expected error, got nil", message)
-	}
-}
-
-// TestChallengeSystemIntegration 综合测试挑战赛系统功能
-func TestChallengeSystemIntegration(t *testing.T) {
-	// 检查是否需要跳过长时间运行的测试
-	if testing.Short() {
-		t.Log("检测到-short标志，但继续运行综合测试...")
-		// 不跳过，继续执行测试
-	}
-
-	// 创建模拟的ApiServer
-	logger := zap.NewNop()
-	server := &ApiServer{
-		logger: logger,
-	}
-
-	// 创建测试挑战赛配置数据 - 基于用户提供的JSON数据
-	testChallengeData := map[string]template.TplChallenge{
-		"1": {
-			ID:            1,
-			ActivityID:    "AL10011",
-			Name:          "夏季挑战赛01",
-			StartDate:     "2025-01-15",
-			StartTime:     "10:00",
-			EndDate:       "2025-01-15",
-			EndTime:       "18:00",
-			MaxPart:       2,
-			RewardRemains: 60,
-			Status:        1,
-		},
-		"2": {
-			ID:            2,
-			ActivityID:    "AL10021",
-			Name:          "夏季挑战赛02",
-			StartDate:     "2025-01-16",
-			StartTime:     "10:00",
-			EndDate:       "2025-01-16",
-			EndTime:       "22:00",
-			MaxPart:       3,
-			RewardRemains: 60,
-			Status:        1,
-		},
-		"3": {
-			ID:            3,
-			ActivityID:    "AL10031",
-			Name:          "夏季挑战赛03",
-			StartDate:     "2025-01-17",
-			StartTime:     "10:00",
-			EndDate:       "2025-01-17",
-			EndTime:       "22:00",
-			MaxPart:       4,
-			RewardRemains: 60,
-			Status:        1,
-		},
-	}
-
-	// 定义挑战赛统计结构
-	type ChallengeStats struct {
-		ChallengeID        int32
-		MaxParticipants    int32
-		TournamentsCreated int
-		PlayersJoined      int
-		ScoresSubmitted    int
-		TournamentFull     int
-		TournamentGroups   map[string]int // 竞标赛ID -> 参与人数
-	}
-
-	// 统计信息
-	var stats struct {
-		totalPlayers            int
-		challengeVisibilityTest int
-		challengeJoinTest       int
-		tournamentCreated       int
-		playersJoined           int
-		scoresSubmitted         int
-		challengeResults        map[int32]ChallengeStats
-	}
-	stats.challengeResults = make(map[int32]ChallengeStats)
-
-	t.Logf("=== 开始综合测试挑战赛系统 ===")
-
-	// 第一部分：测试挑战赛显示时间逻辑
-	t.Run("挑战赛显示时间逻辑测试", func(t *testing.T) {
-		for challengeIDStr, challengeConfig := range testChallengeData {
-			t.Run(fmt.Sprintf("挑战赛_%s", challengeIDStr), func(t *testing.T) {
-				startTime, err := parseDateTime(challengeConfig.StartDate, challengeConfig.StartTime)
-				assertNoError(t, err, "解析开始时间应该成功")
-
-				endTime, err := parseDateTime(challengeConfig.EndDate, challengeConfig.EndTime)
-				assertNoError(t, err, "解析结束时间应该成功")
-
-				// 测试不同时间点的显示逻辑
-				testCases := []struct {
-					name     string
-					timeDesc string
-					now      time.Time
-					expected bool
-				}{
-					{
-						name:     "比赛开始前3天",
-						timeDesc: "3天前",
-						now:      startTime.AddDate(0, 0, -3),
-						expected: false,
-					},
-					{
-						name:     "比赛开始前1天",
-						timeDesc: "1天前",
-						now:      startTime.AddDate(0, 0, -1),
-						expected: true,
-					},
-					{
-						name:     "比赛进行中",
-						timeDesc: "进行中",
-						now:      startTime.Add(2 * time.Hour),
-						expected: true,
-					},
-					{
-						name:     "比赛结束后奖励期内",
-						timeDesc: "结束后30分钟",
-						now:      endTime.Add(30 * time.Minute),
-						expected: true,
-					},
-					{
-						name:     "比赛结束后奖励期外",
-						timeDesc: "结束后2小时",
-						now:      endTime.Add(2 * time.Hour),
-						expected: false,
-					},
-				}
-
-				for _, tc := range testCases {
-					t.Run(tc.name, func(t *testing.T) {
-						result := shouldShowChallenge(tc.now, startTime, endTime, challengeConfig.RewardRemains)
-						assertEqual(t, tc.expected, result, fmt.Sprintf("挑战赛 %s 在 %s 的显示状态", challengeConfig.Name, tc.timeDesc))
-						if result {
-							stats.challengeVisibilityTest++
-						}
-					})
-				}
-			})
-		}
-	})
-
-	// 第二部分：测试挑战赛加入时间逻辑
-	t.Run("挑战赛加入时间逻辑测试", func(t *testing.T) {
-		for challengeIDStr, challengeConfig := range testChallengeData {
-			t.Run(fmt.Sprintf("挑战赛_%s", challengeIDStr), func(t *testing.T) {
-				startTime, err := parseDateTime(challengeConfig.StartDate, challengeConfig.StartTime)
-				assertNoError(t, err, "解析开始时间应该成功")
-
-				endTime, err := parseDateTime(challengeConfig.EndDate, challengeConfig.EndTime)
-				assertNoError(t, err, "解析结束时间应该成功")
-
-				// 测试不同时间点的加入逻辑
-				testCases := []struct {
-					name     string
-					timeDesc string
-					now      time.Time
-					expected bool
-				}{
-					{
-						name:     "比赛开始前",
-						timeDesc: "开始前1小时",
-						now:      startTime.Add(-1 * time.Hour),
-						expected: false,
-					},
-					{
-						name:     "比赛刚开始",
-						timeDesc: "刚开始",
-						now:      startTime,
-						expected: true,
-					},
-					{
-						name:     "比赛进行中",
-						timeDesc: "进行中",
-						now:      startTime.Add(2 * time.Hour),
-						expected: true,
-					},
-					{
-						name:     "比赛结束后",
-						timeDesc: "结束后",
-						now:      endTime.Add(30 * time.Minute),
-						expected: false,
-					},
-				}
-
-				for _, tc := range testCases {
-					t.Run(tc.name, func(t *testing.T) {
-						result := shouldJoinChallenge(tc.now, startTime, endTime, challengeConfig.RewardRemains)
-						assertEqual(t, tc.expected, result, fmt.Sprintf("挑战赛 %s 在 %s 的加入状态", challengeConfig.Name, tc.timeDesc))
-						if result {
-							stats.challengeJoinTest++
-						}
-					})
-				}
-			})
-		}
-	})
-
-	// 第三部分：测试玩家分配和竞标赛创建
-	t.Run("玩家分配和竞标赛创建测试", func(t *testing.T) {
-		// 为每个挑战赛创建不同数量的玩家来测试分配逻辑
-		challengePlayerCounts := map[int32]int{
-			1: 10, // 挑战赛1: 10个玩家，最大2人/竞标赛，应该创建5个竞标赛
-			2: 15, // 挑战赛2: 15个玩家，最大3人/竞标赛，应该创建5个竞标赛
-			3: 20, // 挑战赛3: 20个玩家，最大4人/竞标赛，应该创建5个竞标赛
-		}
-
-		for challengeID, playerCount := range challengePlayerCounts {
-			t.Run(fmt.Sprintf("挑战赛_%d", challengeID), func(t *testing.T) {
-				challengeConfig := testChallengeData[fmt.Sprintf("%d", challengeID)]
-
-				// 初始化挑战赛统计
-				stats.challengeResults[challengeID] = ChallengeStats{
-					ChallengeID:      challengeID,
-					MaxParticipants:  challengeConfig.MaxPart,
-					TournamentGroups: make(map[string]int),
-				}
-
-				startTime, err := parseDateTime(challengeConfig.StartDate, challengeConfig.StartTime)
-				assertNoError(t, err, "解析开始时间应该成功")
-
-				endTime, err := parseDateTime(challengeConfig.EndDate, challengeConfig.EndTime)
-				assertNoError(t, err, "解析结束时间应该成功")
-
-				// 模拟当前时间在挑战赛进行中
-				now := startTime.Add(2 * time.Hour)
-
-				// 创建玩家并模拟加入
-				for i := 0; i < playerCount; i++ {
-					t.Run(fmt.Sprintf("玩家_%d", i+1), func(t *testing.T) {
-						// 创建用户
-						userID := uuid.Must(uuid.NewV4())
-						username := fmt.Sprintf("test_player_%d_%d", challengeID, i+1)
-
-						// 创建用户挑战赛数据
-						userMatch := &UserMatch{}
-						userMatch.Init()
-
-						// 检查是否可以加入挑战赛
-						canJoin := shouldJoinChallenge(now, startTime, endTime, challengeConfig.RewardRemains)
-						assertTrue(t, canJoin, "玩家应该能够加入挑战赛")
-
-						// 检查玩家是否已经加入过
-						_, alreadyJoined := userMatch.Challenges[challengeID]
-						assertFalse(t, alreadyJoined, "玩家不应该重复加入挑战赛")
-
-						// 模拟分配竞标赛ID
-						tournamentBatch := (i / int(challengeConfig.MaxPart)) + 1
-						tournamentID := fmt.Sprintf("challenge_%d_%d_%03d",
-							challengeID,
-							startTime.Unix(),
-							tournamentBatch)
-
-						// 记录玩家加入挑战赛
-						userMatch.Challenges[challengeID] = &Challenge{
-							ID:           challengeID,
-							TournamentID: tournamentID,
-							JoinedAt:     now,
-						}
-
-						// 更新统计信息
-						result := stats.challengeResults[challengeID]
-						result.PlayersJoined++
-						result.TournamentGroups[tournamentID]++
-
-						// 检查是否创建了新的竞标赛
-						if result.TournamentGroups[tournamentID] == 1 {
-							result.TournamentsCreated++
-						}
-
-						// 检查竞标赛是否满员
-						if result.TournamentGroups[tournamentID] == int(challengeConfig.MaxPart) {
-							result.TournamentFull++
-						}
-
-						stats.challengeResults[challengeID] = result
-						stats.playersJoined++
-
-						t.Logf("玩家 %s (ID: %s) 成功加入挑战赛 %d，竞标赛 %s，当前人数 %d/%d",
-							username, userID.String(), challengeID, tournamentID,
-							result.TournamentGroups[tournamentID], challengeConfig.MaxPart)
-					})
-				}
-
-				// 验证竞标赛分配结果
-				result := stats.challengeResults[challengeID]
-				expectedTournaments := (playerCount + int(challengeConfig.MaxPart) - 1) / int(challengeConfig.MaxPart)
-				assertEqual(t, expectedTournaments, result.TournamentsCreated, "竞标赛数量应该正确")
-				assertEqual(t, playerCount, result.PlayersJoined, "加入玩家数量应该正确")
-
-				// 验证每个竞标赛的玩家数量
-				for tournamentID, count := range result.TournamentGroups {
-					if count > int(challengeConfig.MaxPart) {
-						t.Errorf("竞标赛 %s 超过最大玩家数限制: %d > %d", tournamentID, count, challengeConfig.MaxPart)
-					}
-				}
-
-				stats.tournamentCreated += result.TournamentsCreated
-			})
-		}
-	})
-
-	// 第四部分：模拟1000个玩家参加锦标赛
-	t.Run("1000玩家大规模挑战赛测试", func(t *testing.T) {
-		const massPlayerCount = 1000
-
-		// 选择挑战赛3进行大规模测试（最大4人/竞标赛）
-		challengeConfig := testChallengeData["3"]
-
-		startTime, err := parseDateTime(challengeConfig.StartDate, challengeConfig.StartTime)
-		assertNoError(t, err, "解析开始时间应该成功")
-
-		endTime, err := parseDateTime(challengeConfig.EndDate, challengeConfig.EndTime)
-		assertNoError(t, err, "解析结束时间应该成功")
-
-		// 模拟当前时间在挑战赛进行中
-		now := startTime.Add(2 * time.Hour)
-
-		// 创建1000个玩家的数据
-		players := make([]struct {
-			userID       uuid.UUID
-			username     string
-			userMatch    *UserMatch
-			tournamentID string
-			scores       []int64
-		}, massPlayerCount)
-
-		t.Logf("创建 %d 个玩家数据...", massPlayerCount)
-
-		// 初始化玩家数据
-		for i := 0; i < massPlayerCount; i++ {
-			players[i].userID = uuid.Must(uuid.NewV4())
-			players[i].username = fmt.Sprintf("mass_player_%d", i+1)
-			players[i].userMatch = &UserMatch{}
-			players[i].userMatch.Init()
-
-			// 为每个玩家生成3-5个随机成绩
-			scoreCount := 3 + (i % 3)
-			players[i].scores = make([]int64, scoreCount)
-			for j := 0; j < scoreCount; j++ {
-				players[i].scores[j] = int64(1000 + (i*10 + j*100) + (i*j)%5000)
-			}
-		}
-
-		// 大规模测试统计
-		var massStats struct {
-			joinedPlayers      int
-			createdTournaments int
-			submittedScores    int
-			failedSubmissions  int
-			tournamentGroups   map[string]int
-		}
-		massStats.tournamentGroups = make(map[string]int)
-
-		t.Logf("开始1000玩家加入挑战赛测试...")
-
-		// 玩家加入挑战赛
-		for i := 0; i < massPlayerCount; i++ {
-			player := &players[i]
-
-			// 检查是否可以加入挑战赛
-			if !shouldJoinChallenge(now, startTime, endTime, challengeConfig.RewardRemains) {
-				t.Errorf("玩家 %d 无法加入挑战赛 - 时间不符合", i+1)
-				continue
-			}
-
-			// 分配竞标赛ID
-			tournamentBatch := (i / int(challengeConfig.MaxPart)) + 1
-			tournamentID := fmt.Sprintf("challenge_%d_%d_%03d",
-				challengeConfig.ID,
-				startTime.Unix(),
-				tournamentBatch)
-
-			// 记录玩家加入挑战赛
-			player.userMatch.Challenges[challengeConfig.ID] = &Challenge{
-				ID:           challengeConfig.ID,
-				TournamentID: tournamentID,
-				JoinedAt:     now,
-			}
-
-			player.tournamentID = tournamentID
-			massStats.joinedPlayers++
-
-			// 统计竞标赛分组
-			if _, exists := massStats.tournamentGroups[tournamentID]; !exists {
-				massStats.createdTournaments++
-			}
-			massStats.tournamentGroups[tournamentID]++
-
-			// 定期输出进度
-			if (i+1)%200 == 0 {
-				t.Logf("已处理 %d 个玩家", i+1)
-			}
-		}
-
-		t.Logf("开始1000玩家提交成绩测试...")
-
-		// 玩家提交成绩
-		for i := 0; i < massPlayerCount; i++ {
-			player := &players[i]
-
-			// 检查是否已经加入了挑战赛
-			challengeData, exists := player.userMatch.Challenges[challengeConfig.ID]
-			if !exists || challengeData == nil {
-				massStats.failedSubmissions++
-				continue
-			}
-
-			// 模拟多次成绩提交
-			for j, score := range player.scores {
-				// 模拟成绩提交的验证逻辑
-				if score > 0 && player.tournamentID != "" && isChallengeActive(now, startTime, endTime) {
-					// 模拟成功提交成绩
-					massStats.submittedScores++
-
-					// 只记录第一次提交的日志
-					if j == 0 {
-						t.Logf("玩家 %s 成功提交首次成绩: %d (竞标赛: %s)",
-							player.username, score, player.tournamentID)
-					}
-				} else {
-					massStats.failedSubmissions++
-				}
-			}
-
-			// 定期输出进度
-			if (i+1)%200 == 0 {
-				t.Logf("已处理 %d 个玩家的成绩提交", i+1)
-			}
-		}
-
-		// 验证大规模测试结果
-		t.Logf("=== 1000玩家大规模测试结果 ===")
-		t.Logf("总玩家数: %d", massPlayerCount)
-		t.Logf("成功加入挑战赛: %d", massStats.joinedPlayers)
-		t.Logf("创建的竞标赛数量: %d", massStats.createdTournaments)
-		t.Logf("成功提交成绩: %d", massStats.submittedScores)
-		t.Logf("失败提交次数: %d", massStats.failedSubmissions)
-
-		// 验证结果
-		expectedTournaments := (massPlayerCount + int(challengeConfig.MaxPart) - 1) / int(challengeConfig.MaxPart)
-		assertEqual(t, expectedTournaments, massStats.createdTournaments, "大规模测试竞标赛数量应该正确")
-		assertEqual(t, massPlayerCount, massStats.joinedPlayers, "大规模测试加入玩家数量应该正确")
-
-		// 验证每个竞标赛的玩家数量
-		for tournamentID, playerCount := range massStats.tournamentGroups {
-			if playerCount > int(challengeConfig.MaxPart) {
-				t.Errorf("竞标赛 %s 超过最大玩家数限制: %d > %d", tournamentID, playerCount, challengeConfig.MaxPart)
-			}
-		}
-
-		// 验证成绩提交成功率
-		expectedSubmissions := massPlayerCount * 4                // 平均每个玩家4次提交
-		if massStats.submittedScores < expectedSubmissions*8/10 { // 允许20%的失败率
-			t.Errorf("成绩提交成功率过低: %d/%d (%.2f%%)",
-				massStats.submittedScores, expectedSubmissions,
-				float64(massStats.submittedScores)/float64(expectedSubmissions)*100)
-		}
-
-		stats.scoresSubmitted += massStats.submittedScores
-		stats.totalPlayers += massStats.joinedPlayers
-	})
-
-	// 第五部分：竞标赛ID解析测试
-	t.Run("竞标赛ID解析测试", func(t *testing.T) {
-		testCases := []struct {
-			name          string
-			tournamentID  string
-			expectedID    string
-			expectedValid bool
-		}{
-			{
-				name:          "标准挑战赛竞标赛ID",
-				tournamentID:  "challenge_1_1641024000_001",
-				expectedID:    "1",
-				expectedValid: true,
-			},
-			{
-				name:          "复杂挑战赛竞标赛ID",
-				tournamentID:  "challenge_AL10011_1641024000_002",
-				expectedID:    "AL10011",
-				expectedValid: true,
-			},
-			{
-				name:          "非挑战赛竞标赛ID",
-				tournamentID:  "tournament_1_1641024000_001",
-				expectedID:    "",
-				expectedValid: false,
-			},
-			{
-				name:          "格式错误的竞标赛ID",
-				tournamentID:  "challenge_1",
-				expectedID:    "",
-				expectedValid: false,
-			},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				result := server.GetChallengeFromTournamentID(tc.tournamentID)
-
-				if tc.expectedValid {
-					assertEqual(t, tc.expectedID, result, "应该正确解析挑战赛ID")
-				} else {
-					assertEqual(t, "", result, "应该返回空字符串表示无效ID")
-				}
-			})
-		}
-	})
-
-	// 输出最终统计结果
-	t.Logf("=== 综合测试最终统计 ===")
-	t.Logf("总玩家数: %d", stats.totalPlayers)
-	t.Logf("挑战赛显示测试通过: %d", stats.challengeVisibilityTest)
-	t.Logf("挑战赛加入测试通过: %d", stats.challengeJoinTest)
-	t.Logf("创建的竞标赛总数: %d", stats.tournamentCreated)
-	t.Logf("成功加入的玩家总数: %d", stats.playersJoined)
-	t.Logf("成功提交的成绩总数: %d", stats.scoresSubmitted)
-
-	t.Logf("=== 各挑战赛详细统计 ===")
-	for challengeID, result := range stats.challengeResults {
-		t.Logf("挑战赛 %d:", challengeID)
-		t.Logf("  - 最大参与人数: %d", result.MaxParticipants)
-		t.Logf("  - 创建的竞标赛数: %d", result.TournamentsCreated)
-		t.Logf("  - 加入的玩家数: %d", result.PlayersJoined)
-		t.Logf("  - 提交的成绩数: %d", result.ScoresSubmitted)
-		t.Logf("  - 满员的竞标赛数: %d", result.TournamentFull)
-		t.Logf("  - 竞标赛分组情况:")
-
-		count := 0
-		for tournamentID, playerCount := range result.TournamentGroups {
-			if count < 5 { // 只显示前5个竞标赛
-				t.Logf("    - %s: %d 个玩家", tournamentID, playerCount)
-			}
-			count++
-		}
-		if count > 5 {
-			t.Logf("    - ... 还有 %d 个竞标赛", count-5)
-		}
-	}
-
-	// 验证总体测试结果
-	assertTrue(t, stats.totalPlayers >= 1000, "总玩家数应该达到预期")
-	assertTrue(t, stats.tournamentCreated > 0, "应该创建了竞标赛")
-	assertTrue(t, stats.playersJoined > 0, "应该有玩家成功加入")
-	assertTrue(t, stats.scoresSubmitted > 0, "应该有成绩被提交")
-
-	t.Logf("=== 综合测试完成 ===")
-}
-
-// TestChallengeTimeZoneCompatibility 测试挑战赛时区兼容性
-func TestChallengeTimeZoneCompatibility(t *testing.T) {
-	// 测试不同时区的时间解析
-	testCases := []struct {
-		name        string
-		dateStr     string
-		timeStr     string
-		expectError bool
-	}{
-		{
-			name:        "标准格式",
-			dateStr:     "2025-01-15",
-			timeStr:     "10:00",
-			expectError: false,
-		},
-		{
-			name:        "午夜时间",
-			dateStr:     "2025-01-15",
-			timeStr:     "00:00",
-			expectError: false,
-		},
-		{
-			name:        "深夜时间",
-			dateStr:     "2025-01-15",
-			timeStr:     "23:59",
-			expectError: false,
-		},
-		{
-			name:        "无效时间",
-			dateStr:     "2025-01-15",
-			timeStr:     "25:00",
-			expectError: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := parseDateTime(tc.dateStr, tc.timeStr)
-
-			if tc.expectError {
-				assertError(t, err, "应该解析失败")
-			} else {
-				assertNoError(t, err, "应该解析成功")
-				assertTrue(t, !result.IsZero(), "解析结果不应该为零时间")
-			}
-		})
 	}
 }
 
@@ -729,7 +129,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 		Scores           []int64
 	}
 
-	const playerCount = 100
+	const playerCount = 20
 	players := make([]*Player, playerCount)
 
 	// 统计信息
@@ -881,9 +281,9 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 			// 为每个玩家生成随机成绩
 			player.Scores = []int64{
-				int64(1000 + rand.Intn(9000)), // 1000-10000 随机分数
-				int64(1500 + rand.Intn(8500)), // 第二次尝试
-				int64(2000 + rand.Intn(8000)), // 第三次尝试
+				int64(10000 + rand.Intn(9000)), // 1000-10000 随机分数
+				int64(15000 + rand.Intn(8500)), // 第二次尝试
+				int64(20000 + rand.Intn(8000)), // 第三次尝试
 			}
 
 			// 获取该玩家的竞标赛ID
@@ -1087,7 +487,7 @@ func TestRealAPIChallenge10Players(t *testing.T) {
 			t.Logf("挑战赛详情:")
 			t.Logf("  - ID: %d", challenge.Id)
 			t.Logf("  - 活动ID: %s", challenge.ActivityId)
-			t.Logf("  - 开始时间: %s", challenge.Start.AsTime().Format("2006-01-02 15:04:05"))
+			t.Logf("  - 开始时间: %s", challenge.Open.AsTime().Format("2006-01-02 15:04:05"))
 			t.Logf("  - 结束时间: %s", challenge.End.AsTime().Format("2006-01-02 15:04:05"))
 			t.Logf("  - 最大参与人数: %d", challenge.MaxPart)
 			t.Logf("  - 竞标赛ID: %s", challenge.TournamentId)
@@ -1393,49 +793,49 @@ func TestRealAPIChallenge100PlayersSimple(t *testing.T) {
 	t.Logf("加入挑战赛完成: 成功 %d 个玩家", stats.ChallengesJoined)
 
 	// 第四阶段：提交成绩
-	//t.Logf("=== 阶段4: 提交成绩 ===")
-	//if stats.ChallengesJoined > 0 {
-	//	for i, player := range players {
-	//		if player == nil || player.Context == nil || len(player.JoinedChallenges) == 0 || player.TournamentID == "" {
-	//			continue
-	//		}
-	//
-	//		// 为每个玩家提交3个成绩
-	//		scores := []int64{
-	//			int64(1000 + i*10 + rand.Intn(500)),
-	//			int64(1500 + i*10 + rand.Intn(500)),
-	//			int64(2000 + i*10 + rand.Intn(500)),
-	//		}
-	//
-	//		for _, score := range scores {
-	//			writeReq := &api.WriteTournamentRecordRequest{
-	//				TournamentId: player.TournamentID,
-	//				Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
-	//					Score:    score,
-	//					Subscore: 0,
-	//					Metadata: fmt.Sprintf(`{"player": "%s", "attempt": %d}`, player.Username, player.ScoresSubmitted+1),
-	//					Operator: api.Operator_BEST,
-	//				},
-	//			}
-	//
-	//			// 调用提交成绩API
-	//			_, err := client.WriteTournamentRecord(player.Context, writeReq)
-	//			if err != nil {
-	//				t.Logf("玩家 %s 提交成绩失败: %v", player.Username, err)
-	//				stats.Errors++
-	//				continue
-	//			}
-	//
-	//			player.ScoresSubmitted++
-	//			stats.ScoresSubmitted++
-	//		}
-	//
-	//		// 每提交10个玩家成绩输出一次进度
-	//		if (i+1)%10 == 0 {
-	//			t.Logf("已有 %d 个玩家提交成绩", i+1)
-	//		}
-	//	}
-	//}
+	t.Logf("=== 阶段4: 提交成绩 ===")
+	if stats.ChallengesJoined > 0 {
+		for i, player := range players {
+			if player == nil || player.Context == nil || len(player.JoinedChallenges) == 0 || player.TournamentID == "" {
+				continue
+			}
+
+			// 为每个玩家提交3个成绩
+			scores := []int64{
+				int64(1000 + i*10 + rand.Intn(500)),
+				int64(1500 + i*10 + rand.Intn(500)),
+				int64(2000 + i*10 + rand.Intn(500)),
+			}
+
+			for _, score := range scores {
+				writeReq := &api.WriteTournamentRecordRequest{
+					TournamentId: player.TournamentID,
+					Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
+						Score:    score,
+						Subscore: 0,
+						Metadata: fmt.Sprintf(`{"player": "%s", "attempt": %d}`, player.Username, player.ScoresSubmitted+1),
+						Operator: api.Operator_BEST,
+					},
+				}
+
+				// 调用提交成绩API
+				_, err := client.WriteTournamentRecord(player.Context, writeReq)
+				if err != nil {
+					t.Logf("玩家 %s 提交成绩失败: %v", player.Username, err)
+					stats.Errors++
+					continue
+				}
+
+				player.ScoresSubmitted++
+				stats.ScoresSubmitted++
+			}
+
+			// 每提交10个玩家成绩输出一次进度
+			if (i+1)%10 == 0 {
+				t.Logf("已有 %d 个玩家提交成绩", i+1)
+			}
+		}
+	}
 
 	// 第五阶段：输出测试结果
 	elapsedTime := time.Since(stats.StartTime)

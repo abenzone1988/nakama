@@ -31,12 +31,6 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return err
 	}
 
-	// 注册挑战赛Tournament重置回调
-	if err := initializer.RegisterTournamentReset(handleChallengetournamentReset); err != nil {
-		logger.Error("Failed to register tournament reset callback: %v", err)
-		return err
-	}
-
 	logger.Info("Inner module initialized with challenge reward callbacks")
 	return nil
 }
@@ -111,25 +105,6 @@ func handleChallengetournamentEnd(ctx context.Context, logger runtime.Logger, db
 		"players_count": len(records),
 	})
 
-	return nil
-}
-
-// handleChallengetournamentReset 处理挑战赛竞标赛重置事件
-func handleChallengetournamentReset(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, tournament *api.Tournament, end, reset int64) error {
-	// 检查是否是挑战赛竞标赛
-	if !isChallengetournament(tournament) {
-		return nil
-	}
-
-	logger.Info("Processing challenge tournament reset", map[string]interface{}{
-		"tournament_id": tournament.Id,
-		"title":         tournament.Title,
-		"end_time":      end,
-		"reset_time":    reset,
-	})
-
-	// 挑战赛竞标赛通常不需要重置逻辑，因为它们有固定的生命周期
-	// 这里可以添加清理逻辑或记录重置事件
 	return nil
 }
 

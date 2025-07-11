@@ -899,5 +899,13 @@ service Nakama {
       body: "*"
     };
   }
+
+  // Gain Challenge Reward
+  rpc GainChallengeReward(game.GainChallengeRewardRequest) returns (game.GainChallengeRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/challenges/gain"
+      body: "*"
+    };
+  }
 }
 

@@ -9,10 +9,10 @@ import (
 )
 
 type TplMonsterSkill struct {
-	ID      string  `json:"id"`
-	Param   float64 `json:"param"`
-	ResName string  `json:"resName"`
-	Type    int32   `json:"type"`
+	ID      string `json:"id"`
+	Param   int32  `json:"param"`
+	ResName string `json:"resName"`
+	Type    int32  `json:"type"`
 }
 
 type TableTplMonsterSkill struct {

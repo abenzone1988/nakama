@@ -9,11 +9,11 @@ import (
 )
 
 type TplBattleWave struct {
-	GroupID  string `json:"groupId"`
-	ID       int32  `json:"id"`
-	LvUp     int32  `json:"lvUp"`
-	Money    int32  `json:"money"`
-	Progress int32  `json:"progress"`
+	GroupID  string  `json:"groupId"`
+	ID       int32   `json:"id"`
+	LvUp     float64 `json:"lvUp"`
+	Money    int32   `json:"money"`
+	Progress int32   `json:"progress"`
 }
 
 type TableTplBattleWave struct {

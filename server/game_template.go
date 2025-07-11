@@ -17,31 +17,45 @@ type TemplateManager interface {
 	GetTplRedemption() *TableTplRedemption
 	GetTplReward() *TableTplReward
 	GetTplChallenge() *TableTplChallenge
+	GetTplActivityReward() *TableTplActivityReward
+	GetTplActivityInfo() *TableTplActivityInfo
 }
 
 type LocalTemplateManager struct {
-	logger             *zap.Logger
-	db                 *sql.DB
-	tableTplRedemption *TableTplRedemption
-	tableTplReward     *TableTplReward
-	tableTplChallenge  *TableTplChallenge
+	logger                 *zap.Logger
+	db                     *sql.DB
+	tableTplRedemption     *TableTplRedemption
+	tableTplReward         *TableTplReward
+	tableTplChallenge      *TableTplChallenge
+	tableTplActivityReward *TableTplActivityReward
+	tableTplActivityInfo   *TableTplActivityInfo
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
 	jsonPath := config.GetDataDir()
 	t := LocalTemplateManager{
-		logger:             logger,
-		db:                 db,
-		tableTplRedemption: NewTableTplRedemption(logger, jsonPath),
-		tableTplReward:     NewTableTplReward(logger, jsonPath),
-		tableTplChallenge:  NewTableTplChallenge(logger, jsonPath),
+		logger:                 logger,
+		db:                     db,
+		tableTplRedemption:     NewTableTplRedemption(logger, jsonPath),
+		tableTplReward:         NewTableTplReward(logger, jsonPath),
+		tableTplChallenge:      NewTableTplChallenge(logger, jsonPath),
+		tableTplActivityReward: NewTableTplActivityReward(logger, jsonPath),
+		tableTplActivityInfo:   NewTableTplActivityInfo(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
 }
 
+func (t *LocalTemplateManager) GetTplActivityInfo() *TableTplActivityInfo {
+	return t.tableTplActivityInfo
+}
+
 func (t *LocalTemplateManager) GetTplRedemption() *TableTplRedemption {
 	return t.tableTplRedemption
+}
+
+func (t *LocalTemplateManager) GetTplActivityReward() *TableTplActivityReward {
+	return t.tableTplActivityReward
 }
 
 func (t *LocalTemplateManager) GetTplReward() *TableTplReward {
@@ -56,6 +70,8 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 	t.tableTplChallenge.LoadData(t.StorageReadTpl("TplChallenge"))
+	t.tableTplActivityReward.LoadData(t.StorageReadTpl("TplActivityReward"))
+	t.tableTplActivityInfo.LoadData(t.StorageReadTpl("TplActivityInfo"))
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {

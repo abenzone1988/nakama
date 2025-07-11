@@ -1843,6 +1843,39 @@
         ]
       }
     },
+    "/v2/game/challenges/gain": {
+      "post": {
+        "summary": "Gain Challenge Reward",
+        "operationId": "Nakama_GainChallengeReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGainChallengeRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGainChallengeRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/challenges/join": {
       "post": {
         "summary": "Join Challenge",
@@ -6153,13 +6186,25 @@
         "activityId": {
           "type": "string"
         },
-        "start": {
+        "open": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "title": "开始"
+        },
+        "close": {
+          "type": "string",
+          "format": "date-time",
+          "title": "关闭"
         },
         "end": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "title": "结束提交分数"
+        },
+        "over": {
+          "type": "string",
+          "format": "date-time",
+          "title": "结束领取奖励"
         },
         "maxPart": {
           "type": "integer",
@@ -6206,6 +6251,37 @@
         }
       }
     },
+    "gameGainChallengeRewardRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "gameGainChallengeRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "reward": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameReward"
+          },
+          "title": "奖励"
+        }
+      }
+    },
     "gameGetChallengeResponse": {
       "type": "object",
       "properties": {
@@ -6214,6 +6290,13 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/gameChallenge"
+          }
+        },
+        "joined": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameJoinChallengeStatus"
           }
         }
       }
@@ -6351,6 +6434,19 @@
       },
       "title": "关卡数据结构"
     },
+    "gameItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "num": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "Game Item"
+    },
     "gameJoinChallengeRequest": {
       "type": "object",
       "properties": {
@@ -6374,6 +6470,34 @@
         },
         "challenge": {
           "$ref": "#/definitions/gameChallenge"
+        }
+      }
+    },
+    "gameJoinChallengeStatus": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tournamentId": {
+          "type": "string"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rankReward": {
+          "type": "boolean"
+        },
+        "lowScoreReward": {
+          "type": "boolean"
+        },
+        "midScoreReward": {
+          "type": "boolean"
+        },
+        "highScoreReward": {
+          "type": "boolean"
         }
       }
     },
@@ -6430,6 +6554,22 @@
           "type": "string"
         }
       }
+    },
+    "gameReward": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/gameWallet"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameItem"
+          }
+        }
+      },
+      "title": "奖励数据"
     },
     "gameSaveHomeLevelDataRequest": {
       "type": "object",

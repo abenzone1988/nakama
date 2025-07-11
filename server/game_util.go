@@ -98,12 +98,10 @@ func parseTime(timeStr string) (time.Time, error) {
 }
 
 // parseDateTime 解析日期和时间字符串为 time.Time
-func parseDateTime(dateStr, timeStr string) (time.Time, error) {
-	// 组合日期和时间字符串
-	datetimeStr := fmt.Sprintf("%s %s", dateStr, timeStr)
-
-	// 在服务器本地时区中解析时间，确保配置的本地时间被正确理解
-	parsedTime, err := time.ParseInLocation("2006-01-02 15:04", datetimeStr, time.Local)
+// 适配格式如 "2025/7/11 10:00"
+func parseDateTime(datetimeStr string) (time.Time, error) {
+	// 解析格式为 "2006/1/2 15:04"
+	parsedTime, err := time.ParseInLocation("2006-1-2 15:04", datetimeStr, time.Local)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("解析时间失败 '%s': %w", datetimeStr, err)
 	}

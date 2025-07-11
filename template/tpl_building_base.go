@@ -9,12 +9,12 @@ import (
 )
 
 type TplBuildingBase struct {
-	BuildingID string `json:"buildingId"`
-	ID         int32  `json:"id"`
-	Note       string `json:"note"`
-	Param      int32  `json:"param"`
-	ShowTitle  string `json:"showTitle"`
-	Type       string `json:"type"`
+	BuildingID string  `json:"buildingId"`
+	ID         int32   `json:"id"`
+	Note       string  `json:"note"`
+	Param      float64 `json:"param"`
+	ShowTitle  string  `json:"showTitle"`
+	Type       string  `json:"type"`
 }
 
 type TableTplBuildingBase struct {

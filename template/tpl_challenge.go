@@ -10,14 +10,13 @@ import (
 
 type TplChallenge struct {
 	ActivityID    string `json:"activity_id"`
-	EndDate       string `json:"end_date"`
+	CloseTime     string `json:"close_time"`
 	EndTime       string `json:"end_time"`
 	ID            int32  `json:"id"`
 	MaxPart       int32  `json:"max_part"`
 	Name          string `json:"name"`
+	OpenTime      string `json:"open_time"`
 	RewardRemains int32  `json:"reward_remains"`
-	StartDate     string `json:"start_date"`
-	StartTime     string `json:"start_time"`
 	Status        int32  `json:"status"`
 }
 

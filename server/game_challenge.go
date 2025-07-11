@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -24,18 +27,23 @@ type ChallengeTournamentMetadata struct {
 	CreatedBy       string `json:"created_by"`       // 创建者（固定为"server"）
 	BatchNumber     int    `json:"batch_number"`     // 批次编号（同一时间段内的第几个竞标赛）
 	StartTimestamp  int64  `json:"start_timestamp"`  // 开始时间戳
-	EndTimestamp    int64  `json:"end_timestamp"`    // 结束时间戳
+	EndTimestamp    int64  `json:"end_timestamp"`    // 结束时间戳 结束之后无法提交成绩-可以手动领取奖励
+	CloseTimestamp  int64  `json:"close_timestamp"`  // 关闭时间戳 关闭之后没有领奖的-变成邮件发送
 	MaxParticipants int32  `json:"max_participants"` // 最大参与人数
 }
 
-type Challenge struct {
-	ID           int32     `json:"id"`
-	TournamentID string    `json:"tournament_id"`
-	JoinedAt     time.Time `json:"joined_at"`
+type ChallengeStatus struct {
+	ID              int32     `json:"id"`
+	TournamentID    string    `json:"tournament_id"`
+	JoinedAt        time.Time `json:"joined_at"`
+	RankReward      bool      `json:"rank_reward"`       // 排名奖励是否已领取
+	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
+	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
+	HighScoreReward bool      `json:"high_score_reward"` // 高分奖励是否已领取
 }
 
 type UserMatch struct {
-	Challenges map[int32]*Challenge `json:"challenges"`
+	Challenges map[int32]*ChallengeStatus `json:"challenges"`
 }
 
 func (f *UserMatch) GetCollection() string {
@@ -47,7 +55,7 @@ func (f *UserMatch) GetKey() string {
 }
 
 func (f *UserMatch) Init() {
-	f.Challenges = map[int32]*Challenge{}
+	f.Challenges = map[int32]*ChallengeStatus{}
 }
 
 func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeResponse, error) {
@@ -75,23 +83,31 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 
 	for _, tplChallenge := range tplChallenges {
 		// 解析开始时间
-		startTime, err := parseDateTime(tplChallenge.StartDate, tplChallenge.StartTime)
+		startTime, err := parseDateTime(tplChallenge.OpenTime)
 		if err != nil {
 			s.logger.Error("解析挑战赛开始时间失败",
 				zap.Int32("id", tplChallenge.ID),
-				zap.String("start_date", tplChallenge.StartDate),
-				zap.String("start_time", tplChallenge.StartTime),
+				zap.String("OpenTime", tplChallenge.OpenTime),
+				zap.Error(err))
+			continue
+		}
+
+		// 解析开始时间
+		closeTime, err := parseDateTime(tplChallenge.CloseTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛关闭时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("CloseTime", tplChallenge.CloseTime),
 				zap.Error(err))
 			continue
 		}
 
 		// 解析结束时间
-		endTime, err := parseDateTime(tplChallenge.EndDate, tplChallenge.EndTime)
+		endTime, err := parseDateTime(tplChallenge.EndTime)
 		if err != nil {
 			s.logger.Error("解析挑战赛结束时间失败",
 				zap.Int32("id", tplChallenge.ID),
-				zap.String("end_date", tplChallenge.EndDate),
-				zap.String("end_time", tplChallenge.EndTime),
+				zap.String("end_date", tplChallenge.EndTime),
 				zap.Error(err))
 			continue
 		}
@@ -100,16 +116,6 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		if !shouldShowChallenge(now, startTime, endTime, tplChallenge.RewardRemains) {
 			continue
 		}
-
-		// 获取或分配玩家的竞标赛ID
-		//tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, endTime, now)
-		//if err != nil {
-		//	s.logger.Error("获取玩家竞标赛ID失败",
-		//		zap.String("challenge_id", tplChallenge.ID),
-		//		zap.String("user_id", userID.String()),
-		//		zap.Error(err))
-		//	continue
-		//}
 
 		// 获取用户挑战赛状态中的竞标赛ID
 		var tournamentID string
@@ -120,8 +126,10 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		challenge := &game.Challenge{
 			Id:           tplChallenge.ID,
 			ActivityId:   tplChallenge.ActivityID,
-			Start:        timestamppb.New(startTime),
+			Open:         timestamppb.New(startTime),
+			Close:        timestamppb.New(closeTime),
 			End:          timestamppb.New(endTime),
+			Over:         timestamppb.New(endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)),
 			MaxPart:      tplChallenge.MaxPart,
 			TournamentId: tournamentID,
 		}
@@ -129,8 +137,24 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		challenges = append(challenges, challenge)
 	}
 
+	// 转换用户已参与的挑战赛状态为JoinChallengeStatus数组
+	joinedChallenges := make([]*game.JoinChallengeStatus, 0, len(userMatch.Challenges))
+	for _, challengeStatus := range userMatch.Challenges {
+		joinedStatus := &game.JoinChallengeStatus{
+			Id:              challengeStatus.ID,
+			TournamentId:    challengeStatus.TournamentID,
+			JoinedAt:        timestamppb.New(challengeStatus.JoinedAt),
+			RankReward:      challengeStatus.RankReward,
+			LowScoreReward:  challengeStatus.LowScoreReward,
+			MidScoreReward:  challengeStatus.MidScoreReward,
+			HighScoreReward: challengeStatus.HighScoreReward,
+		}
+		joinedChallenges = append(joinedChallenges, joinedStatus)
+	}
+
 	return &game.GetChallengeResponse{
 		Challenges: challenges,
+		Joined:     joinedChallenges,
 	}, nil
 }
 
@@ -162,12 +186,24 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	now := time.Now()
 
 	// 解析开始时间
-	startTime, err := parseDateTime(tplChallenge.StartDate, tplChallenge.StartTime)
+	startTime, err := parseDateTime(tplChallenge.OpenTime)
 	if err != nil {
 		s.logger.Error("解析挑战赛开始时间失败",
 			zap.Int32("id", tplChallenge.ID),
-			zap.String("start_date", tplChallenge.StartDate),
-			zap.String("start_time", tplChallenge.StartTime),
+			zap.String("start_time", tplChallenge.OpenTime),
+			zap.Error(err))
+		return &game.JoinChallengeResponse{
+			Code: 3,
+			Msg:  "配置错误",
+		}, nil
+	}
+
+	// 解析开始时间
+	closeTime, err := parseDateTime(tplChallenge.CloseTime)
+	if err != nil {
+		s.logger.Error("解析挑战赛关闭时间失败",
+			zap.Int32("id", tplChallenge.ID),
+			zap.String("close_time", tplChallenge.CloseTime),
 			zap.Error(err))
 		return &game.JoinChallengeResponse{
 			Code: 3,
@@ -176,11 +212,10 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	}
 
 	// 解析结束时间
-	endTime, err := parseDateTime(tplChallenge.EndDate, tplChallenge.EndTime)
+	endTime, err := parseDateTime(tplChallenge.EndTime)
 	if err != nil {
 		s.logger.Error("解析挑战赛结束时间失败",
 			zap.Int32("id", tplChallenge.ID),
-			zap.String("end_date", tplChallenge.EndDate),
 			zap.String("end_time", tplChallenge.EndTime),
 			zap.Error(err))
 		return &game.JoinChallengeResponse{
@@ -197,8 +232,10 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		}, nil
 	}
 
+	overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
+
 	// 获取或分配玩家的竞标赛ID
-	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, endTime, now)
+	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, overTime, now)
 	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
@@ -207,34 +244,120 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 
 		return &game.JoinChallengeResponse{
 			Code: 5,
-			Msg:  "无法加入挑战赛",
+			Msg:  fmt.Sprintf("无法加入挑战赛: %v", err),
 		}, nil
 	}
 
-	userMatch.Challenges[tplChallenge.ID] = &Challenge{
+	userMatch.Challenges[tplChallenge.ID] = &ChallengeStatus{
 		ID:           tplChallenge.ID,
 		TournamentID: tournamentID,
 		JoinedAt:     now.Truncate(time.Second),
 	}
 
-	// 保存更新后的比赛数据
-	//err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
-	//if err != nil {
-	//	return nil, err
-	//}
+	//保存更新后的比赛数据
+	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+	if err != nil {
+		return nil, err
+	}
 
 	return &game.JoinChallengeResponse{
 		Code: 0,
 		Challenge: &game.Challenge{
 			Id:           tplChallenge.ID,
 			ActivityId:   tplChallenge.ActivityID,
-			Start:        timestamppb.New(startTime),
+			Open:         timestamppb.New(startTime),
 			End:          timestamppb.New(endTime),
+			Close:        timestamppb.New(closeTime),
+			Over:         timestamppb.New(overTime),
 			MaxPart:      tplChallenge.MaxPart,
 			TournamentId: tournamentID,
 		},
 	}, nil
 
+}
+
+func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error) {
+	// 获取用户ID
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	userMatch := &UserMatch{}
+	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
+	if err != nil {
+		return nil, err
+	}
+
+	challengeData, exists := userMatch.Challenges[in.ChallengeId]
+	if !exists || challengeData == nil {
+		return &game.GainChallengeRewardResponse{
+			Code: 1,
+			Msg:  "没有参加挑战赛",
+		}, nil
+	}
+
+	tplChallenge, found := s.template.GetTplChallenge().FindByKey(in.ChallengeId)
+	if !found {
+		return nil, status.Error(codes.InvalidArgument, "挑战赛不存在")
+	}
+
+	tournamentID := userMatch.Challenges[in.ChallengeId].TournamentID
+	records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, tournamentID, []string{userID.String()}, nil, "", 0)
+	if err != nil || len(records.OwnerRecords) == 0 {
+		return &game.GainChallengeRewardResponse{
+			Code: 5,
+			Msg:  "没有提交成绩",
+		}, nil
+	}
+
+	ownerRecord := records.OwnerRecords[0]
+
+	activityInfo, found := s.template.GetTplActivityInfo().FindByKey(tplChallenge.ActivityID)
+	if !found {
+		return nil, status.Error(codes.InvalidArgument, "活动不存在")
+	}
+
+	var rewardIds []string
+	if ownerRecord.Score >= int64(activityInfo.Condition01) && !challengeData.LowScoreReward {
+		challengeData.LowScoreReward = true
+		rewardIds = append(rewardIds, activityInfo.Reward01)
+	}
+	if ownerRecord.Score >= int64(activityInfo.Condition02) && !challengeData.MidScoreReward {
+		challengeData.MidScoreReward = true
+		rewardIds = append(rewardIds, activityInfo.Reward02)
+	}
+	if ownerRecord.Score >= int64(activityInfo.Condition03) && !challengeData.HighScoreReward {
+		challengeData.HighScoreReward = true
+		rewardIds = append(rewardIds, activityInfo.Reward03)
+	}
+
+	// 解析奖励
+	rewards, err := s.parseRewards(rewardIds)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("解析奖励失败: %v", err))
+	}
+
+	if len(rewards) == 0 {
+		return &game.GainChallengeRewardResponse{
+			Code: 6,
+			Msg:  "没有可领取的奖励",
+		}, nil
+	}
+
+	// 保存奖励状态更新
+	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("发放挑战赛奖励",
+		zap.Int32("challenge_id", in.ChallengeId),
+		zap.String("user_id", userID.String()),
+		zap.Strings("reward_ids", rewardIds),
+		zap.Int32("rank", int32(ownerRecord.Rank)))
+
+	return &game.GainChallengeRewardResponse{
+		Code:   0,
+		Msg:    "领取奖励成功",
+		Reward: rewards,
+	}, nil
 }
 
 // getOrAssignPlayerTournament 获取或分配玩家的竞标赛ID
@@ -427,6 +550,7 @@ func (s *ApiServer) createNewChallengeTournament(ctx context.Context, tplChallen
 		BatchNumber:     batchNumber,      // 持久化的递增批次号
 		StartTimestamp:  startTime.Unix(),
 		EndTimestamp:    endTime.Unix(),
+		CloseTimestamp:  endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute).Unix(),
 		MaxParticipants: tplChallenge.MaxPart,
 	}
 
@@ -661,4 +785,112 @@ func (s *ApiServer) ListAllChallengeTournaments(ctx context.Context) (map[string
 		zap.Int("challenge_count", len(result)))
 
 	return result, nil
+}
+
+// parseRewards 解析奖励ID数组，返回奖励对象数组
+func (s *ApiServer) parseRewards(rewardIds []string) ([]*game.Reward, error) {
+	if len(rewardIds) == 0 {
+		return nil, nil
+	}
+
+	rewards := make([]*game.Reward, 0, len(rewardIds))
+
+	for _, rewardId := range rewardIds {
+		if rewardId == "" {
+			continue
+		}
+
+		tplReward, found := s.template.GetTplReward().FindByKey(rewardId)
+		if !found {
+			s.logger.Warn("奖励配置不存在",
+				zap.String("reward_id", rewardId))
+			continue
+		}
+
+		// 构造钱包奖励
+		walletReward := &game.Wallet{
+			Gem:  tplReward.Gem,
+			Coin: tplReward.Coin,
+			Ad:   tplReward.Coupon,
+		}
+
+		// 解析物品奖励
+		items, err := s.parseItemRewards(tplReward.Items, rewardId)
+		if err != nil {
+			s.logger.Warn("解析物品奖励失败",
+				zap.String("reward_id", rewardId),
+				zap.Error(err))
+			continue
+		}
+
+		// 构造奖励对象
+		reward := &game.Reward{
+			Wallet: walletReward,
+			Items:  items,
+		}
+
+		rewards = append(rewards, reward)
+	}
+
+	return rewards, nil
+}
+
+// parseItemRewards 解析物品奖励字符串 "90000_20,90001_30"
+func (s *ApiServer) parseItemRewards(itemsStr, rewardId string) ([]*game.Item, error) {
+	if itemsStr == "" || strings.TrimSpace(itemsStr) == "" {
+		return nil, nil
+	}
+
+	var items []*game.Item
+	itemStrings := strings.Split(itemsStr, ",")
+
+	for _, itemStr := range itemStrings {
+		itemStr = strings.TrimSpace(itemStr)
+		if itemStr == "" {
+			continue
+		}
+
+		parts := strings.Split(itemStr, "_")
+		if len(parts) != 2 {
+			s.logger.Warn("物品奖励格式错误",
+				zap.String("item_string", itemStr),
+				zap.String("reward_id", rewardId))
+			continue
+		}
+
+		itemID := strings.TrimSpace(parts[0])
+		numStr := strings.TrimSpace(parts[1])
+
+		num, err := strconv.ParseInt(numStr, 10, 32)
+		if err != nil {
+			s.logger.Warn("物品数量解析失败",
+				zap.String("item_string", itemStr),
+				zap.String("num_string", numStr),
+				zap.String("reward_id", rewardId),
+				zap.Error(err))
+			continue
+		}
+
+		item := &game.Item{
+			Id:  itemID,
+			Num: int32(num),
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+// parseSingleReward 解析单个奖励ID，返回奖励对象（兼容性方法）
+func (s *ApiServer) parseSingleReward(rewardId string) (*game.Reward, error) {
+	rewards, err := s.parseRewards([]string{rewardId})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rewards) == 0 {
+		return nil, fmt.Errorf("奖励不存在: %s", rewardId)
+	}
+
+	return rewards[0], nil
 }
