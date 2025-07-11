@@ -21,10 +21,11 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/heroiclabs/nakama-common/runtime"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -128,11 +129,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		return nil, ErrLeaderboardNotFound
 	}
 
-	expiryTime, recordsPossible := calculateExpiryOverride(overrideExpiry, leaderboard)
-	if !recordsPossible {
-		// If the expiry time is in the past, we won't have any records to return.
-		return &api.LeaderboardRecordList{}, nil
-	}
+	expiryTime, _ := calculateExpiryOverride(overrideExpiry, leaderboard)
+	//不做过期判断
+	//if !recordsPossible {
+	//	// If the expiry time is in the past, we won't have any records to return.
+	//	return &api.LeaderboardRecordList{}, nil
+	//}
 
 	records := make([]*api.LeaderboardRecord, 0)
 	ownerRecords := make([]*api.LeaderboardRecord, 0)
@@ -962,10 +964,11 @@ func calculateExpiryOverride(overrideExpiry int64, leaderboard *Leaderboard) (in
 		if leaderboard.IsTournament() {
 			now := time.Now().UTC()
 			_, _, expiryTime := calculateTournamentDeadlines(leaderboard.StartTime, leaderboard.EndTime, int64(leaderboard.Duration), leaderboard.ResetSchedule, now)
-			if expiryTime != 0 && expiryTime <= now.Unix() {
-				// If the expiry time is in the past, we won't have any records to return.
-				return 0, false
-			}
+			// 注释掉时间限制检查，允许获取已结束锦标赛的记录
+			//if expiryTime != 0 && expiryTime <= now.Unix() {
+			//	// If the expiry time is in the past, we won't have any records to return.
+			//	return 0, false
+			//}
 			return expiryTime, true
 		} else if leaderboard.ResetSchedule != nil {
 			now := time.Now().UTC()

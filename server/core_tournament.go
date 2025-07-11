@@ -397,9 +397,10 @@ func TournamentRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 		return nil, runtime.ErrTournamentNotFound
 	}
 
-	if overrideExpiry == 0 && leaderboard.EndTime > 0 && leaderboard.EndTime <= time.Now().UTC().Unix() {
-		return nil, runtime.ErrTournamentOutsideDuration
-	}
+	//过期可以查看
+	//if overrideExpiry == 0 && leaderboard.EndTime > 0 && leaderboard.EndTime <= time.Now().UTC().Unix() {
+	//	return nil, runtime.ErrTournamentOutsideDuration
+	//}
 
 	records, err := LeaderboardRecordsList(ctx, logger, db, leaderboardCache, rankCache, tournamentId, limit, cursor, ownerIds, overrideExpiry)
 	if err != nil {
@@ -673,10 +674,11 @@ func TournamentRecordsHaystack(ctx context.Context, logger *zap.Logger, db *sql.
 	if expiry == 0 {
 		now := time.Now().UTC()
 		_, _, expiry = calculateTournamentDeadlines(leaderboard.StartTime, leaderboard.EndTime, int64(leaderboard.Duration), leaderboard.ResetSchedule, now)
-		if expiry != 0 && expiry <= now.Unix() {
-			// if the expiry time is in the past, we wont have any records to return
-			return &api.TournamentRecordList{Records: []*api.LeaderboardRecord{}}, nil
-		}
+		// 注释掉时间限制检查，允许获取已结束锦标赛的记录
+		//if expiry != 0 && expiry <= now.Unix() {
+		//	// if the expiry time is in the past, we wont have any records to return
+		//	return &api.TournamentRecordList{Records: []*api.LeaderboardRecord{}}, nil
+		//}
 	}
 
 	expiryTime := time.Unix(expiry, 0).UTC()

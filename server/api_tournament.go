@@ -17,6 +17,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
@@ -201,6 +202,9 @@ func (s *ApiServer) ListTournamentRecords(ctx context.Context, in *api.ListTourn
 		return nil, status.Error(codes.Internal, "Error listing records from tournament.")
 	}
 
+	// enhanceTournamentRecordsWithPlayerInfo 批量查询玩家信息并增强tournament records的metadata
+	enhanceTournamentRecordsWithPlayerInfo(ctx, s.logger, s.db, s.statusRegistry, recordList, in.GetTournamentId())
+
 	// After hook.
 	if fn := s.runtime.AfterListTournamentRecords(); fn != nil {
 		afterFn := func(clientIP, clientPort string) error {
@@ -212,6 +216,76 @@ func (s *ApiServer) ListTournamentRecords(ctx context.Context, in *api.ListTourn
 	}
 
 	return recordList, nil
+}
+
+// enhanceTournamentRecordsWithPlayerInfo 批量查询玩家信息并增强tournament records的metadata
+func enhanceTournamentRecordsWithPlayerInfo(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, recordList *api.TournamentRecordList, tournamentId string) {
+	// 收集所有记录中的玩家ID
+	playerIDSet := make(map[string]struct{})
+	for _, record := range recordList.Records {
+		playerIDSet[record.OwnerId] = struct{}{}
+	}
+	for _, record := range recordList.OwnerRecords {
+		playerIDSet[record.OwnerId] = struct{}{}
+	}
+
+	// 如果有玩家ID，批量查询玩家信息并增强metadata
+	if len(playerIDSet) > 0 {
+		// 转换为数组
+		var playerIDs []string
+		for playerID := range playerIDSet {
+			playerIDs = append(playerIDs, playerID)
+		}
+
+		// 批量查询玩家信息
+		users, err := GetUsers(ctx, logger, db, statusRegistry, playerIDs, nil, nil)
+		if err != nil {
+			logger.Warn("Failed to get player info for tournament records", zap.String("tournament_id", tournamentId), zap.Error(err))
+			return
+		}
+
+		// 构建玩家信息映射
+		playerInfoMap := make(map[string]*api.User)
+		for _, user := range users.Users {
+			playerInfoMap[user.Id] = user
+		}
+
+		// 增强Records中的玩家信息
+		for i, record := range recordList.Records {
+			if user, exists := playerInfoMap[record.OwnerId]; exists {
+				enhanceRecordMetadata(recordList.Records[i], user)
+			}
+		}
+
+		// 增强OwnerRecords中的玩家信息
+		for i, record := range recordList.OwnerRecords {
+			if user, exists := playerInfoMap[record.OwnerId]; exists {
+				enhanceRecordMetadata(recordList.OwnerRecords[i], user)
+			}
+		}
+	}
+}
+
+// enhanceRecordMetadata 增强单个记录的metadata，添加玩家信息
+func enhanceRecordMetadata(record *api.LeaderboardRecord, user *api.User) {
+	// 解析现有的metadata
+	var metadata map[string]interface{}
+	if record.Metadata != "" {
+		if err := json.Unmarshal([]byte(record.Metadata), &metadata); err != nil {
+			metadata = make(map[string]interface{})
+		}
+	} else {
+		metadata = make(map[string]interface{})
+	}
+
+	// 添加玩家信息
+	metadata["display_name"] = user.DisplayName
+	metadata["avatar_url"] = user.AvatarUrl
+
+	// 序列化回JSON
+	if metadataBytes, err := json.Marshal(metadata); err == nil {
+		record.Metadata = string(metadataBytes)
+	}
 }
 
 func (s *ApiServer) ListTournaments(ctx context.Context, in *api.ListTournamentsRequest) (*api.TournamentList, error) {

@@ -218,10 +218,10 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	}
 
 	// 保存更新后的比赛数据
-	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
-	if err != nil {
-		return nil, err
-	}
+	//err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return &game.JoinChallengeResponse{
 		Code: 0,

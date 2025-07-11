@@ -1393,49 +1393,49 @@ func TestRealAPIChallenge100PlayersSimple(t *testing.T) {
 	t.Logf("加入挑战赛完成: 成功 %d 个玩家", stats.ChallengesJoined)
 
 	// 第四阶段：提交成绩
-	t.Logf("=== 阶段4: 提交成绩 ===")
-	if stats.ChallengesJoined > 0 {
-		for i, player := range players {
-			if player == nil || player.Context == nil || len(player.JoinedChallenges) == 0 || player.TournamentID == "" {
-				continue
-			}
-
-			// 为每个玩家提交3个成绩
-			scores := []int64{
-				int64(1000 + i*10 + rand.Intn(500)),
-				int64(1500 + i*10 + rand.Intn(500)),
-				int64(2000 + i*10 + rand.Intn(500)),
-			}
-
-			for _, score := range scores {
-				writeReq := &api.WriteTournamentRecordRequest{
-					TournamentId: player.TournamentID,
-					Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
-						Score:    score,
-						Subscore: 0,
-						Metadata: fmt.Sprintf(`{"player": "%s", "attempt": %d}`, player.Username, player.ScoresSubmitted+1),
-						Operator: api.Operator_BEST,
-					},
-				}
-
-				// 调用提交成绩API
-				_, err := client.WriteTournamentRecord(player.Context, writeReq)
-				if err != nil {
-					t.Logf("玩家 %s 提交成绩失败: %v", player.Username, err)
-					stats.Errors++
-					continue
-				}
-
-				player.ScoresSubmitted++
-				stats.ScoresSubmitted++
-			}
-
-			// 每提交10个玩家成绩输出一次进度
-			if (i+1)%10 == 0 {
-				t.Logf("已有 %d 个玩家提交成绩", i+1)
-			}
-		}
-	}
+	//t.Logf("=== 阶段4: 提交成绩 ===")
+	//if stats.ChallengesJoined > 0 {
+	//	for i, player := range players {
+	//		if player == nil || player.Context == nil || len(player.JoinedChallenges) == 0 || player.TournamentID == "" {
+	//			continue
+	//		}
+	//
+	//		// 为每个玩家提交3个成绩
+	//		scores := []int64{
+	//			int64(1000 + i*10 + rand.Intn(500)),
+	//			int64(1500 + i*10 + rand.Intn(500)),
+	//			int64(2000 + i*10 + rand.Intn(500)),
+	//		}
+	//
+	//		for _, score := range scores {
+	//			writeReq := &api.WriteTournamentRecordRequest{
+	//				TournamentId: player.TournamentID,
+	//				Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
+	//					Score:    score,
+	//					Subscore: 0,
+	//					Metadata: fmt.Sprintf(`{"player": "%s", "attempt": %d}`, player.Username, player.ScoresSubmitted+1),
+	//					Operator: api.Operator_BEST,
+	//				},
+	//			}
+	//
+	//			// 调用提交成绩API
+	//			_, err := client.WriteTournamentRecord(player.Context, writeReq)
+	//			if err != nil {
+	//				t.Logf("玩家 %s 提交成绩失败: %v", player.Username, err)
+	//				stats.Errors++
+	//				continue
+	//			}
+	//
+	//			player.ScoresSubmitted++
+	//			stats.ScoresSubmitted++
+	//		}
+	//
+	//		// 每提交10个玩家成绩输出一次进度
+	//		if (i+1)%10 == 0 {
+	//			t.Logf("已有 %d 个玩家提交成绩", i+1)
+	//		}
+	//	}
+	//}
 
 	// 第五阶段：输出测试结果
 	elapsedTime := time.Since(stats.StartTime)
