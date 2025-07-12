@@ -390,7 +390,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 
 			// 检查排名奖励
 			if !challenge.RankReward {
-				rankRewardSent, err := s.sendExpiredRankReward(ctx, userID, challenge, ownerRecord)
+				rankRewardSent, err := s.sendExpiredRankReward(ctx, userID, challenge, ownerRecord, &activityInfo)
 				if err != nil {
 					s.logger.Error("发送过期排名奖励失败", zap.Error(err))
 				} else if rankRewardSent {
@@ -402,7 +402,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 			// 检查积分等级奖励
 			scoreResult := s.checkScoreRewards(challenge, ownerRecord, &activityInfo)
 			if scoreResult.HasNewReward {
-				err := s.sendExpiredScoreRewards(ctx, userID, challenge, ownerRecord, scoreResult)
+				err := s.sendExpiredScoreRewards(ctx, userID, challenge, scoreResult, &activityInfo)
 				if err != nil {
 					s.logger.Error("发送过期积分奖励失败", zap.Error(err))
 				} else {
@@ -417,7 +417,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 }
 
 // sendExpiredRankReward 发送过期的排名奖励
-func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, ownerRecord *api.LeaderboardRecord) (bool, error) {
+func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, ownerRecord *api.LeaderboardRecord, activityInfo *template.TplActivityInfo) (bool, error) {
 	// 获取排名奖励配置
 	acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
 		return acReward.ActiveID == challenge.ActivityID
@@ -454,13 +454,24 @@ func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID,
 		return false, nil
 	}
 
-	// 直接使用 rewards 作为通知内容
-	description := fmt.Sprintf("恭喜您在挑战赛中获得第%d名！这是您的排名奖励。", ownerRecord.Rank)
+	// 从 TournamentID 中解析 batchNumber
+	// 格式：challenge_{challengeID}_{startTimestamp}_{batchNumber}
+	batchNumber := "0"
+	if challenge.TournamentID != "" {
+		parts := strings.Split(challenge.TournamentID, "_")
+		if len(parts) >= 4 {
+			batchNumber = parts[len(parts)-1]
+		}
+	}
+
+	// 构建新的描述
+	description := fmt.Sprintf("亲爱的指挥官：您在\"%s\"挑战赛中获得%s号战区排行榜第%d名，邮件中是您的奖励，请查收。",
+		activityInfo.Name, batchNumber, ownerRecord.Rank)
 	return s.sendChallengeRewardNotification(ctx, userID, "挑战赛排名奖励", description, rewards)
 }
 
 // sendExpiredScoreRewards 发送过期的积分等级奖励
-func (s *ApiServer) sendExpiredScoreRewards(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, ownerRecord *api.LeaderboardRecord, scoreResult *ScoreRewardResult) error {
+func (s *ApiServer) sendExpiredScoreRewards(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, scoreResult *ScoreRewardResult, activityInfo *template.TplActivityInfo) error {
 	// 解析奖励
 	rewards, err := ParseRewards(s.logger, s.template.GetTplReward(), scoreResult.RewardIds)
 	if err != nil {
@@ -475,9 +486,9 @@ func (s *ApiServer) sendExpiredScoreRewards(ctx context.Context, userID uuid.UUI
 		return nil
 	}
 
-	// 直接使用 rewards 作为通知内容
-	description := fmt.Sprintf("恭喜您在挑战赛中获得%d分！这是您的积分奖励。", ownerRecord.Score)
-	_, err = s.sendChallengeRewardNotification(ctx, userID, "挑战赛积分奖励", description, rewards)
+	// 构建新的描述
+	description := fmt.Sprintf("亲爱的指挥官：您在\"%s\"挑战赛中有未领取的个人战绩奖励，现通过邮件发放给您，请查收", activityInfo.Name)
+	_, err = s.sendChallengeRewardNotification(ctx, userID, "挑战赛个人战绩奖励", description, rewards)
 	return err
 }
 
