@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -53,6 +54,33 @@ func assertError(t *testing.T, err error, message string) {
 	if err == nil {
 		t.Errorf("%s: expected error, got nil", message)
 	}
+}
+
+// createSignedTournamentMetadata 创建包含签名的tournament record metadata
+func createSignedTournamentMetadata(tournamentID string, score, subscore int64, metadataFields map[string]interface{}) (string, error) {
+	// 将metadata字段转换为JSON字符串
+	metadataBytes, err := json.Marshal(metadataFields)
+	if err != nil {
+		return "", fmt.Errorf("编码metadata失败: %v", err)
+	}
+	metadataStr := string(metadataBytes)
+
+	// 生成签名
+	signature, err := GenerateTournamentRecordSignature(tournamentID, score, subscore, metadataStr)
+	if err != nil {
+		return "", fmt.Errorf("生成签名失败: %v", err)
+	}
+
+	// 将签名添加到metadata中
+	metadataFields["signature"] = signature
+
+	// 返回最终的metadata JSON字符串
+	finalMetadataBytes, err := json.Marshal(metadataFields)
+	if err != nil {
+		return "", fmt.Errorf("编码最终metadata失败: %v", err)
+	}
+
+	return string(finalMetadataBytes), nil
 }
 
 // TestChallengeEdgeCases 测试挑战赛边界情况
@@ -311,13 +339,25 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 			// 提交每个成绩
 			for scoreIndex, score := range player.Scores {
+				// 创建包含签名的metadata
+				metadataFields := map[string]interface{}{
+					"attempt":   scoreIndex + 1,
+					"timestamp": time.Now().Format(time.RFC3339),
+				}
+
+				signedMetadata, err := createSignedTournamentMetadata(tournamentID, score, 0, metadataFields)
+				if err != nil {
+					t.Errorf("玩家 %s 创建签名metadata失败: %v", player.Username, err)
+					stats.Errors++
+					continue
+				}
+
 				writeReq := &api.WriteTournamentRecordRequest{
 					TournamentId: tournamentID,
 					Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
 						Score:    score,
 						Subscore: 0,
-						Metadata: fmt.Sprintf(`{"attempt": %d, "timestamp": "%s"}`,
-							scoreIndex+1, time.Now().Format(time.RFC3339)),
+						Metadata: signedMetadata,
 						Operator: api.Operator_BEST,
 					},
 				}
@@ -332,7 +372,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 				stats.ScoresSubmitted++
 
-				t.Logf("✓ 玩家 %s 提交成绩 %d (尝试 %d/3) 到竞标赛 %s",
+				t.Logf("✓ 玩家 %s 提交成绩 %d (尝试 %d/3) 到竞标赛 %s (已签名)",
 					player.Username, score, scoreIndex+1, tournamentID)
 
 				// 显示成绩记录详情
@@ -581,13 +621,25 @@ func TestRealAPIChallenge10Players(t *testing.T) {
 
 		// 提交每个成绩
 		for scoreIndex, score := range player.Scores {
+			// 创建包含签名的metadata
+			metadataFields := map[string]interface{}{
+				"attempt":   scoreIndex + 1,
+				"player":    player.Username,
+				"timestamp": time.Now().Format(time.RFC3339),
+			}
+
+			signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
+			if err != nil {
+				t.Errorf("玩家 %s 创建签名metadata失败: %v", player.Username, err)
+				continue
+			}
+
 			writeReq := &api.WriteTournamentRecordRequest{
 				TournamentId: player.TournamentID,
 				Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
 					Score:    score,
 					Subscore: 0,
-					Metadata: fmt.Sprintf(`{"attempt": %d, "player": "%s", "timestamp": "%s"}`,
-						scoreIndex+1, player.Username, time.Now().Format(time.RFC3339)),
+					Metadata: signedMetadata,
 					Operator: api.Operator_BEST,
 				},
 			}
@@ -599,7 +651,7 @@ func TestRealAPIChallenge10Players(t *testing.T) {
 				continue
 			}
 
-			t.Logf("✓ 玩家 %s 提交成绩成功:", player.Username)
+			t.Logf("✓ 玩家 %s 提交成绩成功 (已签名):", player.Username)
 			t.Logf("  - 尝试次数: %d/3", scoreIndex+1)
 			t.Logf("  - 提交分数: %d", score)
 			t.Logf("  - 用户名: %s", recordResp.Username)
@@ -808,18 +860,31 @@ func TestRealAPIChallenge100PlayersSimple(t *testing.T) {
 			}
 
 			for _, score := range scores {
+				// 创建包含签名的metadata
+				metadataFields := map[string]interface{}{
+					"player":  player.Username,
+					"attempt": player.ScoresSubmitted + 1,
+				}
+
+				signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
+				if err != nil {
+					t.Logf("玩家 %s 创建签名metadata失败: %v", player.Username, err)
+					stats.Errors++
+					continue
+				}
+
 				writeReq := &api.WriteTournamentRecordRequest{
 					TournamentId: player.TournamentID,
 					Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
 						Score:    score,
 						Subscore: 0,
-						Metadata: fmt.Sprintf(`{"player": "%s", "attempt": %d}`, player.Username, player.ScoresSubmitted+1),
+						Metadata: signedMetadata,
 						Operator: api.Operator_BEST,
 					},
 				}
 
 				// 调用提交成绩API
-				_, err := client.WriteTournamentRecord(player.Context, writeReq)
+				_, err = client.WriteTournamentRecord(player.Context, writeReq)
 				if err != nil {
 					t.Logf("玩家 %s 提交成绩失败: %v", player.Username, err)
 					stats.Errors++
@@ -1163,13 +1228,26 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 		}
 
 		for attemptNum, score := range scores {
+			// 创建包含签名的metadata
+			metadataFields := map[string]interface{}{
+				"player_id": player.ID,
+				"attempt":   attemptNum + 1,
+				"timestamp": time.Now().Format(time.RFC3339),
+			}
+
+			signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
+			if err != nil {
+				t.Logf("✗ 玩家[%d] 创建签名metadata失败: %v", player.ID, err)
+				scoreSubmissionStats.SubmissionFailure++
+				continue
+			}
+
 			writeReq := &api.WriteTournamentRecordRequest{
 				TournamentId: player.TournamentID,
 				Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
 					Score:    score,
 					Subscore: 0,
-					Metadata: fmt.Sprintf(`{"player_id": %d, "attempt": %d, "timestamp": "%s"}`,
-						player.ID, attemptNum+1, time.Now().Format(time.RFC3339)),
+					Metadata: signedMetadata,
 					Operator: api.Operator_BEST,
 				},
 			}
@@ -1182,7 +1260,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 			} else {
 				scoreSubmissionStats.SubmissionSuccess++
 				scoreSubmissionStats.TotalScores++
-				t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d)",
+				t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d, 已签名)",
 					player.ID, recordResp.Score, recordResp.Rank)
 			}
 

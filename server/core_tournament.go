@@ -631,6 +631,11 @@ func TournamentRecordWrite(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 	// Enrich the return record with rank data.
 	record.Rank = rankCache.Insert(leaderboard.Id, leaderboard.SortOrder, record.Score, record.Subscore, dbNumScore, expiryUnix, ownerId, leaderboard.EnableRanks)
 
+	// 如果score和subscore都为0，则rank也为0
+	if record.Score == 0 && record.Subscore == 0 {
+		record.Rank = 0
+	}
+
 	return record, nil
 }
 

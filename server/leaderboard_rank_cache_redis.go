@@ -294,15 +294,54 @@ func (r *RedisLeaderboardRankCache) Get(leaderboardID string, expiryUnix int64, 
 		return rank
 	}
 
-	// 从Redis获取排名
+	// 从Redis获取排名和分数
 	redisKey := r.getRedisKey(leaderboardID, expiryUnix)
 	member := r.formatMember(ownerID)
 
-	rank, err := r.client.ZRevRank(r.ctx, redisKey, member).Result()
+	// 使用管道同时获取排名和分数
+	pipe := r.client.Pipeline()
+	rankCmd := pipe.ZRevRank(r.ctx, redisKey, member)
+	scoreCmd := pipe.ZScore(r.ctx, redisKey, member)
+	_, err := pipe.Exec(r.ctx)
+
 	if err != nil {
 		if err != redis.Nil {
 			r.logger.Error("Error getting rank from Redis", zap.Error(err))
 		}
+		return 0
+	}
+
+	rank, err := rankCmd.Result()
+	if err != nil {
+		if err != redis.Nil {
+			r.logger.Error("Error getting rank from Redis", zap.Error(err))
+		}
+		return 0
+	}
+
+	// 获取分数并解析score和subscore
+	sortScore, err := scoreCmd.Result()
+	if err != nil {
+		if err != redis.Nil {
+			r.logger.Error("Error getting score from Redis", zap.Error(err))
+		}
+		return 0
+	}
+
+	// 从排序分数中解析出原始的score和subscore
+	var score, subscore int64
+	if sortScore >= 0 {
+		// 降序排列
+		score = int64(sortScore / 1e9)
+		subscore = int64(sortScore) % int64(1e9)
+	} else {
+		// 升序排列
+		score = int64(-sortScore / 1e9)
+		subscore = int64(-sortScore) % int64(1e9)
+	}
+
+	// 如果score和subscore都为0，则rank也为0
+	if score == 0 && subscore == 0 {
 		return 0
 	}
 
@@ -400,6 +439,11 @@ func (r *RedisLeaderboardRankCache) Fill(leaderboardID string, expiryUnix int64,
 			rank, err := rankCmds[i].Result()
 			if err == nil {
 				record.Rank = rank + 1 // 转换为从1开始
+
+				// 如果score和subscore都为0，则rank也为0
+				if record.Score == 0 && record.Subscore == 0 {
+					record.Rank = 0
+				}
 			}
 		}
 	}
@@ -487,6 +531,11 @@ func (r *RedisLeaderboardRankCache) Insert(leaderboardID string, sortOrder int, 
 		Timestamp:  time.Now().Unix(),
 	}
 	r.publishMessage(leaderboardID, expiryUnix, ownerID, "insert", data)
+
+	// 如果score和subscore都为0，则rank也为0
+	if score == 0 && subscore == 0 {
+		return 0
+	}
 
 	return rank
 }

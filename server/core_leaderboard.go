@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -194,6 +195,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		var dbUpdateTime pgtype.Timestamptz
 		for rows.Next() {
 			if len(records) >= limitNumber {
+				// 如果score和subscore都为0，则rank也为0（用于cursor）
+				cursorRank := rank
+				if dbScore == 0 && dbSubscore == 0 {
+					cursorRank = 0
+				}
+
 				nextCursor = &leaderboardRecordListCursor{
 					IsNext:        true,
 					LeaderboardId: leaderboardId,
@@ -201,7 +208,7 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 					Score:         dbScore,
 					Subscore:      dbSubscore,
 					OwnerId:       dbOwnerID,
-					Rank:          rank,
+					Rank:          cursorRank,
 				}
 				break
 			}
@@ -219,6 +226,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 				rank++
 			}
 
+			// 如果score和subscore都为0，则rank也为0
+			finalRank := rank
+			if dbScore == 0 && dbSubscore == 0 {
+				finalRank = 0
+			}
+
 			record := &api.LeaderboardRecord{
 				LeaderboardId: leaderboardId,
 				OwnerId:       dbOwnerID,
@@ -229,7 +242,7 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 				Metadata:      dbMetadata,
 				CreateTime:    &timestamppb.Timestamp{Seconds: dbCreateTime.Time.Unix()},
 				UpdateTime:    &timestamppb.Timestamp{Seconds: dbUpdateTime.Time.Unix()},
-				Rank:          rank,
+				Rank:          finalRank,
 			}
 			if dbUsername.Valid {
 				record.Username = &wrapperspb.StringValue{Value: dbUsername.String}
@@ -242,6 +255,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 			// There can only be a previous page if this is a paginated listing.
 			if incomingCursor != nil && prevCursor == nil {
+				// 如果score和subscore都为0，则rank也为0（用于cursor）
+				cursorRank := rank
+				if dbScore == 0 && dbSubscore == 0 {
+					cursorRank = 0
+				}
+
 				prevCursor = &leaderboardRecordListCursor{
 					IsNext:        false,
 					LeaderboardId: leaderboardId,
@@ -249,7 +268,7 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 					Score:         dbScore,
 					Subscore:      dbSubscore,
 					OwnerId:       dbOwnerID,
-					Rank:          rank,
+					Rank:          cursorRank,
 				}
 			}
 		}
@@ -388,6 +407,18 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 			logger.Info("排名缓存重建完成",
 				zap.String("leaderboard_id", leaderboardId),
 				zap.Int64("rank_count", rankCount))
+		}
+	} else {
+		// 查询缓存成功
+		logger.Info("查询缓存成功",
+			zap.String("leaderboard_id", leaderboardId),
+			zap.Int64("rank_count", rankCount))
+	}
+
+	// 对于score和subscore都为0的记录，将rank设置为0
+	for _, record := range ownerRecords {
+		if record.Score == 0 && record.Subscore == 0 {
+			record.Rank = 0
 		}
 	}
 
@@ -575,6 +606,11 @@ func LeaderboardRecordWrite(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	} else {
 		// Ensure we have the latest dbscore, dbsubscore if there was an update.
 		rank = rankCache.Insert(leaderboardId, leaderboard.SortOrder, dbScore, dbSubscore, dbNumScore, expiryTime, uuid.Must(uuid.FromString(ownerID)), leaderboard.EnableRanks)
+	}
+
+	// 如果score和subscore都为0，则rank也为0
+	if dbScore == 0 && dbSubscore == 0 {
+		rank = 0
 	}
 
 	record := &api.LeaderboardRecord{
@@ -885,6 +921,13 @@ func getLeaderboardRecordsHaystack(ctx context.Context, logger *zap.Logger, db *
 		}
 		rankCount := rankCache.Fill(leaderboardId, expiryTime.Unix(), records, l.EnableRanks)
 
+		// 对于score和subscore都为0的记录，将rank设置为0
+		for _, record := range records {
+			if record.Score == 0 && record.Subscore == 0 {
+				record.Rank = 0
+			}
+		}
+
 		var prevCursorStr string
 		if setPrevCursor {
 			record := records[0]
@@ -1023,8 +1066,8 @@ func disableLeaderboardRanks(ctx context.Context, logger *zap.Logger, db *sql.DB
 // rebuildRankCache 重建指定比赛的排名缓存
 func rebuildRankCache(ctx context.Context, logger *zap.Logger, db *sql.DB, rankCache LeaderboardRankCache, leaderboard *Leaderboard, expiryTime int64) error {
 	// 查询该比赛的所有记录
-	query := `SELECT owner_id, score, subscore, num_score 
-FROM leaderboard_record 
+	query := `SELECT owner_id, score, subscore, num_score
+FROM leaderboard_record
 WHERE leaderboard_id = $1 AND expiry_time = $2`
 
 	rows, err := db.QueryContext(ctx, query, leaderboard.Id, time.Unix(expiryTime, 0).UTC())
@@ -1060,6 +1103,69 @@ WHERE leaderboard_id = $1 AND expiry_time = $2`
 	logger.Info("排名缓存重建完成",
 		zap.String("leaderboard_id", leaderboard.Id),
 		zap.Int("inserted_records", insertCount))
+
+	return nil
+}
+
+// fillRanksFromDatabase 使用数据库查询填充排名信息（兜底方案）
+func fillRanksFromDatabase(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboard *Leaderboard, expiryTime int64, ownerRecords []*api.LeaderboardRecord) error {
+	if len(ownerRecords) == 0 {
+		return nil
+	}
+
+	// 构建owner ID列表
+	ownerIDs := make([]string, len(ownerRecords))
+	for i, record := range ownerRecords {
+		ownerIDs[i] = record.OwnerId
+	}
+
+	// 构建排名查询SQL
+	var orderBy string
+	if leaderboard.SortOrder == LeaderboardSortOrderAscending {
+		orderBy = "ORDER BY score ASC, subscore ASC, owner_id ASC"
+	} else {
+		orderBy = "ORDER BY score DESC, subscore DESC, owner_id DESC"
+	}
+
+	query := fmt.Sprintf(`
+WITH ranked_records AS (
+	SELECT owner_id,
+		   ROW_NUMBER() OVER (%s) as rank
+	FROM leaderboard_record
+	WHERE leaderboard_id = $1 AND expiry_time = $2
+)
+SELECT owner_id, rank
+FROM ranked_records
+WHERE owner_id = ANY($3)`, orderBy)
+
+	rows, err := db.QueryContext(ctx, query, leaderboard.Id, time.Unix(expiryTime, 0).UTC(), ownerIDs)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// 创建owner ID到排名的映射
+	rankMap := make(map[string]int64)
+	for rows.Next() {
+		var ownerID string
+		var rank int64
+		if err := rows.Scan(&ownerID, &rank); err != nil {
+			continue
+		}
+		rankMap[ownerID] = rank
+	}
+
+	// 应用排名到记录
+	for _, record := range ownerRecords {
+		if rank, ok := rankMap[record.OwnerId]; ok {
+			// 如果score和subscore都为0，则rank也为0
+			if record.Score == 0 && record.Subscore == 0 {
+				record.Rank = 0
+			} else {
+				record.Rank = rank
+			}
+		}
+	}
 
 	return nil
 }

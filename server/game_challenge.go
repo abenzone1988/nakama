@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"strings"
 	"time"
 
@@ -12,8 +14,6 @@ import (
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -35,8 +35,11 @@ type ChallengeStatus struct {
 	ID              int32     `json:"id"`
 	TournamentID    string    `json:"tournament_id"`
 	ActivityID      string    `json:"activity_id"`
-	JoinedAt        time.Time `json:"joined_at"`
-	OverAt          time.Time `json:"over_at"`
+	Joined          time.Time `json:"joined"`
+	Open            time.Time `json:"open"`
+	Close           time.Time `json:"close"`
+	End             time.Time `json:"end"`
+	Over            time.Time `json:"over"`
 	RankReward      bool      `json:"rank_reward"`       // 排名奖励是否已领取
 	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
 	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
@@ -122,7 +125,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		}
 
 		// 判断挑战赛状态 以overtime
-		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime.Add(time.Duration(tplChallenge.RewardRemains)*time.Minute))
+		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
 		isFuture := startTime.After(now)
 
 		allChallenges = append(allChallenges, challengeInfo{
@@ -188,11 +191,19 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 	// 转换用户已参与的挑战赛状态为JoinChallengeStatus数组
 	joinedChallenges := make([]*game.JoinChallengeStatus, 0, len(userMatch.Challenges))
 	for _, challengeStatus := range userMatch.Challenges {
+		if challengeStatus.Over.Before(now) { //已经结束的比赛不再显示
+			continue
+		}
+
 		joinedStatus := &game.JoinChallengeStatus{
 			Id:              challengeStatus.ID,
 			TournamentId:    challengeStatus.TournamentID,
 			ActivityId:      challengeStatus.ActivityID,
-			JoinedAt:        timestamppb.New(challengeStatus.JoinedAt),
+			Joined:          timestamppb.New(challengeStatus.Joined),
+			Open:            timestamppb.New(challengeStatus.Open),
+			Close:           timestamppb.New(challengeStatus.Close),
+			End:             timestamppb.New(challengeStatus.End),
+			Over:            timestamppb.New(challengeStatus.Over),
 			RankReward:      challengeStatus.RankReward,
 			LowScoreReward:  challengeStatus.LowScoreReward,
 			MidScoreReward:  challengeStatus.MidScoreReward,
@@ -289,7 +300,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 	// 获取或分配玩家的竞标赛ID
-	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, endTime, now)
+	tournamentID, err := s.getOrAssignPlayerTournament(ctx, userID, &tplChallenge, startTime, overTime, now)
 	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
@@ -306,8 +317,11 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		ID:              tplChallenge.ID,
 		ActivityID:      tplChallenge.ActivityID,
 		TournamentID:    tournamentID,
-		JoinedAt:        now.Truncate(time.Second),
-		OverAt:          overTime.Truncate(time.Second),
+		Joined:          now.Truncate(time.Second),
+		Open:            startTime.Truncate(time.Second),
+		Close:           closeTime.Truncate(time.Second),
+		End:             endTime.Truncate(time.Second),
+		Over:            overTime.Truncate(time.Second),
 		HighScoreReward: false,
 		LowScoreReward:  false,
 		MidScoreReward:  false,
@@ -334,6 +348,139 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		},
 	}, nil
 
+}
+
+func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error) {
+	// 获取用户ID
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	userMatch := &UserMatch{}
+	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
+	if err != nil {
+		return nil, err
+	}
+
+	challengeData, exists := userMatch.Challenges[in.ChallengeId]
+	if !exists || challengeData == nil {
+		return &game.GainChallengeRewardResponse{
+			Code: 1,
+			Msg:  "没有参加挑战赛",
+		}, nil
+	}
+
+	tplChallenge, found := s.template.GetTplChallenge().FindByKey(in.ChallengeId)
+	if !found {
+		return nil, status.Error(codes.InvalidArgument, "挑战赛不存在")
+	}
+
+	tournamentID := userMatch.Challenges[in.ChallengeId].TournamentID
+	records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, tournamentID, []string{userID.String()}, nil, "", 0)
+	if err != nil || len(records.OwnerRecords) == 0 {
+		return &game.GainChallengeRewardResponse{
+			Code: 5,
+			Msg:  "没有提交成绩",
+		}, nil
+	}
+
+	ownerRecord := records.OwnerRecords[0]
+
+	activityInfo, found := s.template.GetTplActivityInfo().FindByKey(tplChallenge.ActivityID)
+	if !found {
+		return nil, status.Error(codes.InvalidArgument, "活动不存在")
+	}
+
+	var rewards []*game.Reward
+	var rewardIds []string
+	var rewardTypes []string
+
+	if in.RankReward {
+		// 处理排名奖励
+		if challengeData.RankReward {
+			return &game.GainChallengeRewardResponse{
+				Code: 7,
+				Msg:  "排名奖励已领取",
+			}, nil
+		}
+
+		// 获取排名奖励配置
+		acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
+			return acReward.ActiveID == challengeData.ActivityID
+		})
+
+		rewardId := ""
+		for _, acReward := range acRewards {
+			if int64(acReward.MinRank) <= ownerRecord.Rank && int64(acReward.MaxRank) >= ownerRecord.Rank {
+				rewardId = acReward.RewardID
+				break
+			}
+		}
+
+		if rewardId == "" {
+			return &game.GainChallengeRewardResponse{
+				Code: 8,
+				Msg:  "排名奖励不存在",
+			}, nil
+		}
+
+		rewardIds = []string{rewardId}
+		rewardTypes = []string{"rank"}
+
+		// 解析排名奖励
+		rewards, err = ParseRewards(s.logger, s.template.GetTplReward(), rewardIds)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("解析排名奖励失败: %v", err))
+		}
+
+		// 设置排名奖励为已领取
+		challengeData.RankReward = true
+
+		s.logger.Info("主动领取挑战赛排名奖励",
+			zap.Int32("challenge_id", in.ChallengeId),
+			zap.String("user_id", userID.String()),
+			zap.String("reward_id", rewardId),
+			zap.Strings("reward_types", rewardTypes),
+			zap.Int32("rank", int32(ownerRecord.Rank)))
+
+	} else {
+		// 处理积分奖励
+		scoreResult := s.checkScoreRewards(challengeData, ownerRecord, &activityInfo)
+		if !scoreResult.HasNewReward {
+			return &game.GainChallengeRewardResponse{
+				Code: 6,
+				Msg:  "没有可领取的积分奖励",
+			}, nil
+		}
+
+		// 应用积分奖励状态更新
+		s.applyScoreRewards(challengeData, scoreResult)
+
+		rewardIds = scoreResult.RewardIds
+		rewardTypes = scoreResult.RewardTypes
+
+		// 解析积分奖励
+		rewards, err = ParseRewards(s.logger, s.template.GetTplReward(), rewardIds)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("解析积分奖励失败: %v", err))
+		}
+
+		s.logger.Info("主动领取挑战赛积分奖励",
+			zap.Int32("challenge_id", in.ChallengeId),
+			zap.String("user_id", userID.String()),
+			zap.Strings("reward_ids", rewardIds),
+			zap.Strings("reward_types", rewardTypes),
+			zap.Int32("rank", int32(ownerRecord.Rank)))
+	}
+
+	// 保存奖励状态更新
+	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+	if err != nil {
+		return nil, err
+	}
+
+	return &game.GainChallengeRewardResponse{
+		Code:   0,
+		Msg:    "领取奖励成功",
+		Reward: rewards,
+	}, nil
 }
 
 // ScoreRewardResult 积分奖励检查结果
@@ -424,7 +571,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 	hasRewardUpdate := false
 
 	for _, challenge := range userMatch.Challenges {
-		if challenge.TournamentID != "" && now.After(challenge.OverAt) {
+		if challenge.TournamentID != "" && now.After(challenge.Over) {
 			// 获取用户在竞标赛中的记录
 			records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
 			if err != nil || len(records.OwnerRecords) == 0 {
@@ -589,139 +736,6 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 		zap.Int("rewards_count", len(rewards)))
 
 	return true, nil
-}
-
-func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error) {
-	// 获取用户ID
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-	userMatch := &UserMatch{}
-	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
-	if err != nil {
-		return nil, err
-	}
-
-	challengeData, exists := userMatch.Challenges[in.ChallengeId]
-	if !exists || challengeData == nil {
-		return &game.GainChallengeRewardResponse{
-			Code: 1,
-			Msg:  "没有参加挑战赛",
-		}, nil
-	}
-
-	tplChallenge, found := s.template.GetTplChallenge().FindByKey(in.ChallengeId)
-	if !found {
-		return nil, status.Error(codes.InvalidArgument, "挑战赛不存在")
-	}
-
-	tournamentID := userMatch.Challenges[in.ChallengeId].TournamentID
-	records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, tournamentID, []string{userID.String()}, nil, "", 0)
-	if err != nil || len(records.OwnerRecords) == 0 {
-		return &game.GainChallengeRewardResponse{
-			Code: 5,
-			Msg:  "没有提交成绩",
-		}, nil
-	}
-
-	ownerRecord := records.OwnerRecords[0]
-
-	activityInfo, found := s.template.GetTplActivityInfo().FindByKey(tplChallenge.ActivityID)
-	if !found {
-		return nil, status.Error(codes.InvalidArgument, "活动不存在")
-	}
-
-	var rewards []*game.Reward
-	var rewardIds []string
-	var rewardTypes []string
-
-	if in.RankReward {
-		// 处理排名奖励
-		if challengeData.RankReward {
-			return &game.GainChallengeRewardResponse{
-				Code: 7,
-				Msg:  "排名奖励已领取",
-			}, nil
-		}
-
-		// 获取排名奖励配置
-		acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
-			return acReward.ActiveID == challengeData.ActivityID
-		})
-
-		rewardId := ""
-		for _, acReward := range acRewards {
-			if int64(acReward.MinRank) <= ownerRecord.Rank && int64(acReward.MaxRank) >= ownerRecord.Rank {
-				rewardId = acReward.RewardID
-				break
-			}
-		}
-
-		if rewardId == "" {
-			return &game.GainChallengeRewardResponse{
-				Code: 8,
-				Msg:  "排名奖励不存在",
-			}, nil
-		}
-
-		rewardIds = []string{rewardId}
-		rewardTypes = []string{"rank"}
-
-		// 解析排名奖励
-		rewards, err = ParseRewards(s.logger, s.template.GetTplReward(), rewardIds)
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("解析排名奖励失败: %v", err))
-		}
-
-		// 设置排名奖励为已领取
-		challengeData.RankReward = true
-
-		s.logger.Info("主动领取挑战赛排名奖励",
-			zap.Int32("challenge_id", in.ChallengeId),
-			zap.String("user_id", userID.String()),
-			zap.String("reward_id", rewardId),
-			zap.Strings("reward_types", rewardTypes),
-			zap.Int32("rank", int32(ownerRecord.Rank)))
-
-	} else {
-		// 处理积分奖励
-		scoreResult := s.checkScoreRewards(challengeData, ownerRecord, &activityInfo)
-		if !scoreResult.HasNewReward {
-			return &game.GainChallengeRewardResponse{
-				Code: 6,
-				Msg:  "没有可领取的积分奖励",
-			}, nil
-		}
-
-		// 应用积分奖励状态更新
-		s.applyScoreRewards(challengeData, scoreResult)
-
-		rewardIds = scoreResult.RewardIds
-		rewardTypes = scoreResult.RewardTypes
-
-		// 解析积分奖励
-		rewards, err = ParseRewards(s.logger, s.template.GetTplReward(), rewardIds)
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("解析积分奖励失败: %v", err))
-		}
-
-		s.logger.Info("主动领取挑战赛积分奖励",
-			zap.Int32("challenge_id", in.ChallengeId),
-			zap.String("user_id", userID.String()),
-			zap.Strings("reward_ids", rewardIds),
-			zap.Strings("reward_types", rewardTypes),
-			zap.Int32("rank", int32(ownerRecord.Rank)))
-	}
-
-	// 保存奖励状态更新
-	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
-	if err != nil {
-		return nil, err
-	}
-
-	return &game.GainChallengeRewardResponse{
-		Code:   0,
-		Msg:    "领取奖励成功",
-		Reward: rewards,
-	}, nil
 }
 
 // getOrAssignPlayerTournament 获取或分配玩家的竞标赛ID

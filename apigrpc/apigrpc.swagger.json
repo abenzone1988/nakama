@@ -6604,7 +6604,7 @@
         "activityId": {
           "type": "string"
         },
-        "joinedAt": {
+        "joined": {
           "type": "string",
           "format": "date-time"
         },
@@ -6619,6 +6619,22 @@
         },
         "highScoreReward": {
           "type": "boolean"
+        },
+        "over": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "open": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "close": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
