@@ -79,9 +79,17 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 	// 获取当前时间
 	now := time.Now()
 
-	// 转换 TplChallenge 数组为 game.Challenge 数组，并进行时间过滤
-	challenges := make([]*game.Challenge, 0, len(tplChallenges))
+	// 首先解析所有挑战赛的时间信息
+	type challengeInfo struct {
+		TplChallenge *template.TplChallenge
+		StartTime    time.Time
+		EndTime      time.Time
+		CloseTime    time.Time
+		IsOngoing    bool
+		IsFuture     bool
+	}
 
+	var allChallenges []challengeInfo
 	for _, tplChallenge := range tplChallenges {
 		// 解析开始时间
 		startTime, err := parseDateTime(tplChallenge.OpenTime)
@@ -93,7 +101,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			continue
 		}
 
-		// 解析开始时间
+		// 解析关闭时间
 		closeTime, err := parseDateTime(tplChallenge.CloseTime)
 		if err != nil {
 			s.logger.Error("解析挑战赛关闭时间失败",
@@ -113,10 +121,49 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			continue
 		}
 
-		// 时间过滤逻辑
-		if !shouldShowChallenge(now, startTime, endTime, tplChallenge.RewardRemains) {
-			continue
+		// 判断挑战赛状态 以overtime
+		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime.Add(time.Duration(tplChallenge.RewardRemains)*time.Minute))
+		isFuture := startTime.After(now)
+
+		allChallenges = append(allChallenges, challengeInfo{
+			TplChallenge: &tplChallenge,
+			StartTime:    startTime,
+			EndTime:      endTime,
+			CloseTime:    closeTime,
+			IsOngoing:    isOngoing,
+			IsFuture:     isFuture,
+		})
+	}
+
+	// 筛选要显示的挑战赛：正在进行的比赛 + 下一场比赛
+	var selectedChallenges []challengeInfo
+
+	// 1. 添加所有正在进行的比赛
+	for _, challenge := range allChallenges {
+		if challenge.IsOngoing {
+			selectedChallenges = append(selectedChallenges, challenge)
 		}
+	}
+
+	// 2. 找到下一场比赛（最早的未来比赛）
+	var nextChallenge *challengeInfo
+	for _, challenge := range allChallenges {
+		if challenge.IsFuture {
+			if nextChallenge == nil || challenge.StartTime.Before(nextChallenge.StartTime) {
+				nextChallenge = &challenge
+			}
+		}
+	}
+
+	// 添加下一场比赛（如果存在）
+	if nextChallenge != nil {
+		selectedChallenges = append(selectedChallenges, *nextChallenge)
+	}
+
+	// 转换为 game.Challenge 数组
+	challenges := make([]*game.Challenge, 0, len(selectedChallenges))
+	for _, challengeInfo := range selectedChallenges {
+		tplChallenge := challengeInfo.TplChallenge
 
 		// 获取用户挑战赛状态中的竞标赛ID
 		var tournamentID string
@@ -127,10 +174,10 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		challenge := &game.Challenge{
 			Id:           tplChallenge.ID,
 			ActivityId:   tplChallenge.ActivityID,
-			Open:         timestamppb.New(startTime),
-			Close:        timestamppb.New(closeTime),
-			End:          timestamppb.New(endTime),
-			Over:         timestamppb.New(endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)),
+			Open:         timestamppb.New(challengeInfo.StartTime),
+			Close:        timestamppb.New(challengeInfo.CloseTime),
+			End:          timestamppb.New(challengeInfo.EndTime),
+			Over:         timestamppb.New(challengeInfo.EndTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)),
 			MaxPart:      tplChallenge.MaxPart,
 			TournamentId: tournamentID,
 		}
@@ -153,10 +200,14 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		}
 		joinedChallenges = append(joinedChallenges, joinedStatus)
 	}
-
+	err, getReward := s.checkAndSendExpiredChallengeRewardsForGetAccount(ctx)
+	if err != nil {
+		s.logger.Error("检查过期挑战赛奖励失败", zap.Error(err))
+	}
 	return &game.GetChallengeResponse{
 		Challenges: challenges,
 		Joined:     joinedChallenges,
+		GetReward:  getReward,
 	}, nil
 }
 
@@ -226,8 +277,9 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		}, nil
 	}
 
-	// 时间过滤逻辑
-	if !shouldShowChallenge(now, startTime, endTime, tplChallenge.RewardRemains) {
+	// 时间过滤逻辑：只允许参加正在进行的比赛
+	isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
+	if !isOngoing {
 		return &game.JoinChallengeResponse{
 			Code: 4,
 			Msg:  "挑战赛未开放或已结束",
@@ -331,8 +383,8 @@ func (s *ApiServer) applyScoreRewards(challengeData *ChallengeStatus, scoreResul
 	}
 }
 
-// checkAndSendExpiredChallengeRewardsForGetAccount 为GetAccount方法检查过期挑战赛奖励
-func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context.Context) error {
+// 检查过期挑战赛奖励
+func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context.Context) (error, bool) {
 	// 获取用户ID
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
@@ -342,7 +394,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context
 	if err != nil {
 		// 如果加载失败，记录日志但不返回错误，避免影响GetAccount的正常流程
 		s.logger.Debug("加载用户挑战赛数据失败", zap.String("user_id", userID.String()), zap.Error(err))
-		return nil
+		return nil, false
 	}
 
 	// 获取当前时间
@@ -352,7 +404,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context
 	hasRewardUpdate, err := s.checkAndSendExpiredChallengeRewards(ctx, userID, userMatch, now)
 	if err != nil {
 		s.logger.Error("检查过期挑战赛奖励失败", zap.String("user_id", userID.String()), zap.Error(err))
-		return err
+		return err, false
 	}
 
 	// 如果有奖励更新，保存数据
@@ -360,11 +412,11 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context
 		err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
 		if err != nil {
 			s.logger.Error("保存挑战赛状态失败", zap.String("user_id", userID.String()), zap.Error(err))
-			return err
+			return err, false
 		}
 	}
 
-	return nil
+	return nil, hasRewardUpdate
 }
 
 // checkAndSendExpiredChallengeRewards 检查活动结束后是否有奖励没有领取，没有领取的变成邮件
@@ -577,22 +629,86 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 		return nil, status.Error(codes.InvalidArgument, "活动不存在")
 	}
 
-	// 使用公共逻辑检查积分奖励
-	scoreResult := s.checkScoreRewards(challengeData, ownerRecord, &activityInfo)
-	if !scoreResult.HasNewReward {
-		return &game.GainChallengeRewardResponse{
-			Code: 6,
-			Msg:  "没有可领取的奖励",
-		}, nil
-	}
+	var rewards []*game.Reward
+	var rewardIds []string
+	var rewardTypes []string
 
-	// 应用积分奖励状态更新
-	s.applyScoreRewards(challengeData, scoreResult)
+	if in.RankReward {
+		// 处理排名奖励
+		if challengeData.RankReward {
+			return &game.GainChallengeRewardResponse{
+				Code: 7,
+				Msg:  "排名奖励已领取",
+			}, nil
+		}
 
-	// 解析奖励并直接返回（主动领取不发送通知）
-	rewards, err := ParseRewards(s.logger, s.template.GetTplReward(), scoreResult.RewardIds)
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("解析奖励失败: %v", err))
+		// 获取排名奖励配置
+		acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
+			return acReward.ActiveID == challengeData.ActivityID
+		})
+
+		rewardId := ""
+		for _, acReward := range acRewards {
+			if int64(acReward.MinRank) <= ownerRecord.Rank && int64(acReward.MaxRank) >= ownerRecord.Rank {
+				rewardId = acReward.RewardID
+				break
+			}
+		}
+
+		if rewardId == "" {
+			return &game.GainChallengeRewardResponse{
+				Code: 8,
+				Msg:  "排名奖励不存在",
+			}, nil
+		}
+
+		rewardIds = []string{rewardId}
+		rewardTypes = []string{"rank"}
+
+		// 解析排名奖励
+		rewards, err = ParseRewards(s.logger, s.template.GetTplReward(), rewardIds)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("解析排名奖励失败: %v", err))
+		}
+
+		// 设置排名奖励为已领取
+		challengeData.RankReward = true
+
+		s.logger.Info("主动领取挑战赛排名奖励",
+			zap.Int32("challenge_id", in.ChallengeId),
+			zap.String("user_id", userID.String()),
+			zap.String("reward_id", rewardId),
+			zap.Strings("reward_types", rewardTypes),
+			zap.Int32("rank", int32(ownerRecord.Rank)))
+
+	} else {
+		// 处理积分奖励
+		scoreResult := s.checkScoreRewards(challengeData, ownerRecord, &activityInfo)
+		if !scoreResult.HasNewReward {
+			return &game.GainChallengeRewardResponse{
+				Code: 6,
+				Msg:  "没有可领取的积分奖励",
+			}, nil
+		}
+
+		// 应用积分奖励状态更新
+		s.applyScoreRewards(challengeData, scoreResult)
+
+		rewardIds = scoreResult.RewardIds
+		rewardTypes = scoreResult.RewardTypes
+
+		// 解析积分奖励
+		rewards, err = ParseRewards(s.logger, s.template.GetTplReward(), rewardIds)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("解析积分奖励失败: %v", err))
+		}
+
+		s.logger.Info("主动领取挑战赛积分奖励",
+			zap.Int32("challenge_id", in.ChallengeId),
+			zap.String("user_id", userID.String()),
+			zap.Strings("reward_ids", rewardIds),
+			zap.Strings("reward_types", rewardTypes),
+			zap.Int32("rank", int32(ownerRecord.Rank)))
 	}
 
 	// 保存奖励状态更新
@@ -600,13 +716,6 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 	if err != nil {
 		return nil, err
 	}
-
-	s.logger.Info("主动领取挑战赛奖励",
-		zap.Int32("challenge_id", in.ChallengeId),
-		zap.String("user_id", userID.String()),
-		zap.Strings("reward_ids", scoreResult.RewardIds),
-		zap.Strings("reward_types", scoreResult.RewardTypes),
-		zap.Int32("rank", int32(ownerRecord.Rank)))
 
 	return &game.GainChallengeRewardResponse{
 		Code:   0,
@@ -917,6 +1026,8 @@ func shouldJoinChallenge(now, startTime, endTime time.Time, rewardRemains int32)
 }
 
 // shouldShowChallenge 判断是否应该显示该挑战赛
+// 注意：此函数主要用于测试，实际业务逻辑在GetChallenge中实现
+// 实际的显示逻辑是：所有正在进行的比赛 + 下一场比赛
 func shouldShowChallenge(now, startTime, endTime time.Time, rewardRemains int32) bool {
 	// 条件1：正在进行中的比赛（已开始但未结束）
 	if startTime.Before(now) || startTime.Equal(now) {

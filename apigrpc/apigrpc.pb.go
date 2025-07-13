@@ -57,7 +57,7 @@ var file_apigrpc_proto_rawDesc = string([]byte{
 	0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61,
 	0x6b, 0x61, 0x6d, 0x61, 0x2d, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x61, 0x70, 0x69, 0x2f,
 	0x61, 0x70, 0x69, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x09, 0x6d, 0x73, 0x67, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x32, 0x99, 0x60, 0x0a, 0x06, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x12,
+	0x72, 0x6f, 0x74, 0x6f, 0x32, 0xde, 0x61, 0x0a, 0x06, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x12,
 	0x57, 0x0a, 0x0a, 0x41, 0x64, 0x64, 0x46, 0x72, 0x69, 0x65, 0x6e, 0x64, 0x73, 0x12, 0x1d, 0x2e,
 	0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x41, 0x64, 0x64, 0x46, 0x72,
 	0x69, 0x65, 0x6e, 0x64, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67,
@@ -806,56 +806,68 @@ var file_apigrpc_proto_rawDesc = string([]byte{
 	0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
 	0x1e, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x18, 0x3a, 0x01, 0x2a, 0x22, 0x13, 0x2f, 0x76, 0x32, 0x2f,
 	0x67, 0x61, 0x6d, 0x65, 0x2f, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x2f, 0x67, 0x65, 0x74, 0x12,
-	0x5f, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x12,
-	0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
-	0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x1a, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x47,
-	0x65, 0x74, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x1b, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x15, 0x12, 0x13, 0x2f, 0x76, 0x32,
+	0x5c, 0x0a, 0x0a, 0x47, 0x61, 0x69, 0x6e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0x17, 0x2e,
+	0x67, 0x61, 0x6d, 0x65, 0x2e, 0x47, 0x61, 0x69, 0x6e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x14, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x57, 0x61,
+	0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1f, 0x82, 0xd3,
+	0xe4, 0x93, 0x02, 0x19, 0x3a, 0x01, 0x2a, 0x22, 0x14, 0x2f, 0x76, 0x32, 0x2f, 0x67, 0x61, 0x6d,
+	0x65, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x2f, 0x67, 0x61, 0x69, 0x6e, 0x12, 0x65, 0x0a,
+	0x0d, 0x43, 0x6f, 0x6e, 0x73, 0x75, 0x6d, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x12, 0x1a,
+	0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x43, 0x6f, 0x6e, 0x73, 0x75, 0x6d, 0x65, 0x57, 0x61, 0x6c,
+	0x6c, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x14, 0x2e, 0x67, 0x61, 0x6d,
+	0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x22, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1c, 0x3a, 0x01, 0x2a, 0x22, 0x17, 0x2f, 0x76, 0x32,
+	0x2f, 0x67, 0x61, 0x6d, 0x65, 0x2f, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x2f, 0x63, 0x6f, 0x6e,
+	0x73, 0x75, 0x6d, 0x65, 0x12, 0x5f, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x43, 0x68, 0x61, 0x6c, 0x6c,
+	0x65, 0x6e, 0x67, 0x65, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x1a, 0x2e, 0x67,
+	0x61, 0x6d, 0x65, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x1b, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x15,
+	0x12, 0x13, 0x2f, 0x76, 0x32, 0x2f, 0x67, 0x61, 0x6d, 0x65, 0x2f, 0x63, 0x68, 0x61, 0x6c, 0x6c,
+	0x65, 0x6e, 0x67, 0x65, 0x73, 0x12, 0x6d, 0x0a, 0x0d, 0x4a, 0x6f, 0x69, 0x6e, 0x43, 0x68, 0x61,
+	0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x12, 0x1a, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x4a, 0x6f,
+	0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x4a, 0x6f, 0x69, 0x6e, 0x43, 0x68,
+	0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x23, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1d, 0x3a, 0x01, 0x2a, 0x22, 0x18, 0x2f, 0x76, 0x32, 0x2f,
+	0x67, 0x61, 0x6d, 0x65, 0x2f, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73, 0x2f,
+	0x6a, 0x6f, 0x69, 0x6e, 0x12, 0x7f, 0x0a, 0x13, 0x47, 0x61, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c,
+	0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x12, 0x20, 0x2e, 0x67, 0x61,
+	0x6d, 0x65, 0x2e, 0x47, 0x61, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65,
+	0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x21, 0x2e,
+	0x67, 0x61, 0x6d, 0x65, 0x2e, 0x47, 0x61, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e,
+	0x67, 0x65, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x23, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1d, 0x3a, 0x01, 0x2a, 0x22, 0x18, 0x2f, 0x76, 0x32,
 	0x2f, 0x67, 0x61, 0x6d, 0x65, 0x2f, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73,
-	0x12, 0x6d, 0x0a, 0x0d, 0x4a, 0x6f, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67,
-	0x65, 0x12, 0x1a, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x4a, 0x6f, 0x69, 0x6e, 0x43, 0x68, 0x61,
-	0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e,
-	0x67, 0x61, 0x6d, 0x65, 0x2e, 0x4a, 0x6f, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e,
-	0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x23, 0x82, 0xd3, 0xe4, 0x93,
-	0x02, 0x1d, 0x3a, 0x01, 0x2a, 0x22, 0x18, 0x2f, 0x76, 0x32, 0x2f, 0x67, 0x61, 0x6d, 0x65, 0x2f,
-	0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73, 0x2f, 0x6a, 0x6f, 0x69, 0x6e, 0x12,
-	0x7f, 0x0a, 0x13, 0x47, 0x61, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65,
-	0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x12, 0x20, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x47, 0x61,
-	0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x77, 0x61, 0x72,
-	0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x21, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e,
-	0x47, 0x61, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x52, 0x65, 0x77,
-	0x61, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x23, 0x82, 0xd3, 0xe4,
-	0x93, 0x02, 0x1d, 0x3a, 0x01, 0x2a, 0x22, 0x18, 0x2f, 0x76, 0x32, 0x2f, 0x67, 0x61, 0x6d, 0x65,
-	0x2f, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x73, 0x2f, 0x67, 0x61, 0x69, 0x6e,
-	0x42, 0xba, 0x03, 0x92, 0x41, 0xcf, 0x02, 0x12, 0x75, 0x0a, 0x0d, 0x4e, 0x61, 0x6b, 0x61, 0x6d,
-	0x61, 0x20, 0x41, 0x50, 0x49, 0x20, 0x76, 0x32, 0x22, 0x5f, 0x0a, 0x21, 0x54, 0x68, 0x65, 0x20,
-	0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x20, 0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x73, 0x20, 0x26,
-	0x20, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x6f, 0x72, 0x73, 0x12, 0x24, 0x68,
-	0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b,
-	0x61, 0x6d, 0x61, 0x1a, 0x14, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x40, 0x68, 0x65, 0x72, 0x6f, 0x69,
-	0x63, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x32, 0x03, 0x32, 0x2e, 0x30, 0x1a, 0x0e,
-	0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x3a, 0x37, 0x33, 0x35, 0x30, 0x2a, 0x01,
-	0x01, 0x32, 0x10, 0x61, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2f, 0x6a,
-	0x73, 0x6f, 0x6e, 0x3a, 0x10, 0x61, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e,
-	0x2f, 0x6a, 0x73, 0x6f, 0x6e, 0x5a, 0x52, 0x0a, 0x0f, 0x0a, 0x09, 0x42, 0x61, 0x73, 0x69, 0x63,
-	0x41, 0x75, 0x74, 0x68, 0x12, 0x02, 0x08, 0x01, 0x0a, 0x20, 0x0a, 0x09, 0x42, 0x65, 0x61, 0x72,
-	0x65, 0x72, 0x4a, 0x77, 0x74, 0x12, 0x13, 0x08, 0x02, 0x1a, 0x0d, 0x41, 0x75, 0x74, 0x68, 0x6f,
-	0x72, 0x69, 0x7a, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x02, 0x0a, 0x1d, 0x0a, 0x0b, 0x48, 0x74,
-	0x74, 0x70, 0x4b, 0x65, 0x79, 0x41, 0x75, 0x74, 0x68, 0x12, 0x0e, 0x08, 0x02, 0x1a, 0x08, 0x68,
-	0x74, 0x74, 0x70, 0x5f, 0x6b, 0x65, 0x79, 0x20, 0x02, 0x62, 0x0f, 0x0a, 0x0d, 0x0a, 0x09, 0x42,
-	0x65, 0x61, 0x72, 0x65, 0x72, 0x4a, 0x77, 0x74, 0x12, 0x00, 0x72, 0x3a, 0x0a, 0x1b, 0x4e, 0x61,
-	0x6b, 0x61, 0x6d, 0x61, 0x20, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x20, 0x64, 0x6f, 0x63, 0x75,
-	0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1b, 0x68, 0x74, 0x74, 0x70, 0x73,
-	0x3a, 0x2f, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x64, 0x6f, 0x63, 0x73, 0x0a, 0x19, 0x63, 0x6f, 0x6d, 0x2e, 0x68, 0x65, 0x72, 0x6f,
-	0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2e, 0x61, 0x70,
-	0x69, 0x42, 0x0d, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x41, 0x70, 0x69, 0x47, 0x72, 0x70, 0x63,
-	0x50, 0x01, 0x5a, 0x27, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68,
-	0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61,
-	0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x67, 0x72, 0x70, 0x63, 0xaa, 0x02, 0x0f, 0x4e, 0x61,
-	0x6b, 0x61, 0x6d, 0x61, 0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x2f, 0x67, 0x61, 0x69, 0x6e, 0x42, 0xba, 0x03, 0x92, 0x41, 0xcf, 0x02, 0x12, 0x75, 0x0a, 0x0d,
+	0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x20, 0x41, 0x50, 0x49, 0x20, 0x76, 0x32, 0x22, 0x5f, 0x0a,
+	0x21, 0x54, 0x68, 0x65, 0x20, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x20, 0x41, 0x75, 0x74, 0x68,
+	0x6f, 0x72, 0x73, 0x20, 0x26, 0x20, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x6f,
+	0x72, 0x73, 0x12, 0x24, 0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x67, 0x69, 0x74, 0x68,
+	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62,
+	0x73, 0x2f, 0x6e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x1a, 0x14, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x40,
+	0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x32, 0x03,
+	0x32, 0x2e, 0x30, 0x1a, 0x0e, 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x3a, 0x37,
+	0x33, 0x35, 0x30, 0x2a, 0x01, 0x01, 0x32, 0x10, 0x61, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x2f, 0x6a, 0x73, 0x6f, 0x6e, 0x3a, 0x10, 0x61, 0x70, 0x70, 0x6c, 0x69, 0x63,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2f, 0x6a, 0x73, 0x6f, 0x6e, 0x5a, 0x52, 0x0a, 0x0f, 0x0a, 0x09,
+	0x42, 0x61, 0x73, 0x69, 0x63, 0x41, 0x75, 0x74, 0x68, 0x12, 0x02, 0x08, 0x01, 0x0a, 0x20, 0x0a,
+	0x09, 0x42, 0x65, 0x61, 0x72, 0x65, 0x72, 0x4a, 0x77, 0x74, 0x12, 0x13, 0x08, 0x02, 0x1a, 0x0d,
+	0x41, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x69, 0x7a, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x02, 0x0a,
+	0x1d, 0x0a, 0x0b, 0x48, 0x74, 0x74, 0x70, 0x4b, 0x65, 0x79, 0x41, 0x75, 0x74, 0x68, 0x12, 0x0e,
+	0x08, 0x02, 0x1a, 0x08, 0x68, 0x74, 0x74, 0x70, 0x5f, 0x6b, 0x65, 0x79, 0x20, 0x02, 0x62, 0x0f,
+	0x0a, 0x0d, 0x0a, 0x09, 0x42, 0x65, 0x61, 0x72, 0x65, 0x72, 0x4a, 0x77, 0x74, 0x12, 0x00, 0x72,
+	0x3a, 0x0a, 0x1b, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x20, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72,
+	0x20, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1b,
+	0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61,
+	0x62, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x64, 0x6f, 0x63, 0x73, 0x0a, 0x19, 0x63, 0x6f, 0x6d,
+	0x2e, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x6e, 0x61, 0x6b, 0x61,
+	0x6d, 0x61, 0x2e, 0x61, 0x70, 0x69, 0x42, 0x0d, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x41, 0x70,
+	0x69, 0x47, 0x72, 0x70, 0x63, 0x50, 0x01, 0x5a, 0x27, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x65, 0x72, 0x6f, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x6e,
+	0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2f, 0x76, 0x33, 0x2f, 0x61, 0x70, 0x69, 0x67, 0x72, 0x70, 0x63,
+	0xaa, 0x02, 0x0f, 0x4e, 0x61, 0x6b, 0x61, 0x6d, 0x61, 0x2e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var file_apigrpc_proto_goTypes = []any{
@@ -946,46 +958,49 @@ var file_apigrpc_proto_goTypes = []any{
 	(*game.UseWalletRequest)(nil),                        // 84: game.UseWalletRequest
 	(*game.AddWalletRequest)(nil),                        // 85: game.AddWalletRequest
 	(*game.GetRewardRequest)(nil),                        // 86: game.GetRewardRequest
-	(*game.JoinChallengeRequest)(nil),                    // 87: game.JoinChallengeRequest
-	(*game.GainChallengeRewardRequest)(nil),              // 88: game.GainChallengeRewardRequest
-	(*api.Session)(nil),                                  // 89: nakama.api.Session
-	(*api.Group)(nil),                                    // 90: nakama.api.Group
-	(*api.Account)(nil),                                  // 91: nakama.api.Account
-	(*api.Users)(nil),                                    // 92: nakama.api.Users
-	(*api.ValidatedSubscription)(nil),                    // 93: nakama.api.ValidatedSubscription
-	(*api.MatchmakerStats)(nil),                          // 94: nakama.api.MatchmakerStats
-	(*api.ChannelMessageList)(nil),                       // 95: nakama.api.ChannelMessageList
-	(*api.FriendList)(nil),                               // 96: nakama.api.FriendList
-	(*api.FriendsOfFriendsList)(nil),                     // 97: nakama.api.FriendsOfFriendsList
-	(*api.GroupList)(nil),                                // 98: nakama.api.GroupList
-	(*api.GroupUserList)(nil),                            // 99: nakama.api.GroupUserList
-	(*api.LeaderboardRecordList)(nil),                    // 100: nakama.api.LeaderboardRecordList
-	(*api.MatchList)(nil),                                // 101: nakama.api.MatchList
-	(*api.NotificationList)(nil),                         // 102: nakama.api.NotificationList
-	(*api.StorageObjectList)(nil),                        // 103: nakama.api.StorageObjectList
-	(*api.SubscriptionList)(nil),                         // 104: nakama.api.SubscriptionList
-	(*api.TournamentList)(nil),                           // 105: nakama.api.TournamentList
-	(*api.TournamentRecordList)(nil),                     // 106: nakama.api.TournamentRecordList
-	(*api.UserGroupList)(nil),                            // 107: nakama.api.UserGroupList
-	(*api.StorageObjects)(nil),                           // 108: nakama.api.StorageObjects
-	(*api.ValidatePurchaseResponse)(nil),                 // 109: nakama.api.ValidatePurchaseResponse
-	(*api.ValidateSubscriptionResponse)(nil),             // 110: nakama.api.ValidateSubscriptionResponse
-	(*api.LeaderboardRecord)(nil),                        // 111: nakama.api.LeaderboardRecord
-	(*api.StorageObjectAcks)(nil),                        // 112: nakama.api.StorageObjectAcks
-	(*game.RedeemGiftResponse)(nil),                      // 113: game.RedeemGiftResponse
-	(*game.ListInviteeResponse)(nil),                     // 114: game.ListInviteeResponse
-	(*game.GetGameTimeResponse)(nil),                     // 115: game.GetGameTimeResponse
-	(*game.ListPublishedAnnouncementsResponse)(nil),      // 116: game.ListPublishedAnnouncementsResponse
-	(*api.MarkNotificationsReadResponse)(nil),            // 117: nakama.api.MarkNotificationsReadResponse
-	(*api.ClaimNotificationAttachmentsResponse)(nil),     // 118: nakama.api.ClaimNotificationAttachmentsResponse
-	(*game.SaveHomeLevelDataResponse)(nil),               // 119: game.SaveHomeLevelDataResponse
-	(*game.GetHomeLevelDataResponse)(nil),                // 120: game.GetHomeLevelDataResponse
-	(*game.UseWalletResponse)(nil),                       // 121: game.UseWalletResponse
-	(*game.AddWalletResponse)(nil),                       // 122: game.AddWalletResponse
-	(*game.GetRewardResponse)(nil),                       // 123: game.GetRewardResponse
-	(*game.GetChallengeResponse)(nil),                    // 124: game.GetChallengeResponse
-	(*game.JoinChallengeResponse)(nil),                   // 125: game.JoinChallengeResponse
-	(*game.GainChallengeRewardResponse)(nil),             // 126: game.GainChallengeRewardResponse
+	(*game.GainWalletRequest)(nil),                       // 87: game.GainWalletRequest
+	(*game.ConsumeWalletRequest)(nil),                    // 88: game.ConsumeWalletRequest
+	(*game.JoinChallengeRequest)(nil),                    // 89: game.JoinChallengeRequest
+	(*game.GainChallengeRewardRequest)(nil),              // 90: game.GainChallengeRewardRequest
+	(*api.Session)(nil),                                  // 91: nakama.api.Session
+	(*api.Group)(nil),                                    // 92: nakama.api.Group
+	(*api.Account)(nil),                                  // 93: nakama.api.Account
+	(*api.Users)(nil),                                    // 94: nakama.api.Users
+	(*api.ValidatedSubscription)(nil),                    // 95: nakama.api.ValidatedSubscription
+	(*api.MatchmakerStats)(nil),                          // 96: nakama.api.MatchmakerStats
+	(*api.ChannelMessageList)(nil),                       // 97: nakama.api.ChannelMessageList
+	(*api.FriendList)(nil),                               // 98: nakama.api.FriendList
+	(*api.FriendsOfFriendsList)(nil),                     // 99: nakama.api.FriendsOfFriendsList
+	(*api.GroupList)(nil),                                // 100: nakama.api.GroupList
+	(*api.GroupUserList)(nil),                            // 101: nakama.api.GroupUserList
+	(*api.LeaderboardRecordList)(nil),                    // 102: nakama.api.LeaderboardRecordList
+	(*api.MatchList)(nil),                                // 103: nakama.api.MatchList
+	(*api.NotificationList)(nil),                         // 104: nakama.api.NotificationList
+	(*api.StorageObjectList)(nil),                        // 105: nakama.api.StorageObjectList
+	(*api.SubscriptionList)(nil),                         // 106: nakama.api.SubscriptionList
+	(*api.TournamentList)(nil),                           // 107: nakama.api.TournamentList
+	(*api.TournamentRecordList)(nil),                     // 108: nakama.api.TournamentRecordList
+	(*api.UserGroupList)(nil),                            // 109: nakama.api.UserGroupList
+	(*api.StorageObjects)(nil),                           // 110: nakama.api.StorageObjects
+	(*api.ValidatePurchaseResponse)(nil),                 // 111: nakama.api.ValidatePurchaseResponse
+	(*api.ValidateSubscriptionResponse)(nil),             // 112: nakama.api.ValidateSubscriptionResponse
+	(*api.LeaderboardRecord)(nil),                        // 113: nakama.api.LeaderboardRecord
+	(*api.StorageObjectAcks)(nil),                        // 114: nakama.api.StorageObjectAcks
+	(*game.RedeemGiftResponse)(nil),                      // 115: game.RedeemGiftResponse
+	(*game.ListInviteeResponse)(nil),                     // 116: game.ListInviteeResponse
+	(*game.GetGameTimeResponse)(nil),                     // 117: game.GetGameTimeResponse
+	(*game.ListPublishedAnnouncementsResponse)(nil),      // 118: game.ListPublishedAnnouncementsResponse
+	(*api.MarkNotificationsReadResponse)(nil),            // 119: nakama.api.MarkNotificationsReadResponse
+	(*api.ClaimNotificationAttachmentsResponse)(nil),     // 120: nakama.api.ClaimNotificationAttachmentsResponse
+	(*game.SaveHomeLevelDataResponse)(nil),               // 121: game.SaveHomeLevelDataResponse
+	(*game.GetHomeLevelDataResponse)(nil),                // 122: game.GetHomeLevelDataResponse
+	(*game.UseWalletResponse)(nil),                       // 123: game.UseWalletResponse
+	(*game.AddWalletResponse)(nil),                       // 124: game.AddWalletResponse
+	(*game.GetRewardResponse)(nil),                       // 125: game.GetRewardResponse
+	(*game.WalletResponse)(nil),                          // 126: game.WalletResponse
+	(*game.GetChallengeResponse)(nil),                    // 127: game.GetChallengeResponse
+	(*game.JoinChallengeResponse)(nil),                   // 128: game.JoinChallengeResponse
+	(*game.GainChallengeRewardResponse)(nil),             // 129: game.GainChallengeRewardResponse
 }
 var file_apigrpc_proto_depIdxs = []int32{
 	0,   // 0: nakama.api.Nakama.AddFriends:input_type -> nakama.api.AddFriendsRequest
@@ -1087,113 +1102,117 @@ var file_apigrpc_proto_depIdxs = []int32{
 	84,  // 96: nakama.api.Nakama.UseWallet:input_type -> game.UseWalletRequest
 	85,  // 97: nakama.api.Nakama.AddWallet:input_type -> game.AddWalletRequest
 	86,  // 98: nakama.api.Nakama.GetReward:input_type -> game.GetRewardRequest
-	16,  // 99: nakama.api.Nakama.GetChallenge:input_type -> google.protobuf.Empty
-	87,  // 100: nakama.api.Nakama.JoinChallenge:input_type -> game.JoinChallengeRequest
-	88,  // 101: nakama.api.Nakama.GainChallengeReward:input_type -> game.GainChallengeRewardRequest
-	16,  // 102: nakama.api.Nakama.AddFriends:output_type -> google.protobuf.Empty
-	16,  // 103: nakama.api.Nakama.AddGroupUsers:output_type -> google.protobuf.Empty
-	89,  // 104: nakama.api.Nakama.SessionRefresh:output_type -> nakama.api.Session
-	16,  // 105: nakama.api.Nakama.SessionLogout:output_type -> google.protobuf.Empty
-	89,  // 106: nakama.api.Nakama.AuthenticateApple:output_type -> nakama.api.Session
-	89,  // 107: nakama.api.Nakama.AuthenticateCustom:output_type -> nakama.api.Session
-	89,  // 108: nakama.api.Nakama.AuthenticateDevice:output_type -> nakama.api.Session
-	89,  // 109: nakama.api.Nakama.AuthenticateEmail:output_type -> nakama.api.Session
-	89,  // 110: nakama.api.Nakama.AuthenticateFacebook:output_type -> nakama.api.Session
-	89,  // 111: nakama.api.Nakama.AuthenticateFacebookInstantGame:output_type -> nakama.api.Session
-	89,  // 112: nakama.api.Nakama.AuthenticateGameCenter:output_type -> nakama.api.Session
-	89,  // 113: nakama.api.Nakama.AuthenticateGoogle:output_type -> nakama.api.Session
-	89,  // 114: nakama.api.Nakama.AuthenticateSteam:output_type -> nakama.api.Session
-	16,  // 115: nakama.api.Nakama.BanGroupUsers:output_type -> google.protobuf.Empty
-	16,  // 116: nakama.api.Nakama.BlockFriends:output_type -> google.protobuf.Empty
-	90,  // 117: nakama.api.Nakama.CreateGroup:output_type -> nakama.api.Group
-	16,  // 118: nakama.api.Nakama.DeleteAccount:output_type -> google.protobuf.Empty
-	16,  // 119: nakama.api.Nakama.DeleteFriends:output_type -> google.protobuf.Empty
-	16,  // 120: nakama.api.Nakama.DeleteGroup:output_type -> google.protobuf.Empty
-	16,  // 121: nakama.api.Nakama.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	16,  // 122: nakama.api.Nakama.DeleteNotifications:output_type -> google.protobuf.Empty
-	16,  // 123: nakama.api.Nakama.DeleteTournamentRecord:output_type -> google.protobuf.Empty
-	16,  // 124: nakama.api.Nakama.DeleteStorageObjects:output_type -> google.protobuf.Empty
-	16,  // 125: nakama.api.Nakama.Event:output_type -> google.protobuf.Empty
-	91,  // 126: nakama.api.Nakama.GetAccount:output_type -> nakama.api.Account
-	92,  // 127: nakama.api.Nakama.GetUsers:output_type -> nakama.api.Users
-	93,  // 128: nakama.api.Nakama.GetSubscription:output_type -> nakama.api.ValidatedSubscription
-	94,  // 129: nakama.api.Nakama.GetMatchmakerStats:output_type -> nakama.api.MatchmakerStats
-	16,  // 130: nakama.api.Nakama.Healthcheck:output_type -> google.protobuf.Empty
-	16,  // 131: nakama.api.Nakama.ImportFacebookFriends:output_type -> google.protobuf.Empty
-	16,  // 132: nakama.api.Nakama.ImportSteamFriends:output_type -> google.protobuf.Empty
-	16,  // 133: nakama.api.Nakama.JoinGroup:output_type -> google.protobuf.Empty
-	16,  // 134: nakama.api.Nakama.JoinTournament:output_type -> google.protobuf.Empty
-	16,  // 135: nakama.api.Nakama.KickGroupUsers:output_type -> google.protobuf.Empty
-	16,  // 136: nakama.api.Nakama.LeaveGroup:output_type -> google.protobuf.Empty
-	16,  // 137: nakama.api.Nakama.LinkApple:output_type -> google.protobuf.Empty
-	16,  // 138: nakama.api.Nakama.LinkCustom:output_type -> google.protobuf.Empty
-	16,  // 139: nakama.api.Nakama.LinkDevice:output_type -> google.protobuf.Empty
-	16,  // 140: nakama.api.Nakama.LinkEmail:output_type -> google.protobuf.Empty
-	16,  // 141: nakama.api.Nakama.LinkFacebook:output_type -> google.protobuf.Empty
-	16,  // 142: nakama.api.Nakama.LinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	16,  // 143: nakama.api.Nakama.LinkGameCenter:output_type -> google.protobuf.Empty
-	16,  // 144: nakama.api.Nakama.LinkGoogle:output_type -> google.protobuf.Empty
-	16,  // 145: nakama.api.Nakama.LinkSteam:output_type -> google.protobuf.Empty
-	95,  // 146: nakama.api.Nakama.ListChannelMessages:output_type -> nakama.api.ChannelMessageList
-	96,  // 147: nakama.api.Nakama.ListFriends:output_type -> nakama.api.FriendList
-	97,  // 148: nakama.api.Nakama.ListFriendsOfFriends:output_type -> nakama.api.FriendsOfFriendsList
-	98,  // 149: nakama.api.Nakama.ListGroups:output_type -> nakama.api.GroupList
-	99,  // 150: nakama.api.Nakama.ListGroupUsers:output_type -> nakama.api.GroupUserList
-	100, // 151: nakama.api.Nakama.ListLeaderboardRecords:output_type -> nakama.api.LeaderboardRecordList
-	100, // 152: nakama.api.Nakama.ListLeaderboardRecordsAroundOwner:output_type -> nakama.api.LeaderboardRecordList
-	101, // 153: nakama.api.Nakama.ListMatches:output_type -> nakama.api.MatchList
-	102, // 154: nakama.api.Nakama.ListNotifications:output_type -> nakama.api.NotificationList
-	103, // 155: nakama.api.Nakama.ListStorageObjects:output_type -> nakama.api.StorageObjectList
-	104, // 156: nakama.api.Nakama.ListSubscriptions:output_type -> nakama.api.SubscriptionList
-	105, // 157: nakama.api.Nakama.ListTournaments:output_type -> nakama.api.TournamentList
-	106, // 158: nakama.api.Nakama.ListTournamentRecords:output_type -> nakama.api.TournamentRecordList
-	106, // 159: nakama.api.Nakama.ListTournamentRecordsAroundOwner:output_type -> nakama.api.TournamentRecordList
-	107, // 160: nakama.api.Nakama.ListUserGroups:output_type -> nakama.api.UserGroupList
-	16,  // 161: nakama.api.Nakama.PromoteGroupUsers:output_type -> google.protobuf.Empty
-	16,  // 162: nakama.api.Nakama.DemoteGroupUsers:output_type -> google.protobuf.Empty
-	108, // 163: nakama.api.Nakama.ReadStorageObjects:output_type -> nakama.api.StorageObjects
-	59,  // 164: nakama.api.Nakama.RpcFunc:output_type -> nakama.api.Rpc
-	16,  // 165: nakama.api.Nakama.UnlinkApple:output_type -> google.protobuf.Empty
-	16,  // 166: nakama.api.Nakama.UnlinkCustom:output_type -> google.protobuf.Empty
-	16,  // 167: nakama.api.Nakama.UnlinkDevice:output_type -> google.protobuf.Empty
-	16,  // 168: nakama.api.Nakama.UnlinkEmail:output_type -> google.protobuf.Empty
-	16,  // 169: nakama.api.Nakama.UnlinkFacebook:output_type -> google.protobuf.Empty
-	16,  // 170: nakama.api.Nakama.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	16,  // 171: nakama.api.Nakama.UnlinkGameCenter:output_type -> google.protobuf.Empty
-	16,  // 172: nakama.api.Nakama.UnlinkGoogle:output_type -> google.protobuf.Empty
-	16,  // 173: nakama.api.Nakama.UnlinkSteam:output_type -> google.protobuf.Empty
-	16,  // 174: nakama.api.Nakama.UpdateAccount:output_type -> google.protobuf.Empty
-	16,  // 175: nakama.api.Nakama.UpdateGroup:output_type -> google.protobuf.Empty
-	109, // 176: nakama.api.Nakama.ValidatePurchaseApple:output_type -> nakama.api.ValidatePurchaseResponse
-	110, // 177: nakama.api.Nakama.ValidateSubscriptionApple:output_type -> nakama.api.ValidateSubscriptionResponse
-	109, // 178: nakama.api.Nakama.ValidatePurchaseGoogle:output_type -> nakama.api.ValidatePurchaseResponse
-	110, // 179: nakama.api.Nakama.ValidateSubscriptionGoogle:output_type -> nakama.api.ValidateSubscriptionResponse
-	109, // 180: nakama.api.Nakama.ValidatePurchaseHuawei:output_type -> nakama.api.ValidatePurchaseResponse
-	109, // 181: nakama.api.Nakama.ValidatePurchaseFacebookInstant:output_type -> nakama.api.ValidatePurchaseResponse
-	111, // 182: nakama.api.Nakama.WriteLeaderboardRecord:output_type -> nakama.api.LeaderboardRecord
-	112, // 183: nakama.api.Nakama.WriteStorageObjects:output_type -> nakama.api.StorageObjectAcks
-	111, // 184: nakama.api.Nakama.WriteTournamentRecord:output_type -> nakama.api.LeaderboardRecord
-	113, // 185: nakama.api.Nakama.RedeemGift:output_type -> game.RedeemGiftResponse
-	16,  // 186: nakama.api.Nakama.Feedback:output_type -> google.protobuf.Empty
-	89,  // 187: nakama.api.Nakama.AuthenticateWechat:output_type -> nakama.api.Session
-	89,  // 188: nakama.api.Nakama.AuthenticateTikTok:output_type -> nakama.api.Session
-	16,  // 189: nakama.api.Nakama.SubmitBeInvited:output_type -> google.protobuf.Empty
-	114, // 190: nakama.api.Nakama.ListInvitee:output_type -> game.ListInviteeResponse
-	16,  // 191: nakama.api.Nakama.ClaimInviteReward:output_type -> google.protobuf.Empty
-	115, // 192: nakama.api.Nakama.GetGameTime:output_type -> game.GetGameTimeResponse
-	116, // 193: nakama.api.Nakama.ListPublishedAnnouncements:output_type -> game.ListPublishedAnnouncementsResponse
-	117, // 194: nakama.api.Nakama.MarkNotificationsRead:output_type -> nakama.api.MarkNotificationsReadResponse
-	118, // 195: nakama.api.Nakama.ClaimNotificationAttachments:output_type -> nakama.api.ClaimNotificationAttachmentsResponse
-	119, // 196: nakama.api.Nakama.SaveHomeLevelData:output_type -> game.SaveHomeLevelDataResponse
-	120, // 197: nakama.api.Nakama.GetHomeLevelData:output_type -> game.GetHomeLevelDataResponse
-	121, // 198: nakama.api.Nakama.UseWallet:output_type -> game.UseWalletResponse
-	122, // 199: nakama.api.Nakama.AddWallet:output_type -> game.AddWalletResponse
-	123, // 200: nakama.api.Nakama.GetReward:output_type -> game.GetRewardResponse
-	124, // 201: nakama.api.Nakama.GetChallenge:output_type -> game.GetChallengeResponse
-	125, // 202: nakama.api.Nakama.JoinChallenge:output_type -> game.JoinChallengeResponse
-	126, // 203: nakama.api.Nakama.GainChallengeReward:output_type -> game.GainChallengeRewardResponse
-	102, // [102:204] is the sub-list for method output_type
-	0,   // [0:102] is the sub-list for method input_type
+	87,  // 99: nakama.api.Nakama.GainWallet:input_type -> game.GainWalletRequest
+	88,  // 100: nakama.api.Nakama.ConsumeWallet:input_type -> game.ConsumeWalletRequest
+	16,  // 101: nakama.api.Nakama.GetChallenge:input_type -> google.protobuf.Empty
+	89,  // 102: nakama.api.Nakama.JoinChallenge:input_type -> game.JoinChallengeRequest
+	90,  // 103: nakama.api.Nakama.GainChallengeReward:input_type -> game.GainChallengeRewardRequest
+	16,  // 104: nakama.api.Nakama.AddFriends:output_type -> google.protobuf.Empty
+	16,  // 105: nakama.api.Nakama.AddGroupUsers:output_type -> google.protobuf.Empty
+	91,  // 106: nakama.api.Nakama.SessionRefresh:output_type -> nakama.api.Session
+	16,  // 107: nakama.api.Nakama.SessionLogout:output_type -> google.protobuf.Empty
+	91,  // 108: nakama.api.Nakama.AuthenticateApple:output_type -> nakama.api.Session
+	91,  // 109: nakama.api.Nakama.AuthenticateCustom:output_type -> nakama.api.Session
+	91,  // 110: nakama.api.Nakama.AuthenticateDevice:output_type -> nakama.api.Session
+	91,  // 111: nakama.api.Nakama.AuthenticateEmail:output_type -> nakama.api.Session
+	91,  // 112: nakama.api.Nakama.AuthenticateFacebook:output_type -> nakama.api.Session
+	91,  // 113: nakama.api.Nakama.AuthenticateFacebookInstantGame:output_type -> nakama.api.Session
+	91,  // 114: nakama.api.Nakama.AuthenticateGameCenter:output_type -> nakama.api.Session
+	91,  // 115: nakama.api.Nakama.AuthenticateGoogle:output_type -> nakama.api.Session
+	91,  // 116: nakama.api.Nakama.AuthenticateSteam:output_type -> nakama.api.Session
+	16,  // 117: nakama.api.Nakama.BanGroupUsers:output_type -> google.protobuf.Empty
+	16,  // 118: nakama.api.Nakama.BlockFriends:output_type -> google.protobuf.Empty
+	92,  // 119: nakama.api.Nakama.CreateGroup:output_type -> nakama.api.Group
+	16,  // 120: nakama.api.Nakama.DeleteAccount:output_type -> google.protobuf.Empty
+	16,  // 121: nakama.api.Nakama.DeleteFriends:output_type -> google.protobuf.Empty
+	16,  // 122: nakama.api.Nakama.DeleteGroup:output_type -> google.protobuf.Empty
+	16,  // 123: nakama.api.Nakama.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	16,  // 124: nakama.api.Nakama.DeleteNotifications:output_type -> google.protobuf.Empty
+	16,  // 125: nakama.api.Nakama.DeleteTournamentRecord:output_type -> google.protobuf.Empty
+	16,  // 126: nakama.api.Nakama.DeleteStorageObjects:output_type -> google.protobuf.Empty
+	16,  // 127: nakama.api.Nakama.Event:output_type -> google.protobuf.Empty
+	93,  // 128: nakama.api.Nakama.GetAccount:output_type -> nakama.api.Account
+	94,  // 129: nakama.api.Nakama.GetUsers:output_type -> nakama.api.Users
+	95,  // 130: nakama.api.Nakama.GetSubscription:output_type -> nakama.api.ValidatedSubscription
+	96,  // 131: nakama.api.Nakama.GetMatchmakerStats:output_type -> nakama.api.MatchmakerStats
+	16,  // 132: nakama.api.Nakama.Healthcheck:output_type -> google.protobuf.Empty
+	16,  // 133: nakama.api.Nakama.ImportFacebookFriends:output_type -> google.protobuf.Empty
+	16,  // 134: nakama.api.Nakama.ImportSteamFriends:output_type -> google.protobuf.Empty
+	16,  // 135: nakama.api.Nakama.JoinGroup:output_type -> google.protobuf.Empty
+	16,  // 136: nakama.api.Nakama.JoinTournament:output_type -> google.protobuf.Empty
+	16,  // 137: nakama.api.Nakama.KickGroupUsers:output_type -> google.protobuf.Empty
+	16,  // 138: nakama.api.Nakama.LeaveGroup:output_type -> google.protobuf.Empty
+	16,  // 139: nakama.api.Nakama.LinkApple:output_type -> google.protobuf.Empty
+	16,  // 140: nakama.api.Nakama.LinkCustom:output_type -> google.protobuf.Empty
+	16,  // 141: nakama.api.Nakama.LinkDevice:output_type -> google.protobuf.Empty
+	16,  // 142: nakama.api.Nakama.LinkEmail:output_type -> google.protobuf.Empty
+	16,  // 143: nakama.api.Nakama.LinkFacebook:output_type -> google.protobuf.Empty
+	16,  // 144: nakama.api.Nakama.LinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	16,  // 145: nakama.api.Nakama.LinkGameCenter:output_type -> google.protobuf.Empty
+	16,  // 146: nakama.api.Nakama.LinkGoogle:output_type -> google.protobuf.Empty
+	16,  // 147: nakama.api.Nakama.LinkSteam:output_type -> google.protobuf.Empty
+	97,  // 148: nakama.api.Nakama.ListChannelMessages:output_type -> nakama.api.ChannelMessageList
+	98,  // 149: nakama.api.Nakama.ListFriends:output_type -> nakama.api.FriendList
+	99,  // 150: nakama.api.Nakama.ListFriendsOfFriends:output_type -> nakama.api.FriendsOfFriendsList
+	100, // 151: nakama.api.Nakama.ListGroups:output_type -> nakama.api.GroupList
+	101, // 152: nakama.api.Nakama.ListGroupUsers:output_type -> nakama.api.GroupUserList
+	102, // 153: nakama.api.Nakama.ListLeaderboardRecords:output_type -> nakama.api.LeaderboardRecordList
+	102, // 154: nakama.api.Nakama.ListLeaderboardRecordsAroundOwner:output_type -> nakama.api.LeaderboardRecordList
+	103, // 155: nakama.api.Nakama.ListMatches:output_type -> nakama.api.MatchList
+	104, // 156: nakama.api.Nakama.ListNotifications:output_type -> nakama.api.NotificationList
+	105, // 157: nakama.api.Nakama.ListStorageObjects:output_type -> nakama.api.StorageObjectList
+	106, // 158: nakama.api.Nakama.ListSubscriptions:output_type -> nakama.api.SubscriptionList
+	107, // 159: nakama.api.Nakama.ListTournaments:output_type -> nakama.api.TournamentList
+	108, // 160: nakama.api.Nakama.ListTournamentRecords:output_type -> nakama.api.TournamentRecordList
+	108, // 161: nakama.api.Nakama.ListTournamentRecordsAroundOwner:output_type -> nakama.api.TournamentRecordList
+	109, // 162: nakama.api.Nakama.ListUserGroups:output_type -> nakama.api.UserGroupList
+	16,  // 163: nakama.api.Nakama.PromoteGroupUsers:output_type -> google.protobuf.Empty
+	16,  // 164: nakama.api.Nakama.DemoteGroupUsers:output_type -> google.protobuf.Empty
+	110, // 165: nakama.api.Nakama.ReadStorageObjects:output_type -> nakama.api.StorageObjects
+	59,  // 166: nakama.api.Nakama.RpcFunc:output_type -> nakama.api.Rpc
+	16,  // 167: nakama.api.Nakama.UnlinkApple:output_type -> google.protobuf.Empty
+	16,  // 168: nakama.api.Nakama.UnlinkCustom:output_type -> google.protobuf.Empty
+	16,  // 169: nakama.api.Nakama.UnlinkDevice:output_type -> google.protobuf.Empty
+	16,  // 170: nakama.api.Nakama.UnlinkEmail:output_type -> google.protobuf.Empty
+	16,  // 171: nakama.api.Nakama.UnlinkFacebook:output_type -> google.protobuf.Empty
+	16,  // 172: nakama.api.Nakama.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	16,  // 173: nakama.api.Nakama.UnlinkGameCenter:output_type -> google.protobuf.Empty
+	16,  // 174: nakama.api.Nakama.UnlinkGoogle:output_type -> google.protobuf.Empty
+	16,  // 175: nakama.api.Nakama.UnlinkSteam:output_type -> google.protobuf.Empty
+	16,  // 176: nakama.api.Nakama.UpdateAccount:output_type -> google.protobuf.Empty
+	16,  // 177: nakama.api.Nakama.UpdateGroup:output_type -> google.protobuf.Empty
+	111, // 178: nakama.api.Nakama.ValidatePurchaseApple:output_type -> nakama.api.ValidatePurchaseResponse
+	112, // 179: nakama.api.Nakama.ValidateSubscriptionApple:output_type -> nakama.api.ValidateSubscriptionResponse
+	111, // 180: nakama.api.Nakama.ValidatePurchaseGoogle:output_type -> nakama.api.ValidatePurchaseResponse
+	112, // 181: nakama.api.Nakama.ValidateSubscriptionGoogle:output_type -> nakama.api.ValidateSubscriptionResponse
+	111, // 182: nakama.api.Nakama.ValidatePurchaseHuawei:output_type -> nakama.api.ValidatePurchaseResponse
+	111, // 183: nakama.api.Nakama.ValidatePurchaseFacebookInstant:output_type -> nakama.api.ValidatePurchaseResponse
+	113, // 184: nakama.api.Nakama.WriteLeaderboardRecord:output_type -> nakama.api.LeaderboardRecord
+	114, // 185: nakama.api.Nakama.WriteStorageObjects:output_type -> nakama.api.StorageObjectAcks
+	113, // 186: nakama.api.Nakama.WriteTournamentRecord:output_type -> nakama.api.LeaderboardRecord
+	115, // 187: nakama.api.Nakama.RedeemGift:output_type -> game.RedeemGiftResponse
+	16,  // 188: nakama.api.Nakama.Feedback:output_type -> google.protobuf.Empty
+	91,  // 189: nakama.api.Nakama.AuthenticateWechat:output_type -> nakama.api.Session
+	91,  // 190: nakama.api.Nakama.AuthenticateTikTok:output_type -> nakama.api.Session
+	16,  // 191: nakama.api.Nakama.SubmitBeInvited:output_type -> google.protobuf.Empty
+	116, // 192: nakama.api.Nakama.ListInvitee:output_type -> game.ListInviteeResponse
+	16,  // 193: nakama.api.Nakama.ClaimInviteReward:output_type -> google.protobuf.Empty
+	117, // 194: nakama.api.Nakama.GetGameTime:output_type -> game.GetGameTimeResponse
+	118, // 195: nakama.api.Nakama.ListPublishedAnnouncements:output_type -> game.ListPublishedAnnouncementsResponse
+	119, // 196: nakama.api.Nakama.MarkNotificationsRead:output_type -> nakama.api.MarkNotificationsReadResponse
+	120, // 197: nakama.api.Nakama.ClaimNotificationAttachments:output_type -> nakama.api.ClaimNotificationAttachmentsResponse
+	121, // 198: nakama.api.Nakama.SaveHomeLevelData:output_type -> game.SaveHomeLevelDataResponse
+	122, // 199: nakama.api.Nakama.GetHomeLevelData:output_type -> game.GetHomeLevelDataResponse
+	123, // 200: nakama.api.Nakama.UseWallet:output_type -> game.UseWalletResponse
+	124, // 201: nakama.api.Nakama.AddWallet:output_type -> game.AddWalletResponse
+	125, // 202: nakama.api.Nakama.GetReward:output_type -> game.GetRewardResponse
+	126, // 203: nakama.api.Nakama.GainWallet:output_type -> game.WalletResponse
+	126, // 204: nakama.api.Nakama.ConsumeWallet:output_type -> game.WalletResponse
+	127, // 205: nakama.api.Nakama.GetChallenge:output_type -> game.GetChallengeResponse
+	128, // 206: nakama.api.Nakama.JoinChallenge:output_type -> game.JoinChallengeResponse
+	129, // 207: nakama.api.Nakama.GainChallengeReward:output_type -> game.GainChallengeRewardResponse
+	104, // [104:208] is the sub-list for method output_type
+	0,   // [0:104] is the sub-list for method input_type
 	0,   // [0:0] is the sub-list for extension type_name
 	0,   // [0:0] is the sub-list for extension extendee
 	0,   // [0:0] is the sub-list for field type_name

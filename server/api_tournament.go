@@ -416,11 +416,33 @@ func (s *ApiServer) WriteTournamentRecord(ctx context.Context, in *api.WriteTour
 		return nil, status.Error(codes.InvalidArgument, "Tournament ID must be provided.")
 	} else if in.GetRecord() == nil {
 		return nil, status.Error(codes.InvalidArgument, "Invalid input, record score value is required.")
-	} else if in.GetRecord().GetMetadata() != "" {
-		if maybeJSON := []byte(in.GetRecord().GetMetadata()); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
-			return nil, status.Error(codes.InvalidArgument, "Metadata value must be JSON, if provided.")
-		}
 	}
+
+	// 统一的签名验证处理 - 强制要求签名
+	if in.GetRecord().GetMetadata() == "" {
+		return nil, status.Error(codes.InvalidArgument, "Signature is required. Please provide signature field.")
+	}
+
+	if maybeJSON := []byte(in.GetRecord().GetMetadata()); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
+		return nil, status.Error(codes.InvalidArgument, "Metadata value must be JSON, if provided.")
+	}
+
+	// 使用统一的签名验证函数
+	verifiedMetadata, err := VerifyRecordSignature(&SignatureVerificationRequest{
+		RecordType: "tournament",
+		RecordID:   in.GetTournamentId(),
+		Score:      in.GetRecord().GetScore(),
+		Subscore:   in.GetRecord().GetSubscore(),
+		Metadata:   in.GetRecord().GetMetadata(),
+		UserID:     userID.String(),
+		Username:   username,
+		Logger:     s.logger,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 更新metadata为验证后的版本（移除了签名字段）
+	in.GetRecord().Metadata = verifiedMetadata
 
 	tournament := s.leaderboardCache.Get(in.GetTournamentId())
 	if tournament == nil {

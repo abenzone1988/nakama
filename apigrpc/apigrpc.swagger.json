@@ -2131,6 +2131,72 @@
         ]
       }
     },
+    "/v2/game/wallet/consume": {
+      "post": {
+        "summary": "ConsumeWallet",
+        "operationId": "Nakama_ConsumeWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameConsumeWalletRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/wallet/gain": {
+      "post": {
+        "summary": "Gain Wallet",
+        "operationId": "Nakama_GainWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGainWalletRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/wallet/use": {
       "post": {
         "summary": "Use wallet currency",
@@ -6227,6 +6293,29 @@
         }
       }
     },
+    "gameConsumeWalletRequest": {
+      "type": "object",
+      "properties": {
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        }
+      }
+    },
     "gameCurrencyType": {
       "type": "string",
       "enum": [
@@ -6257,6 +6346,9 @@
         "challengeId": {
           "type": "integer",
           "format": "int32"
+        },
+        "rankReward": {
+          "type": "boolean"
         }
       }
     },
@@ -6282,6 +6374,29 @@
         }
       }
     },
+    "gameGainWalletRequest": {
+      "type": "object",
+      "properties": {
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        }
+      }
+    },
     "gameGetChallengeResponse": {
       "type": "object",
       "properties": {
@@ -6298,6 +6413,9 @@
             "type": "object",
             "$ref": "#/definitions/gameJoinChallengeStatus"
           }
+        },
+        "getReward": {
+          "type": "boolean"
         }
       }
     },
@@ -6481,6 +6599,9 @@
           "format": "int32"
         },
         "tournamentId": {
+          "type": "string"
+        },
+        "activityId": {
           "type": "string"
         },
         "joinedAt": {
@@ -6689,6 +6810,28 @@
         }
       },
       "title": "钱包结构"
+    },
+    "gameWalletResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新后的钱包"
+        },
+        "walletPrevious": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新前的钱包"
+        }
+      }
     },
     "protobufAny": {
       "type": "object",

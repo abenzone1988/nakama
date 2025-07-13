@@ -887,6 +887,22 @@ service Nakama {
     };
   }
 
+  // Gain Wallet
+  rpc GainWallet(game.GainWalletRequest) returns (game.WalletResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/wallet/gain"
+      body: "*"
+    };
+  }
+
+ // ConsumeWallet
+  rpc ConsumeWallet(game.ConsumeWalletRequest) returns (game.WalletResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/wallet/consume"
+      body: "*"
+    };
+  }
+
   // Get Challenge
   rpc GetChallenge(google.protobuf.Empty) returns (game.GetChallengeResponse) {
     option (google.api.http).get = "/v2/game/challenges";

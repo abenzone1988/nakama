@@ -163,7 +163,6 @@ message AddWalletResponse{
   Wallet wallet_previous = 4;    // 更新前的钱包
 }
 
-
 //获取奖励响应
 message GetRewardResponse{
   int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
@@ -189,6 +188,29 @@ message UseWalletRequest {
 
 // 使用钱包货币响应
 message UseWalletResponse {
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  Wallet wallet_updated = 3;     // 更新后的钱包
+  Wallet wallet_previous = 4;    // 更新前的钱包
+}
+
+message GainWalletRequest{
+  int32 coin = 1;
+  int32 gem = 2;
+  int32 ad = 3;
+  string reason = 4;
+  string signature = 5;
+}
+
+message ConsumeWalletRequest{
+  int32 coin = 1;
+  int32 gem = 2;
+  int32 ad = 3;
+  string reason = 4;
+  string signature = 5;
+}
+
+message WalletResponse {
   int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
   string msg = 2;                // 响应消息
   Wallet wallet_updated = 3;     // 更新后的钱包
@@ -221,6 +243,7 @@ message JoinChallengeStatus{
 message GetChallengeResponse{
   repeated Challenge challenges = 1;
   repeated JoinChallengeStatus joined = 2;
+  bool get_reward = 3;
 }
 
 
@@ -237,6 +260,7 @@ message JoinChallengeResponse{
 
 message GainChallengeRewardRequest{
   int32 challenge_id = 1;
+  bool rank_reward = 2;
 }
 
 message GainChallengeRewardResponse{

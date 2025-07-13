@@ -138,6 +138,8 @@ const (
 	Nakama_UseWallet_FullMethodName                         = "/nakama.api.Nakama/UseWallet"
 	Nakama_AddWallet_FullMethodName                         = "/nakama.api.Nakama/AddWallet"
 	Nakama_GetReward_FullMethodName                         = "/nakama.api.Nakama/GetReward"
+	Nakama_GainWallet_FullMethodName                        = "/nakama.api.Nakama/GainWallet"
+	Nakama_ConsumeWallet_FullMethodName                     = "/nakama.api.Nakama/ConsumeWallet"
 	Nakama_GetChallenge_FullMethodName                      = "/nakama.api.Nakama/GetChallenge"
 	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
 	Nakama_GainChallengeReward_FullMethodName               = "/nakama.api.Nakama/GainChallengeReward"
@@ -345,6 +347,10 @@ type NakamaClient interface {
 	AddWallet(ctx context.Context, in *game.AddWalletRequest, opts ...grpc.CallOption) (*game.AddWalletResponse, error)
 	// Get Reward
 	GetReward(ctx context.Context, in *game.GetRewardRequest, opts ...grpc.CallOption) (*game.GetRewardResponse, error)
+	// Gain Wallet
+	GainWallet(ctx context.Context, in *game.GainWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
+	// ConsumeWallet
+	ConsumeWallet(ctx context.Context, in *game.ConsumeWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
 	// Get Challenge
 	GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error)
 	// Join Challenge
@@ -1252,6 +1258,24 @@ func (c *nakamaClient) GetReward(ctx context.Context, in *game.GetRewardRequest,
 	return out, nil
 }
 
+func (c *nakamaClient) GainWallet(ctx context.Context, in *game.GainWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
+	out := new(game.WalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_GainWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ConsumeWallet(ctx context.Context, in *game.ConsumeWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
+	out := new(game.WalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_ConsumeWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error) {
 	out := new(game.GetChallengeResponse)
 	err := c.cc.Invoke(ctx, Nakama_GetChallenge_FullMethodName, in, out, opts...)
@@ -1481,6 +1505,10 @@ type NakamaServer interface {
 	AddWallet(context.Context, *game.AddWalletRequest) (*game.AddWalletResponse, error)
 	// Get Reward
 	GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error)
+	// Gain Wallet
+	GainWallet(context.Context, *game.GainWalletRequest) (*game.WalletResponse, error)
+	// ConsumeWallet
+	ConsumeWallet(context.Context, *game.ConsumeWalletRequest) (*game.WalletResponse, error)
 	// Get Challenge
 	GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error)
 	// Join Challenge
@@ -1790,6 +1818,12 @@ func (UnimplementedNakamaServer) AddWallet(context.Context, *game.AddWalletReque
 }
 func (UnimplementedNakamaServer) GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReward not implemented")
+}
+func (UnimplementedNakamaServer) GainWallet(context.Context, *game.GainWalletRequest) (*game.WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GainWallet not implemented")
+}
+func (UnimplementedNakamaServer) ConsumeWallet(context.Context, *game.ConsumeWalletRequest) (*game.WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConsumeWallet not implemented")
 }
 func (UnimplementedNakamaServer) GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChallenge not implemented")
@@ -3595,6 +3629,42 @@ func _Nakama_GetReward_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GainWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GainWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GainWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GainWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GainWallet(ctx, req.(*game.GainWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ConsumeWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ConsumeWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ConsumeWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ConsumeWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ConsumeWallet(ctx, req.(*game.ConsumeWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_GetChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -4051,6 +4121,14 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetReward",
 			Handler:    _Nakama_GetReward_Handler,
+		},
+		{
+			MethodName: "GainWallet",
+			Handler:    _Nakama_GainWallet_Handler,
+		},
+		{
+			MethodName: "ConsumeWallet",
+			Handler:    _Nakama_ConsumeWallet_Handler,
 		},
 		{
 			MethodName: "GetChallenge",
