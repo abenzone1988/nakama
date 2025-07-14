@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"strings"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -36,10 +37,6 @@ type ChallengeStatus struct {
 	TournamentID    string    `json:"tournament_id"`
 	ActivityID      string    `json:"activity_id"`
 	Joined          time.Time `json:"joined"`
-	Open            time.Time `json:"open"`
-	Close           time.Time `json:"close"`
-	End             time.Time `json:"end"`
-	Over            time.Time `json:"over"`
 	RankReward      bool      `json:"rank_reward"`       // 排名奖励是否已领取
 	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
 	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
@@ -47,7 +44,7 @@ type ChallengeStatus struct {
 }
 
 type UserMatch struct {
-	Challenges map[int32]*ChallengeStatus `json:"challenges"`
+	Challenges map[int32]*ChallengeStatus `json:"join_challenges"`
 }
 
 func (f *UserMatch) GetCollection() string {
@@ -191,7 +188,35 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 	// 转换用户已参与的挑战赛状态为JoinChallengeStatus数组
 	joinedChallenges := make([]*game.JoinChallengeStatus, 0, len(userMatch.Challenges))
 	for _, challengeStatus := range userMatch.Challenges {
-		if challengeStatus.Over.Before(now) { //已经结束的比赛不再显示
+
+		tplChallenge, found := s.template.GetTplChallenge().FindByKey(challengeStatus.ID)
+		if !found {
+			s.logger.Error("模板挑战赛不存在", zap.Int32("challenge_id", challengeStatus.ID))
+			continue
+		}
+
+		// 从模板表中读取时间信息
+		openTime, err := parseDateTime(tplChallenge.OpenTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛开始时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+			continue
+		}
+
+		closeTime, err := parseDateTime(tplChallenge.CloseTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛关闭时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+			continue
+		}
+
+		endTime, err := parseDateTime(tplChallenge.EndTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛结束时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+			continue
+		}
+
+		overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
+
+		if overTime.Before(now) { //已经结束的比赛不再显示
 			continue
 		}
 
@@ -200,10 +225,10 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			TournamentId:    challengeStatus.TournamentID,
 			ActivityId:      challengeStatus.ActivityID,
 			Joined:          timestamppb.New(challengeStatus.Joined),
-			Open:            timestamppb.New(challengeStatus.Open),
-			Close:           timestamppb.New(challengeStatus.Close),
-			End:             timestamppb.New(challengeStatus.End),
-			Over:            timestamppb.New(challengeStatus.Over),
+			Open:            timestamppb.New(openTime),
+			Close:           timestamppb.New(closeTime),
+			End:             timestamppb.New(endTime),
+			Over:            timestamppb.New(overTime),
 			RankReward:      challengeStatus.RankReward,
 			LowScoreReward:  challengeStatus.LowScoreReward,
 			MidScoreReward:  challengeStatus.MidScoreReward,
@@ -318,10 +343,6 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		ActivityID:      tplChallenge.ActivityID,
 		TournamentID:    tournamentID,
 		Joined:          now.Truncate(time.Second),
-		Open:            startTime.Truncate(time.Second),
-		Close:           closeTime.Truncate(time.Second),
-		End:             endTime.Truncate(time.Second),
-		Over:            overTime.Truncate(time.Second),
 		HighScoreReward: false,
 		LowScoreReward:  false,
 		MidScoreReward:  false,
@@ -571,42 +592,60 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 	hasRewardUpdate := false
 
 	for _, challenge := range userMatch.Challenges {
-		if challenge.TournamentID != "" && now.After(challenge.Over) {
-			// 获取用户在竞标赛中的记录
-			records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
-			if err != nil || len(records.OwnerRecords) == 0 {
-				s.logger.Info("没有提交成绩没有奖励")
-				continue
-			}
-			ownerRecord := records.OwnerRecords[0]
-
-			// 获取活动配置
-			activityInfo, found := s.template.GetTplActivityInfo().FindByKey(challenge.ActivityID)
+		if challenge.TournamentID != "" {
+			// 获取挑战赛模板信息
+			tplChallenge, found := s.template.GetTplChallenge().FindByKey(challenge.ID)
 			if !found {
-				s.logger.Error("活动配置不存在", zap.String("activity_id", challenge.ActivityID))
+				s.logger.Error("模板挑战赛不存在", zap.Int32("challenge_id", challenge.ID))
 				continue
 			}
 
-			// 检查排名奖励
-			if !challenge.RankReward {
-				rankRewardSent, err := s.sendExpiredRankReward(ctx, userID, challenge, ownerRecord, &activityInfo)
-				if err != nil {
-					s.logger.Error("发送过期排名奖励失败", zap.Error(err))
-				} else if rankRewardSent {
-					challenge.RankReward = true
-					hasRewardUpdate = true
-				}
+			// 从模板表中读取时间信息
+			endTime, err := parseDateTime(tplChallenge.EndTime)
+			if err != nil {
+				s.logger.Error("解析挑战赛结束时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+				continue
 			}
 
-			// 检查积分等级奖励
-			scoreResult := s.checkScoreRewards(challenge, ownerRecord, &activityInfo)
-			if scoreResult.HasNewReward {
-				err := s.sendExpiredScoreRewards(ctx, userID, challenge, scoreResult, &activityInfo)
-				if err != nil {
-					s.logger.Error("发送过期积分奖励失败", zap.Error(err))
-				} else {
-					s.applyScoreRewards(challenge, scoreResult)
-					hasRewardUpdate = true
+			overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
+
+			if now.After(overTime) {
+				// 获取用户在竞标赛中的记录
+				records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
+				if err != nil || len(records.OwnerRecords) == 0 {
+					s.logger.Info("没有提交成绩没有奖励")
+					continue
+				}
+				ownerRecord := records.OwnerRecords[0]
+
+				// 获取活动配置
+				activityInfo, found := s.template.GetTplActivityInfo().FindByKey(challenge.ActivityID)
+				if !found {
+					s.logger.Error("活动配置不存在", zap.String("activity_id", challenge.ActivityID))
+					continue
+				}
+
+				// 检查排名奖励
+				if !challenge.RankReward {
+					rankRewardSent, err := s.sendExpiredRankReward(ctx, userID, challenge, ownerRecord, &activityInfo)
+					if err != nil {
+						s.logger.Error("发送过期排名奖励失败", zap.Error(err))
+					} else if rankRewardSent {
+						challenge.RankReward = true
+						hasRewardUpdate = true
+					}
+				}
+
+				// 检查积分等级奖励
+				scoreResult := s.checkScoreRewards(challenge, ownerRecord, &activityInfo)
+				if scoreResult.HasNewReward {
+					err := s.sendExpiredScoreRewards(ctx, userID, challenge, scoreResult, &activityInfo)
+					if err != nil {
+						s.logger.Error("发送过期积分奖励失败", zap.Error(err))
+					} else {
+						s.applyScoreRewards(challenge, scoreResult)
+						hasRewardUpdate = true
+					}
 				}
 			}
 		}

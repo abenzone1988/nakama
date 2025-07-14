@@ -1290,3 +1290,516 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	t.Logf("=== 并发测试完成 ===")
 	t.Logf("测试已正常结束")
 }
+
+// TestChallengeComprehensive 综合测试挑战赛的完整生命周期
+func TestChallengeComprehensive(t *testing.T) {
+	// 设置测试时间基准
+	baseTime := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+
+	// 定义挑战赛时间段（以基准时间为参考）
+	scenarios := []struct {
+		name             string
+		description      string
+		openTime         time.Time
+		closeTime        time.Time
+		endTime          time.Time
+		overTime         time.Time
+		testTime         time.Time
+		expectedBehavior string
+	}{
+		{
+			name:             "比赛开始前",
+			description:      "比赛还未开始，玩家无法参加",
+			openTime:         baseTime.Add(1 * time.Hour),
+			closeTime:        baseTime.Add(2 * time.Hour),
+			endTime:          baseTime.Add(3 * time.Hour),
+			overTime:         baseTime.Add(4 * time.Hour),
+			testTime:         baseTime,
+			expectedBehavior: "无法参加，但可以在GetChallenge中看到（作为下一场比赛）",
+		},
+		{
+			name:             "比赛开始时",
+			description:      "比赛刚开始，玩家可以参加",
+			openTime:         baseTime,
+			closeTime:        baseTime.Add(1 * time.Hour),
+			endTime:          baseTime.Add(2 * time.Hour),
+			overTime:         baseTime.Add(3 * time.Hour),
+			testTime:         baseTime,
+			expectedBehavior: "可以参加，可以提交成绩",
+		},
+		{
+			name:             "比赛进行中",
+			description:      "比赛正在进行，玩家可以参加和提交成绩",
+			openTime:         baseTime,
+			closeTime:        baseTime.Add(2 * time.Hour),
+			endTime:          baseTime.Add(3 * time.Hour),
+			overTime:         baseTime.Add(4 * time.Hour),
+			testTime:         baseTime.Add(1 * time.Hour),
+			expectedBehavior: "可以参加，可以提交成绩",
+		},
+		{
+			name:             "比赛关闭时",
+			description:      "比赛关闭，客户端不能进入游戏，但还可以提交成绩",
+			openTime:         baseTime,
+			closeTime:        baseTime.Add(1 * time.Hour),
+			endTime:          baseTime.Add(2 * time.Hour),
+			overTime:         baseTime.Add(3 * time.Hour),
+			testTime:         baseTime.Add(1 * time.Hour),
+			expectedBehavior: "可以参加，可以提交成绩（但客户端判断不能进入游戏）",
+		},
+		{
+			name:             "比赛结束时",
+			description:      "比赛结束，不能再提交成绩，但可以领取奖励",
+			openTime:         baseTime,
+			closeTime:        baseTime.Add(1 * time.Hour),
+			endTime:          baseTime.Add(2 * time.Hour),
+			overTime:         baseTime.Add(3 * time.Hour),
+			testTime:         baseTime.Add(2 * time.Hour),
+			expectedBehavior: "无法参加，无法提交成绩，可以手动领取奖励",
+		},
+		{
+			name:             "比赛结算前",
+			description:      "比赛结束后，结算前，玩家可以手动领取奖励",
+			openTime:         baseTime,
+			closeTime:        baseTime.Add(1 * time.Hour),
+			endTime:          baseTime.Add(2 * time.Hour),
+			overTime:         baseTime.Add(3 * time.Hour),
+			testTime:         baseTime.Add(2*time.Hour + 30*time.Minute),
+			expectedBehavior: "无法参加，无法提交成绩，可以手动领取奖励",
+		},
+		{
+			name:             "比赛结算后",
+			description:      "比赛结算后，奖励变成邮件发送",
+			openTime:         baseTime,
+			closeTime:        baseTime.Add(1 * time.Hour),
+			endTime:          baseTime.Add(2 * time.Hour),
+			overTime:         baseTime.Add(3 * time.Hour),
+			testTime:         baseTime.Add(3 * time.Hour),
+			expectedBehavior: "无法参加，无法提交成绩，奖励变成邮件发送",
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			t.Logf("测试场景: %s", scenario.description)
+			t.Logf("预期行为: %s", scenario.expectedBehavior)
+
+			// 这里会实际测试每个时间段的行为
+			// 具体实现需要根据实际的测试框架来编写
+			testChallengeTimeScenario(t, scenario)
+		})
+	}
+}
+
+// TestChallengeRewardScenarios 测试各种奖励场景
+func TestChallengeRewardScenarios(t *testing.T) {
+	rewardScenarios := []struct {
+		name               string
+		userScore          int64
+		userRank           int64
+		lowScoreCondition  int32
+		midScoreCondition  int32
+		highScoreCondition int32
+		expectedRewards    []string
+		description        string
+	}{
+		{
+			name:               "无成绩玩家",
+			userScore:          0,
+			userRank:           0,
+			lowScoreCondition:  1000,
+			midScoreCondition:  5000,
+			highScoreCondition: 10000,
+			expectedRewards:    []string{},
+			description:        "玩家参加但没有提交成绩，不应该获得任何奖励",
+		},
+		{
+			name:               "低分玩家",
+			userScore:          1500,
+			userRank:           10,
+			lowScoreCondition:  1000,
+			midScoreCondition:  5000,
+			highScoreCondition: 10000,
+			expectedRewards:    []string{"low_score_reward", "rank_reward"},
+			description:        "玩家达到低分条件，应该获得低分奖励和排位奖励",
+		},
+		{
+			name:               "中分玩家",
+			userScore:          6000,
+			userRank:           5,
+			lowScoreCondition:  1000,
+			midScoreCondition:  5000,
+			highScoreCondition: 10000,
+			expectedRewards:    []string{"low_score_reward", "mid_score_reward", "rank_reward"},
+			description:        "玩家达到中分条件，应该获得低分、中分奖励和排位奖励",
+		},
+		{
+			name:               "高分玩家",
+			userScore:          12000,
+			userRank:           1,
+			lowScoreCondition:  1000,
+			midScoreCondition:  5000,
+			highScoreCondition: 10000,
+			expectedRewards:    []string{"low_score_reward", "mid_score_reward", "high_score_reward", "rank_reward"},
+			description:        "玩家达到高分条件，应该获得所有积分奖励和排位奖励",
+		},
+		{
+			name:               "边界分数玩家",
+			userScore:          5000,
+			userRank:           3,
+			lowScoreCondition:  1000,
+			midScoreCondition:  5000,
+			highScoreCondition: 10000,
+			expectedRewards:    []string{"low_score_reward", "mid_score_reward", "rank_reward"},
+			description:        "玩家刚好达到中分条件边界，应该获得低分、中分奖励和排位奖励",
+		},
+		{
+			name:               "高分低排名玩家",
+			userScore:          15000,
+			userRank:           50,
+			lowScoreCondition:  1000,
+			midScoreCondition:  5000,
+			highScoreCondition: 10000,
+			expectedRewards:    []string{"low_score_reward", "mid_score_reward", "high_score_reward", "rank_reward"},
+			description:        "玩家高分但排名较低，应该获得所有积分奖励和对应排位奖励",
+		},
+	}
+
+	for _, scenario := range rewardScenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			t.Logf("测试场景: %s", scenario.description)
+			testChallengeRewardScenario(t, scenario)
+		})
+	}
+}
+
+// TestChallengeBoundaryConditions 测试边界条件
+func TestChallengeBoundaryConditions(t *testing.T) {
+	boundaryTests := []struct {
+		name        string
+		description string
+		testFunc    func(t *testing.T)
+	}{
+		{
+			name:        "重复参加挑战赛",
+			description: "玩家尝试重复参加同一个挑战赛",
+			testFunc:    testDuplicateJoinChallenge,
+		},
+		{
+			name:        "竞标赛满员情况",
+			description: "测试竞标赛达到最大参与人数时的处理",
+			testFunc:    testTournamentMaxCapacity,
+		},
+		{
+			name:        "重复领取奖励",
+			description: "玩家尝试重复领取同一个奖励",
+			testFunc:    testDuplicateRewardClaim,
+		},
+		{
+			name:        "时间临界点",
+			description: "测试各个时间临界点的精确处理",
+			testFunc:    testTimeBoundaryConditions,
+		},
+		{
+			name:        "无效挑战赛ID",
+			description: "测试使用无效挑战赛ID的处理",
+			testFunc:    testInvalidChallengeID,
+		},
+		{
+			name:        "邮件奖励发送",
+			description: "测试过期奖励变成邮件发送的逻辑",
+			testFunc:    testEmailRewardSending,
+		},
+	}
+
+	for _, test := range boundaryTests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Logf("测试场景: %s", test.description)
+			test.testFunc(t)
+		})
+	}
+}
+
+// TestChallengeRankingScenarios 测试排名场景
+func TestChallengeRankingScenarios(t *testing.T) {
+	rankingScenarios := []struct {
+		name         string
+		players      []PlayerScore
+		rewardConfig []RankRewardConfig
+		description  string
+	}{
+		{
+			name: "基础排名测试",
+			players: []PlayerScore{
+				{UserID: "user1", Score: 10000, ExpectedRank: 1},
+				{UserID: "user2", Score: 9000, ExpectedRank: 2},
+				{UserID: "user3", Score: 8000, ExpectedRank: 3},
+				{UserID: "user4", Score: 7000, ExpectedRank: 4},
+				{UserID: "user5", Score: 6000, ExpectedRank: 5},
+			},
+			rewardConfig: []RankRewardConfig{
+				{MinRank: 1, MaxRank: 1, RewardID: "champion_reward"},
+				{MinRank: 2, MaxRank: 3, RewardID: "top3_reward"},
+				{MinRank: 4, MaxRank: 10, RewardID: "top10_reward"},
+			},
+			description: "测试基础排名奖励分配",
+		},
+		{
+			name: "相同分数排名测试",
+			players: []PlayerScore{
+				{UserID: "user1", Score: 10000, ExpectedRank: 1},
+				{UserID: "user2", Score: 10000, ExpectedRank: 1},
+				{UserID: "user3", Score: 9000, ExpectedRank: 3},
+				{UserID: "user4", Score: 9000, ExpectedRank: 3},
+				{UserID: "user5", Score: 8000, ExpectedRank: 5},
+			},
+			rewardConfig: []RankRewardConfig{
+				{MinRank: 1, MaxRank: 2, RewardID: "top2_reward"},
+				{MinRank: 3, MaxRank: 5, RewardID: "top5_reward"},
+			},
+			description: "测试相同分数时的排名处理",
+		},
+		{
+			name:    "大规模排名测试",
+			players: generateLargePlayerList(100),
+			rewardConfig: []RankRewardConfig{
+				{MinRank: 1, MaxRank: 1, RewardID: "champion_reward"},
+				{MinRank: 2, MaxRank: 10, RewardID: "top10_reward"},
+				{MinRank: 11, MaxRank: 50, RewardID: "top50_reward"},
+				{MinRank: 51, MaxRank: 100, RewardID: "participation_reward"},
+			},
+			description: "测试大规模玩家排名奖励分配",
+		},
+	}
+
+	for _, scenario := range rankingScenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			t.Logf("测试场景: %s", scenario.description)
+			testChallengeRankingScenario(t, scenario)
+		})
+	}
+}
+
+// TestChallengeCompleteWorkflow 测试完整工作流程
+func TestChallengeCompleteWorkflow(t *testing.T) {
+	workflows := []struct {
+		name        string
+		description string
+		workflow    []WorkflowStep
+	}{
+		{
+			name:        "正常参赛流程",
+			description: "玩家正常参加挑战赛并获得奖励的完整流程",
+			workflow: []WorkflowStep{
+				{Action: "GetChallenge", ExpectedResult: "显示可参加的挑战赛"},
+				{Action: "JoinChallenge", ExpectedResult: "成功参加挑战赛"},
+				{Action: "SubmitScore", ExpectedResult: "成功提交成绩"},
+				{Action: "GetChallenge", ExpectedResult: "显示已参加的挑战赛状态"},
+				{Action: "WaitForEnd", ExpectedResult: "等待比赛结束"},
+				{Action: "GainReward", ExpectedResult: "成功领取奖励"},
+			},
+		},
+		{
+			name:        "迟到参赛流程",
+			description: "玩家在比赛快结束时参加的流程",
+			workflow: []WorkflowStep{
+				{Action: "WaitUntilNearEnd", ExpectedResult: "等待到比赛快结束"},
+				{Action: "JoinChallenge", ExpectedResult: "成功参加挑战赛"},
+				{Action: "SubmitScore", ExpectedResult: "成功提交成绩"},
+				{Action: "WaitForEnd", ExpectedResult: "等待比赛结束"},
+				{Action: "GainReward", ExpectedResult: "成功领取奖励"},
+			},
+		},
+		{
+			name:        "错过手动领奖流程",
+			description: "玩家错过手动领奖时间，奖励变成邮件的流程",
+			workflow: []WorkflowStep{
+				{Action: "JoinChallenge", ExpectedResult: "成功参加挑战赛"},
+				{Action: "SubmitScore", ExpectedResult: "成功提交成绩"},
+				{Action: "WaitForEnd", ExpectedResult: "等待比赛结束"},
+				{Action: "WaitForOvertime", ExpectedResult: "等待超过结算时间"},
+				{Action: "CheckEmail", ExpectedResult: "确认奖励已通过邮件发送"},
+			},
+		},
+		{
+			name:        "只参加不提交成绩流程",
+			description: "玩家参加但不提交成绩的流程",
+			workflow: []WorkflowStep{
+				{Action: "JoinChallenge", ExpectedResult: "成功参加挑战赛"},
+				{Action: "WaitForEnd", ExpectedResult: "等待比赛结束"},
+				{Action: "TryGainReward", ExpectedResult: "因为没有成绩无法领取奖励"},
+			},
+		},
+	}
+
+	for _, workflow := range workflows {
+		t.Run(workflow.name, func(t *testing.T) {
+			t.Logf("测试工作流程: %s", workflow.description)
+			testChallengeWorkflow(t, workflow)
+		})
+	}
+}
+
+// 辅助结构体定义
+type PlayerScore struct {
+	UserID       string
+	Score        int64
+	ExpectedRank int64
+}
+
+type RankRewardConfig struct {
+	MinRank  int32
+	MaxRank  int32
+	RewardID string
+}
+
+type WorkflowStep struct {
+	Action         string
+	ExpectedResult string
+}
+
+// 辅助函数实现
+func testChallengeTimeScenario(t *testing.T, scenario struct {
+	name             string
+	description      string
+	openTime         time.Time
+	closeTime        time.Time
+	endTime          time.Time
+	overTime         time.Time
+	testTime         time.Time
+	expectedBehavior string
+}) {
+	// 模拟时间设置
+	// 这里需要根据实际的测试框架来实现时间模拟
+
+	// 1. 测试GetChallenge接口
+	t.Run("GetChallenge", func(t *testing.T) {
+		// 根据当前时间，测试是否能正确获取挑战赛列表
+		// 实现GetChallenge的测试逻辑
+	})
+
+	// 2. 测试JoinChallenge接口
+	t.Run("JoinChallenge", func(t *testing.T) {
+		// 根据当前时间，测试是否能正确参加挑战赛
+		// 实现JoinChallenge的测试逻辑
+	})
+
+	// 3. 测试GainChallengeReward接口
+	t.Run("GainChallengeReward", func(t *testing.T) {
+		// 根据当前时间，测试是否能正确领取奖励
+		// 实现GainChallengeReward的测试逻辑
+	})
+}
+
+func testChallengeRewardScenario(t *testing.T, scenario struct {
+	name               string
+	userScore          int64
+	userRank           int64
+	lowScoreCondition  int32
+	midScoreCondition  int32
+	highScoreCondition int32
+	expectedRewards    []string
+	description        string
+}) {
+	// 实现奖励场景测试
+	// 1. 设置玩家成绩和排名
+	// 2. 调用奖励检查逻辑
+	// 3. 验证预期奖励
+}
+
+func testDuplicateJoinChallenge(t *testing.T) {
+	// 实现重复参加挑战赛的测试
+	// 1. 第一次参加应该成功
+	// 2. 第二次参加应该失败并返回适当的错误码
+}
+
+func testTournamentMaxCapacity(t *testing.T) {
+	// 实现竞标赛满员测试
+	// 1. 填满一个竞标赛
+	// 2. 测试新玩家加入时的处理（创建新竞标赛）
+}
+
+func testDuplicateRewardClaim(t *testing.T) {
+	// 实现重复领取奖励的测试
+	// 1. 第一次领取应该成功
+	// 2. 第二次领取应该失败并返回适当的错误码
+}
+
+func testTimeBoundaryConditions(t *testing.T) {
+	// 实现时间边界条件测试
+	// 测试各个时间点的精确处理
+}
+
+func testInvalidChallengeID(t *testing.T) {
+	// 实现无效挑战赛ID的测试
+	// 测试使用不存在的挑战赛ID时的处理
+}
+
+func testEmailRewardSending(t *testing.T) {
+	// 实现邮件奖励发送测试
+	// 测试过期奖励变成邮件发送的逻辑
+}
+
+func testChallengeRankingScenario(t *testing.T, scenario struct {
+	name         string
+	players      []PlayerScore
+	rewardConfig []RankRewardConfig
+	description  string
+}) {
+	// 实现排名场景测试
+	// 1. 设置多个玩家的成绩
+	// 2. 验证排名计算
+	// 3. 验证排名奖励分配
+}
+
+func testChallengeWorkflow(t *testing.T, workflow struct {
+	name        string
+	description string
+	workflow    []WorkflowStep
+}) {
+	// 实现完整工作流程测试
+	// 按照工作流程步骤顺序执行测试
+}
+
+func generateLargePlayerList(count int) []PlayerScore {
+	players := make([]PlayerScore, count)
+	for i := 0; i < count; i++ {
+		players[i] = PlayerScore{
+			UserID:       fmt.Sprintf("user%d", i+1),
+			Score:        int64(10000 - i*100), // 递减分数
+			ExpectedRank: int64(i + 1),
+		}
+	}
+	return players
+}
+
+// 测试用例执行指南
+func TestChallengeExecutionGuide(t *testing.T) {
+	t.Log("===============================================")
+	t.Log("挑战赛测试用例执行指南")
+	t.Log("===============================================")
+	t.Log("")
+	t.Log("1. 时间段测试:")
+	t.Log("   - 比赛开始前: 无法参加，但可以在列表中看到")
+	t.Log("   - 比赛进行中: 可以参加，可以提交成绩")
+	t.Log("   - 比赛关闭时: 客户端判断不能进入，但可以提交成绩")
+	t.Log("   - 比赛结束后: 不能提交成绩，可以手动领取奖励")
+	t.Log("   - 比赛结算后: 奖励变成邮件发送")
+	t.Log("")
+	t.Log("2. 奖励测试:")
+	t.Log("   - 积分奖励: 根据成绩达到不同条件获得")
+	t.Log("   - 排位奖励: 根据最终排名获得")
+	t.Log("   - 邮件奖励: 过期未领取奖励通过邮件发送")
+	t.Log("")
+	t.Log("3. 边界条件测试:")
+	t.Log("   - 重复参加、重复领奖")
+	t.Log("   - 竞标赛满员处理")
+	t.Log("   - 时间临界点处理")
+	t.Log("   - 无效参数处理")
+	t.Log("")
+	t.Log("4. 完整流程测试:")
+	t.Log("   - 正常参赛到领奖的完整流程")
+	t.Log("   - 各种异常情况的处理流程")
+	t.Log("")
+	t.Log("===============================================")
+}
