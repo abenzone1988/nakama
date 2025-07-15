@@ -6,6 +6,7 @@ set GOARCH=amd64
 go build -o nakama
 
 
+
 scp -P 31222  nakama   root@118.145.182.217:/root/wx-hjzx/bin
 
 rem scp -P 31222  nakama   root@47.122.45.71:/root/nakama/bin
