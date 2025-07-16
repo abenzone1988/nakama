@@ -63,8 +63,8 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 		VerboseLogging  bool
 	}{
 		PlayerCount:     10000,
-		CustomIDPrefix:  "test_player_10000",
-		UsernamePrefix:  "Player_10000",
+		CustomIDPrefix:  "test_player_10000_1",
+		UsernamePrefix:  "Player_10000_1",
 		StrictMode:      true, // 严格模式：使用t.Errorf，解析JWT
 		PerformanceMode: true, // 性能模式：记录时间，计算速度
 		VerboseLogging:  true, // 详细日志：显示详细成绩信息
@@ -518,7 +518,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 		Error        error
 	}
 
-	const playerCount = 20            // 减少到20个玩家，更容易观察tournament创建
+	const playerCount = 100           // 减少到20个玩家，更容易观察tournament创建
 	const maxPlayersPerTournament = 4 // 假设每个tournament最多4个玩家
 
 	players := make([]*Player, playerCount)
