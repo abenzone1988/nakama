@@ -855,3 +855,46 @@ func DisableTournamentRanks(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 	return nil
 }
+
+// 快速查找第一个可加入的tournament
+func TournamentFindFirstAvailable(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, category int, maxSize int) (*api.Tournament, error) {
+	// 简化查询：只使用category和size条件
+	query := `
+SELECT id, sort_order, operator, reset_schedule, metadata, create_time,
+       category, description, duration, end_time, max_size, max_num_score,
+       title, size, start_time
+FROM leaderboard
+WHERE duration > 0
+  AND category = $1
+  AND (max_size = 0 OR size < max_size)`
+
+	params := []interface{}{
+		category,
+	}
+
+	// 如果有最大size要求，添加size限制
+	if maxSize > 0 {
+		query += " AND size < $2"
+		params = append(params, maxSize)
+	}
+
+	query += " ORDER BY create_time ASC LIMIT 1"
+
+	row := db.QueryRowContext(ctx, query, params...)
+	tournament, err := parseTournament(row, time.Now().UTC())
+	if err != nil {
+		if errors.Is(err, runtime.ErrTournamentNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // 没有找到可加入的tournament
+		}
+		logger.Error("Error finding first available tournament", zap.Error(err))
+		return nil, err
+	}
+
+	logger.Debug("快速查找到第一个可加入的tournament",
+		zap.Int("category", category),
+		zap.String("tournament_id", tournament.Id),
+		zap.Uint32("current_size", tournament.Size),
+		zap.Uint32("max_size", tournament.MaxSize))
+
+	return tournament, nil
+}

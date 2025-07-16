@@ -2,7 +2,7 @@ name: nakama-node-jp
 
 database:
   address:
-    - "root@192.168.102.223:26257/test"
+    - "root:sparkinfi123!@192.168.102.223:5432?dbname=hjzx"
 logger:
   level: "info"
 
@@ -20,6 +20,8 @@ session:
 socket:
   server_key: "sparkgame"
   port: 7350
+
+
 
 console:
   port: 7351

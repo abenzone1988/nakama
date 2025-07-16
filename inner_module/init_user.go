@@ -41,6 +41,13 @@ func InitializeDeviceUser(ctx context.Context, logger runtime.Logger, db *sql.DB
 	return nil
 }
 
+func InitializeCustomUser(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, out *api.Session, in *api.AuthenticateCustomRequest) error {
+	if out.Created {
+		return InitWallet(ctx, logger, nk)
+	}
+	return nil
+}
+
 func InitializeAccount(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, out *api.Account) error {
 	var wallet map[string]int64
 	err := json.Unmarshal([]byte(out.Wallet), &wallet)
