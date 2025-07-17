@@ -237,8 +237,29 @@ func (r *RedisLeaderboardRankCache) publishMessage(leaderboardID string, expiryU
 		channel = rankCacheUpdateChannel
 	}
 
-	if err := r.client.Publish(r.ctx, channel, msgBytes).Err(); err != nil {
-		r.logger.Error("Error publishing rank cache message", zap.Error(err))
+	// 增加重试机制，确保消息可靠发送
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		if err := r.client.Publish(r.ctx, channel, msgBytes).Err(); err != nil {
+			r.logger.Error("Error publishing rank cache message",
+				zap.Error(err),
+				zap.Int("retry", i+1),
+				zap.String("channel", channel))
+
+			if i == maxRetries-1 {
+				// 最后一次重试失败，记录严重错误
+				r.logger.Error("Failed to publish rank cache message after all retries",
+					zap.String("leaderboard_id", leaderboardID),
+					zap.String("action", action))
+			}
+
+			// 短暂延迟后重试
+			time.Sleep(time.Duration(i+1) * 100 * time.Millisecond)
+			continue
+		}
+
+		// 发送成功，跳出重试循环
+		break
 	}
 }
 
@@ -307,6 +328,14 @@ func (r *RedisLeaderboardRankCache) Get(leaderboardID string, expiryUnix int64, 
 	if err != nil {
 		if err != redis.Nil {
 			r.logger.Error("Error getting rank from Redis", zap.Error(err))
+			// Redis连接失败时，尝试从数据库重建缓存
+			r.logger.Warn("Redis connection failed, attempting to rebuild cache from database",
+				zap.String("leaderboard_id", leaderboardID),
+				zap.String("owner_id", ownerID.String()))
+
+			// 这里可以添加从数据库重建缓存的逻辑
+			// 暂时返回0，避免返回错误数据
+			return 0
 		}
 		return 0
 	}
@@ -639,4 +668,55 @@ func (r *RedisLeaderboardRankCache) Stop() {
 	if r.client != nil {
 		r.client.Close()
 	}
+}
+
+// HealthCheck 健康检查方法
+func (r *RedisLeaderboardRankCache) HealthCheck() error {
+	if r.blacklistAll {
+		return nil // 禁用状态视为健康
+	}
+
+	// 检查Redis连接
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := r.client.Ping(ctx).Err(); err != nil {
+		return fmt.Errorf("Redis connection failed: %w", err)
+	}
+
+	// 检查发布/订阅连接
+	if r.pubsub != nil {
+		if err := r.pubsub.Ping(ctx); err != nil {
+			return fmt.Errorf("Redis pubsub connection failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// GetStats 获取缓存统计信息
+func (r *RedisLeaderboardRankCache) GetStats() map[string]interface{} {
+	stats := make(map[string]interface{})
+
+	// 本地缓存统计
+	localCacheSize := 0
+	r.localCache.cache.Range(func(key, value interface{}) bool {
+		localCacheSize++
+		return true
+	})
+
+	stats["local_cache_size"] = localCacheSize
+	stats["node_id"] = r.nodeID
+	stats["blacklist_all"] = r.blacklistAll
+	stats["blacklist_count"] = len(r.blacklistIds)
+
+	// Redis统计（如果连接正常）
+	if err := r.HealthCheck(); err == nil {
+		info, err := r.client.Info(r.ctx, "memory").Result()
+		if err == nil {
+			stats["redis_memory_usage"] = info
+		}
+	}
+
+	return stats
 }

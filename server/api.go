@@ -372,6 +372,27 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 	// 初始化挑战赛批次号管理
 	s.InitChallengeBatch()
 
+	// 启动定时保存挑战赛批次号的goroutine
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			if s.challengeBatchDirty {
+				s.logger.Info("定时检测到挑战赛批次号有变化，尝试保存")
+				s.challengeBatchMutex.Lock()
+				if s.challengeBatchDirty {
+					err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, s.challengeBatch)
+					if err != nil {
+						s.logger.Error("定时保存挑战赛批次号数据失败", zap.Error(err))
+					} else {
+						s.challengeBatchDirty = false
+						s.logger.Info("定时保存挑战赛批次号数据成功", zap.Int("challenge_count", len(s.challengeBatch.Batch)))
+					}
+				}
+				s.challengeBatchMutex.Unlock()
+			}
+		}
+	}()
+
 	return s
 }
 
