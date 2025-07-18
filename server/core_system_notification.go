@@ -53,7 +53,7 @@ func SystemNotificationDelete(ctx context.Context, db *sql.DB, logger *zap.Logge
 	return nil
 }
 
-func SystemNotificationCreate(ctx context.Context, db *sql.DB, logger *zap.Logger, subject string, content string, effectiveTime *timestamppb.Timestamp, expiryTime *timestamppb.Timestamp, code int32) (*console.SystemNotice, error) {
+func SystemNotificationCreate(ctx context.Context, db *sql.DB, logger *zap.Logger, noticeType int32, subject string, content string, effectiveTime *timestamppb.Timestamp, expiryTime *timestamppb.Timestamp, challengeId int32) (*console.SystemNotice, error) {
 	var effectiveTimeVal, expiryTimeVal interface{}
 	now := time.Now().UTC()
 
@@ -65,27 +65,34 @@ func SystemNotificationCreate(ctx context.Context, db *sql.DB, logger *zap.Logge
 		expiryTimeVal = expiryTime.AsTime()
 	}
 
+	var challengeIdVal interface{}
+	if challengeId > 0 {
+		challengeIdVal = challengeId
+	}
+
 	query := `
 		INSERT INTO system_notification (
+			notice_type,
 			subject,
 			content,
 			create_time,
 			effective_time,
 			expiry_time,
-			code
-		) VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, subject, content, create_time, effective_time, expiry_time, code`
+			challenge_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, notice_type, subject, content, create_time, effective_time, expiry_time, challenge_id`
 
 	var (
 		id              string
 		createTime      pgtype.Timestamptz
 		dbEffectiveTime pgtype.Timestamptz
 		dbExpiryTime    pgtype.Timestamptz
+		dbChallengeId   sql.NullInt32
 		contentStr      string
 	)
 
-	err := db.QueryRowContext(ctx, query, subject, content, now, effectiveTimeVal, expiryTimeVal, code).
-		Scan(&id, &subject, &contentStr, &createTime, &dbEffectiveTime, &dbExpiryTime, &code)
+	err := db.QueryRowContext(ctx, query, noticeType, subject, content, now, effectiveTimeVal, expiryTimeVal, challengeIdVal).
+		Scan(&id, &noticeType, &subject, &contentStr, &createTime, &dbEffectiveTime, &dbExpiryTime, &dbChallengeId)
 
 	if err != nil {
 		logger.Error("创建系统通知失败", zap.Error(err))
@@ -111,6 +118,9 @@ func SystemNotificationCreate(ctx context.Context, db *sql.DB, logger *zap.Logge
 	if dbExpiryTime.Valid {
 		notification.ExpiryTime = timestamppb.New(dbExpiryTime.Time)
 	}
+	if dbChallengeId.Valid {
+		notification.ChallengeId = dbChallengeId.Int32
+	}
 
 	return notification, nil
 }
@@ -130,7 +140,7 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	}
 
 	query := `
-		SELECT id, subject, content, create_time, effective_time, expiry_time, code
+		SELECT id, notice_type, subject, content, create_time, effective_time, expiry_time, challenge_id
 		FROM system_notification
 		` + conditions
 
@@ -157,15 +167,16 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	for rows.Next() {
 		var (
 			id            string
+			noticeType    sql.NullInt32
 			subject       string
 			contentStr    string
 			createTime    pgtype.Timestamptz
 			effectiveTime pgtype.Timestamptz
 			expiryTime    pgtype.Timestamptz
-			code          int32
+			challengeId   sql.NullInt32
 		)
 
-		if err = rows.Scan(&id, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &code); err != nil {
+		if err = rows.Scan(&id, &noticeType, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &challengeId); err != nil {
 			logger.Error("扫描系统通知数据失败", zap.Error(err))
 			return nil, err
 		}
@@ -183,6 +194,7 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 		notification := &console.SystemNotice{
 			Id:         id,
+			NoticeType: noticeType.Int32,
 			Subject:    subject,
 			Content:    &content,
 			CreateTime: timestamppb.New(createTime.Time),
@@ -193,6 +205,9 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		}
 		if expiryTime.Valid {
 			notification.ExpiryTime = timestamppb.New(expiryTime.Time)
+		}
+		if challengeId.Valid {
+			notification.ChallengeId = challengeId.Int32
 		}
 
 		notifications = append(notifications, notification)
@@ -210,7 +225,7 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	}, nil
 }
 
-func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logger, id string, subject string, content string, effectiveTime *timestamppb.Timestamp, expiryTime *timestamppb.Timestamp, code int32) (*console.SystemNotice, error) {
+func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logger, id string, subject string, content string, effectiveTime *timestamppb.Timestamp, expiryTime *timestamppb.Timestamp, challengeId int32) (*console.SystemNotice, error) {
 	var effectiveTimeVal, expiryTimeVal interface{}
 
 	if effectiveTime != nil {
@@ -221,26 +236,32 @@ func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logge
 		expiryTimeVal = expiryTime.AsTime()
 	}
 
+	var challengeIdVal interface{}
+	if challengeId > 0 {
+		challengeIdVal = challengeId
+	}
+
 	query := `
 		UPDATE system_notification
 		SET subject = $2,
 			content = $3,
 			effective_time = $4,
 			expiry_time = $5,
-			code = $6
+			challenge_id = $6
 		WHERE id = $1
-		RETURNING id, subject, content, create_time, effective_time, expiry_time, code`
+		RETURNING id, subject, content, create_time, effective_time, expiry_time, challenge_id`
 
 	var (
 		notificationId  string
 		createTime      pgtype.Timestamptz
 		dbEffectiveTime pgtype.Timestamptz
 		dbExpiryTime    pgtype.Timestamptz
+		dbChallengeId   sql.NullInt32
 		contentStr      string
 	)
 
-	err := db.QueryRowContext(ctx, query, id, subject, content, effectiveTimeVal, expiryTimeVal, code).
-		Scan(&notificationId, &subject, &contentStr, &createTime, &dbEffectiveTime, &dbExpiryTime, &code)
+	err := db.QueryRowContext(ctx, query, id, subject, content, effectiveTimeVal, expiryTimeVal, challengeIdVal).
+		Scan(&notificationId, &subject, &contentStr, &createTime, &dbEffectiveTime, &dbExpiryTime, &dbChallengeId)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -269,13 +290,16 @@ func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logge
 	if dbExpiryTime.Valid {
 		notification.ExpiryTime = timestamppb.New(dbExpiryTime.Time)
 	}
+	if dbChallengeId.Valid {
+		notification.ChallengeId = dbChallengeId.Int32
+	}
 
 	return notification, nil
 }
 
 func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, id string) (*console.SystemNotice, error) {
 	query := `
-		SELECT id, subject, content, create_time, effective_time, expiry_time, code
+		SELECT id, subject, content, create_time, effective_time, expiry_time, challenge_id
 		FROM system_notification
 		WHERE id = $1`
 
@@ -286,7 +310,7 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 		createTime     pgtype.Timestamptz
 		effectiveTime  pgtype.Timestamptz
 		expiryTime     pgtype.Timestamptz
-		code           int32
+		challengeId    sql.NullInt32
 	)
 
 	err := db.QueryRowContext(ctx, query, id).Scan(
@@ -296,7 +320,7 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 		&createTime,
 		&effectiveTime,
 		&expiryTime,
-		&code,
+		&challengeId,
 	)
 
 	if err != nil {
@@ -325,6 +349,9 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 	}
 	if expiryTime.Valid {
 		notification.ExpiryTime = timestamppb.New(expiryTime.Time)
+	}
+	if challengeId.Valid {
+		notification.ChallengeId = challengeId.Int32
 	}
 
 	return notification, nil
@@ -403,7 +430,7 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 			create_time,
 			effective_time,
 			expiry_time,
-			code
+			challenge_id
 		FROM system_notification
 		WHERE
 			EXTRACT(EPOCH FROM date_trunc('second', effective_time)) > $1
@@ -427,9 +454,9 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 		var createTime pgtype.Timestamptz
 		var effectiveTime pgtype.Timestamptz
 		var expiryTime pgtype.Timestamptz
-		var code int32
+		var challengeId sql.NullInt32
 
-		if err = rows.Scan(&id, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &code); err != nil {
+		if err = rows.Scan(&id, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &challengeId); err != nil {
 			logger.Error("扫描系统通知数据失败", zap.Error(err))
 			return nil, err
 		}
@@ -452,6 +479,9 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 		}
 		if expiryTime.Valid {
 			notification.ExpiryTime = timestamppb.New(expiryTime.Time)
+		}
+		if challengeId.Valid {
+			notification.ChallengeId = challengeId.Int32
 		}
 
 		notifications = append(notifications, notification)

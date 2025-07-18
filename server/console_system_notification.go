@@ -17,8 +17,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -34,7 +32,7 @@ import (
 func (s *ConsoleServer) ListSystemNotifications(ctx context.Context, in *console.ListSystemNoticeRequest) (*console.ListSystemNoticeResponse, error) {
 	// 参数验证
 	if in.Limit <= 0 || in.Limit > 100 {
-		in.Limit = 20
+		in.Limit = 100
 	}
 
 	notifications, err := SystemNotificationList(ctx, s.logger, s.db, int(in.Limit), in.Cursor)
@@ -68,60 +66,30 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 	// 计算生效时间
 	var effectiveTime *timestamppb.Timestamp
 	if in.Type == 1 { // 比赛类型
-		// 从通知内容中获取挑战赛ID
-		content := notice.GetContent()
-		if content != nil {
-			// 尝试从内容中获取挑战赛ID
-			// 由于 NoticeContent 结构体目前没有 challenge_id 字段，
-			// 我们暂时通过其他方式获取挑战赛ID
-			// 这里可以从通知的描述或其他字段中解析挑战赛ID
-			challengeIDStr := ""
-
-			// 尝试从描述中解析挑战赛ID（临时方案）
-			// 格式：[挑战赛ID:123]
-			description := content.GetDescription()
-			if description != "" {
-				// 解析挑战赛ID
-				// 查找格式：[挑战赛ID:数字]
-				challengeIDMatch := regexp.MustCompile(`\[挑战赛ID:(\d+)\]`).FindStringSubmatch(description)
-				if len(challengeIDMatch) > 1 {
-					challengeIDStr = challengeIDMatch[1]
-					s.logger.Info("从描述中解析到挑战赛ID", zap.String("challenge_id", challengeIDStr))
-				}
-			}
-
-			if challengeIDStr != "" {
-				challengeID, err := strconv.Atoi(challengeIDStr)
+		// 从通知对象中获取挑战赛ID
+		challengeID := notice.GetChallengeId()
+		if challengeID > 0 {
+			tplChallenge := s.template.GetTplChallenge()
+			challenge, found := tplChallenge.FindByKey(int(challengeID))
+			if found {
+				// 解析开始时间作为生效时间
+				startTime, err := parseDateTime(challenge.OpenTime)
 				if err == nil {
-					tplChallenge := s.template.GetTplChallenge()
-					challenge, found := tplChallenge.FindByKey(challengeID)
-					if found {
-						// 解析开始时间作为生效时间
-						startTime, err := parseDateTime(challenge.OpenTime)
-						if err == nil {
-							effectiveTime = timestamppb.New(startTime)
-							s.logger.Info("使用挑战赛开始时间作为生效时间",
-								zap.Int("challenge_id", challengeID),
-								zap.String("open_time", challenge.OpenTime))
-						} else {
-							s.logger.Error("解析挑战赛开始时间失败", zap.Error(err))
-							effectiveTime = timestamppb.Now()
-						}
-					} else {
-						s.logger.Warn("挑战赛模板不存在", zap.Int("challenge_id", challengeID))
-						effectiveTime = timestamppb.Now()
-					}
+					effectiveTime = timestamppb.New(startTime)
+					s.logger.Info("使用挑战赛开始时间作为生效时间",
+						zap.Int32("challenge_id", challengeID),
+						zap.String("open_time", challenge.OpenTime))
 				} else {
-					s.logger.Error("挑战赛ID格式错误", zap.Error(err))
+					s.logger.Error("解析挑战赛开始时间失败", zap.Error(err))
 					effectiveTime = timestamppb.Now()
 				}
 			} else {
-				s.logger.Warn("未找到挑战赛ID，使用当前时间")
+				s.logger.Warn("挑战赛模板不存在", zap.Int32("challenge_id", challengeID))
 				effectiveTime = timestamppb.Now()
 			}
 		} else {
-			s.logger.Warn("通知内容为空，使用当前时间")
-			effectiveTime = timestamppb.Now()
+			s.logger.Error("比赛类型未指定挑战赛ID", zap.Int32("challenge_id", challengeID))
+			return nil, status.Error(codes.InvalidArgument, "比赛类型未指定挑战赛ID")
 		}
 	} else {
 		// 全体和个人类型使用当前时间
@@ -135,7 +103,7 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 	}
 
 	// 创建系统通知
-	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetSubject(), string(contentJson), effectiveTime, notice.GetExpiryTime(), 0)
+	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetNoticeType(), notice.GetSubject(), string(contentJson), effectiveTime, notice.GetExpiryTime(), notice.GetChallengeId())
 	if err != nil {
 		s.logger.Error("创建系统通知失败", zap.Error(err))
 		return nil, status.Error(codes.Internal, "创建系统通知失败")
@@ -230,7 +198,7 @@ func (s *ConsoleServer) UpdateSystemNotification(ctx context.Context, in *consol
 		return nil, status.Error(codes.InvalidArgument, "通知内容格式错误")
 	}
 
-	notification, err := SystemNotificationUpdate(ctx, s.db, s.logger, in.GetId(), in.GetSubject(), string(contentJson), in.GetEffectiveTime(), in.GetExpiryTime(), 0)
+	notification, err := SystemNotificationUpdate(ctx, s.db, s.logger, in.GetId(), in.GetSubject(), string(contentJson), in.GetEffectiveTime(), in.GetExpiryTime(), in.GetChallengeId())
 	if err != nil {
 		if err == ErrSystemNotificationNotFound {
 			return nil, status.Error(codes.NotFound, "通知不存在")

@@ -3019,10 +3019,15 @@
                   "format": "date-time",
                   "title": "Expiry time"
                 },
-                "status": {
+                "challenge_id": {
                   "type": "integer",
                   "format": "int32",
-                  "title": "Status code"
+                  "title": "Challenge ID"
+                },
+                "notice_type": {
+                  "type": "integer",
+                  "format": "int32",
+                  "title": "Notice Type"
                 }
               },
               "title": "System notification message definition"
@@ -4382,7 +4387,7 @@
         "type": {
           "type": "integer",
           "format": "int32",
-          "title": "Type 0:all users 1:specific users"
+          "title": "Type 0:all users 1:challenge 2:specific users"
         },
         "target": {
           "type": "array",
@@ -4768,10 +4773,15 @@
           "format": "date-time",
           "title": "Expiry time"
         },
-        "status": {
+        "challenge_id": {
           "type": "integer",
           "format": "int32",
-          "title": "Status code"
+          "title": "Challenge ID"
+        },
+        "notice_type": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Notice Type"
         }
       },
       "title": "System notification message definition"

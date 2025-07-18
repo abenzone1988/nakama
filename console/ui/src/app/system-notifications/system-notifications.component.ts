@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Component, inject, Injectable, OnInit, TemplateRef} from '@angular/core';
+import {Component, inject, Injectable, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
 import {
   ConsoleService,
@@ -72,25 +72,15 @@ export class SystemNotificationsComponent implements OnInit {
       subject: [''],
       desc: [''],
       challengeId: [''],
+      challengeTimeType: [''], // 比赛时间类型选择
       targetIds: this.formBuilder.array([]),
       items: this.formBuilder.array([]),
       immediateSend: [true], // 默认选择立即发送
-      enableEffectiveTime: [false], // 设置生效时间
       enableExpiry: [false], // 设置过期时间
       effectiveDate: [{value: null, disabled: true}],
       effectiveTime: [{value: null, disabled: true}],
       expireDate: [{value: null, disabled: true}],
       expireTime: [{value: null, disabled: true}]
-    });
-
-    this.notificationForm.get('enableEffectiveTime')!.valueChanges.subscribe(enabled => {
-      if (enabled) {
-        this.notificationForm.get('effectiveDate')!.enable();
-        this.notificationForm.get('effectiveTime')!.enable();
-      } else {
-        this.notificationForm.get('effectiveDate')!.disable();
-        this.notificationForm.get('effectiveTime')!.disable();
-      }
     });
 
     this.notificationForm.get('enableExpiry')!.valueChanges.subscribe(enabled => {
@@ -105,30 +95,36 @@ export class SystemNotificationsComponent implements OnInit {
 
     this.notificationForm.get('immediateSend')!.valueChanges.subscribe(immediate => {
       if (immediate) {
-        this.notificationForm.get('enableEffectiveTime')!.disable();
-        this.notificationForm.get('enableExpiry')!.disable();
+        // 立即生效时只禁用生效时间控件，过期时间保持独立
         this.notificationForm.get('effectiveDate')!.disable();
         this.notificationForm.get('effectiveTime')!.disable();
-        this.notificationForm.get('expireDate')!.disable();
-        this.notificationForm.get('expireTime')!.disable();
+
+        // 清除挑战赛时间类型选择
+        this.notificationForm.get('challengeTimeType')!.setValue('');
       } else {
-        this.notificationForm.get('enableEffectiveTime')!.enable();
-        this.notificationForm.get('enableExpiry')!.enable();
-        if (this.notificationForm.get('enableEffectiveTime')!.value) {
+        // 不立即生效时启用生效时间控件
           this.notificationForm.get('effectiveDate')!.enable();
           this.notificationForm.get('effectiveTime')!.enable();
         }
-        if (this.notificationForm.get('enableExpiry')!.value) {
-          this.notificationForm.get('expireDate')!.enable();
-          this.notificationForm.get('expireTime')!.enable();
-        }
+    });
+
+    // 监听发送类型变化
+    this.notificationForm.get('type')!.valueChanges.subscribe(type => {
+      if (type !== 1) { // 如果不是比赛类型
+        this.notificationForm.get('challengeId')!.setValue('');
+        this.notificationForm.get('challengeTimeType')!.setValue('');
+        this.selectedChallenge = null;
+      } else {
+        // 如果是比赛类型，默认不使用立即生效
+        this.notificationForm.patchValue({
+          immediateSend: false
+        });
       }
     });
 
-    this.notificationForm.get('effectiveDate')!.disable();
-    this.notificationForm.get('effectiveTime')!.disable();
-    this.notificationForm.get('expireDate')!.disable();
-    this.notificationForm.get('expireTime')!.disable();
+    // 触发初始状态设置
+    this.notificationForm.get('immediateSend')!.updateValueAndValidity();
+    this.notificationForm.get('enableExpiry')!.updateValueAndValidity();
 
     this.route.data.subscribe({
       next: (data) => {
@@ -183,11 +179,13 @@ export class SystemNotificationsComponent implements OnInit {
     {id: '10000', name: '金币', icon: 'CoinPile'},
     {id: '10001', name: '宝石', icon: 'GemPile'},
     {id: '10002', name: '体力', icon: 'Stanima'},
-    {id: '20000', name: '面广告券', icon: 'BigFood'},
+    {id: '20000', name: '广告券', icon: 'BigFood'},
   ];
 
   challenges: any[] = [];
   selectedChallenge: any = null;
+
+  @ViewChild('errorModal') errorModal!: TemplateRef<any>;
 
   ngOnInit(): void {
     const qp = this.route.snapshot.queryParamMap;
@@ -361,22 +359,54 @@ export class SystemNotificationsComponent implements OnInit {
 
   operateAllowed(): boolean{
     // only admin and developers are allowed.
-    return this.authService.sessionRole <= UserRole.USER_ROLE_DEVELOPER;
+    const allowed = this.authService.sessionRole <= UserRole.USER_ROLE_DEVELOPER;
+    console.log('操作权限检查:', {
+      sessionRole: this.authService.sessionRole,
+      developerRole: UserRole.USER_ROLE_DEVELOPER,
+      allowed: allowed
+    });
+    return allowed;
   }
 
   openModal(content: any, notification?: SystemNotice): void {
     this.editingNotification = notification || null;
     if (notification) {
       // 检查是否为立即发送（生效时间等于创建时间）
-      const isImmediateSend = notification.effective_time && 
+      const isImmediateSend = notification.effective_time &&
         new Date(notification.effective_time).getTime() === new Date(notification.create_time!).getTime();
-      
+
+      // 获取通知类型，默认为0（全体）
+      const notificationType = (notification as any).notice_type || 0;
+
       this.notificationForm.patchValue({
+        type: notificationType,
         subject: notification.subject,
-        content: notification.content || { description: '', rewards: [] },
+        desc: notification.content?.description || '',
+        challengeId: notification.challenge_id || '',
+        challengeTimeType: '', // 编辑时重置为空，让用户重新选择
         immediateSend: isImmediateSend,
-        enableExpiry: !isImmediateSend && (!!notification.effective_time || !!notification.expiry_time),
+        enableExpiry: !isImmediateSend && !!notification.expiry_time,
       });
+
+      // 编辑时禁用类型选择
+      this.notificationForm.get('type')!.disable();
+
+      // 如果是比赛类型且有挑战赛ID，加载挑战赛信息
+      if (notificationType === 1 && notification.challenge_id) {
+        const challengeId = parseInt(notification.challenge_id.toString());
+        this.getChallengeTemplate(challengeId);
+
+        // 查找挑战赛信息，如果找不到则稍后再试
+        this.selectedChallenge = this.challenges.find(c => c.id == challengeId) || null;
+
+        // 如果没有找到挑战赛信息，可能是因为挑战赛列表还没有加载完成
+        if (!this.selectedChallenge && this.challenges.length === 0) {
+          // 延迟一点再尝试查找
+          setTimeout(() => {
+            this.selectedChallenge = this.challenges.find(c => c.id == challengeId) || null;
+          }, 1000);
+        }
+      }
 
       // 设置生效时间
       if (notification.effective_time && !isImmediateSend) {
@@ -420,18 +450,22 @@ export class SystemNotificationsComponent implements OnInit {
       }
     } else {
       this.notificationForm.reset({
+        type: 0,
         subject: '',
-        content: { description: '', rewards: [] },
-        code: 0,
+        desc: '',
+        challengeId: '',
+        challengeTimeType: '',
         immediateSend: true,
-        enableEffectiveTime: false,
         enableExpiry: false,
         effectiveDate: null,
         effectiveTime: null,
         expireDate: null,
         expireTime: null,
       });
+      // 新建时启用类型选择
+      this.notificationForm.get('type')!.enable();
       this.formItems.clear();
+      this.selectedChallenge = null;
     }
     const modalRef = this.modalService.open(content, {
       size: 'lg',
@@ -458,27 +492,29 @@ export class SystemNotificationsComponent implements OnInit {
     }
 
     const formValue = this.notificationForm.value;
-    
+
+    // 验证比赛类型必须选择挑战赛
+    if (formValue.type == 1 && !formValue.challengeId) {
+      this.showErrorModal('比赛类型通知必须选择挑战赛');
+      return;
+    }
+
     // 验证生效时间不能小于当前时间
-    if (formValue.enableEffectiveTime && formValue.effectiveDate) {
+    if (!formValue.immediateSend && formValue.effectiveDate) {
       const effectiveDate = new Date(formValue.effectiveDate.year, formValue.effectiveDate.month - 1, formValue.effectiveDate.day);
       const now = new Date();
       if (effectiveDate < now) {
-        this.showError = true;
-        this.errorMessage = '生效时间不能小于当前时间';
-        setTimeout(() => this.showError = false, 3000);
+        this.showErrorModal('生效时间不能小于当前时间');
         return;
       }
     }
 
     // 验证过期时间不能小于生效时间
-    if (formValue.enableExpiry && formValue.expireDate && formValue.effectiveDate && formValue.enableEffectiveTime) {
+    if (formValue.enableExpiry && formValue.expireDate && formValue.effectiveDate && !formValue.immediateSend) {
       const effectiveDate = new Date(formValue.effectiveDate.year, formValue.effectiveDate.month - 1, formValue.effectiveDate.day);
       const expireDate = new Date(formValue.expireDate.year, formValue.expireDate.month - 1, formValue.expireDate.day);
       if (expireDate <= effectiveDate) {
-        this.showError = true;
-        this.errorMessage = '过期时间必须大于生效时间';
-        setTimeout(() => this.showError = false, 3000);
+        this.showErrorModal('过期时间必须大于生效时间');
         return;
       }
     }
@@ -489,7 +525,7 @@ export class SystemNotificationsComponent implements OnInit {
       // 立即发送，使用当前时间作为生效时间
       const now = new Date();
       effectiveTime = now.toISOString();
-    } else if (formValue.enableEffectiveTime && formValue.effectiveDate) {
+    } else if (formValue.effectiveDate) {
       // 手动选择生效时间
       effectiveTime = this.toTimeString(formValue.effectiveDate, formValue.effectiveTime);
     } else {
@@ -499,6 +535,7 @@ export class SystemNotificationsComponent implements OnInit {
     }
 
     const notice: SystemNotice = {
+      notice_type: formValue.type,
       subject: formValue.subject,
       content: {
         description: formValue.desc,
@@ -508,33 +545,44 @@ export class SystemNotificationsComponent implements OnInit {
       expiry_time: formValue.enableExpiry && formValue.expireDate ? this.toTimeString(formValue.expireDate, formValue.expireTime) : undefined
     };
 
+    // 如果是比赛类型且有挑战赛ID，则添加挑战赛ID
+    if (formValue.type == 1 && formValue.challengeId) {
+      const challengeId = parseInt(formValue.challengeId);
+      if (!isNaN(challengeId) && challengeId > 0) {
+        notice.challenge_id = challengeId;
+      }
+    }
+
+    // 构建更新请求数据
+    const updateData: any = {
+      content: notice.content,
+      effective_time: notice.effective_time,
+      expiry_time: notice.expiry_time,
+      subject: notice.subject,
+      challenge_id: notice.challenge_id
+    };
+
     if (this.editingNotification?.id) {
-      this.notificationsService.updateNotification(this.editingNotification.id, notice).subscribe({
-        next: () => {
+        console.log('准备更新通知:', this.editingNotification.id, updateData);
+        this.notificationsService.updateNotification(this.editingNotification.id, updateData).subscribe({
+        next: (response) => {
+          console.log('更新成功:', response);
           this.showSuccess = true;
           this.showError = false;
+          this.errorMessage = '通知更新成功';
           setTimeout(() => this.showSuccess = false, 3000);
           this.search(0);
           this.modalService.dismissAll();
           this.loadNotifications();
         },
         error: (error) => {
+          console.error('更新失败:', error);
           this.showSuccess = false;
-          this.showError = true;
-          setTimeout(() => this.showError = false, 3000);
+          this.showErrorModal('更新失败: ' + (error.error?.message || error.message || '未知错误'));
           this.search(0);
-          console.error('更新失败', error);
         }
       });
     } else {
-      // 如果是比赛类型，将挑战赛ID添加到通知描述中
-      if (formValue.type === 1 && formValue.challengeId) {
-        notice.content = {
-          ...notice.content,
-          description: `${notice.content?.description || ''} [挑战赛ID:${formValue.challengeId}]`
-        };
-      }
-      
       const createSystemNotificationRequest: CreateSystemNotificationRequest = {
         type: formValue.type,
         target: formValue.type === 2 ? formValue.targetIds : [],
@@ -551,8 +599,7 @@ export class SystemNotificationsComponent implements OnInit {
         },
         error: (error) => {
           this.showSuccess = false;
-          this.showError = true;
-          setTimeout(() => this.showError = false, 3000);
+          this.showErrorModal('创建失败: ' + (error || '未知错误'));
           this.search(0);
           console.error('创建失败', error);
         }
@@ -562,16 +609,26 @@ export class SystemNotificationsComponent implements OnInit {
 
   deleteNotification(notification: SystemNotice): void {
     if (!notification.id) {
+      console.error('通知ID为空，无法删除');
       return;
     }
+
+    console.log('准备删除通知:', notification);
+
     this.deleteConfirmService.openDeleteConfirmModal(
       () => {
+        console.log('用户确认删除，开始删除通知...');
         this.notificationsService.deleteNotification(notification.id!).subscribe({
-          next: () => {
+          next: (response) => {
+            console.log('删除成功:', response);
+            this.showSuccess = true;
+            this.errorMessage = '通知删除成功';
+            setTimeout(() => this.showSuccess = false, 3000);
             this.loadNotifications();
           },
           error: (error) => {
-            console.error('删除失败', error);
+            console.error('删除失败:', error);
+            this.showErrorModal('删除失败: ' + (error.error?.message || error.message || '未知错误'));
           }
         });
       },
@@ -623,15 +680,6 @@ export class SystemNotificationsComponent implements OnInit {
     this.loadNotifications();
   }
 
-  getStatusText(status: number): string {
-    const statusMap: { [key: number]: string } = {
-      0: '草稿',
-      1: '已发布',
-      2: '已下线'
-    };
-    return statusMap[status] || '未知';
-  }
-
   getStatusClass(status: number): string {
     const classMap: { [key: number]: string } = {
       0: 'badge-secondary',
@@ -664,7 +712,7 @@ export class SystemNotificationsComponent implements OnInit {
   }
 
   getChallengeTemplate(challengeId: number): void {
-    this.consoleService.getChallengeTemplate('', challengeId.toString()).subscribe({
+    this.consoleService.getChallengeTemplate('', challengeId).subscribe({
       next: (response) => {
         if (response.template) {
           const template = response.template;
@@ -690,13 +738,96 @@ export class SystemNotificationsComponent implements OnInit {
     }
   }
 
+  // 获取挑战赛时间选项
+  getChallengeTimeOptions(): {value: string, label: string, time: string}[] {
+    if (!this.selectedChallenge) {
+      return [];
+    }
+
+    const options = [
+      {
+        value: 'open_time',
+        label: '开始时间',
+        time: this.selectedChallenge.open_time
+      },
+      {
+        value: 'close_time',
+        label: '结束时间',
+        time: this.selectedChallenge.close_time
+      },
+      {
+        value: 'end_time',
+        label: '结算时间',
+        time: this.selectedChallenge.end_time
+      }
+    ];
+
+    // 计算关闭时间（结算时间 + 奖励剩余时间）
+    if (this.selectedChallenge.end_time && this.selectedChallenge.reward_remains) {
+      const endTime = new Date(this.selectedChallenge.end_time);
+      const closeTime = new Date(endTime.getTime() + (this.selectedChallenge.reward_remains * 60 * 1000));
+
+      options.push({
+        value: 'final_close_time',
+        label: '关闭时间',
+        time: closeTime.toISOString()
+      });
+    }
+
+    return options;
+  }
+
+  // 处理时间类型选择变化
+  onChallengeTimeTypeChange(event: any): void {
+    const timeType = event.target.value;
+    if (timeType && this.selectedChallenge) {
+      const timeOptions = this.getChallengeTimeOptions();
+      const selectedOption = timeOptions.find(option => option.value === timeType);
+
+      if (selectedOption) {
+        // 自动取消立即生效
+        this.notificationForm.patchValue({
+          immediateSend: false
+        });
+
+        // 自动设置生效时间
+        const selectedTime = new Date(selectedOption.time);
+
+        // 设置日期和时间
+        this.notificationForm.patchValue({
+          effectiveDate: {
+            year: selectedTime.getFullYear(),
+            month: selectedTime.getMonth() + 1,
+            day: selectedTime.getDate()
+          },
+          effectiveTime: {
+            hour: selectedTime.getHours(),
+            minute: selectedTime.getMinutes()
+          }
+        });
+      }
+    }
+  }
+
   isNotificationEffective(notification: SystemNotice): boolean {
     if (!notification.effective_time) {
+      console.log('通知无生效时间，允许操作:', notification.subject);
       return false;
     }
     const effectiveTime = new Date(notification.effective_time);
     const now = new Date();
-    return effectiveTime <= now;
+    const isEffective = effectiveTime <= now;
+
+    console.log('通知生效状态检查:', {
+      subject: notification.subject,
+      effective_time: notification.effective_time,
+      effectiveTime: effectiveTime,
+      now: now,
+      isEffective: isEffective
+    });
+
+    // 如果生效时间已经过了，则认为通知已经生效，不能修改或删除
+    return isEffective;
   }
 
   isNotificationExpired(notification: SystemNotice): boolean {
@@ -706,6 +837,29 @@ export class SystemNotificationsComponent implements OnInit {
     const expiryTime = new Date(notification.expiry_time);
     const now = new Date();
     return expiryTime <= now;
+  }
+
+  // 关闭错误弹窗
+  closeErrorModal(): void {
+    this.showError = false;
+    this.errorMessage = '';
+  }
+
+  // 显示错误弹窗
+  showErrorModal(errorMessage: string): void {
+    this.errorMessage = errorMessage;
+    this.showError = true;
+    this.modalService.open(this.errorModal, {
+      backdrop: 'static',
+      keyboard: false,
+      centered: true
+    }).result.then(() => {
+      this.showError = false;
+      this.errorMessage = '';
+    }, () => {
+      this.showError = false;
+      this.errorMessage = '';
+    });
   }
 
 }

@@ -1417,8 +1417,10 @@ message SystemNotice {
   google.protobuf.Timestamp effective_time = 5;
   // Expiry time
   google.protobuf.Timestamp expiry_time = 6;
-  // Status code
-  int32 status = 7;
+  // Challenge ID
+  int32 challenge_id = 7;
+  // Notice Type
+  int32 notice_type = 8;
 }
 
 message NoticeContent {
@@ -1434,7 +1436,7 @@ message SystemNotificationId {
 }
 
 message CreateSystemNotificationRequest {
-  // Type 0:all users 1:specific users
+  // Type 0:all users 1:challenge 2:specific users
   int32 type = 1;
   // Target user ID list
   repeated string target = 2;
@@ -1445,16 +1447,8 @@ message CreateSystemNotificationRequest {
 message UpdateSystemNotificationRequest {
   // Notification ID
   string id = 1;
-  // Notification subject
-  string subject = 2;
   // Notification content
-  NoticeContent content = 3;
-  // Effective time
-  google.protobuf.Timestamp effective = 4;
-  // Expiry time
-  google.protobuf.Timestamp expiry = 5;
-  // Status code
-  int32 code = 6;
+  SystemNotice notice = 2;
 }
 
 message ListSystemNoticeRequest {
