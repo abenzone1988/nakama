@@ -70,32 +70,18 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 		challengeID := notice.GetChallengeId()
 		if challengeID > 0 {
 			tplChallenge := s.template.GetTplChallenge()
-			challenge, found := tplChallenge.FindByKey(int(challengeID))
-			if found {
-				// 解析开始时间作为生效时间
-				startTime, err := parseDateTime(challenge.OpenTime)
-				if err == nil {
-					effectiveTime = timestamppb.New(startTime)
-					s.logger.Info("使用挑战赛开始时间作为生效时间",
-						zap.Int32("challenge_id", challengeID),
-						zap.String("open_time", challenge.OpenTime))
-				} else {
-					s.logger.Error("解析挑战赛开始时间失败", zap.Error(err))
-					effectiveTime = timestamppb.Now()
-				}
-			} else {
+			_, found := tplChallenge.FindByKey(int(challengeID))
+			if !found {
 				s.logger.Warn("挑战赛模板不存在", zap.Int32("challenge_id", challengeID))
-				effectiveTime = timestamppb.Now()
+				return nil, status.Error(codes.InvalidArgument, "挑战赛模板不存在")
 			}
 		} else {
 			s.logger.Error("比赛类型未指定挑战赛ID", zap.Int32("challenge_id", challengeID))
 			return nil, status.Error(codes.InvalidArgument, "比赛类型未指定挑战赛ID")
 		}
-	} else {
-		// 全体和个人类型使用当前时间
-		effectiveTime = timestamppb.Now()
 	}
 
+	effectiveTime = in.Notice.GetEffectiveTime()
 	// 验证生效时间不能小于当前时间
 	now := time.Now()
 	if effectiveTime.AsTime().Before(now) {

@@ -305,8 +305,19 @@ export class SystemNotificationsComponent implements OnInit {
     if (!date) {
       return undefined;
     }
-    const timeStr = time ? `${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}:00` : '00:00:00';
-    return `${date.year}-${date.month.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}T${timeStr}Z`;
+    
+    // 构建本地时间
+    const localDate = new Date(
+      date.year, 
+      date.month - 1, 
+      date.day,
+      time?.hour || 0,
+      time?.minute || 0,
+      0
+    );
+    
+    // 转换为UTC时间字符串
+    return localDate.toISOString();
   }
 
   convertItemsToGameItems(): GameItem[] {
@@ -371,11 +382,11 @@ export class SystemNotificationsComponent implements OnInit {
   operateAllowed(): boolean{
     // only admin and developers are allowed.
     const allowed = this.authService.sessionRole <= UserRole.USER_ROLE_DEVELOPER;
-    console.log('操作权限检查:', {
-      sessionRole: this.authService.sessionRole,
-      developerRole: UserRole.USER_ROLE_DEVELOPER,
-      allowed: allowed
-    });
+    // console.log('操作权限检查:', {
+    //   sessionRole: this.authService.sessionRole,
+    //   developerRole: UserRole.USER_ROLE_DEVELOPER,
+    //   allowed: allowed
+    // });
     return allowed;
   }
 
@@ -514,9 +525,20 @@ export class SystemNotificationsComponent implements OnInit {
 
     // 验证生效时间不能小于当前时间
     if (!formValue.immediateSend && formValue.effectiveDate) {
-      const effectiveDate = new Date(formValue.effectiveDate.year, formValue.effectiveDate.month - 1, formValue.effectiveDate.day);
+      // 构建完整的生效时间（包含日期和时间）
+      const effectiveDateTime = new Date(
+        formValue.effectiveDate.year, 
+        formValue.effectiveDate.month - 1, 
+        formValue.effectiveDate.day,
+        formValue.effectiveTime?.hour || 0,
+        formValue.effectiveTime?.minute || 0,
+        0
+      );
       const now = new Date();
-      if (effectiveDate < now) {
+      // 转换为UTC时间进行比较
+      const effectiveUTC = effectiveDateTime.toISOString();
+      const nowUTC = now.toISOString();
+      if (effectiveUTC < nowUTC) {
         this.showErrorModal('生效时间不能小于当前时间');
         return;
       }
@@ -524,9 +546,28 @@ export class SystemNotificationsComponent implements OnInit {
 
     // 验证过期时间不能小于生效时间
     if (formValue.enableExpiry && formValue.expireDate && formValue.effectiveDate && !formValue.immediateSend) {
-      const effectiveDate = new Date(formValue.effectiveDate.year, formValue.effectiveDate.month - 1, formValue.effectiveDate.day);
-      const expireDate = new Date(formValue.expireDate.year, formValue.expireDate.month - 1, formValue.expireDate.day);
-      if (expireDate <= effectiveDate) {
+      // 构建完整的生效时间（包含日期和时间）
+      const effectiveDateTime = new Date(
+        formValue.effectiveDate.year, 
+        formValue.effectiveDate.month - 1, 
+        formValue.effectiveDate.day,
+        formValue.effectiveTime?.hour || 0,
+        formValue.effectiveTime?.minute || 0,
+        0
+      );
+      // 构建完整的过期时间（包含日期和时间）
+      const expireDateTime = new Date(
+        formValue.expireDate.year, 
+        formValue.expireDate.month - 1, 
+        formValue.expireDate.day,
+        formValue.expireTime?.hour || 0,
+        formValue.expireTime?.minute || 0,
+        0
+      );
+      // 转换为UTC时间进行比较
+      const effectiveUTC = effectiveDateTime.toISOString();
+      const expireUTC = expireDateTime.toISOString();
+      if (expireUTC <= effectiveUTC) {
         this.showErrorModal('过期时间必须大于生效时间');
         return;
       }
@@ -831,13 +872,13 @@ export class SystemNotificationsComponent implements OnInit {
     const now = new Date();
     const isEffective = effectiveTime <= now;
 
-    console.log('通知生效状态检查:', {
-      subject: notification.subject,
-      effective_time: notification.effective_time,
-      effectiveTime: effectiveTime,
-      now: now,
-      isEffective: isEffective
-    });
+    // console.log('通知生效状态检查:', {
+    //   subject: notification.subject,
+    //   effective_time: notification.effective_time,
+    //   effectiveTime: effectiveTime,
+    //   now: now,
+    //   isEffective: isEffective
+    // });
 
     // 如果生效时间已经过了，则认为通知已经生效，不能修改或删除
     return isEffective;
