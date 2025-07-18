@@ -357,7 +357,7 @@ export interface NoticeContent {
   // Notification description
   description?:string
   // Reward items
-  rewards?:Array<GameItem>
+  rewards?:Array<GameReward>
 }
 
 export interface Notification {
@@ -1048,6 +1048,17 @@ export interface ApiValidatedSubscription {
 export interface GameItem {
   id?:string
   num?:number
+}
+
+export interface GameReward {
+  items?:Array<GameItem>
+  wallet?:GameWallet
+}
+
+export interface GameWallet {
+  ad?:number
+  coin?:number
+  gem?:number
 }
 
 /** A user session associated to a stream, usually through a list operation or a join/leave event. */

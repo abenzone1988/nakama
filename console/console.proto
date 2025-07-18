@@ -1427,7 +1427,7 @@ message NoticeContent {
   // Notification description
   string description = 1;
   // Reward items
-  repeated game.Item rewards = 2;
+  repeated game.Reward rewards = 2;
 }
 
 message SystemNotificationId {
@@ -1451,7 +1451,7 @@ message UpdateSystemNotificationRequest {
   SystemNotice notice = 2;
 }
 
-message ListListSystemNoticeRequest {
+message ListSystemNoticeRequest {
   // Filter condition
   string filter = 1;
   // Cursor

@@ -4526,7 +4526,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/gameItem"
+            "$ref": "#/definitions/gameReward"
           },
           "title": "Reward items"
         }
@@ -4904,6 +4904,40 @@
         }
       },
       "title": "Game Item"
+    },
+    "gameReward": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/gameWallet"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameItem"
+          }
+        }
+      },
+      "title": "奖励数据"
+    },
+    "gameWallet": {
+      "type": "object",
+      "properties": {
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "钱包结构"
     },
     "googlerpcStatus": {
       "type": "object",

@@ -76,18 +76,18 @@
         <td>{{notification.subject}}</td>
         <td>
           <div>{{notification.content?.description}}</div>
-          <div *ngIf="notification.content?.rewards && notification.content.rewards.length > 0" class="mt-2">
+          <div *ngIf="getRewardItems(notification).length > 0" class="mt-2">
             <small class="text-muted font-weight-bold">奖励：</small>
             <div class="d-flex flex-wrap mt-1">
-              <span *ngFor="let reward of notification.content.rewards" class="badge badge-info mr-1 mb-1 d-flex align-items-center">
-                <img [src]="getIconById(reward.id)"
-                     [alt]="getItemNameById(reward.id)"
+              <span *ngFor="let item of getRewardItems(notification)" class="badge badge-info mr-1 mb-1 d-flex align-items-center">
+                <img [src]="getIconById(item.id!)"
+                     [alt]="getItemNameById(item.id!)"
                      width="14"
                      height="14"
                      class="mr-1"
                      style="object-fit: contain;"
                      (error)="onImageError($event)">
-                <span>{{getItemNameById(reward.id)}} x{{reward.num}}</span>
+                <span>{{getItemNameById(item.id!)}} x{{item.num}}</span>
               </span>
             </div>
           </div>

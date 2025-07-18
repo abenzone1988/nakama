@@ -17,7 +17,7 @@ import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnap
 import {
   ConsoleService,
   SystemNotice,
-  ListSystemNoticeResponse, CreateSystemNotificationRequest, GameItem, NoticeContent, UserRole,
+  ListSystemNoticeResponse, CreateSystemNotificationRequest, GameItem, NoticeContent, UserRole, GameReward,
 } from '../console.service';
 import {Observable} from 'rxjs';
 import {FormBuilder, FormGroup, FormControl, FormArray, AbstractControl, Validators, ReactiveFormsModule} from '@angular/forms';
@@ -317,6 +317,26 @@ export class SystemNotificationsComponent implements OnInit {
     });
   }
 
+  convertItemsToGameRewads(): GameReward[] {
+    const itemsArray = this.notificationForm.get('items') as FormArray;
+    const items = itemsArray.controls.map((control: AbstractControl) => {
+      const group = control as FormGroup;
+      return {
+        id: group.get('id')?.value,
+        num: group.get('num')?.value
+      };
+    });
+    
+    return [{
+      wallet: {
+        ad: 0,
+        coin: 0,
+        gem: 0
+      },
+      items: items
+    }];
+  }
+
   addTargetId(): void {
     const targetIds = this.notificationForm.get('targetIds') as FormArray;
     targetIds.push(this.formBuilder.control(''));
@@ -363,6 +383,13 @@ export class SystemNotificationsComponent implements OnInit {
     if (target) {
       target.style.display = 'none';
     }
+  }
+
+  getRewardItems(notification: SystemNotice): GameItem[] {
+    if (!notification.content?.rewards || notification.content.rewards.length === 0) {
+      return [];
+    }
+    return notification.content.rewards[0].items || [];
   }
 
   operateAllowed(): boolean{
@@ -450,13 +477,16 @@ export class SystemNotificationsComponent implements OnInit {
       }
       const itemsArray = this.notificationForm.get('items') as FormArray;
       itemsArray.clear();
-      if (notification.content?.rewards) {
-        notification.content.rewards.forEach(reward => {
-          itemsArray.push(this.formBuilder.group({
-            id: [reward.id],
-            num: [parseInt(String(reward.num || '1'), 10)],
-          }));
-        });
+      if (notification.content?.rewards && notification.content.rewards.length > 0) {
+        const gameReward = notification.content.rewards[0];
+        if (gameReward && gameReward.items) {
+          gameReward.items.forEach(item => {
+            itemsArray.push(this.formBuilder.group({
+              id: [item.id],
+              num: [parseInt(String(item.num || '1'), 10)],
+            }));
+          });
+        }
       }
     } else {
       this.notificationForm.reset({
@@ -582,7 +612,7 @@ export class SystemNotificationsComponent implements OnInit {
       subject: formValue.subject,
       content: {
         description: formValue.desc,
-        rewards: this.convertItemsToGameItems(),
+        rewards: this.convertItemsToGameRewads(),
       },
       effective_time: effectiveTime,
       expiry_time: formValue.enableExpiry && formValue.expireDate ? this.toTimeString(formValue.expireDate, formValue.expireTime) : undefined
@@ -872,7 +902,7 @@ export class SystemNotificationsComponent implements OnInit {
       console.log('通知无生效时间，允许操作:', notification.subject);
       return false;
     }
-    const effectiveTime = new Date(notification.effective_time);
+    const effectiveTime = new Date(notification.effective_time!);
     const now = new Date();
     const isEffective = effectiveTime <= now;
 
