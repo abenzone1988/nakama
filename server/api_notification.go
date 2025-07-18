@@ -51,7 +51,7 @@ func (s *ApiServer) ListNotifications(ctx context.Context, in *api.ListNotificat
 		}
 	}
 
-	//
+	//同步系统通知
 	if err := SyncSystemNotifications(ctx, s.logger, s.db, s.statusRegistry, userID); err != nil {
 		s.logger.Error("Sync System Notice error ", zap.Error(err))
 	}

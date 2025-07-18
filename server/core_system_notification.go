@@ -299,7 +299,7 @@ func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logge
 
 func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, id string) (*console.SystemNotice, error) {
 	query := `
-		SELECT id, subject, content, create_time, effective_time, expiry_time, challenge_id
+		SELECT id, notice_type, subject, content, create_time, effective_time, expiry_time, challenge_id
 		FROM system_notification
 		WHERE id = $1`
 
@@ -311,10 +311,12 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 		effectiveTime  pgtype.Timestamptz
 		expiryTime     pgtype.Timestamptz
 		challengeId    sql.NullInt32
+		noticeType     sql.NullInt32
 	)
 
 	err := db.QueryRowContext(ctx, query, id).Scan(
 		&notificationId,
+		&noticeType,
 		&subject,
 		&contentStr,
 		&createTime,
@@ -339,6 +341,7 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 
 	notification := &console.SystemNotice{
 		Id:         notificationId,
+		NoticeType: noticeType.Int32,
 		Subject:    subject,
 		Content:    &content,
 		CreateTime: timestamppb.New(createTime.Time),
@@ -372,13 +375,10 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 		return err
 	}
 
-	if len(notices) == 0 {
-		return nil
-	}
-
 	// 构建通知列表
 	notifications := make([]*api.Notification, 0, len(notices))
 	var latestSyncTime int64 = userMeta.LastSyncNotice
+	currentTime := time.Now().UTC().Unix()
 
 	for _, notice := range notices {
 		contentJson, err := json.Marshal(notice.GetContent())
@@ -387,44 +387,58 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 			continue
 		}
 
-		// 使用 effective_time 作为同步时间戳
+		// 使用 effective_time 作为同步时间戳，但确保只处理已生效的通知
 		effectiveTime := notice.GetEffectiveTime().AsTime().UTC().Unix()
-		if effectiveTime > latestSyncTime {
-			latestSyncTime = effectiveTime
-		}
 
-		notifications = append(notifications, &api.Notification{
-			Id:         uuid.Must(uuid.NewV4()).String(),
-			Subject:    notice.GetSubject(),
-			Content:    string(contentJson),
-			SenderId:   uuid.Nil.String(),
-			Code:       NotificationSystemNotice,
-			Persistent: true,
-			CreateTime: notice.GetCreateTime(),
-			ExpiryTime: notice.GetExpiryTime(),
-		})
+		// 只处理已生效的通知
+		if effectiveTime <= currentTime {
+			if effectiveTime > latestSyncTime {
+				latestSyncTime = effectiveTime
+			}
+
+			notifications = append(notifications, &api.Notification{
+				Id:         uuid.Must(uuid.NewV4()).String(),
+				Subject:    notice.GetSubject(),
+				Content:    string(contentJson),
+				SenderId:   uuid.Nil.String(),
+				Code:       NotificationSystemNotice,
+				Persistent: true,
+				CreateTime: notice.GetCreateTime(),
+				ExpiryTime: notice.GetExpiryTime(),
+			})
+		}
 	}
 
 	// 更新用户的最后同步时间
-	userMeta.LastSyncNotice = latestSyncTime
+	// 如果有新通知，使用最新的通知时间；否则使用当前时间
+	if len(notifications) > 0 {
+		userMeta.LastSyncNotice = latestSyncTime
+	} else {
+		// 即使没有新通知，也更新为当前时间，减少后续查询范围
+		userMeta.LastSyncNotice = currentTime
+	}
+
 	if err := SaveUserMeta(ctx, logger, db, userMeta); err != nil {
 		logger.Error("更新用户元数据失败", zap.Error(err))
 	}
 
-	// 保存通知到用户的通知列表
-	if err := NotificationSave(ctx, logger, db, map[uuid.UUID][]*api.Notification{id: notifications}); err != nil {
-		logger.Error("保存用户通知失败", zap.Error(err))
-		return err
+	// 只有在有有效通知时才保存到用户通知列表
+	if len(notifications) > 0 {
+		if err := NotificationSave(ctx, logger, db, map[uuid.UUID][]*api.Notification{id: notifications}); err != nil {
+			logger.Error("保存用户通知失败", zap.Error(err))
+			return err
+		}
 	}
 
 	return nil
 }
 
 func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logger, lastSyncTime int64) ([]*console.SystemNotice, error) {
-	// 使用 effective_time 进行查询，考虑时间精度问题
+	// 使用 effective_time 进行查询，修复时间精度问题
 	query := `
 		SELECT
 			id,
+			notice_type,
 			subject,
 			content,
 			create_time,
@@ -433,7 +447,7 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 			challenge_id
 		FROM system_notification
 		WHERE
-			EXTRACT(EPOCH FROM date_trunc('second', effective_time)) > $1
+			effective_time > to_timestamp($1)
 			AND effective_time <= CURRENT_TIMESTAMP
 			AND (expiry_time IS NULL OR expiry_time > CURRENT_TIMESTAMP)
 		ORDER BY effective_time ASC
@@ -449,6 +463,7 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 	notifications := make([]*console.SystemNotice, 0)
 	for rows.Next() {
 		var id string
+		var noticeType sql.NullInt32
 		var subject string
 		var contentStr string
 		var createTime pgtype.Timestamptz
@@ -456,7 +471,7 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 		var expiryTime pgtype.Timestamptz
 		var challengeId sql.NullInt32
 
-		if err = rows.Scan(&id, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &challengeId); err != nil {
+		if err = rows.Scan(&id, &noticeType, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &challengeId); err != nil {
 			logger.Error("扫描系统通知数据失败", zap.Error(err))
 			return nil, err
 		}
@@ -469,6 +484,7 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 
 		notification := &console.SystemNotice{
 			Id:         id,
+			NoticeType: noticeType.Int32,
 			Subject:    subject,
 			Content:    &content,
 			CreateTime: timestamppb.New(createTime.Time),

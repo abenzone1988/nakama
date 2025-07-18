@@ -43,7 +43,6 @@ interface NotificationResponse {
 })
 export class SystemNotificationsComponent implements OnInit {
   private today: NgbDate;
-  private formItems: FormArray;
   searchForm: FormGroup;
   notificationForm: FormGroup;
   items: FormArray;
@@ -60,7 +59,6 @@ export class SystemNotificationsComponent implements OnInit {
     private readonly calendar: NgbCalendar,
   ) {
     this.today = this.calendar.getToday();
-    this.formItems = this.formBuilder.array([]);
     this.items = this.formBuilder.array([]);
     this.searchForm = this.formBuilder.group({
       filter: [''],
@@ -110,7 +108,7 @@ export class SystemNotificationsComponent implements OnInit {
 
     // 监听发送类型变化
     this.notificationForm.get('type')!.valueChanges.subscribe(type => {
-      if (type !== 1) { // 如果不是比赛类型
+      if (type != 1) { // 如果不是比赛类型
         this.notificationForm.get('challengeId')!.setValue('');
         this.notificationForm.get('challengeTimeType')!.setValue('');
         this.selectedChallenge = null;
@@ -176,10 +174,10 @@ export class SystemNotificationsComponent implements OnInit {
   editingNotification: SystemNotice | null = null;
 
   defaultItems = [
-    {id: '10000', name: '金币', icon: 'CoinPile'},
-    {id: '10001', name: '宝石', icon: 'GemPile'},
-    {id: '10002', name: '体力', icon: 'Stanima'},
-    {id: '20000', name: '广告券', icon: 'BigFood'},
+    {id: '10000', name: '金币', icon: 'Coin'},
+    {id: '10001', name: '宝石', icon: 'Gem'},
+    {id: '10002', name: '体力', icon: 'Food'},
+    {id: '20000', name: '广告券', icon: 'AD'},
   ];
 
   challenges: any[] = [];
@@ -312,7 +310,8 @@ export class SystemNotificationsComponent implements OnInit {
   }
 
   convertItemsToGameItems(): GameItem[] {
-    return this.formItems.controls.map((control: AbstractControl) => {
+    const itemsArray = this.notificationForm.get('items') as FormArray;
+    return itemsArray.controls.map((control: AbstractControl) => {
       const group = control as FormGroup;
       return {
         id: group.get('id')?.value,
@@ -355,6 +354,18 @@ export class SystemNotificationsComponent implements OnInit {
   getIconById(itemId: string): string {
     const item = this.defaultItems.find(item => item.id === itemId);
     return item ? `/static/icon/${item.icon}.png` : '';
+  }
+
+  getItemNameById(itemId: string): string {
+    const item = this.defaultItems.find(item => item.id === itemId);
+    return item ? item.name : itemId;
+  }
+
+  onImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.style.display = 'none';
+    }
   }
 
   operateAllowed(): boolean{
@@ -439,10 +450,11 @@ export class SystemNotificationsComponent implements OnInit {
           }
         });
       }
-      this.formItems.clear();
+      const itemsArray = this.notificationForm.get('items') as FormArray;
+      itemsArray.clear();
       if (notification.content?.rewards) {
         notification.content.rewards.forEach(reward => {
-          this.formItems.push(this.formBuilder.group({
+          itemsArray.push(this.formBuilder.group({
             id: [reward.id],
             num: [parseInt(String(reward.num || '1'), 10)],
           }));
@@ -464,7 +476,8 @@ export class SystemNotificationsComponent implements OnInit {
       });
       // 新建时启用类型选择
       this.notificationForm.get('type')!.enable();
-      this.formItems.clear();
+      const itemsArray = this.notificationForm.get('items') as FormArray;
+      itemsArray.clear();
       this.selectedChallenge = null;
     }
     const modalRef = this.modalService.open(content, {

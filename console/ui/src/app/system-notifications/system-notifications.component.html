@@ -69,20 +69,37 @@
     <thead class="thead-light">
       <tr>
         <th style="width: 120px">标题</th>
-        <th>内容</th>
-        <th style="width: 180px">创建时间</th>
-        <th style="width: 180px">生效时间</th>
-        <th style="width: 180px">过期时间</th>
+        <th style="width: 300px">内容</th>
+        <th style="width: 150px">创建时间</th>
+        <th style="width: 150px">生效时间</th>
+        <th style="width: 150px">过期时间</th>
         <th style="width: 120px" *ngIf="operateAllowed()">操作</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngIf="notifications.length === 0">
-        <td colSpan="7" class="text-muted">No System Notifications found </td>
+        <td colSpan="6" class="text-muted">No System Notifications found </td>
       </tr>
       <tr *ngFor="let notification of notifications; index as i;">
         <td>{{notification.subject}}</td>
-        <td>{{notification.content?.description}}</td>
+        <td>
+          <div>{{notification.content?.description}}</div>
+          <div *ngIf="notification.content?.rewards && notification.content.rewards.length > 0" class="mt-2">
+            <small class="text-muted font-weight-bold">奖励：</small>
+            <div class="d-flex flex-wrap mt-1">
+              <span *ngFor="let reward of notification.content.rewards" class="badge badge-info mr-1 mb-1 d-flex align-items-center">
+                <img [src]="getIconById(reward.id)" 
+                     [alt]="getItemNameById(reward.id)" 
+                     width="14" 
+                     height="14" 
+                     class="mr-1" 
+                     style="object-fit: contain;"
+                     (error)="onImageError($event)">
+                <span>{{getItemNameById(reward.id)}} x{{reward.num}}</span>
+              </span>
+            </div>
+          </div>
+        </td>
         <td>{{notification.create_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
         <td>{{notification.effective_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
         <td>{{notification.expiry_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
@@ -90,7 +107,7 @@
           <button type="button"
                   class="btn btn-sm mr-1"
                   [ngClass]="isNotificationEffective(notification) ? 'btn-secondary' : 'btn-primary'"
-                  (click)="openModal(content, notification)"
+                  (click)="openModal(content, notification)" 
                   [disabled]="isNotificationEffective(notification)"
                   [title]="isNotificationEffective(notification) ? '通知已生效，无法修改' : '修改通知'">
             修改
@@ -188,7 +205,7 @@
           <small class="form-text text-muted">选择后将自动填充生效时间</small>
         </div>
       </div>
-
+      
       <div class="mb-3" *ngIf="n.type.value == 2">
         <label>目标用户</label>
         <div formArrayName="targetIds">
