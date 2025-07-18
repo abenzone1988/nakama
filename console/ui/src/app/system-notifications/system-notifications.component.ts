@@ -396,8 +396,9 @@ export class SystemNotificationsComponent implements OnInit {
         enableExpiry: !isImmediateSend && !!notification.expiry_time,
       });
 
-      // 编辑时禁用类型选择
+      // 编辑时禁用类型选择和挑战赛ID选择
       this.notificationForm.get('type')!.disable();
+      this.notificationForm.get('challengeId')!.disable();
 
       // 如果是比赛类型且有挑战赛ID，加载挑战赛信息
       if (notificationType === 1 && notification.challenge_id) {
@@ -471,8 +472,9 @@ export class SystemNotificationsComponent implements OnInit {
         expireDate: null,
         expireTime: null,
       });
-      // 新建时启用类型选择
+      // 新建时启用类型选择和挑战赛ID选择
       this.notificationForm.get('type')!.enable();
+      this.notificationForm.get('challengeId')!.enable();
       const itemsArray = this.notificationForm.get('items') as FormArray;
       itemsArray.clear();
       this.selectedChallenge = null;
@@ -501,7 +503,8 @@ export class SystemNotificationsComponent implements OnInit {
       return;
     }
 
-    const formValue = this.notificationForm.value;
+    // 使用getRawValue()获取包含禁用字段的完整表单值
+    const formValue = this.notificationForm.getRawValue();
 
     // 验证比赛类型必须选择挑战赛
     if (formValue.type == 1 && !formValue.challengeId) {
@@ -864,6 +867,7 @@ export class SystemNotificationsComponent implements OnInit {
   }
 
   isNotificationEffective(notification: SystemNotice): boolean {
+    return false;
     if (!notification.effective_time) {
       console.log('通知无生效时间，允许操作:', notification.subject);
       return false;

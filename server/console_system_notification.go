@@ -184,7 +184,7 @@ func (s *ConsoleServer) UpdateSystemNotification(ctx context.Context, in *consol
 		return nil, status.Error(codes.InvalidArgument, "通知内容格式错误")
 	}
 
-	notification, err := SystemNotificationUpdate(ctx, s.db, s.logger, in.GetId(), in.GetSubject(), string(contentJson), in.GetEffectiveTime(), in.GetExpiryTime(), in.GetChallengeId())
+	notification, err := SystemNotificationUpdate(ctx, s.db, s.logger, in.GetId(), in.GetSubject(), string(contentJson), in.GetEffectiveTime(), in.GetExpiryTime())
 	if err != nil {
 		if err == ErrSystemNotificationNotFound {
 			return nil, status.Error(codes.NotFound, "通知不存在")

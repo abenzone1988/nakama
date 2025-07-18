@@ -316,7 +316,7 @@ FROM
 	}, nil
 }
 
-func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logger, id string, subject string, content string, effectiveTime *timestamppb.Timestamp, expiryTime *timestamppb.Timestamp, challengeId int32) (*console.SystemNotice, error) {
+func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logger, id string, subject string, content string, effectiveTime *timestamppb.Timestamp, expiryTime *timestamppb.Timestamp) (*console.SystemNotice, error) {
 	var effectiveTimeVal, expiryTimeVal interface{}
 
 	if effectiveTime != nil {
@@ -327,32 +327,25 @@ func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logge
 		expiryTimeVal = expiryTime.AsTime()
 	}
 
-	var challengeIdVal interface{}
-	if challengeId > 0 {
-		challengeIdVal = challengeId
-	}
-
 	query := `
 		UPDATE system_notification
 		SET subject = $2,
 			content = $3,
 			effective_time = $4,
-			expiry_time = $5,
-			challenge_id = $6
+			expiry_time = $5
 		WHERE id = $1
-		RETURNING id, subject, content, create_time, effective_time, expiry_time, challenge_id`
+		RETURNING id, subject, content, create_time, effective_time, expiry_time`
 
 	var (
 		notificationId  string
 		createTime      pgtype.Timestamptz
 		dbEffectiveTime pgtype.Timestamptz
 		dbExpiryTime    pgtype.Timestamptz
-		dbChallengeId   sql.NullInt32
 		contentStr      string
 	)
 
-	err := db.QueryRowContext(ctx, query, id, subject, content, effectiveTimeVal, expiryTimeVal, challengeIdVal).
-		Scan(&notificationId, &subject, &contentStr, &createTime, &dbEffectiveTime, &dbExpiryTime, &dbChallengeId)
+	err := db.QueryRowContext(ctx, query, id, subject, content, effectiveTimeVal, expiryTimeVal).
+		Scan(&notificationId, &subject, &contentStr, &createTime, &dbEffectiveTime, &dbExpiryTime)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -381,10 +374,6 @@ func SystemNotificationUpdate(ctx context.Context, db *sql.DB, logger *zap.Logge
 	if dbExpiryTime.Valid {
 		notification.ExpiryTime = timestamppb.New(dbExpiryTime.Time)
 	}
-	if dbChallengeId.Valid {
-		notification.ChallengeId = dbChallengeId.Int32
-	}
-
 	return notification, nil
 }
 
@@ -460,16 +449,25 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 	}
 
 	// 查询新的系统通知
-	notices, err := QuerySystemNotifications(ctx, db, logger, userMeta.LastSyncNotice)
+	serverNow := time.Now().Unix()
+	notices, err := QuerySystemNotifications(ctx, db, logger, userMeta.LastSyncNotice, serverNow)
 	if err != nil {
 		logger.Error("查询系统通知失败", zap.Error(err))
 		return err
 	}
 
+	if len(notices) == 0 {
+		logger.Info("没有查询到系统通知")
+		return nil
+	}
+	logger.Info("查询到的系统通知", zap.Any("notices", notices))
+
 	// 构建通知列表
 	notifications := make([]*api.Notification, 0, len(notices))
 	var latestSyncTime int64 = userMeta.LastSyncNotice
-	currentTime := time.Now().UTC().Unix()
+
+	logger.Info("上次同步的时间", zap.String("last_sync_time", time.Unix(latestSyncTime, 0).Format("2006-01-02 15:04:05")))
+	logger.Info("当前系统时间", zap.String("last_sync_time", time.Unix(serverNow, 0).Format("2006-01-02 15:04:05")))
 
 	// 加载用户挑战赛数据，用于检查比赛类型通知
 	var userMatch *UserMatch
@@ -491,82 +489,79 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 		effectiveTime := notice.GetEffectiveTime().AsTime().UTC().Unix()
 
 		// 只处理已生效的通知
-		if effectiveTime <= currentTime {
-			// 根据通知类型进行不同处理
-			shouldAddNotification := false
 
-			switch notice.GetNoticeType() {
-			case 0: // 全局邮件，直接添加
-				shouldAddNotification = true
-				logger.Debug("处理全局系统通知",
-					zap.String("notice_id", notice.GetId()),
-					zap.String("subject", notice.GetSubject()))
+		// 根据通知类型进行不同处理
+		shouldAddNotification := false
 
-			case 1: // 比赛邮件，需要检查用户是否参加了对应的挑战赛
-				if userMatch == nil && needLoadUserMatch {
-					userMatch = &UserMatch{}
-					err := LoadData(ctx, logger, db, id, userMatch)
-					if err != nil {
-						logger.Error("加载用户挑战赛数据失败", zap.Error(err))
-						// 加载失败时跳过比赛类型通知，避免误发
-						continue
-					}
+		switch notice.GetNoticeType() {
+		case 0: // 全局邮件，直接添加
+			shouldAddNotification = true
+			logger.Debug("处理全局系统通知",
+				zap.String("notice_id", notice.GetId()),
+				zap.String("subject", notice.GetSubject()))
+
+		case 1: // 比赛邮件，需要检查用户是否参加了对应的挑战赛
+			if userMatch == nil && needLoadUserMatch {
+				userMatch = &UserMatch{}
+				err := LoadData(ctx, logger, db, id, userMatch)
+				if err != nil {
+					logger.Error("加载用户挑战赛数据失败", zap.Error(err))
+					// 加载失败时跳过比赛类型通知，避免误发
+					continue
 				}
-
-				// 检查用户是否参加了对应的挑战赛
-				if userMatch != nil {
-					challengeID := notice.GetChallengeId()
-					if challengeStatus, exists := userMatch.Challenges[challengeID]; exists && challengeStatus != nil {
-						shouldAddNotification = true
-						logger.Debug("用户参加了挑战赛，添加比赛通知",
-							zap.String("notice_id", notice.GetId()),
-							zap.Int32("challenge_id", challengeID),
-							zap.String("subject", notice.GetSubject()))
-					} else {
-						logger.Debug("用户未参加挑战赛，跳过比赛通知",
-							zap.String("notice_id", notice.GetId()),
-							zap.Int32("challenge_id", challengeID),
-							zap.String("subject", notice.GetSubject()))
-					}
-				}
-
-			default:
-				logger.Warn("未知的通知类型，跳过",
-					zap.String("notice_id", notice.GetId()),
-					zap.Int32("notice_type", notice.GetNoticeType()))
-				continue
 			}
 
-			if shouldAddNotification {
-				if effectiveTime > latestSyncTime {
-					latestSyncTime = effectiveTime
+			// 检查用户是否参加了对应的挑战赛
+			if userMatch != nil {
+				challengeID := notice.GetChallengeId()
+				if challengeStatus, exists := userMatch.Challenges[challengeID]; exists && challengeStatus != nil {
+					shouldAddNotification = true
+					logger.Debug("用户参加了挑战赛，添加比赛通知",
+						zap.String("notice_id", notice.GetId()),
+						zap.Int32("challenge_id", challengeID),
+						zap.String("subject", notice.GetSubject()))
+				} else {
+					logger.Debug("用户未参加挑战赛，跳过比赛通知",
+						zap.String("notice_id", notice.GetId()),
+						zap.Int32("challenge_id", challengeID),
+						zap.String("subject", notice.GetSubject()))
 				}
-
-				notifications = append(notifications, &api.Notification{
-					Id:         uuid.Must(uuid.NewV4()).String(),
-					Subject:    notice.GetSubject(),
-					Content:    string(contentJson),
-					SenderId:   uuid.Nil.String(),
-					Code:       NotificationSystemNotice,
-					Persistent: true,
-					CreateTime: notice.GetCreateTime(),
-					ExpiryTime: notice.GetExpiryTime(),
-				})
 			}
+
+		default:
+			logger.Warn("未知的通知类型，跳过",
+				zap.String("notice_id", notice.GetId()),
+				zap.Int32("notice_type", notice.GetNoticeType()))
+			continue
 		}
+
+		if shouldAddNotification {
+			if effectiveTime >= latestSyncTime {
+				latestSyncTime = effectiveTime
+			}
+
+			notifications = append(notifications, &api.Notification{
+				Id:         uuid.Must(uuid.NewV4()).String(),
+				Subject:    notice.GetSubject(),
+				Content:    string(contentJson),
+				SenderId:   uuid.Nil.String(),
+				Code:       NotificationSystemNotice,
+				Persistent: true,
+				CreateTime: notice.GetCreateTime(),
+				ExpiryTime: notice.GetExpiryTime(),
+			})
+		}
+
 	}
 
 	// 更新用户的最后同步时间
 	// 如果有新通知，使用最新的通知时间；否则使用当前时间
 	if len(notifications) > 0 {
 		userMeta.LastSyncNotice = latestSyncTime
-	} else {
-		// 即使没有新通知，也更新为当前时间，减少后续查询范围
-		userMeta.LastSyncNotice = currentTime
-	}
-
-	if err := SaveUserMeta(ctx, logger, db, userMeta); err != nil {
-		logger.Error("更新用户元数据失败", zap.Error(err))
+		logger.Info("上次同步的时间", zap.String("last_sync_time", time.Unix(latestSyncTime, 0).Format("2006-01-02 15:04:05")))
+		if err := SaveUserMeta(ctx, logger, db, userMeta); err != nil {
+			logger.Error("更新用户元数据失败", zap.Error(err))
+		}
 	}
 
 	// 只有在有有效通知时才保存到用户通知列表
@@ -580,8 +575,8 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 	return nil
 }
 
-func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logger, lastSyncTime int64) ([]*console.SystemNotice, error) {
-	// 使用 effective_time 进行查询，修复时间精度问题
+func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logger, lastSyncTime, serverNow int64) ([]*console.SystemNotice, error) {
+	// 直接使用int64时间戳进行比较，避免类型转换开销
 	query := `
 		SELECT
 			id,
@@ -594,13 +589,13 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 			challenge_id
 		FROM system_notification
 		WHERE
-			effective_time > to_timestamp($1)
-			AND effective_time <= CURRENT_TIMESTAMP
-			AND (expiry_time IS NULL OR expiry_time > CURRENT_TIMESTAMP)
+			EXTRACT(EPOCH FROM effective_time)::BIGINT > $1
+			AND EXTRACT(EPOCH FROM effective_time)::BIGINT <= $2
+			AND (expiry_time IS NULL OR EXTRACT(EPOCH FROM expiry_time)::BIGINT > $2)
 		ORDER BY effective_time ASC
 	`
 
-	rows, err := db.QueryContext(ctx, query, lastSyncTime)
+	rows, err := db.QueryContext(ctx, query, lastSyncTime, serverNow)
 	if err != nil {
 		logger.Error("查询系统通知失败", zap.Error(err))
 		return nil, err
