@@ -17,6 +17,9 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -25,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (s *ConsoleServer) ListSystemNotifications(ctx context.Context, in *console.ListSystemNoticeRequest) (*console.ListSystemNoticeResponse, error) {
@@ -61,29 +65,98 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 		return nil, status.Error(codes.InvalidArgument, "通知内容格式错误")
 	}
 
+	// 计算生效时间
+	var effectiveTime *timestamppb.Timestamp
+	if in.Type == 1 { // 比赛类型
+		// 从通知内容中获取挑战赛ID
+		content := notice.GetContent()
+		if content != nil {
+			// 尝试从内容中获取挑战赛ID
+			// 由于 NoticeContent 结构体目前没有 challenge_id 字段，
+			// 我们暂时通过其他方式获取挑战赛ID
+			// 这里可以从通知的描述或其他字段中解析挑战赛ID
+			challengeIDStr := ""
+
+			// 尝试从描述中解析挑战赛ID（临时方案）
+			// 格式：[挑战赛ID:123]
+			description := content.GetDescription()
+			if description != "" {
+				// 解析挑战赛ID
+				// 查找格式：[挑战赛ID:数字]
+				challengeIDMatch := regexp.MustCompile(`\[挑战赛ID:(\d+)\]`).FindStringSubmatch(description)
+				if len(challengeIDMatch) > 1 {
+					challengeIDStr = challengeIDMatch[1]
+					s.logger.Info("从描述中解析到挑战赛ID", zap.String("challenge_id", challengeIDStr))
+				}
+			}
+
+			if challengeIDStr != "" {
+				challengeID, err := strconv.Atoi(challengeIDStr)
+				if err == nil {
+					tplChallenge := s.template.GetTplChallenge()
+					challenge, found := tplChallenge.FindByKey(challengeID)
+					if found {
+						// 解析开始时间作为生效时间
+						startTime, err := parseDateTime(challenge.OpenTime)
+						if err == nil {
+							effectiveTime = timestamppb.New(startTime)
+							s.logger.Info("使用挑战赛开始时间作为生效时间",
+								zap.Int("challenge_id", challengeID),
+								zap.String("open_time", challenge.OpenTime))
+						} else {
+							s.logger.Error("解析挑战赛开始时间失败", zap.Error(err))
+							effectiveTime = timestamppb.Now()
+						}
+					} else {
+						s.logger.Warn("挑战赛模板不存在", zap.Int("challenge_id", challengeID))
+						effectiveTime = timestamppb.Now()
+					}
+				} else {
+					s.logger.Error("挑战赛ID格式错误", zap.Error(err))
+					effectiveTime = timestamppb.Now()
+				}
+			} else {
+				s.logger.Warn("未找到挑战赛ID，使用当前时间")
+				effectiveTime = timestamppb.Now()
+			}
+		} else {
+			s.logger.Warn("通知内容为空，使用当前时间")
+			effectiveTime = timestamppb.Now()
+		}
+	} else {
+		// 全体和个人类型使用当前时间
+		effectiveTime = timestamppb.Now()
+	}
+
+	// 验证生效时间不能小于当前时间
+	now := time.Now()
+	if effectiveTime.AsTime().Before(now) {
+		return nil, status.Error(codes.InvalidArgument, "生效时间不能小于当前时间")
+	}
+
 	// 创建系统通知
-	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetSubject(), string(contentJson), notice.GetEffectiveTime(), notice.GetExpiryTime(), 0)
+	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetSubject(), string(contentJson), effectiveTime, notice.GetExpiryTime(), 0)
 	if err != nil {
 		s.logger.Error("创建系统通知失败", zap.Error(err))
 		return nil, status.Error(codes.Internal, "创建系统通知失败")
 	}
 
-	// 如果需要即时推送
-	if in.Type == 0 || in.Type == 1 {
-		notification := &api.Notification{
-			Id:         uuid.Must(uuid.NewV4()).String(),
-			Subject:    notice.GetSubject(),
-			Content:    string(contentJson),
-			SenderId:   uuid.Nil.String(),
-			Code:       0,
-			Persistent: false,
+	// 根据类型处理发送逻辑
+	switch in.Type {
+	case 0: // 全体
+		// 创建系统通知，不立即发送，等待生效时间
+		s.logger.Info("创建全体系统通知", zap.String("subject", notice.GetSubject()))
+
+	case 1: // 比赛
+		// 创建系统通知，不立即发送，等待生效时间
+		s.logger.Info("创建比赛系统通知", zap.String("subject", notice.GetSubject()))
+
+	case 2: // 个人
+		// 直接发送给指定用户，不创建系统通知
+		if len(in.GetTarget()) == 0 {
+			return nil, status.Error(codes.InvalidArgument, "个人类型必须指定目标用户")
 		}
-		if err := NotificationSendAll(ctx, s.logger, s.db, s.tracker, s.router, notification); err != nil {
-			s.logger.Error("发送系统通知失败", zap.Error(err))
-			return nil, status.Error(codes.Internal, "发送系统通知失败")
-		}
-	} else if in.Type == 2 && len(in.GetTarget()) > 0 {
-		// 发送给指定用户
+
 		userIDs, err := fetchUserID(ctx, s.db, in.GetTarget())
 		if err != nil {
 			s.logger.Error("获取用户ID失败", zap.Error(err))
@@ -108,9 +181,12 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 		}
 
 		if err := NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications); err != nil {
-			s.logger.Error("发送系统通知给指定用户失败", zap.Error(err))
-			return nil, status.Error(codes.Internal, "发送系统通知失败")
+			s.logger.Error("发送个人通知失败", zap.Error(err))
+			return nil, status.Error(codes.Internal, "发送个人通知失败")
 		}
+
+		// 个人类型不返回系统通知，因为直接发送了
+		return nil, nil
 	}
 
 	return notification, nil

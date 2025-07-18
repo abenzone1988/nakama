@@ -19,12 +19,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strconv"
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strconv"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -141,7 +142,7 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 	paramCount++
 	params = append(params, limit+1)
-	query += " ORDER BY id DESC LIMIT $" + strconv.Itoa(paramCount)
+	query += " ORDER BY effective_time DESC, id DESC LIMIT $" + strconv.Itoa(paramCount)
 
 	rows, err := db.QueryContext(ctx, query, params...)
 	if err != nil {
@@ -359,9 +360,10 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 			continue
 		}
 
-		createTime := notice.GetCreateTime().AsTime().UTC().Unix()
-		if createTime > latestSyncTime {
-			latestSyncTime = createTime
+		// 使用 effective_time 作为同步时间戳
+		effectiveTime := notice.GetEffectiveTime().AsTime().UTC().Unix()
+		if effectiveTime > latestSyncTime {
+			latestSyncTime = effectiveTime
 		}
 
 		notifications = append(notifications, &api.Notification{
@@ -392,7 +394,7 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 }
 
 func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logger, lastSyncTime int64) ([]*console.SystemNotice, error) {
-	// 使用时间戳查询，考虑时间精度问题
+	// 使用 effective_time 进行查询，考虑时间精度问题
 	query := `
 		SELECT
 			id,
@@ -404,10 +406,10 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 			code
 		FROM system_notification
 		WHERE
-			EXTRACT(EPOCH FROM date_trunc('second', create_time)) > $1
-			AND (effective_time IS NULL OR effective_time <= CURRENT_TIMESTAMP)
+			EXTRACT(EPOCH FROM date_trunc('second', effective_time)) > $1
+			AND effective_time <= CURRENT_TIMESTAMP
 			AND (expiry_time IS NULL OR expiry_time > CURRENT_TIMESTAMP)
-		ORDER BY create_time ASC
+		ORDER BY effective_time ASC
 	`
 
 	rows, err := db.QueryContext(ctx, query, lastSyncTime)

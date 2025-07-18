@@ -148,6 +148,37 @@ export interface CallRpcEndpointRequest {
   user_id?:string
 }
 
+export interface ChallengeTemplate {
+  // Activity ID
+  activity_id?:string
+  // Close time
+  close_time?:string
+  // End time
+  end_time?:string
+  // Challenge ID
+  id?:number
+  // Max participants
+  max_part?:number
+  // Challenge name
+  name?:string
+  // Open time
+  open_time?:string
+  // Reward remains minutes
+  reward_remains?:number
+  // Status
+  status?:number
+}
+
+export interface ChallengeTemplateResponse {
+  // Challenge template data
+  template?:ChallengeTemplate
+}
+
+export interface GetAllChallengeTemplatesResponse {
+  // Challenge template list
+  templates?:ChallengeTemplate[]
+}
+
 /** The current server configuration and any associated warnings. */
 export interface Config {
   // JSON-encoded active server configuration.
@@ -197,6 +228,11 @@ export interface CreateSystemNotificationRequest {
 export interface DeleteChannelMessagesResponse {
   // Total number of messages deleted.
   total?:string
+}
+
+export interface GetAllChallengeTemplatesResponse {
+  // Challenge template list
+  templates?:Array<ChallengeTemplate>
 }
 
 /** An export of all information stored for a group. */
@@ -1012,7 +1048,7 @@ export interface ApiValidatedSubscription {
 
 export interface GameItem {
   id?:string
-  num?:string
+  num?:number
 }
 
 /** A user session associated to a stream, usually through a list operation or a join/leave event. */
@@ -1807,6 +1843,21 @@ export class ConsoleService {
     const urlPath = `/v2/console/template`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
     return this.httpClient.post(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Get challenge template by ID */
+  getChallengeTemplate(auth_token: string, id: string): Observable<ChallengeTemplateResponse> {
+    id = encodeURIComponent(String(id))
+    const urlPath = `/v2/console/template/challenge/${id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.get<ChallengeTemplateResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Get all challenge templates */
+  getAllChallengeTemplates(auth_token: string): Observable<GetAllChallengeTemplatesResponse> {
+    const urlPath = `/v2/console/template/challenges`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.get<GetAllChallengeTemplatesResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   /** Delete console user. */

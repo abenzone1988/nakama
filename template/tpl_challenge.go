@@ -3,9 +3,10 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 type TplChallenge struct {

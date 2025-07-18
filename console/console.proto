@@ -193,6 +193,16 @@ service Console {
     option (google.api.http).post = "/v2/console/template";
   }
 
+  // Get challenge template by ID
+  rpc GetChallengeTemplate (ChallengeTemplateRequest) returns (ChallengeTemplateResponse) {
+    option (google.api.http).get = "/v2/console/template/challenge/{id}";
+  }
+
+  // Get all challenge templates
+  rpc GetAllChallengeTemplates (google.protobuf.Empty) returns (GetAllChallengeTemplatesResponse) {
+    option (google.api.http).get = "/v2/console/template/challenges";
+  }
+
   // Delete (non-recorded) all user accounts.
   rpc DeleteAccounts (google.protobuf.Empty) returns (google.protobuf.Empty) {
     option (google.api.http).delete = "/v2/console/account";
@@ -1474,4 +1484,40 @@ message SearchSystemNotificationsRequest {
   int32 limit = 2;
   // Cursor
   string cursor = 3;
+}
+
+message ChallengeTemplateRequest {
+  // Challenge template ID
+  int32 id = 1;
+}
+
+message ChallengeTemplateResponse {
+  // Challenge template data
+  ChallengeTemplate template = 1;
+}
+
+message ChallengeTemplate {
+  // Challenge ID
+  int32 id = 1;
+  // Challenge name
+  string name = 2;
+  // Activity ID
+  string activity_id = 3;
+  // Open time
+  string open_time = 4;
+  // Close time
+  string close_time = 5;
+  // End time
+  string end_time = 6;
+  // Max participants
+  int32 max_part = 7;
+  // Reward remains minutes
+  int32 reward_remains = 8;
+  // Status
+  int32 status = 9;
+}
+
+message GetAllChallengeTemplatesResponse {
+  // Challenge template list
+  repeated ChallengeTemplate templates = 1;
 }

@@ -3105,6 +3105,62 @@
         ]
       }
     },
+    "/v2/console/template/challenge/{id}": {
+      "get": {
+        "summary": "Get challenge template by ID",
+        "operationId": "Console_GetChallengeTemplate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleChallengeTemplateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Challenge template ID",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/template/challenges": {
+      "get": {
+        "summary": "Get all challenge templates",
+        "operationId": "Console_GetAllChallengeTemplates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleGetAllChallengeTemplatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/user": {
       "get": {
         "summary": "List (and optionally filter) users.",
@@ -4208,6 +4264,60 @@
       },
       "title": "API Explorer response definition for CallApiEndpoint"
     },
+    "consoleChallengeTemplate": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Challenge ID"
+        },
+        "name": {
+          "type": "string",
+          "title": "Challenge name"
+        },
+        "activity_id": {
+          "type": "string",
+          "title": "Activity ID"
+        },
+        "open_time": {
+          "type": "string",
+          "title": "Open time"
+        },
+        "close_time": {
+          "type": "string",
+          "title": "Close time"
+        },
+        "end_time": {
+          "type": "string",
+          "title": "End time"
+        },
+        "max_part": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Max participants"
+        },
+        "reward_remains": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Reward remains minutes"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Status"
+        }
+      }
+    },
+    "consoleChallengeTemplateResponse": {
+      "type": "object",
+      "properties": {
+        "template": {
+          "$ref": "#/definitions/consoleChallengeTemplate",
+          "title": "Challenge template data"
+        }
+      }
+    },
     "consoleConfig": {
       "type": "object",
       "properties": {
@@ -4294,6 +4404,19 @@
           "type": "string",
           "format": "int64",
           "description": "Total number of messages deleted."
+        }
+      }
+    },
+    "consoleGetAllChallengeTemplatesResponse": {
+      "type": "object",
+      "properties": {
+        "templates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/consoleChallengeTemplate"
+          },
+          "title": "Challenge template list"
         }
       }
     },
@@ -4766,8 +4889,8 @@
           "type": "string"
         },
         "num": {
-          "type": "string",
-          "format": "int64"
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "Game Item"

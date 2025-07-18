@@ -55,6 +55,8 @@ const (
 	Console_DeleteStorage_FullMethodName             = "/nakama.console.Console/DeleteStorage"
 	Console_DeleteStorageObject_FullMethodName       = "/nakama.console.Console/DeleteStorageObject"
 	Console_ReloadTemplate_FullMethodName            = "/nakama.console.Console/ReloadTemplate"
+	Console_GetChallengeTemplate_FullMethodName      = "/nakama.console.Console/GetChallengeTemplate"
+	Console_GetAllChallengeTemplates_FullMethodName  = "/nakama.console.Console/GetAllChallengeTemplates"
 	Console_DeleteAccounts_FullMethodName            = "/nakama.console.Console/DeleteAccounts"
 	Console_DeleteLeaderboard_FullMethodName         = "/nakama.console.Console/DeleteLeaderboard"
 	Console_DeleteLeaderboardRecord_FullMethodName   = "/nakama.console.Console/DeleteLeaderboardRecord"
@@ -159,6 +161,10 @@ type ConsoleClient interface {
 	DeleteStorageObject(ctx context.Context, in *DeleteStorageObjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Reload template data
 	ReloadTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Get challenge template by ID
+	GetChallengeTemplate(ctx context.Context, in *ChallengeTemplateRequest, opts ...grpc.CallOption) (*ChallengeTemplateResponse, error)
+	// Get all challenge templates
+	GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -444,6 +450,24 @@ func (c *consoleClient) DeleteStorageObject(ctx context.Context, in *DeleteStora
 func (c *consoleClient) ReloadTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Console_ReloadTemplate_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetChallengeTemplate(ctx context.Context, in *ChallengeTemplateRequest, opts ...grpc.CallOption) (*ChallengeTemplateResponse, error) {
+	out := new(ChallengeTemplateResponse)
+	err := c.cc.Invoke(ctx, Console_GetChallengeTemplate_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error) {
+	out := new(GetAllChallengeTemplatesResponse)
+	err := c.cc.Invoke(ctx, Console_GetAllChallengeTemplates_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1064,6 +1088,10 @@ type ConsoleServer interface {
 	DeleteStorageObject(context.Context, *DeleteStorageObjectRequest) (*emptypb.Empty, error)
 	// Reload template data
 	ReloadTemplate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Get challenge template by ID
+	GetChallengeTemplate(context.Context, *ChallengeTemplateRequest) (*ChallengeTemplateResponse, error)
+	// Get all challenge templates
+	GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -1249,6 +1277,12 @@ func (UnimplementedConsoleServer) DeleteStorageObject(context.Context, *DeleteSt
 }
 func (UnimplementedConsoleServer) ReloadTemplate(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReloadTemplate not implemented")
+}
+func (UnimplementedConsoleServer) GetChallengeTemplate(context.Context, *ChallengeTemplateRequest) (*ChallengeTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallengeTemplate not implemented")
+}
+func (UnimplementedConsoleServer) GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllChallengeTemplates not implemented")
 }
 func (UnimplementedConsoleServer) DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccounts not implemented")
@@ -1757,6 +1791,42 @@ func _Console_ReloadTemplate_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).ReloadTemplate(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetChallengeTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChallengeTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetChallengeTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetChallengeTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetChallengeTemplate(ctx, req.(*ChallengeTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetAllChallengeTemplates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetAllChallengeTemplates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetAllChallengeTemplates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetAllChallengeTemplates(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2987,6 +3057,14 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReloadTemplate",
 			Handler:    _Console_ReloadTemplate_Handler,
+		},
+		{
+			MethodName: "GetChallengeTemplate",
+			Handler:    _Console_GetChallengeTemplate_Handler,
+		},
+		{
+			MethodName: "GetAllChallengeTemplates",
+			Handler:    _Console_GetAllChallengeTemplates_Handler,
 		},
 		{
 			MethodName: "DeleteAccounts",

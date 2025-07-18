@@ -59,6 +59,7 @@
         <th style="width: 120px">标题</th>
         <th>内容</th>
         <th style="width: 180px">创建时间</th>
+        <th style="width: 180px">生效时间</th>
         <th style="width: 180px">过期时间</th>
         <th style="width: 90px">状态</th>
         <th style="width: 120px" *ngIf="operateAllowed()">操作</th>
@@ -66,12 +67,13 @@
     </thead>
     <tbody>
       <tr *ngIf="notifications.length === 0">
-        <td colSpan="6" class="text-muted">No System Notifications found </td>
+        <td colSpan="7" class="text-muted">No System Notifications found </td>
       </tr>
       <tr *ngFor="let notification of notifications; index as i;">
         <td>{{notification.subject}}</td>
         <td>{{notification.content?.description}}</td>
         <td>{{notification.create_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+        <td>{{notification.effective_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
         <td>{{notification.expiry_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
         <td>
           <span class="badge" [ngClass]="getStatusClass(notification.status)">
@@ -79,8 +81,12 @@
           </span>
         </td>
         <td *ngIf="operateAllowed()" class="text-center">
-          <button type="button" class="btn btn-sm btn-primary mr-1" (click)="openModal(content, notification)">修改</button>
-          <button type="button" class="btn btn-sm btn-danger" (click)="deleteNotification(notification)">删除</button>
+          <button type="button" class="btn btn-sm btn-primary mr-1" 
+                  (click)="openModal(content, notification)" 
+                  [disabled]="isNotificationEffective(notification)">修改</button>
+          <button type="button" class="btn btn-sm btn-danger" 
+                  (click)="deleteNotification(notification)"
+                  [disabled]="isNotificationEffective(notification)">删除</button>
         </td>
       </tr>
     </tbody>
@@ -98,11 +104,12 @@
   <div class="modal-body">
     <form  [formGroup]="notificationForm">
       <div class="mb-3 row align-items-center">
-        <label class="col-sm-2 col-form-label">对象</label>
+        <label class="col-sm-2 col-form-label">发送类型</label>
         <div class="col-sm-10">
           <select class="form-control" formControlName="type">
             <option value="0">全体</option>
-            <option value="1">特定</option>
+            <option value="1">比赛</option>
+            <option value="2">个人</option>
           </select>
         </div>
       </div>
@@ -128,7 +135,29 @@
         </div>
       </div>
       <div class="mb-3" *ngIf="n.type.value == 1">
-        <label>目标</label>
+        <label>挑战赛选择</label>
+        <div class="input-group">
+          <select class="form-control" formControlName="challengeId" (change)="onChallengeChange($event)">
+            <option value="">请选择挑战赛</option>
+            <option *ngFor="let challenge of challenges" [value]="challenge.id">
+              {{ challenge.name }} ({{ challenge.open_time }})
+            </option>
+          </select>
+        </div>
+        <small class="form-text text-muted">选择挑战赛后，系统将根据挑战赛的开始时间设置生效时间</small>
+        <div *ngIf="selectedChallenge" class="mt-2 p-2 bg-light">
+          <small>
+            <strong>挑战赛信息：</strong><br>
+            开始时间：{{selectedChallenge.open_time}}<br>
+            结束时间：{{selectedChallenge.close_time}}<br>
+            结算时间：{{selectedChallenge.end_time}}<br>
+            奖励剩余时间：{{selectedChallenge.reward_remains}} 分钟
+          </small>
+        </div>
+      </div>
+      
+      <div class="mb-3" *ngIf="n.type.value == 2">
+        <label>目标用户</label>
         <div formArrayName="targetIds">
           <div *ngFor="let targetId of n.targetIds.controls; let i = index" class="input-group mb-2">
             <!-- 直接绑定到 FormControl -->
@@ -162,20 +191,33 @@
         </div>
       </div>
       <div class="mb-3 row align-items-center">
-        <label class="col-sm-3 col-form-label">是否过期</label>
+        <label class="col-sm-3 col-form-label">立即发送</label>
         <div class="col-sm-9">
-          <input class="form-check-input" type="checkbox" formControlName="enableExpiry">
+          <input class="form-check-input" type="checkbox" formControlName="immediateSend">
+          <small class="form-text text-muted ml-2">选择后将以当前时间作为生效时间立即发送</small>
         </div>
       </div>
-      <div class="mb-3 row align-items-center" >
-        <label class="col-sm-2 col-form-label">过期时间</label>
+      <div class="mb-3 row align-items-center">
+        <label class="col-sm-3 col-form-label">设置生效时间</label>
+        <div class="col-sm-9">
+          <input class="form-check-input" type="checkbox" formControlName="enableEffectiveTime" [disabled]="n.immediateSend.value">
+        </div>
+      </div>
+      <div class="mb-3 row align-items-center">
+        <label class="col-sm-3 col-form-label">设置过期时间</label>
+        <div class="col-sm-9">
+          <input class="form-check-input" type="checkbox" formControlName="enableExpiry" [disabled]="n.immediateSend.value">
+        </div>
+      </div>
+      <div class="mb-3 row align-items-center" *ngIf="!n.immediateSend.value && n.enableEffectiveTime.value">
+        <label class="col-sm-2 col-form-label">生效时间</label>
         <div class="input-group col-sm-5">
           <input
-            id="dateOfExpire"
+            id="dateOfEffective"
             class="form-control"
             placeholder="yyyy-mm-dd"
             name="dp"
-            formControlName="expireDate"
+            formControlName="effectiveDate"
             [footerTemplate]="footerTemplate"
             ngbDatepicker
             #dp="ngbDatepicker"
@@ -186,6 +228,30 @@
             <button class="btn btn-secondary btn-sm m-2 float-end" (click)="dp.close()">Close</button>
           </ng-template>
           <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dp.toggle()" type="button"></button>
+        </div>
+      <div class="col-sm-5">
+        <ngb-timepicker [minuteStep]="15" formControlName="effectiveTime" [meridian]="true"/>
+      </div>
+      </div>
+      <div class="mb-3 row align-items-center" *ngIf="!n.immediateSend.value && n.enableExpiry.value">
+        <label class="col-sm-2 col-form-label">过期时间</label>
+        <div class="input-group col-sm-5">
+          <input
+            id="dateOfExpire"
+            class="form-control"
+            placeholder="yyyy-mm-dd"
+            name="dp"
+            formControlName="expireDate"
+            [footerTemplate]="footerTemplateExpire"
+            ngbDatepicker
+            #dpExpire="ngbDatepicker"
+          />
+          <ng-template #footerTemplateExpire>
+            <hr class="my-0" />
+            <button class="btn btn-primary btn-sm m-2 float-start" (click)="setExpireToday(); dpExpire.close()">Today</button>
+            <button class="btn btn-secondary btn-sm m-2 float-end" (click)="dpExpire.close()">Close</button>
+          </ng-template>
+          <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dpExpire.toggle()" type="button"></button>
         </div>
       <div class="col-sm-5">
         <ngb-timepicker [minuteStep]="15" formControlName="expireTime" [meridian]="true"/>
