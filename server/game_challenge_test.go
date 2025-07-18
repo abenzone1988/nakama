@@ -118,34 +118,24 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 	// 统计信息
 	stats := struct {
-		CreatedAccounts      int
-		AuthenticationErrors int
-		ChallengesFetched    int
-		ChallengesJoined     int
-		ScoresSubmitted      int
-		Errors               int
-		TournamentGroups     map[string]int
-		StartTime            time.Time
+		CreatedAccounts   int
+		ChallengesFetched int
+		ChallengesJoined  int
+		ScoresSubmitted   int
+		TournamentGroups  map[string]int
+		StartTime         time.Time
 	}{
 		TournamentGroups: make(map[string]int),
 		StartTime:        time.Now(),
 	}
 
-	// 错误处理函数
+	// 错误处理函数 - 任何失败都立即停止测试
 	logError := func(format string, args ...interface{}) {
-		if config.StrictMode {
-			t.Errorf(format, args...)
-		} else {
-			t.Logf(format, args...)
-		}
+		t.Fatalf(format, args...)
 	}
 
 	fatalError := func(format string, args ...interface{}) {
-		if config.StrictMode {
-			t.Fatalf(format, args...)
-		} else {
-			t.Logf(format, args...)
-		}
+		t.Fatalf(format, args...)
 	}
 
 	// 第一阶段：创建玩家账号
@@ -191,8 +181,6 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 		session, err := client.AuthenticateCustom(authCtx, authReq)
 		if err != nil {
 			logError("玩家 %s 认证/创建账号失败: %v", player.Username, err)
-			stats.AuthenticationErrors++
-			continue
 		}
 
 		player.Session = session
@@ -203,8 +191,6 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 			token, _, err := jwt.NewParser().ParseUnverified(session.Token, claims)
 			if err != nil {
 				logError("玩家 %s 解析token失败: %v", player.Username, err)
-				stats.AuthenticationErrors++
-				continue
 			}
 
 			if claims, ok := token.Claims.(*SessionTokenClaims); ok {
@@ -228,7 +214,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 		}
 	}
 
-	t.Logf("账号创建完成: 成功 %d 个, 失败 %d 个", stats.CreatedAccounts, stats.AuthenticationErrors)
+	t.Logf("账号创建完成: 成功 %d 个", stats.CreatedAccounts)
 
 	// 第二阶段：获取挑战赛信息
 	t.Logf("=== 阶段2: 获取挑战赛信息 ===")
@@ -288,15 +274,11 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 			joinResp, err := client.JoinChallenge(player.Context, joinReq)
 			if err != nil {
 				logError("玩家 %s 加入挑战赛失败: %v", player.Username, err)
-				stats.Errors++
-				continue
 			}
 
 			if joinResp.Code != 0 {
 				logError("玩家 %s 加入挑战赛失败: Code=%d, Msg=%s",
 					player.Username, joinResp.Code, joinResp.Msg)
-				stats.Errors++
-				continue
 			}
 
 			player.JoinedChallenges = append(player.JoinedChallenges, targetChallenge.Id)
@@ -345,7 +327,6 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 				challengeResp, err := client.GetChallenge(player.Context, &emptypb.Empty{})
 				if err != nil {
 					logError("玩家 %s 获取挑战赛信息失败: %v", player.Username, err)
-					continue
 				}
 
 				// 找到对应的挑战赛
@@ -358,7 +339,6 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 				if tournamentID == "" {
 					logError("玩家 %s 没有分配到竞标赛", player.Username)
-					continue
 				}
 			}
 
@@ -392,8 +372,6 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 				signedMetadata, err := createSignedTournamentMetadata(tournamentID, score, 0, metadataFields)
 				if err != nil {
 					logError("玩家 %s 创建签名metadata失败: %v", player.Username, err)
-					stats.Errors++
-					continue
 				}
 
 				writeReq := &api.WriteTournamentRecordRequest{
@@ -410,8 +388,6 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 				recordResp, err := client.WriteTournamentRecord(player.Context, writeReq)
 				if err != nil {
 					logError("玩家 %s 提交成绩失败: %v", player.Username, err)
-					stats.Errors++
-					continue
 				}
 
 				player.ScoresSubmitted++
@@ -438,11 +414,10 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 	if config.PerformanceMode {
 		t.Logf("测试总耗时: %v", elapsedTime)
 	}
-	t.Logf("创建账号: %d 成功, %d 失败", stats.CreatedAccounts, stats.AuthenticationErrors)
+	t.Logf("创建账号: %d 成功", stats.CreatedAccounts)
 	t.Logf("获取挑战赛: %d 个", stats.ChallengesFetched)
 	t.Logf("加入挑战赛: %d 个玩家成功", stats.ChallengesJoined)
 	t.Logf("提交成绩: %d 次成功", stats.ScoresSubmitted)
-	t.Logf("总错误数: %d", stats.Errors)
 
 	t.Logf("=== 竞标赛分配详情 ===")
 	for tournamentID, playerCount := range stats.TournamentGroups {

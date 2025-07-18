@@ -2,7 +2,7 @@ name: nakama-node-jp
 
 database:
   address:
-    - "root:sparkinfi123!@192.168.102.223:5432?dbname=hjzx"
+    - "root:sparkinfi123!@192.168.102.223:5432?dbname=hjzx-0"
 logger:
   level: "info"
 

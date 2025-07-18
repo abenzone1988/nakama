@@ -4,14 +4,6 @@
 <div class="row no-gutters mb-4">
   <div class="col d-flex justify-content-between no-gutters align-items-center">
     <div class="col-md-9">
-      <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
-        <div class="input-group">
-          <input type="text" class="form-control border-right-0" formControlName="filter" placeholder="Filter by Subject"/>
-          <div class="input-group-append">
-            <button type="submit" class="btn btn-primary dropdown-radius">Search</button>
-          </div>
-        </div>
-      </form>
     </div>
     <div class="col-md-3 justify-content-end text-right">
       <div class="btn-group page-btns" role="group">
@@ -176,7 +168,7 @@
           <select class="form-control" formControlName="challengeId" (change)="onChallengeChange($event)">
             <option value="">请选择挑战赛</option>
             <option *ngFor="let challenge of challenges" [value]="challenge.id">
-              {{ challenge.name }} ({{ challenge.open_time }})
+            {{challenge.id}}  {{ challenge.name }} ({{ challenge.open_time }})
             </option>
           </select>
         </div>
@@ -184,6 +176,7 @@
         <div *ngIf="selectedChallenge" class="mt-2 p-2 bg-light">
           <small>
             <strong>挑战赛信息：</strong><br>
+            比赛id:  {{selectedChallenge.id}}<br>
             开始时间：{{selectedChallenge.open_time}}<br>
             结束时间：{{selectedChallenge.close_time}}<br>
             结算时间：{{selectedChallenge.end_time}}<br>
