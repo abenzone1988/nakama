@@ -1,5 +1,5 @@
 <h2 class="pb-1">System notifications</h2>
-<h6 class="pb-3">{{notificationsCount}} notifications found. </h6>
+<h6 class="pb-3">{{totalCount}} notifications found. </h6>
 
 <div class="row no-gutters mb-4">
   <div class="col d-flex justify-content-between no-gutters align-items-center">
@@ -15,13 +15,13 @@
     </div>
     <div class="col-md-3 justify-content-end text-right">
       <div class="btn-group page-btns" role="group">
-        <button type="button" class="btn btn-outline-secondary" (click)="onPageChange(1)" [disabled]="notifications.length === 0">
+        <button type="button" class="btn btn-outline-secondary" (click)="onFirstPage()" [disabled]="!hasPreviousPage()">
           <img src="/static/svg/page-first.svg" alt="" width="20" height="">
         </button>
-        <button type="button" class="btn btn-outline-secondary" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1">
+        <button type="button" class="btn btn-outline-secondary" (click)="onPreviousPage()" [disabled]="!hasPreviousPage()">
           <img src="/static/svg/page-prev.svg" alt="" width="20" height="">
         </button>
-        <button type="button" class="btn btn-outline-secondary" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage * pageSize >= totalCount">
+        <button type="button" class="btn btn-outline-secondary" (click)="onNextPage()" [disabled]="!hasNextPage()">
           <img src="/static/svg/page-next.svg" alt="" width="20" height="">
         </button>
       </div>
@@ -88,11 +88,11 @@
             <small class="text-muted font-weight-bold">奖励：</small>
             <div class="d-flex flex-wrap mt-1">
               <span *ngFor="let reward of notification.content.rewards" class="badge badge-info mr-1 mb-1 d-flex align-items-center">
-                <img [src]="getIconById(reward.id)" 
-                     [alt]="getItemNameById(reward.id)" 
-                     width="14" 
-                     height="14" 
-                     class="mr-1" 
+                <img [src]="getIconById(reward.id)"
+                     [alt]="getItemNameById(reward.id)"
+                     width="14"
+                     height="14"
+                     class="mr-1"
                      style="object-fit: contain;"
                      (error)="onImageError($event)">
                 <span>{{getItemNameById(reward.id)}} x{{reward.num}}</span>
@@ -107,7 +107,7 @@
           <button type="button"
                   class="btn btn-sm mr-1"
                   [ngClass]="isNotificationEffective(notification) ? 'btn-secondary' : 'btn-primary'"
-                  (click)="openModal(content, notification)" 
+                  (click)="openModal(content, notification)"
                   [disabled]="isNotificationEffective(notification)"
                   [title]="isNotificationEffective(notification) ? '通知已生效，无法修改' : '修改通知'">
             修改
@@ -205,7 +205,7 @@
           <small class="form-text text-muted">选择后将自动填充生效时间</small>
         </div>
       </div>
-      
+
       <div class="mb-3" *ngIf="n.type.value == 2">
         <label>目标用户</label>
         <div formArrayName="targetIds">

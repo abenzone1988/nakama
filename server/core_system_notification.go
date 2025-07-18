@@ -15,10 +15,14 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strconv"
 	"time"
 
@@ -33,6 +37,13 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// 系统通知分页cursor结构体
+type systemNotificationsCursor struct {
+	NotificationID []byte
+	EffectiveTime  int64
+	IsNext         bool
+}
 
 var (
 	ErrSystemNotificationNotFound = errors.New("系统通知不存在")
@@ -126,33 +137,63 @@ func SystemNotificationCreate(ctx context.Context, db *sql.DB, logger *zap.Logge
 }
 
 func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB, limit int, cursor string) (*console.ListSystemNoticeResponse, error) {
-	conditions := "WHERE 1=1"
-	params := make([]interface{}, 0)
-	paramCount := 0
+	var nc *systemNotificationsCursor
+	if cursor != "" {
+		nc = &systemNotificationsCursor{}
+		cb, err := base64.URLEncoding.DecodeString(cursor)
+		if err != nil {
+			logger.Warn("Could not base64 decode system notification cursor.", zap.String("cursor", cursor))
+			return nil, status.Error(codes.InvalidArgument, "Malformed cursor was used.")
+		}
+		if err = gob.NewDecoder(bytes.NewReader(cb)).Decode(nc); err != nil {
+			logger.Warn("Could not decode system notification cursor.", zap.String("cursor", cursor))
+			return nil, status.Error(codes.InvalidArgument, "Malformed cursor was used.")
+		}
+	}
 
 	// 先查询总数
-	countQuery := "SELECT COUNT(*) FROM system_notification " + conditions
+	countQuery := "SELECT COUNT(*) FROM system_notification"
 	var totalCount int32
-	err := db.QueryRowContext(ctx, countQuery, params...).Scan(&totalCount)
+	err := db.QueryRowContext(ctx, countQuery).Scan(&totalCount)
 	if err != nil {
-		logger.Error("Error counting announcements", zap.Error(err))
+		logger.Error("Error counting system notifications", zap.Error(err))
 		return nil, err
 	}
 
 	query := `
-		SELECT id, notice_type, subject, content, create_time, effective_time, expiry_time, challenge_id
-		FROM system_notification
-		` + conditions
+SELECT
+    id,
+    notice_type,
+    subject,
+    content,
+    create_time,
+    effective_time,
+    expiry_time,
+    challenge_id
+FROM
+    system_notification
+`
 
-	if cursor != "" {
-		paramCount++
-		params = append(params, cursor)
-		query += " AND id < $" + strconv.Itoa(paramCount)
+	var params []interface{}
+	var comparisonOp string
+	var sortOrder string
+
+	if nc != nil {
+		if nc.IsNext {
+			comparisonOp = "<"
+			sortOrder = "ORDER BY effective_time DESC, id DESC"
+		} else {
+			comparisonOp = ">"
+			sortOrder = "ORDER BY effective_time ASC, id ASC"
+		}
+		query += `WHERE (effective_time, id) ` + comparisonOp + ` ($1::TIMESTAMPTZ, $2::UUID)`
+		params = append(params, &pgtype.Timestamptz{Time: time.Unix(0, nc.EffectiveTime).UTC(), Valid: true}, uuid.FromBytesOrNil(nc.NotificationID))
+	} else {
+		sortOrder = "ORDER BY effective_time DESC, id DESC"
 	}
 
-	paramCount++
+	query += " " + sortOrder + " LIMIT $" + strconv.Itoa(len(params)+1)
 	params = append(params, limit+1)
-	query += " ORDER BY effective_time DESC, id DESC LIMIT $" + strconv.Itoa(paramCount)
 
 	rows, err := db.QueryContext(ctx, query, params...)
 	if err != nil {
@@ -161,29 +202,34 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	}
 	defer rows.Close()
 
+	var nextCursor *systemNotificationsCursor
+	var prevCursor *systemNotificationsCursor
 	notifications := make([]*console.SystemNotice, 0, limit)
-	var nextCursor string
+
+	var (
+		id            string
+		noticeType    sql.NullInt32
+		subject       string
+		contentStr    string
+		createTime    pgtype.Timestamptz
+		effectiveTime pgtype.Timestamptz
+		expiryTime    pgtype.Timestamptz
+		challengeId   sql.NullInt32
+	)
 
 	for rows.Next() {
-		var (
-			id            string
-			noticeType    sql.NullInt32
-			subject       string
-			contentStr    string
-			createTime    pgtype.Timestamptz
-			effectiveTime pgtype.Timestamptz
-			expiryTime    pgtype.Timestamptz
-			challengeId   sql.NullInt32
-		)
+		if len(notifications) >= limit {
+			nextCursor = &systemNotificationsCursor{
+				NotificationID: uuid.FromStringOrNil(id).Bytes(),
+				EffectiveTime:  effectiveTime.Time.UnixNano(),
+				IsNext:         true,
+			}
+			break
+		}
 
 		if err = rows.Scan(&id, &noticeType, &subject, &contentStr, &createTime, &effectiveTime, &expiryTime, &challengeId); err != nil {
 			logger.Error("扫描系统通知数据失败", zap.Error(err))
 			return nil, err
-		}
-
-		if len(notifications) >= limit {
-			nextCursor = id
-			break
 		}
 
 		var content console.NoticeContent
@@ -211,6 +257,14 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		}
 
 		notifications = append(notifications, notification)
+
+		if nc != nil && prevCursor == nil {
+			prevCursor = &systemNotificationsCursor{
+				NotificationID: uuid.FromStringOrNil(id).Bytes(),
+				EffectiveTime:  effectiveTime.Time.UnixNano(),
+				IsNext:         false,
+			}
+		}
 	}
 
 	if err = rows.Err(); err != nil {
@@ -218,9 +272,46 @@ func SystemNotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		return nil, err
 	}
 
+	// 如果是向前翻页，需要处理cursor和结果顺序
+	if nc != nil && !nc.IsNext {
+		if nextCursor != nil && prevCursor != nil {
+			nextCursor, nextCursor.IsNext, prevCursor, prevCursor.IsNext = prevCursor, prevCursor.IsNext, nextCursor, nextCursor.IsNext
+		} else if nextCursor != nil {
+			nextCursor, prevCursor = nil, nextCursor
+			prevCursor.IsNext = !prevCursor.IsNext
+		} else if prevCursor != nil {
+			nextCursor, prevCursor = prevCursor, nil
+			nextCursor.IsNext = !nextCursor.IsNext
+		}
+
+		// 反转结果顺序
+		slices.Reverse(notifications)
+	}
+
+	var nextCursorStr string
+	if nextCursor != nil {
+		cursorBuf := new(bytes.Buffer)
+		if err := gob.NewEncoder(cursorBuf).Encode(nextCursor); err != nil {
+			logger.Error("Error creating system notification list cursor", zap.Error(err))
+			return nil, err
+		}
+		nextCursorStr = base64.URLEncoding.EncodeToString(cursorBuf.Bytes())
+	}
+
+	var prevCursorStr string
+	if prevCursor != nil {
+		cursorBuf := new(bytes.Buffer)
+		if err := gob.NewEncoder(cursorBuf).Encode(prevCursor); err != nil {
+			logger.Error("Error creating system notification list cursor", zap.Error(err))
+			return nil, err
+		}
+		prevCursorStr = base64.URLEncoding.EncodeToString(cursorBuf.Bytes())
+	}
+
 	return &console.ListSystemNoticeResponse{
 		Notifications: notifications,
-		NextCursor:    nextCursor,
+		NextCursor:    nextCursorStr,
+		PrevCursor:    prevCursorStr,
 		TotalCount:    totalCount,
 	}, nil
 }

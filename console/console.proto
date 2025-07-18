@@ -1451,7 +1451,7 @@ message UpdateSystemNotificationRequest {
   SystemNotice notice = 2;
 }
 
-message ListSystemNoticeRequest {
+message ListListSystemNoticeRequest {
   // Filter condition
   string filter = 1;
   // Cursor

@@ -33,6 +33,7 @@ interface NotificationResponse {
   notifications?: SystemNotice[];
   total_count?: number;
   next_cursor?: string;
+  prev_cursor?: string;
 }
 
 @Component({
@@ -132,7 +133,7 @@ export class SystemNotificationsComponent implements OnInit {
           if (response.notice) {
             this.notifications.push(...response.notice);
           }
-          this.notificationsCount = response.total_count || 0;
+          this.totalCount = response.total_count || 0;
           this.nextCursor = response.cursor || '';
           this.prevCursor = response.prev_cursor || '';
         }
@@ -154,7 +155,7 @@ export class SystemNotificationsComponent implements OnInit {
 
   public readonly systemUserId = '00000000-0000-0000-0000-000000000000';
   public error = '';
-  public notificationsCount = 0;
+  public totalCount = 0;
   public notifications: SystemNotice[] = [];
   public nextCursor = '';
   public prevCursor = '';
@@ -163,13 +164,10 @@ export class SystemNotificationsComponent implements OnInit {
   showError = false;
   errorMessage = '';
   loading = false;
-  totalCount = 0;
-  currentPage = 1;
-  pageSize = 10;
+
   statusFilter = '';
   searchQuery = '';
-  cursor = '';
-  cursorCache: { [page: number]: string } = { 1: '' };
+  currentCursor = '';
   isSearchMode = false;
   editingNotification: SystemNotice | null = null;
 
@@ -216,8 +214,8 @@ export class SystemNotificationsComponent implements OnInit {
   private loadSearchResults(): void {
     const params: any = {
       query: this.searchQuery,
-      limit: this.pageSize,
-      cursor: this.cursor,
+      limit: 10,
+      cursor: this.currentCursor,
     };
 
     this.fetchNotifications(params, true);
@@ -225,8 +223,8 @@ export class SystemNotificationsComponent implements OnInit {
 
   private loadNotificationsList(): void {
     const params: any = {
-      limit: this.pageSize,
-      cursor: this.cursor,
+      limit: 10,
+      cursor: this.currentCursor,
     };
     if (this.statusFilter !== '') {
       params.status = parseInt(this.statusFilter, 10);
@@ -240,9 +238,8 @@ export class SystemNotificationsComponent implements OnInit {
       next: (response: NotificationResponse) => {
         this.notifications = response.notifications || [];
         this.totalCount = response.total_count || 0;
-        if (response.next_cursor) {
-          this.cursorCache[this.currentPage + 1] = response.next_cursor;
-        }
+        this.nextCursor = response.next_cursor || '';
+        this.prevCursor = response.prev_cursor || '';
         this.loading = false;
       },
       error: (error) => {
@@ -273,7 +270,7 @@ export class SystemNotificationsComponent implements OnInit {
       if (d.notifications) {
         this.notifications.push(...d.notifications);
       }
-      this.notificationsCount = d.total_count ?? 0;
+      this.totalCount = d.total_count ?? 0;
       this.nextCursor = d.next_cursor ?? '';
       this.prevCursor = d.prev_cursor ?? '';
 
@@ -290,32 +287,21 @@ export class SystemNotificationsComponent implements OnInit {
     });
   }
 
-  private getDismissReason(reason: any): string {
-    switch (reason) {
-      case ModalDismissReasons.ESC:
-        return 'by pressing ESC';
-      case ModalDismissReasons.BACKDROP_CLICK:
-        return 'by clicking on a backdrop';
-      default:
-        return `with: ${reason}`;
-    }
-  }
-
   private toTimeString(date: NgbDateStruct | null, time: NgbTimeStruct | null): string | undefined {
     if (!date) {
       return undefined;
     }
-    
+
     // 构建本地时间
     const localDate = new Date(
-      date.year, 
-      date.month - 1, 
+      date.year,
+      date.month - 1,
       date.day,
       time?.hour || 0,
       time?.minute || 0,
       0
     );
-    
+
     // 转换为UTC时间字符串
     return localDate.toISOString();
   }
@@ -527,8 +513,8 @@ export class SystemNotificationsComponent implements OnInit {
     if (!formValue.immediateSend && formValue.effectiveDate) {
       // 构建完整的生效时间（包含日期和时间）
       const effectiveDateTime = new Date(
-        formValue.effectiveDate.year, 
-        formValue.effectiveDate.month - 1, 
+        formValue.effectiveDate.year,
+        formValue.effectiveDate.month - 1,
         formValue.effectiveDate.day,
         formValue.effectiveTime?.hour || 0,
         formValue.effectiveTime?.minute || 0,
@@ -548,8 +534,8 @@ export class SystemNotificationsComponent implements OnInit {
     if (formValue.enableExpiry && formValue.expireDate && formValue.effectiveDate && !formValue.immediateSend) {
       // 构建完整的生效时间（包含日期和时间）
       const effectiveDateTime = new Date(
-        formValue.effectiveDate.year, 
-        formValue.effectiveDate.month - 1, 
+        formValue.effectiveDate.year,
+        formValue.effectiveDate.month - 1,
         formValue.effectiveDate.day,
         formValue.effectiveTime?.hour || 0,
         formValue.effectiveTime?.minute || 0,
@@ -557,8 +543,8 @@ export class SystemNotificationsComponent implements OnInit {
       );
       // 构建完整的过期时间（包含日期和时间）
       const expireDateTime = new Date(
-        formValue.expireDate.year, 
-        formValue.expireDate.month - 1, 
+        formValue.expireDate.year,
+        formValue.expireDate.month - 1,
         formValue.expireDate.day,
         formValue.expireTime?.hour || 0,
         formValue.expireTime?.minute || 0,
@@ -696,9 +682,7 @@ export class SystemNotificationsComponent implements OnInit {
     this.searchQuery = this.searchForm.get('filter')?.value || '';
     this.statusFilter = this.searchForm.get('status')?.value || '';
     this.isSearchMode = true;
-    this.currentPage = 1;
-    this.cursor = '';
-    this.cursorCache = { 1: '' };
+    this.currentCursor = '';
     this.loadNotifications();
   }
 
@@ -707,31 +691,47 @@ export class SystemNotificationsComponent implements OnInit {
     this.searchQuery = '';
     this.statusFilter = '';
     this.isSearchMode = false;
-    this.currentPage = 1;
-    this.cursor = '';
-    this.cursorCache = { 1: '' };
+    this.currentCursor = '';
     this.loadNotifications();
   }
 
   onStatusFilterChange(): void {
     this.isSearchMode = false;
     this.searchQuery = '';
-    this.currentPage = 1;
-    this.cursor = '';
-    this.cursorCache = { 1: '' };
+    this.currentCursor = '';
     this.loadNotifications();
   }
 
-  onPageChange(page: number): void {
-    if (page > this.currentPage) {
-      this.cursor = this.cursorCache[page] || '';
-    } else if (page === 1) {
-      this.cursor = '';
-    } else {
-      this.cursor = this.cursorCache[page] || '';
+  // 向前翻页
+  onPreviousPage(): void {
+    if (this.prevCursor) {
+      this.currentCursor = this.prevCursor;
+      this.loadNotifications();
     }
-    this.currentPage = page;
+  }
+
+  // 向后翻页
+  onNextPage(): void {
+    if (this.nextCursor) {
+      this.currentCursor = this.nextCursor;
+      this.loadNotifications();
+    }
+  }
+
+  // 回到第一页
+  onFirstPage(): void {
+    this.currentCursor = '';
     this.loadNotifications();
+  }
+
+  // 检查是否有上一页
+  hasPreviousPage(): boolean {
+    return !!this.prevCursor;
+  }
+
+  // 检查是否有下一页
+  hasNextPage(): boolean {
+    return !!this.nextCursor;
   }
 
   getStatusClass(status: number): string {
@@ -928,4 +928,5 @@ export class MailManagerResolver implements Resolve<ListSystemNoticeResponse> {
     return this.consoleService.listSystemNotifications('', filter, undefined);
   }
 }
+
 
