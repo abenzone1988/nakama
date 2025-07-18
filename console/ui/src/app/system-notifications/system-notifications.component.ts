@@ -174,10 +174,10 @@ export class SystemNotificationsComponent implements OnInit {
   editingNotification: SystemNotice | null = null;
 
   defaultItems = [
-    {id: '10000', name: '金币', icon: 'Coin'},
+    {id: '10000', name: '金币', icon: 'GoldCoin'},
     {id: '10001', name: '宝石', icon: 'Gem'},
-    {id: '10002', name: '体力', icon: 'Food'},
-    {id: '20000', name: '广告券', icon: 'AD'},
+    {id: '10002', name: '体力', icon: 'Strength'},
+    {id: '20000', name: '广告券', icon: 'Coupon'},
   ];
 
   challenges: any[] = [];

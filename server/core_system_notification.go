@@ -380,7 +380,16 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 	var latestSyncTime int64 = userMeta.LastSyncNotice
 	currentTime := time.Now().UTC().Unix()
 
+	// 加载用户挑战赛数据，用于检查比赛类型通知
+	var userMatch *UserMatch
+	var needLoadUserMatch bool
+
 	for _, notice := range notices {
+		// 检查是否需要加载用户挑战赛数据
+		if notice.GetNoticeType() == 1 && !needLoadUserMatch {
+			needLoadUserMatch = true
+		}
+
 		contentJson, err := json.Marshal(notice.GetContent())
 		if err != nil {
 			logger.Error("序列化通知内容失败", zap.Error(err))
@@ -392,20 +401,67 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 
 		// 只处理已生效的通知
 		if effectiveTime <= currentTime {
-			if effectiveTime > latestSyncTime {
-				latestSyncTime = effectiveTime
+			// 根据通知类型进行不同处理
+			shouldAddNotification := false
+
+			switch notice.GetNoticeType() {
+			case 0: // 全局邮件，直接添加
+				shouldAddNotification = true
+				logger.Debug("处理全局系统通知",
+					zap.String("notice_id", notice.GetId()),
+					zap.String("subject", notice.GetSubject()))
+
+			case 1: // 比赛邮件，需要检查用户是否参加了对应的挑战赛
+				if userMatch == nil && needLoadUserMatch {
+					userMatch = &UserMatch{}
+					err := LoadData(ctx, logger, db, id, userMatch)
+					if err != nil {
+						logger.Error("加载用户挑战赛数据失败", zap.Error(err))
+						// 加载失败时跳过比赛类型通知，避免误发
+						continue
+					}
+				}
+
+				// 检查用户是否参加了对应的挑战赛
+				if userMatch != nil {
+					challengeID := notice.GetChallengeId()
+					if challengeStatus, exists := userMatch.Challenges[challengeID]; exists && challengeStatus != nil {
+						shouldAddNotification = true
+						logger.Debug("用户参加了挑战赛，添加比赛通知",
+							zap.String("notice_id", notice.GetId()),
+							zap.Int32("challenge_id", challengeID),
+							zap.String("subject", notice.GetSubject()))
+					} else {
+						logger.Debug("用户未参加挑战赛，跳过比赛通知",
+							zap.String("notice_id", notice.GetId()),
+							zap.Int32("challenge_id", challengeID),
+							zap.String("subject", notice.GetSubject()))
+					}
+				}
+
+			default:
+				logger.Warn("未知的通知类型，跳过",
+					zap.String("notice_id", notice.GetId()),
+					zap.Int32("notice_type", notice.GetNoticeType()))
+				continue
 			}
 
-			notifications = append(notifications, &api.Notification{
-				Id:         uuid.Must(uuid.NewV4()).String(),
-				Subject:    notice.GetSubject(),
-				Content:    string(contentJson),
-				SenderId:   uuid.Nil.String(),
-				Code:       NotificationSystemNotice,
-				Persistent: true,
-				CreateTime: notice.GetCreateTime(),
-				ExpiryTime: notice.GetExpiryTime(),
-			})
+			if shouldAddNotification {
+				if effectiveTime > latestSyncTime {
+					latestSyncTime = effectiveTime
+				}
+
+				notifications = append(notifications, &api.Notification{
+					Id:         uuid.Must(uuid.NewV4()).String(),
+					Subject:    notice.GetSubject(),
+					Content:    string(contentJson),
+					SenderId:   uuid.Nil.String(),
+					Code:       NotificationSystemNotice,
+					Persistent: true,
+					CreateTime: notice.GetCreateTime(),
+					ExpiryTime: notice.GetExpiryTime(),
+				})
+			}
 		}
 	}
 
