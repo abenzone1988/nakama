@@ -326,7 +326,7 @@ export class SystemNotificationsComponent implements OnInit {
         num: group.get('num')?.value
       };
     });
-    
+
     return [{
       wallet: {
         ad: 0,
@@ -658,7 +658,7 @@ export class SystemNotificationsComponent implements OnInit {
     } else {
       const createSystemNotificationRequest: CreateSystemNotificationRequest = {
         type: formValue.type,
-        target: formValue.type === 2 ? formValue.targetIds : [],
+        target: formValue.targetIds,
         notice
       };
       this.notificationsService.createNotification(createSystemNotificationRequest).subscribe({

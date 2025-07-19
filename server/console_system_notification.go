@@ -17,8 +17,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"time"
-
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/console"
@@ -27,6 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"time"
 )
 
 func (s *ConsoleServer) ListSystemNotifications(ctx context.Context, in *console.ListSystemNoticeRequest) (*console.ListSystemNoticeResponse, error) {
@@ -81,30 +80,29 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 		}
 	}
 
-	effectiveTime = in.Notice.GetEffectiveTime()
-	// 验证生效时间不能小于当前时间
-	now := time.Now()
-	if effectiveTime.AsTime().Before(now) {
-		return nil, status.Error(codes.InvalidArgument, "生效时间不能小于当前时间")
-	}
-
-	// 创建系统通知
-	notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetNoticeType(), notice.GetSubject(), string(contentJson), effectiveTime, notice.GetExpiryTime(), notice.GetChallengeId())
-	if err != nil {
-		s.logger.Error("创建系统通知失败", zap.Error(err))
-		return nil, status.Error(codes.Internal, "创建系统通知失败")
-	}
-
 	// 根据类型处理发送逻辑
 	switch in.Type {
 	case 0: // 全体
 		// 创建系统通知，不立即发送，等待生效时间
 		s.logger.Info("创建全体系统通知", zap.String("subject", notice.GetSubject()))
-
 	case 1: // 比赛
 		// 创建系统通知，不立即发送，等待生效时间
 		s.logger.Info("创建比赛系统通知", zap.String("subject", notice.GetSubject()))
+		//
+		// 验证生效时间不能小于当前时间
+		now := time.Now()
+		if effectiveTime.AsTime().Before(now) {
+			return nil, status.Error(codes.InvalidArgument, "生效时间不能小于当前时间")
+		}
 
+		effectiveTime = in.Notice.GetEffectiveTime()
+		// 创建系统通知
+		notification, err := SystemNotificationCreate(ctx, s.db, s.logger, notice.GetNoticeType(), notice.GetSubject(), string(contentJson), effectiveTime, notice.GetExpiryTime(), notice.GetChallengeId())
+		if err != nil {
+			s.logger.Error("创建系统通知失败", zap.Error(err))
+			return nil, status.Error(codes.Internal, "创建系统通知失败")
+		}
+		return notification, nil
 	case 2: // 个人
 		// 直接发送给指定用户，不创建系统通知
 		if len(in.GetTarget()) == 0 {
@@ -138,12 +136,10 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 			s.logger.Error("发送个人通知失败", zap.Error(err))
 			return nil, status.Error(codes.Internal, "发送个人通知失败")
 		}
-
 		// 个人类型不返回系统通知，因为直接发送了
 		return nil, nil
 	}
-
-	return notification, nil
+	return nil, status.Error(codes.Internal, "暂未支持的类型")
 }
 
 func (s *ConsoleServer) DeleteSystemNotification(ctx context.Context, in *console.SystemNotificationId) (*emptypb.Empty, error) {
