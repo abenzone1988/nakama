@@ -135,11 +135,9 @@ const (
 	Nakama_ClaimNotificationAttachments_FullMethodName      = "/nakama.api.Nakama/ClaimNotificationAttachments"
 	Nakama_SaveHomeLevelData_FullMethodName                 = "/nakama.api.Nakama/SaveHomeLevelData"
 	Nakama_GetHomeLevelData_FullMethodName                  = "/nakama.api.Nakama/GetHomeLevelData"
-	Nakama_UseWallet_FullMethodName                         = "/nakama.api.Nakama/UseWallet"
-	Nakama_AddWallet_FullMethodName                         = "/nakama.api.Nakama/AddWallet"
-	Nakama_GetReward_FullMethodName                         = "/nakama.api.Nakama/GetReward"
 	Nakama_GainWallet_FullMethodName                        = "/nakama.api.Nakama/GainWallet"
 	Nakama_ConsumeWallet_FullMethodName                     = "/nakama.api.Nakama/ConsumeWallet"
+	Nakama_OperateWallet_FullMethodName                     = "/nakama.api.Nakama/OperateWallet"
 	Nakama_GetChallenge_FullMethodName                      = "/nakama.api.Nakama/GetChallenge"
 	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
 	Nakama_GainChallengeReward_FullMethodName               = "/nakama.api.Nakama/GainChallengeReward"
@@ -341,16 +339,12 @@ type NakamaClient interface {
 	SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLevelDataRequest, opts ...grpc.CallOption) (*game.SaveHomeLevelDataResponse, error)
 	// Get home level data
 	GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelDataRequest, opts ...grpc.CallOption) (*game.GetHomeLevelDataResponse, error)
-	// Use wallet currency
-	UseWallet(ctx context.Context, in *game.UseWalletRequest, opts ...grpc.CallOption) (*game.UseWalletResponse, error)
-	// Add wallet currency
-	AddWallet(ctx context.Context, in *game.AddWalletRequest, opts ...grpc.CallOption) (*game.AddWalletResponse, error)
-	// Get Reward
-	GetReward(ctx context.Context, in *game.GetRewardRequest, opts ...grpc.CallOption) (*game.GetRewardResponse, error)
 	// Gain Wallet
 	GainWallet(ctx context.Context, in *game.GainWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
 	// ConsumeWallet
 	ConsumeWallet(ctx context.Context, in *game.ConsumeWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
+	// OperateWallet
+	OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
 	// Get Challenge
 	GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error)
 	// Join Challenge
@@ -1231,33 +1225,6 @@ func (c *nakamaClient) GetHomeLevelData(ctx context.Context, in *game.GetHomeLev
 	return out, nil
 }
 
-func (c *nakamaClient) UseWallet(ctx context.Context, in *game.UseWalletRequest, opts ...grpc.CallOption) (*game.UseWalletResponse, error) {
-	out := new(game.UseWalletResponse)
-	err := c.cc.Invoke(ctx, Nakama_UseWallet_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *nakamaClient) AddWallet(ctx context.Context, in *game.AddWalletRequest, opts ...grpc.CallOption) (*game.AddWalletResponse, error) {
-	out := new(game.AddWalletResponse)
-	err := c.cc.Invoke(ctx, Nakama_AddWallet_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *nakamaClient) GetReward(ctx context.Context, in *game.GetRewardRequest, opts ...grpc.CallOption) (*game.GetRewardResponse, error) {
-	out := new(game.GetRewardResponse)
-	err := c.cc.Invoke(ctx, Nakama_GetReward_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *nakamaClient) GainWallet(ctx context.Context, in *game.GainWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
 	out := new(game.WalletResponse)
 	err := c.cc.Invoke(ctx, Nakama_GainWallet_FullMethodName, in, out, opts...)
@@ -1270,6 +1237,15 @@ func (c *nakamaClient) GainWallet(ctx context.Context, in *game.GainWalletReques
 func (c *nakamaClient) ConsumeWallet(ctx context.Context, in *game.ConsumeWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
 	out := new(game.WalletResponse)
 	err := c.cc.Invoke(ctx, Nakama_ConsumeWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
+	out := new(game.WalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_OperateWallet_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1499,16 +1475,12 @@ type NakamaServer interface {
 	SaveHomeLevelData(context.Context, *game.SaveHomeLevelDataRequest) (*game.SaveHomeLevelDataResponse, error)
 	// Get home level data
 	GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error)
-	// Use wallet currency
-	UseWallet(context.Context, *game.UseWalletRequest) (*game.UseWalletResponse, error)
-	// Add wallet currency
-	AddWallet(context.Context, *game.AddWalletRequest) (*game.AddWalletResponse, error)
-	// Get Reward
-	GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error)
 	// Gain Wallet
 	GainWallet(context.Context, *game.GainWalletRequest) (*game.WalletResponse, error)
 	// ConsumeWallet
 	ConsumeWallet(context.Context, *game.ConsumeWalletRequest) (*game.WalletResponse, error)
+	// OperateWallet
+	OperateWallet(context.Context, *game.OperateWalletRequest) (*game.WalletResponse, error)
 	// Get Challenge
 	GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error)
 	// Join Challenge
@@ -1810,20 +1782,14 @@ func (UnimplementedNakamaServer) SaveHomeLevelData(context.Context, *game.SaveHo
 func (UnimplementedNakamaServer) GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHomeLevelData not implemented")
 }
-func (UnimplementedNakamaServer) UseWallet(context.Context, *game.UseWalletRequest) (*game.UseWalletResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UseWallet not implemented")
-}
-func (UnimplementedNakamaServer) AddWallet(context.Context, *game.AddWalletRequest) (*game.AddWalletResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddWallet not implemented")
-}
-func (UnimplementedNakamaServer) GetReward(context.Context, *game.GetRewardRequest) (*game.GetRewardResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetReward not implemented")
-}
 func (UnimplementedNakamaServer) GainWallet(context.Context, *game.GainWalletRequest) (*game.WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GainWallet not implemented")
 }
 func (UnimplementedNakamaServer) ConsumeWallet(context.Context, *game.ConsumeWalletRequest) (*game.WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConsumeWallet not implemented")
+}
+func (UnimplementedNakamaServer) OperateWallet(context.Context, *game.OperateWalletRequest) (*game.WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OperateWallet not implemented")
 }
 func (UnimplementedNakamaServer) GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChallenge not implemented")
@@ -3575,60 +3541,6 @@ func _Nakama_GetHomeLevelData_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Nakama_UseWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(game.UseWalletRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NakamaServer).UseWallet(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Nakama_UseWallet_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).UseWallet(ctx, req.(*game.UseWalletRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Nakama_AddWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(game.AddWalletRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NakamaServer).AddWallet(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Nakama_AddWallet_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).AddWallet(ctx, req.(*game.AddWalletRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Nakama_GetReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(game.GetRewardRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NakamaServer).GetReward(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Nakama_GetReward_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).GetReward(ctx, req.(*game.GetRewardRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Nakama_GainWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.GainWalletRequest)
 	if err := dec(in); err != nil {
@@ -3661,6 +3573,24 @@ func _Nakama_ConsumeWallet_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(NakamaServer).ConsumeWallet(ctx, req.(*game.ConsumeWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_OperateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.OperateWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).OperateWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_OperateWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).OperateWallet(ctx, req.(*game.OperateWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4111,24 +4041,16 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Nakama_GetHomeLevelData_Handler,
 		},
 		{
-			MethodName: "UseWallet",
-			Handler:    _Nakama_UseWallet_Handler,
-		},
-		{
-			MethodName: "AddWallet",
-			Handler:    _Nakama_AddWallet_Handler,
-		},
-		{
-			MethodName: "GetReward",
-			Handler:    _Nakama_GetReward_Handler,
-		},
-		{
 			MethodName: "GainWallet",
 			Handler:    _Nakama_GainWallet_Handler,
 		},
 		{
 			MethodName: "ConsumeWallet",
 			Handler:    _Nakama_ConsumeWallet_Handler,
+		},
+		{
+			MethodName: "OperateWallet",
+			Handler:    _Nakama_OperateWallet_Handler,
 		},
 		{
 			MethodName: "GetChallenge",

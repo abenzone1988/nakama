@@ -2042,39 +2042,6 @@
         ]
       }
     },
-    "/v2/game/reward/get": {
-      "post": {
-        "summary": "Get Reward",
-        "operationId": "Nakama_GetReward",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameGetRewardResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameGetRewardRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
     "/v2/game/time": {
       "get": {
         "summary": "Get Server Time",
@@ -2093,39 +2060,6 @@
             }
           }
         },
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/wallet/add": {
-      "post": {
-        "summary": "Add wallet currency",
-        "operationId": "Nakama_AddWallet",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameAddWalletResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameAddWalletRequest"
-            }
-          }
-        ],
         "tags": [
           "Nakama"
         ]
@@ -2197,15 +2131,15 @@
         ]
       }
     },
-    "/v2/game/wallet/use": {
+    "/v2/game/wallet/operate": {
       "post": {
-        "summary": "Use wallet currency",
-        "operationId": "Nakama_UseWallet",
+        "summary": "OperateWallet",
+        "operationId": "Nakama_OperateWallet",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/gameUseWalletResponse"
+              "$ref": "#/definitions/gameWalletResponse"
             }
           },
           "default": {
@@ -2221,7 +2155,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/gameUseWalletRequest"
+              "$ref": "#/definitions/gameOperateWalletRequest"
             }
           }
         ],
@@ -4390,6 +4324,14 @@
       },
       "description": "A single user-role pair."
     },
+    "OperateWalletRequestWalletOperationOption": {
+      "type": "string",
+      "enum": [
+        "GAIN",
+        "CONSUME"
+      ],
+      "default": "GAIN"
+    },
     "UserGroupListUserGroup": {
       "type": "object",
       "properties": {
@@ -6166,50 +6108,6 @@
       },
       "description": "Write objects to the storage engine."
     },
-    "gameAddWalletRequest": {
-      "type": "object",
-      "properties": {
-        "coin": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "gem": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "ad": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "reason": {
-          "type": "string"
-        }
-      },
-      "title": "加钱包请求"
-    },
-    "gameAddWalletResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新后的钱包"
-        },
-        "walletPrevious": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新前的钱包"
-        }
-      },
-      "title": "加钱包响应"
-    },
     "gameAnnouncementInfo": {
       "type": "object",
       "properties": {
@@ -6315,18 +6213,6 @@
           "type": "string"
         }
       }
-    },
-    "gameCurrencyType": {
-      "type": "string",
-      "enum": [
-        "CURRENCY_TYPE_UNSPECIFIED",
-        "CURRENCY_TYPE_COIN",
-        "CURRENCY_TYPE_GEM",
-        "CURRENCY_TYPE_AD"
-      ],
-      "default": "CURRENCY_TYPE_UNSPECIFIED",
-      "description": "- CURRENCY_TYPE_UNSPECIFIED: 未指定\n - CURRENCY_TYPE_COIN: 硬币\n - CURRENCY_TYPE_GEM: 宝石\n - CURRENCY_TYPE_AD: 广告币",
-      "title": "货币类型枚举"
     },
     "gameFeedbackRequest": {
       "type": "object",
@@ -6486,39 +6372,6 @@
       },
       "title": "获取关卡数据响应"
     },
-    "gameGetRewardRequest": {
-      "type": "object",
-      "properties": {
-        "rewardId": {
-          "type": "string",
-          "title": "奖励id"
-        }
-      },
-      "title": "获取奖励请求"
-    },
-    "gameGetRewardResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新后的钱包"
-        },
-        "walletPrevious": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新前的钱包"
-        }
-      },
-      "title": "获取奖励响应"
-    },
     "gameHomeLevelData": {
       "type": "object",
       "properties": {
@@ -6672,6 +6525,36 @@
       },
       "title": "获取已发布公告响应"
     },
+    "gameOperateWalletRequest": {
+      "type": "object",
+      "properties": {
+        "option": {
+          "$ref": "#/definitions/OperateWalletRequestWalletOperationOption",
+          "title": "操作类型"
+        },
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "walletId": {
+          "type": "string"
+        }
+      }
+    },
     "gameRedeemGiftRequest": {
       "type": "object",
       "properties": {
@@ -6766,48 +6649,6 @@
           "type": "string"
         }
       }
-    },
-    "gameUseWalletRequest": {
-      "type": "object",
-      "properties": {
-        "currencyType": {
-          "$ref": "#/definitions/gameCurrencyType",
-          "title": "货币类型"
-        },
-        "amount": {
-          "type": "integer",
-          "format": "int32",
-          "title": "使用数量"
-        },
-        "reason": {
-          "type": "string",
-          "title": "使用原因"
-        }
-      },
-      "title": "使用钱包货币请求"
-    },
-    "gameUseWalletResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新后的钱包"
-        },
-        "walletPrevious": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新前的钱包"
-        }
-      },
-      "title": "使用钱包货币响应"
     },
     "gameWallet": {
       "type": "object",

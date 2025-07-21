@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gofrs/uuid/v5"
 	"sort"
 	"strconv"
 	"strings"
@@ -219,7 +220,7 @@ func VerifyWalletSignature(operationType string, coin, gem, ad int64, reason, si
 }
 
 // VerifyWalletSignatureV2 验证钱包操作签名
-func VerifyWalletSignatureV2(operationType string, coin, gem, ad int64, reason, signature, userID, recordID string) bool {
+func VerifyWalletSignatureV2(operationType string, coin, gem, ad int64, reason, signature, userID, walletID string) bool {
 	data := map[string]interface{}{
 		"operation_type": operationType,
 		"coin":           coin,
@@ -227,7 +228,7 @@ func VerifyWalletSignatureV2(operationType string, coin, gem, ad int64, reason, 
 		"ad":             ad,
 		"reason":         reason,
 		"user_id":        userID,
-		"record_id":      recordID,
+		"wallet_id":      walletID,
 	}
 	return verifySignature(data, signature, DefaultSignatureConfig.SecretKey)
 
@@ -247,7 +248,12 @@ func GenerateWalletSignature(operationType string, coin, gem, ad int64, reason s
 }
 
 // GenerateWalletSignatureV2 生成钱包操作签名
-func GenerateWalletSignatureV2(operationType string, coin, gem, ad int64, reason, userID, recordID string) (string, error) {
+func GenerateWalletSignatureV2(operationType string, coin, gem, ad int64, reason, userID, walletID string) (string, error) {
+	// 验证walletID是否为有效的UUID
+	if _, err := uuid.FromString(walletID); err != nil {
+		return "", fmt.Errorf("invalid walletID format: %v", err)
+	}
+
 	data := map[string]interface{}{
 		"operation_type": operationType,
 		"coin":           coin,
@@ -255,7 +261,7 @@ func GenerateWalletSignatureV2(operationType string, coin, gem, ad int64, reason
 		"ad":             ad,
 		"reason":         reason,
 		"user_id":        userID,
-		"record_id":      recordID,
+		"wallet_id":      walletID,
 	}
 
 	return generateSignature(data, DefaultSignatureConfig.SecretKey)

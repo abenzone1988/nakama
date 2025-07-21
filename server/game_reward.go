@@ -11,6 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// 配置
+var EnableAutoBan = true          // 是否启用自动封禁
+var SignatureFailBanThreshold = 3 // 阈值，3次失败才封禁
+
+// 内存计数器（生产建议用 Redis，防止多实例不一致）
+var signatureFailCounter = make(map[string]int)
+
 func (s *ApiServer) updatePlayerWallet(ctx context.Context, coinChange, gemChange, adChange int64, record string) ([]*runtime.WalletUpdateResult, error) {
 	return s.updatePlayerWalletWithID(ctx, coinChange, gemChange, adChange, record, nil)
 }
@@ -304,6 +311,110 @@ func (s *ApiServer) ConsumeWallet(ctx context.Context, in *game.ConsumeWalletReq
 	return &game.WalletResponse{
 		Code:           0,
 		Msg:            "使用成功",
+		WalletUpdated:  updatedWallet,
+		WalletPrevious: previousWallet,
+	}, nil
+}
+
+func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletRequest) (*game.WalletResponse, error) {
+	userID, _ := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	username, _ := ctx.Value(ctxUsernameKey{}).(string)
+
+	// 1. 参数校验
+	if in.GetSignature() == "" {
+		s.logger.Warn("钱包操作缺少签名", zap.String("user_id", userID.String()), zap.String("username", username))
+		return &game.WalletResponse{Code: 1, Msg: "缺少签名"}, nil
+	}
+	if in.GetCoin() < 0 || in.GetGem() < 0 || in.GetAd() < 0 {
+		s.logger.Warn("钱包操作参数非法", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
+		return &game.WalletResponse{Code: 2, Msg: "数量不能为负"}, nil
+	}
+
+	// 可选：最大值校验，防止溢出
+	const maxAmount = 10000000
+	if in.GetCoin() > maxAmount || in.GetGem() > maxAmount || in.GetAd() > maxAmount {
+		s.logger.Warn("钱包操作参数过大", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
+		return &game.WalletResponse{Code: 3, Msg: "数量过大"}, nil
+	}
+
+	// 验证walletID是否为有效的UUID
+	walletId, err := uuid.FromString(in.GetWalletId())
+	if err != nil {
+		return &game.WalletResponse{Code: 6, Msg: "id错误"}, nil
+	}
+
+	op := in.GetOption()
+	coin := int64(in.GetCoin())
+	gem := int64(in.GetGem())
+	ad := int64(in.GetAd())
+	reason := in.GetReason()
+	if reason == "" {
+		reason = "钱包操作"
+	}
+
+	// 2. 操作类型校验
+	var coinChange, gemChange, adChange int64
+	switch op {
+	case game.OperateWalletRequest_GAIN:
+		coinChange, gemChange, adChange = coin, gem, ad
+	case game.OperateWalletRequest_CONSUME:
+		coinChange, gemChange, adChange = -coin, -gem, -ad
+	default:
+		s.logger.Warn("钱包操作类型未指定", zap.String("user_id", userID.String()))
+		return &game.WalletResponse{Code: 4, Msg: "操作类型未指定"}, nil
+	}
+
+	// 3. 签名校验
+	if !VerifyWalletSignatureV2(op.String(), coin, gem, ad, reason, in.GetSignature(), userID.String(), in.GetWalletId()) {
+		s.logger.Error("钱包操作签名验证失败", zap.String("user_id", userID.String()), zap.String("username", username), zap.Int64("coin", coin), zap.Int64("gem", gem), zap.Int64("ad", ad), zap.String("reason", reason), zap.String("signature", in.GetSignature()), zap.String("wallet_id", in.GetWalletId()))
+
+		// 计数+1
+		failKey := userID.String()
+		signatureFailCounter[failKey]++
+		failCount := signatureFailCounter[failKey]
+
+		// 判断是否封禁
+		if EnableAutoBan && failCount >= SignatureFailBanThreshold {
+			BanUsers(ctx, s.logger, s.db, s.config, s.sessionCache, s.sessionRegistry, s.tracker, []uuid.UUID{userID})
+			s.logger.Warn("用户因签名多次失败被封禁", zap.String("user_id", userID.String()), zap.Int("fail_count", failCount))
+		}
+
+		return &game.WalletResponse{Code: 5, Msg: "签名验证失败"}, nil
+	}
+
+	// 4. 钱包变更
+	record := fmt.Sprintf("%s钱包: 金币 %d 钻石 %d 广告券 %d, 原因: %s", op.String(), coinChange, gemChange, adChange, reason)
+	results, err := s.updatePlayerWalletWithID(ctx, coinChange, gemChange, adChange, record, &walletId)
+	if err != nil {
+		var walletErr *runtime.WalletNegativeError
+		if errors.As(err, &walletErr) {
+			s.logger.Warn("钱包余额不足", zap.String("user_id", userID.String()), zap.String("原因", reason), zap.Int64("金币", coinChange), zap.Int64("钻石", gemChange), zap.Int64("广告券", adChange))
+			return &game.WalletResponse{Code: 6, Msg: "余额不足"}, nil
+		}
+		s.logger.Error("钱包更新失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return &game.WalletResponse{Code: 7, Msg: "钱包更新失败"}, nil
+	}
+	if len(results) == 0 {
+		s.logger.Error("未找到钱包更新结果", zap.String("user_id", userID.String()))
+		return &game.WalletResponse{Code: 8, Msg: "未找到钱包更新结果"}, nil
+	}
+
+	result := results[0]
+	previousWallet := &game.Wallet{
+		Coin: int32(result.Previous["coin"]),
+		Gem:  int32(result.Previous["gem"]),
+		Ad:   int32(result.Previous["ad"]),
+	}
+	updatedWallet := &game.Wallet{
+		Coin: int32(result.Updated["coin"]),
+		Gem:  int32(result.Updated["gem"]),
+		Ad:   int32(result.Updated["ad"]),
+	}
+
+	s.logger.Info("钱包操作成功", zap.String("user_id", userID.String()), zap.String("username", username), zap.Int64("coin", coinChange), zap.Int64("gem", gemChange), zap.Int64("ad", adChange), zap.String("reason", reason))
+	return &game.WalletResponse{
+		Code:           0,
+		Msg:            "操作成功",
 		WalletUpdated:  updatedWallet,
 		WalletPrevious: previousWallet,
 	}, nil

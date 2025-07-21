@@ -210,8 +210,12 @@ message ConsumeWalletRequest{
   string signature = 5;
 }
 
-message WalletOperationRequest{
-  string option = 1;
+message OperateWalletRequest{
+  enum WalletOperationOption {
+    GAIN = 0;
+    CONSUME = 1;
+  }
+  WalletOperationOption option = 1; // 操作类型
   int32 coin = 2;
   int32 gem = 3;
   int32 ad = 4;
@@ -226,7 +230,6 @@ message WalletResponse {
   Wallet wallet_updated = 3;     // 更新后的钱包
   Wallet wallet_previous = 4;    // 更新前的钱包
 }
-
 
 message Challenge{
   int32 id = 1;

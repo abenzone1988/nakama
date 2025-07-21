@@ -535,11 +535,11 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 			continue
 		}
 
-		if shouldAddNotification {
-			if effectiveTime >= latestSyncTime {
-				latestSyncTime = effectiveTime
-			}
+		if effectiveTime >= latestSyncTime {
+			latestSyncTime = effectiveTime
+		}
 
+		if shouldAddNotification {
 			notifications = append(notifications, &api.Notification{
 				Id:         uuid.Must(uuid.NewV4()).String(),
 				Subject:    notice.GetSubject(),
@@ -556,9 +556,9 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 
 	// 更新用户的最后同步时间
 	// 如果有新通知，使用最新的通知时间；否则使用当前时间
-	if len(notifications) > 0 {
+	if len(notices) > 0 {
 		userMeta.LastSyncNotice = latestSyncTime
-		logger.Info("上次同步的时间", zap.String("last_sync_time", time.Unix(latestSyncTime, 0).Format("2006-01-02 15:04:05")))
+		logger.Info("更新同步的时间", zap.String("last_sync_time", time.Unix(latestSyncTime, 0).Format("2006-01-02 15:04:05")))
 		if err := SaveUserMeta(ctx, logger, db, userMeta); err != nil {
 			logger.Error("更新用户元数据失败", zap.Error(err))
 		}

@@ -880,6 +880,14 @@ service Nakama {
     };
   }
 
+  // OperateWallet
+  rpc OperateWallet(game.OperateWalletRequest) returns (game.WalletResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/wallet/operate"
+      body: "*"
+    };
+  }
+
   // Get Challenge
   rpc GetChallenge(google.protobuf.Empty) returns (game.GetChallengeResponse) {
     option (google.api.http).get = "/v2/game/challenges";
