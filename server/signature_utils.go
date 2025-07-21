@@ -215,11 +215,25 @@ func VerifyWalletSignature(operationType string, coin, gem, ad int64, reason, si
 		"ad":             ad,
 		"reason":         reason,
 	}
-
 	return verifySignature(data, signature, DefaultSignatureConfig.SecretKey)
 }
 
-// GenerateWalletSignature 生成钱包操作签名（用于测试或客户端参考）
+// VerifyWalletSignatureV2 验证钱包操作签名
+func VerifyWalletSignatureV2(operationType string, coin, gem, ad int64, reason, signature, userID, recordID string) bool {
+	data := map[string]interface{}{
+		"operation_type": operationType,
+		"coin":           coin,
+		"gem":            gem,
+		"ad":             ad,
+		"reason":         reason,
+		"user_id":        userID,
+		"record_id":      recordID,
+	}
+	return verifySignature(data, signature, DefaultSignatureConfig.SecretKey)
+
+}
+
+// GenerateWalletSignature 生成钱包操作签名
 func GenerateWalletSignature(operationType string, coin, gem, ad int64, reason string) (string, error) {
 	data := map[string]interface{}{
 		"operation_type": operationType,
@@ -227,6 +241,21 @@ func GenerateWalletSignature(operationType string, coin, gem, ad int64, reason s
 		"gem":            gem,
 		"ad":             ad,
 		"reason":         reason,
+	}
+
+	return generateSignature(data, DefaultSignatureConfig.SecretKey)
+}
+
+// GenerateWalletSignatureV2 生成钱包操作签名
+func GenerateWalletSignatureV2(operationType string, coin, gem, ad int64, reason, userID, recordID string) (string, error) {
+	data := map[string]interface{}{
+		"operation_type": operationType,
+		"coin":           coin,
+		"gem":            gem,
+		"ad":             ad,
+		"reason":         reason,
+		"user_id":        userID,
+		"record_id":      recordID,
 	}
 
 	return generateSignature(data, DefaultSignatureConfig.SecretKey)

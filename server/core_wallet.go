@@ -45,6 +45,8 @@ type walletUpdate struct {
 	Changeset map[string]int64
 	// Metadata is expected to be a valid JSON string already.
 	Metadata string
+	// ExternalID is the external UUID for wallet ledger record
+	ExternalID *uuid.UUID
 }
 
 // Not an API entity, only used to send data to runtime environment.
@@ -217,7 +219,15 @@ func updateWallets(ctx context.Context, logger *zap.Logger, tx pgx.Tx, updates [
 				return nil, err
 			}
 
-			idParams = append(idParams, uuid.Must(uuid.NewV4()))
+			// 使用外部传入的ID，如果没有则生成新的UUID
+			var ledgerID uuid.UUID
+			if update.ExternalID != nil {
+				ledgerID = *update.ExternalID
+			} else {
+				ledgerID = uuid.Must(uuid.NewV4())
+			}
+
+			idParams = append(idParams, ledgerID)
 			userIdParams = append(userIdParams, userID)
 			changesetParams = append(changesetParams, changesetData)
 			metadataParams = append(metadataParams, update.Metadata)

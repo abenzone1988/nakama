@@ -210,12 +210,23 @@ message ConsumeWalletRequest{
   string signature = 5;
 }
 
+message WalletOperationRequest{
+  string option = 1;
+  int32 coin = 2;
+  int32 gem = 3;
+  int32 ad = 4;
+  string reason = 5;
+  string signature = 6;
+  string wallet_id = 7;
+}
+
 message WalletResponse {
   int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
   string msg = 2;                // 响应消息
   Wallet wallet_updated = 3;     // 更新后的钱包
   Wallet wallet_previous = 4;    // 更新前的钱包
 }
+
 
 message Challenge{
   int32 id = 1;
@@ -239,7 +250,7 @@ message JoinChallengeStatus{
   bool mid_score_reward = 7;
   bool high_score_reward = 8;
   google.protobuf.Timestamp over = 9;
-  google.protobuf.Timestamp start = 10;
+  google.protobuf.Timestamp open = 10;
   google.protobuf.Timestamp close = 11;
   google.protobuf.Timestamp end = 12;
 }
