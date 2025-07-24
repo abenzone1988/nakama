@@ -2065,72 +2065,6 @@
         ]
       }
     },
-    "/v2/game/wallet/consume": {
-      "post": {
-        "summary": "ConsumeWallet",
-        "operationId": "Nakama_ConsumeWallet",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameWalletResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameConsumeWalletRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/wallet/gain": {
-      "post": {
-        "summary": "Gain Wallet",
-        "operationId": "Nakama_GainWallet",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameWalletResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameGainWalletRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
     "/v2/game/wallet/operate": {
       "post": {
         "summary": "OperateWallet",
@@ -6191,29 +6125,6 @@
         }
       }
     },
-    "gameConsumeWalletRequest": {
-      "type": "object",
-      "properties": {
-        "coin": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "gem": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "ad": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "signature": {
-          "type": "string"
-        }
-      }
-    },
     "gameFeedbackRequest": {
       "type": "object",
       "properties": {
@@ -6257,29 +6168,6 @@
             "$ref": "#/definitions/gameReward"
           },
           "title": "奖励"
-        }
-      }
-    },
-    "gameGainWalletRequest": {
-      "type": "object",
-      "properties": {
-        "coin": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "gem": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "ad": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "signature": {
-          "type": "string"
         }
       }
     },
