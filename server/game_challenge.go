@@ -271,6 +271,11 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		return nil, err
 	}
 
+	// 确保Challenges map已初始化
+	if userMatch.Challenges == nil {
+		userMatch.Challenges = map[int32]*ChallengeStatus{}
+	}
+
 	if challengeData, exists := userMatch.Challenges[in.ChallengeId]; exists && challengeData != nil {
 		return &game.JoinChallengeResponse{
 			Code: 2,
@@ -431,7 +436,7 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 
 		// 获取排名奖励配置
 		acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
-			return acReward.ActiveID == challengeData.ActivityID
+			return acReward.ActiveID == activityInfo.RewardGroupID
 		})
 
 		rewardId := ""

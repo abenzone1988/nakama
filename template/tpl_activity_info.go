@@ -10,6 +10,8 @@ import (
 
 type TplActivityInfo struct {
 	LevelMonsterDev    string   `json:"LevelMonsterDev"`
+	MapIcon            string   `json:"MapIcon"`
+	RewardGroupID      string   `json:"RewardGroupID"`
 	AddHpScale         float64  `json:"addHpScale"`
 	BattleWaveGroupID  string   `json:"battleWaveGroupId"`
 	Brief              string   `json:"brief"`
@@ -21,6 +23,7 @@ type TplActivityInfo struct {
 	ID                 string   `json:"id"`
 	MaiBaseID          string   `json:"maiBaseId"`
 	MonsterLevel       int32    `json:"monsterLevel"`
+	MonsterLimitCount  int32    `json:"monsterLimitCount"`
 	MonsterWaveGroupID string   `json:"monsterWaveGroupId"`
 	Name               string   `json:"name"`
 	PropertyLevel      int32    `json:"propertyLevel"`
@@ -28,7 +31,9 @@ type TplActivityInfo struct {
 	Reward02           string   `json:"reward02"`
 	Reward03           string   `json:"reward03"`
 	SceneConfigData    string   `json:"sceneConfigData"`
+	TitleIcon          string   `json:"titleIcon"`
 	UIName             string   `json:"uiName"`
+	WinRewards         string   `json:"winRewards"`
 }
 
 type TableTplActivityInfo struct {
