@@ -1909,6 +1909,29 @@
         ]
       }
     },
+    "/v2/game/challenges/top-three-stats": {
+      "get": {
+        "summary": "Get Top Three Stats",
+        "operationId": "Nakama_GetChallengeTopStats",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetChallengeTopStatsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/feedback": {
       "post": {
         "summary": "User Feedback",
@@ -6193,6 +6216,25 @@
         }
       }
     },
+    "gameGetChallengeTopStatsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "stats": {
+          "$ref": "#/definitions/gameTopThreeStats",
+          "title": "前三名统计数据"
+        }
+      },
+      "title": "获取前三名统计响应"
+    },
     "gameGetGameTimeResponse": {
       "type": "object",
       "properties": {
@@ -6537,6 +6579,32 @@
           "type": "string"
         }
       }
+    },
+    "gameTopThreeStats": {
+      "type": "object",
+      "properties": {
+        "firstPlace": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第一名次数"
+        },
+        "secondPlace": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第二名次数"
+        },
+        "thirdPlace": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第三名次数"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "int64",
+          "title": "最后更新时间戳"
+        }
+      },
+      "title": "前三名统计数据"
     },
     "gameWallet": {
       "type": "object",

@@ -891,5 +891,10 @@ service Nakama {
       body: "*"
     };
   }
+
+  // Get Top Three Stats
+  rpc GetChallengeTopStats(google.protobuf.Empty) returns (game.GetChallengeTopStatsResponse) {
+    option (google.api.http).get = "/v2/game/challenges/top-three-stats";
+  }
 }
 

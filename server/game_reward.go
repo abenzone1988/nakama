@@ -2,13 +2,16 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // 配置
@@ -17,6 +20,9 @@ var SignatureFailBanThreshold = 5 // 阈值，5次失败才封禁
 
 // 内存计数器（生产建议用 Redis，防止多实例不一致）
 var signatureFailCounter = make(map[string]int)
+
+// 作弊检测阈值
+const CheatDetectionThreshold = 300 // 广告券>=300视为作弊
 
 func (s *ApiServer) updatePlayerWallet(ctx context.Context, coinChange, gemChange, adChange int64, record string) ([]*runtime.WalletUpdateResult, error) {
 	return s.updatePlayerWalletWithID(ctx, coinChange, gemChange, adChange, record, nil)
@@ -58,6 +64,97 @@ func (s *ApiServer) updatePlayerWalletWithID(ctx context.Context, coinChange, ge
 	return results, nil
 }
 
+// 检测并处理作弊玩家
+func (s *ApiServer) detectAndHandleCheatPlayer(ctx context.Context, userID uuid.UUID, walletData map[string]int64) (map[string]int64, bool, error) {
+	// 检查广告券是否超过阈值
+	if adAmount, exists := walletData["ad"]; exists && adAmount >= CheatDetectionThreshold {
+		s.logger.Warn("检测到作弊玩家",
+			zap.String("user_id", userID.String()),
+			zap.Int64("ad_amount", adAmount),
+			zap.Int64("threshold", CheatDetectionThreshold))
+
+		// 清空玩家钱包
+		clearChangeset := map[string]int64{
+			"coin": -walletData["coin"],
+			"gem":  -walletData["gem"],
+			"ad":   -walletData["ad"],
+		}
+
+		// 执行钱包清零
+		clearUpdates := []*walletUpdate{{
+			UserID:    userID,
+			Changeset: clearChangeset,
+			Metadata:  `{"message": "作弊检测：清空钱包"}`,
+		}}
+
+		clearResults, err := UpdateWallets(ctx, s.logger, s.db, clearUpdates, true)
+		if err != nil {
+			s.logger.Error("清空作弊玩家钱包失败", zap.String("user_id", userID.String()), zap.Error(err))
+			return nil, false, err
+		}
+
+		// 发送警告邮件
+		err = s.sendCheatWarningEmail(ctx, userID)
+		if err != nil {
+			s.logger.Error("发送作弊警告邮件失败", zap.String("user_id", userID.String()), zap.Error(err))
+			return nil, false, err
+		}
+
+		s.logger.Info("成功处理作弊玩家",
+			zap.String("user_id", userID.String()),
+			zap.Int64("ad_amount", adAmount))
+
+		// 返回清空后的钱包数据
+		if len(clearResults) > 0 {
+			return clearResults[0].Updated, true, nil
+		}
+	}
+
+	return walletData, false, nil
+}
+
+// 发送作弊警告邮件
+func (s *ApiServer) sendCheatWarningEmail(ctx context.Context, userID uuid.UUID) error {
+	// 邮件内容
+	emailContent := map[string]interface{}{
+		"description": "经技术排查，您的账号涉及篡改数据，现已将您账号的货币重置。请阁下遵守游戏规则，勿通过任何渠道篡改游戏数据或使用外挂！",
+	}
+
+	contentBytes, err := json.Marshal(emailContent)
+	if err != nil {
+		s.logger.Error("序列化邮件内容失败", zap.Error(err))
+		return err
+	}
+
+	// 创建通知
+	notification := &api.Notification{
+		Id:         uuid.Must(uuid.NewV4()).String(),
+		Subject:    "篡改数据处理通知",
+		Content:    string(contentBytes),
+		Code:       0, // 系统通知
+		SenderId:   uuid.Nil.String(),
+		CreateTime: timestamppb.Now(),
+		Persistent: true,
+	}
+
+	// 发送通知
+	notifications := make(map[uuid.UUID][]*api.Notification)
+	notifications[userID] = []*api.Notification{notification}
+
+	err = NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
+	if err != nil {
+		s.logger.Error("发送作弊警告邮件失败",
+			zap.String("user_id", userID.String()),
+			zap.Error(err))
+		return err
+	}
+
+	s.logger.Info("成功发送作弊警告邮件",
+		zap.String("user_id", userID.String()))
+
+	return nil
+}
+
 func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletRequest) (*game.WalletResponse, error) {
 	userID, _ := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	username, _ := ctx.Value(ctxUsernameKey{}).(string)
@@ -72,11 +169,16 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 		return &game.WalletResponse{Code: 2, Msg: "数量不能为负"}, nil
 	}
 
-	// 可选：最大值校验，防止溢出
-	const maxAmount = 10000000
-	if in.GetCoin() > maxAmount || in.GetGem() > maxAmount || in.GetAd() > maxAmount {
+	// 可选：最大值校验，防止溢出 金币钻石 10w 广告券 10
+	const maxAmount = 100000
+	if in.GetCoin() > maxAmount || in.GetGem() > maxAmount {
 		s.logger.Warn("钱包操作参数过大", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
 		return &game.WalletResponse{Code: 3, Msg: "数量过大"}, nil
+	}
+
+	if in.GetAd() > 10 {
+		s.logger.Warn("玩家作弊", zap.String("user_id", userID.String()), zap.Int32("ad", in.GetAd()))
+		return &game.WalletResponse{Code: 3, Msg: "作弊行为"}, nil
 	}
 
 	// 验证walletID是否为有效的UUID
@@ -142,18 +244,45 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 
 	result := results[0]
+	// 5. 作弊检测和处理
+	finalWalletData, isCheatDetected, err := s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
+	if err != nil {
+		s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(err))
+		// 不返回错误，继续正常流程
+	}
+
 	previousWallet := &game.Wallet{
 		Coin: int32(result.Previous["coin"]),
 		Gem:  int32(result.Previous["gem"]),
 		Ad:   int32(result.Previous["ad"]),
 	}
+
+	// 使用最终的钱包数据（如果检测到作弊，使用清空后的数据）
 	updatedWallet := &game.Wallet{
-		Coin: int32(result.Updated["coin"]),
-		Gem:  int32(result.Updated["gem"]),
-		Ad:   int32(result.Updated["ad"]),
+		Coin: int32(finalWalletData["coin"]),
+		Gem:  int32(finalWalletData["gem"]),
+		Ad:   int32(finalWalletData["ad"]),
 	}
 
-	s.logger.Info("钱包操作成功", zap.String("user_id", userID.String()), zap.String("username", username), zap.Int64("coin", coinChange), zap.Int64("gem", gemChange), zap.Int64("ad", adChange), zap.String("reason", reason))
+	// 如果检测到作弊，记录日志
+	if isCheatDetected {
+		s.logger.Warn("钱包操作成功（检测到作弊并已处理）",
+			zap.String("user_id", userID.String()),
+			zap.String("username", username),
+			zap.Int64("coin", coinChange),
+			zap.Int64("gem", gemChange),
+			zap.Int64("ad", adChange),
+			zap.String("reason", reason))
+	} else {
+		s.logger.Info("钱包操作成功",
+			zap.String("user_id", userID.String()),
+			zap.String("username", username),
+			zap.Int64("coin", coinChange),
+			zap.Int64("gem", gemChange),
+			zap.Int64("ad", adChange),
+			zap.String("reason", reason))
+	}
+
 	return &game.WalletResponse{
 		Code:           0,
 		Msg:            "操作成功",

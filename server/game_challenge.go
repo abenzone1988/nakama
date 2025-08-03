@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -41,6 +42,7 @@ type ChallengeStatus struct {
 	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
 	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
 	HighScoreReward bool      `json:"high_score_reward"` // 高分奖励是否已领取
+	OverCheckReward bool      `json:"over_check_reward"` // 是否已检查过期奖励
 }
 
 // ScoreRewardResult 积分奖励检查结果
@@ -51,7 +53,8 @@ type ScoreRewardResult struct {
 }
 
 type UserMatch struct {
-	Challenges map[int32]*ChallengeStatus `json:"join_challenges"`
+	Challenges   map[int32]*ChallengeStatus `json:"join_challenges"`
+	TopThreeData *TopThreeStats             `json:"top_three_data,omitempty"` // 前三名统计数据
 }
 
 func (f *UserMatch) GetCollection() string {
@@ -64,6 +67,35 @@ func (f *UserMatch) GetKey() string {
 
 func (f *UserMatch) Init() {
 	f.Challenges = map[int32]*ChallengeStatus{}
+	f.TopThreeData = &TopThreeStats{
+		FirstPlaceTournaments:  make(map[string]bool),
+		SecondPlaceTournaments: make(map[string]bool),
+		ThirdPlaceTournaments:  make(map[string]bool),
+		LastUpdated:            0,
+	}
+}
+
+// TopThreeStats 前三名统计数据
+type TopThreeStats struct {
+	FirstPlaceTournaments  map[string]bool `json:"first_place_tournaments"`  // 获得第一名的竞标赛ID集合
+	SecondPlaceTournaments map[string]bool `json:"second_place_tournaments"` // 获得第二名的竞标赛ID集合
+	ThirdPlaceTournaments  map[string]bool `json:"third_place_tournaments"`  // 获得第三名的竞标赛ID集合
+	LastUpdated            int64           `json:"last_updated"`             // 最后更新时间戳，用于数据版本控制
+}
+
+// GetFirstPlaceCount 获取第一名次数
+func (t *TopThreeStats) GetFirstPlaceCount() int32 {
+	return int32(len(t.FirstPlaceTournaments))
+}
+
+// GetSecondPlaceCount 获取第二名次数
+func (t *TopThreeStats) GetSecondPlaceCount() int32 {
+	return int32(len(t.SecondPlaceTournaments))
+}
+
+// GetThirdPlaceCount 获取第三名次数
+func (t *TopThreeStats) GetThirdPlaceCount() int32 {
+	return int32(len(t.ThirdPlaceTournaments))
 }
 
 func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeResponse, error) {
@@ -152,19 +184,30 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		}
 	}
 
-	// 2. 找到下一场比赛（最早的未来比赛）
-	var nextChallenge *challengeInfo
+	// 2. 找到未来三场比赛（按开始时间排序）
+	var futureChallenges []challengeInfo
 	for _, challenge := range allChallenges {
 		if challenge.IsFuture {
-			if nextChallenge == nil || challenge.StartTime.Before(nextChallenge.StartTime) {
-				nextChallenge = &challenge
-			}
+			futureChallenges = append(futureChallenges, challenge)
 		}
 	}
 
-	// 添加下一场比赛（如果存在）
-	if nextChallenge != nil {
-		selectedChallenges = append(selectedChallenges, *nextChallenge)
+	// 按开始时间排序，取前三个
+	if len(futureChallenges) > 0 {
+		// 按开始时间排序
+		sort.Slice(futureChallenges, func(i, j int) bool {
+			return futureChallenges[i].StartTime.Before(futureChallenges[j].StartTime)
+		})
+
+		// 取前三个未来比赛
+		maxFutureChallenges := 3
+		if len(futureChallenges) < maxFutureChallenges {
+			maxFutureChallenges = len(futureChallenges)
+		}
+
+		for i := 0; i < maxFutureChallenges; i++ {
+			selectedChallenges = append(selectedChallenges, futureChallenges[i])
+		}
 	}
 
 	// 转换为 game.Challenge 数组
@@ -415,7 +458,6 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 	}
 
 	ownerRecord := records.OwnerRecords[0]
-
 	activityInfo, found := s.template.GetTplActivityInfo().FindByKey(tplChallenge.ActivityID)
 	if !found {
 		return nil, status.Error(codes.InvalidArgument, "活动不存在")
@@ -472,6 +514,9 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 			zap.String("reward_id", rewardId),
 			zap.Strings("reward_types", rewardTypes),
 			zap.Int32("rank", int32(ownerRecord.Rank)))
+
+		// 更新前三名统计数据
+		s.updateTopThreeStats(userID, userMatch, ownerRecord.Rank, tournamentID)
 
 	} else {
 		// 处理积分奖励
@@ -597,7 +642,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 	hasRewardUpdate := false
 
 	for _, challenge := range userMatch.Challenges {
-		if challenge.TournamentID != "" {
+		if challenge.TournamentID != "" && !challenge.OverCheckReward {
 			// 获取挑战赛模板信息
 			tplChallenge, found := s.template.GetTplChallenge().FindByKey(challenge.ID)
 			if !found {
@@ -622,6 +667,9 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 					continue
 				}
 				ownerRecord := records.OwnerRecords[0]
+
+				// 更新前三名统计数据
+				hasRewardUpdate = s.updateTopThreeStats(userID, userMatch, ownerRecord.Rank, challenge.TournamentID)
 
 				// 获取活动配置
 				activityInfo, found := s.template.GetTplActivityInfo().FindByKey(challenge.ActivityID)
@@ -652,6 +700,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 						hasRewardUpdate = true
 					}
 				}
+				challenge.OverCheckReward = true
 			}
 		}
 	}
@@ -922,4 +971,168 @@ func (s *ApiServer) createNewChallengeTournament(ctx context.Context, tplChallen
 		zap.String("created_by", "server"))
 
 	return tournamentID, nil
+}
+
+// 初始化前三名统计数据，首次查询历史记录
+func (s *ApiServer) initializeTopThreeStats(ctx context.Context, userID uuid.UUID, userMatch *UserMatch) error {
+	// 如果已经初始化过，跳过
+	if userMatch.TopThreeData != nil && userMatch.TopThreeData.LastUpdated > 0 {
+		return nil
+	}
+
+	// 确保 TopThreeData 已初始化
+	if userMatch.TopThreeData == nil {
+		userMatch.TopThreeData = &TopThreeStats{
+			FirstPlaceTournaments:  make(map[string]bool),
+			SecondPlaceTournaments: make(map[string]bool),
+			ThirdPlaceTournaments:  make(map[string]bool),
+			LastUpdated:            0,
+		}
+	}
+
+	s.logger.Info("开始初始化用户前三名统计数据", zap.String("user_id", userID.String()))
+
+	// 通过循环查找 userMatch 中参加挑战赛的ID，查询用户的排名成绩
+	for challengeID, challenge := range userMatch.Challenges {
+		if challenge == nil || challenge.TournamentID == "" {
+			s.logger.Debug("跳过无效的挑战赛记录", zap.Int32("challenge_id", challengeID))
+			continue
+		}
+
+		// 获取该竞标赛的完整排名信息
+		records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
+		if err != nil || len(records.OwnerRecords) == 0 {
+			s.logger.Debug("获取竞标赛排名失败",
+				zap.Int32("challenge_id", challengeID),
+				zap.String("tournament_id", challenge.TournamentID),
+				zap.Error(err))
+			continue
+		}
+
+		rank := records.OwnerRecords[0].Rank
+
+		// 统计前三名
+		switch rank {
+		case 1:
+			userMatch.TopThreeData.FirstPlaceTournaments[challenge.TournamentID] = true
+			s.logger.Debug("用户在该竞标赛中获得第一名",
+				zap.String("tournament_id", challenge.TournamentID),
+				zap.Int32("challenge_id", challengeID))
+		case 2:
+			userMatch.TopThreeData.SecondPlaceTournaments[challenge.TournamentID] = true
+			s.logger.Debug("用户在该竞标赛中获得第二名",
+				zap.String("tournament_id", challenge.TournamentID),
+				zap.Int32("challenge_id", challengeID))
+		case 3:
+			userMatch.TopThreeData.ThirdPlaceTournaments[challenge.TournamentID] = true
+			s.logger.Debug("用户在该竞标赛中获得第三名",
+				zap.String("tournament_id", challenge.TournamentID),
+				zap.Int32("challenge_id", challengeID))
+		}
+
+		s.logger.Debug("处理挑战赛记录",
+			zap.Int32("challenge_id", challengeID),
+			zap.String("tournament_id", challenge.TournamentID),
+			zap.Int64("rank", rank))
+	}
+
+	userMatch.TopThreeData.LastUpdated = time.Now().Unix()
+
+	s.logger.Info("完成前三名统计数据初始化",
+		zap.String("user_id", userID.String()),
+		zap.Int32("first_place", userMatch.TopThreeData.GetFirstPlaceCount()),
+		zap.Int32("second_place", userMatch.TopThreeData.GetSecondPlaceCount()),
+		zap.Int32("third_place", userMatch.TopThreeData.GetThirdPlaceCount()))
+
+	err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+	if err != nil {
+		s.logger.Error("保存用户统计数据失败", zap.String("user_id", userID.String()), zap.Error(err))
+		// 不影响返回结果，继续执行
+	}
+
+	return nil
+}
+
+// 更新前三名统计数据（在比赛结束时调用）
+func (s *ApiServer) updateTopThreeStats(userID uuid.UUID, userMatch *UserMatch, rank int64, tournamentID string) bool {
+	// 确保 TopThreeData 已初始化
+	if userMatch.TopThreeData == nil {
+		userMatch.TopThreeData = &TopThreeStats{
+			FirstPlaceTournaments:  make(map[string]bool),
+			SecondPlaceTournaments: make(map[string]bool),
+			ThirdPlaceTournaments:  make(map[string]bool),
+			LastUpdated:            0,
+		}
+	}
+
+	// 如果是前三名，更新统计
+	var updated bool
+	switch rank {
+	case 1:
+		if !userMatch.TopThreeData.FirstPlaceTournaments[tournamentID] {
+			userMatch.TopThreeData.FirstPlaceTournaments[tournamentID] = true
+			updated = true
+			s.logger.Info("用户获得第一名，更新统计", zap.String("user_id", userID.String()), zap.String("tournament_id", tournamentID), zap.Int32("total_first", userMatch.TopThreeData.GetFirstPlaceCount()))
+		}
+	case 2:
+		if !userMatch.TopThreeData.SecondPlaceTournaments[tournamentID] {
+			userMatch.TopThreeData.SecondPlaceTournaments[tournamentID] = true
+			updated = true
+			s.logger.Info("用户获得第二名，更新统计", zap.String("user_id", userID.String()), zap.String("tournament_id", tournamentID), zap.Int32("total_second", userMatch.TopThreeData.GetSecondPlaceCount()))
+		}
+	case 3:
+		if !userMatch.TopThreeData.ThirdPlaceTournaments[tournamentID] {
+			userMatch.TopThreeData.ThirdPlaceTournaments[tournamentID] = true
+			updated = true
+			s.logger.Info("用户获得第三名，更新统计", zap.String("user_id", userID.String()), zap.String("tournament_id", tournamentID), zap.Int32("total_third", userMatch.TopThreeData.GetThirdPlaceCount()))
+		}
+	}
+
+	if updated {
+		userMatch.TopThreeData.LastUpdated = time.Now().Unix()
+	}
+
+	return updated
+}
+
+// GetTopThreeStats 获取用户前三名统计数据
+func (s *ApiServer) GetTopThreeStats(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
+	// 获取用户ID
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	userMatch := &UserMatch{}
+	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
+	if err != nil {
+		return &game.GetChallengeTopStatsResponse{
+			Code: 1,
+			Msg:  "加载用户数据失败",
+		}, nil
+	}
+
+	// 初始化前三名统计数据（如果需要）
+	err = s.initializeTopThreeStats(ctx, userID, userMatch)
+	if err != nil {
+		s.logger.Error("初始化前三名统计数据失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return &game.GetChallengeTopStatsResponse{
+			Code: 2,
+			Msg:  "初始化统计数据失败",
+		}, nil
+	}
+
+	s.logger.Info("获取前三名统计数据",
+		zap.String("user_id", userID.String()),
+		zap.Int32("first_place", userMatch.TopThreeData.GetFirstPlaceCount()),
+		zap.Int32("second_place", userMatch.TopThreeData.GetSecondPlaceCount()),
+		zap.Int32("third_place", userMatch.TopThreeData.GetThirdPlaceCount()))
+
+	return &game.GetChallengeTopStatsResponse{
+		Code: 0,
+		Msg:  "获取成功",
+		Stats: &game.TopThreeStats{
+			FirstPlace:  userMatch.TopThreeData.GetFirstPlaceCount(),
+			SecondPlace: userMatch.TopThreeData.GetSecondPlaceCount(),
+			ThirdPlace:  userMatch.TopThreeData.GetThirdPlaceCount(),
+			LastUpdated: userMatch.TopThreeData.LastUpdated,
+		},
+	}, nil
 }

@@ -286,3 +286,18 @@ message GainChallengeRewardResponse{
   string msg = 2;                // 响应消息
   repeated Reward reward = 3;     // 奖励
 }
+
+// 前三名统计数据
+message TopThreeStats {
+  int32 first_place = 1;         // 第一名次数
+  int32 second_place = 2;        // 第二名次数
+  int32 third_place = 3;         // 第三名次数
+  int64 last_updated = 4;        // 最后更新时间戳
+}
+
+// 获取前三名统计响应
+message GetChallengeTopStatsResponse {
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  TopThreeStats stats = 3;       // 前三名统计数据
+}
