@@ -42,7 +42,6 @@ type ChallengeStatus struct {
 	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
 	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
 	HighScoreReward bool      `json:"high_score_reward"` // 高分奖励是否已领取
-	OverCheckReward bool      `json:"over_check_reward"` // 是否已检查过期奖励
 }
 
 // ScoreRewardResult 积分奖励检查结果
@@ -642,7 +641,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 	hasRewardUpdate := false
 
 	for _, challenge := range userMatch.Challenges {
-		if challenge.TournamentID != "" && !challenge.OverCheckReward {
+		if challenge.TournamentID != "" {
 			// 获取挑战赛模板信息
 			tplChallenge, found := s.template.GetTplChallenge().FindByKey(challenge.ID)
 			if !found {
@@ -700,7 +699,6 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 						hasRewardUpdate = true
 					}
 				}
-				challenge.OverCheckReward = true
 			}
 		}
 	}
@@ -712,7 +710,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID, challenge *ChallengeStatus, ownerRecord *api.LeaderboardRecord, activityInfo *template.TplActivityInfo) (bool, error) {
 	// 获取排名奖励配置
 	acRewards := s.template.GetTplActivityReward().FindByFilter(func(acReward template.TplActivityReward) bool {
-		return acReward.ActiveID == challenge.ActivityID
+		return acReward.ActiveID == activityInfo.RewardGroupID
 	})
 
 	rewardId := ""

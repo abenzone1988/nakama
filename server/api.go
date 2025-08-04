@@ -375,7 +375,7 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 	// 启动定时保存挑战赛批次号的goroutine
 	go func() {
 		for {
-			time.Sleep(time.Second)
+			time.Sleep(time.Minute)
 			if s.challengeBatchDirty {
 				s.logger.Info("定时检测到挑战赛批次号有变化，尝试保存")
 				s.challengeBatchMutex.Lock()

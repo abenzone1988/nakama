@@ -239,7 +239,7 @@ func main() {
 		}
 	}()
 
-	// leaderboardScheduler.Start(runtime)
+	//leaderboardScheduler.Start(runtime)
 	googleRefundScheduler.Start(runtime)
 
 	pipeline := server.NewPipeline(logger, config, db, jsonpbMarshaler, jsonpbUnmarshaler, sessionRegistry, statusRegistry, matchRegistry, partyRegistry, matchmaker, tracker, router, runtime)
