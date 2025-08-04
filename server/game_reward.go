@@ -166,7 +166,16 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 	if in.GetCoin() < 0 || in.GetGem() < 0 || in.GetAd() < 0 {
 		s.logger.Warn("钱包操作参数非法", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
-		return &game.WalletResponse{Code: 2, Msg: "数量不能为负"}, nil
+		return &game.WalletResponse{Code: 2, Msg: "钱包操作参数非法"}, nil
+	}
+
+	if in.GetCoin() == 0 && in.GetGem() == 0 && in.GetAd() == 0 {
+		s.logger.Warn("钱包操作参数非法", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
+		return &game.WalletResponse{Code: 2, Msg: "钱包操作参数非法"}, nil
+	}
+
+	if in.GetReason() == "战斗胜利" && in.GetAd() > 0 {
+		return &game.WalletResponse{Code: 2, Msg: "钱包操作参数非法"}, nil
 	}
 
 	// 可选：最大值校验，防止溢出 金币钻石 10w 广告券 10
@@ -235,11 +244,11 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 			s.logger.Warn("钱包余额不足", zap.String("user_id", userID.String()), zap.String("原因", reason), zap.Int64("金币", coinChange), zap.Int64("钻石", gemChange), zap.Int64("广告券", adChange))
 			return &game.WalletResponse{Code: 6, Msg: "余额不足"}, nil
 		}
-		s.logger.Error("钱包更新失败", zap.Error(err), zap.String("user_id", userID.String()))
+		s.logger.Error("钱包更新失败", zap.Error(err), zap.String("user_id", userID.String()), zap.String("record", record))
 		return &game.WalletResponse{Code: 7, Msg: "钱包更新失败"}, nil
 	}
 	if len(results) == 0 {
-		s.logger.Error("未找到钱包更新结果", zap.String("user_id", userID.String()))
+		s.logger.Error("未找到钱包更新结果", zap.String("user_id", userID.String()), zap.String("record", record))
 		return &game.WalletResponse{Code: 8, Msg: "未找到钱包更新结果"}, nil
 	}
 
