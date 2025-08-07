@@ -94,6 +94,7 @@ func UpdateWallets(ctx context.Context, logger *zap.Logger, db *sql.DB, updates 
 		var updateErr error
 		results, updateErr = updateWallets(ctx, logger, tx, updates, updateLedger)
 		if updateErr != nil {
+			logger.Error("UpdateWallets: updateWallets执行失败", zap.Error(updateErr))
 			return updateErr
 		}
 		return nil
@@ -262,7 +263,7 @@ SELECT
 	unnest($1::uuid[]), unnest($2::uuid[]), unnest($3::jsonb[]), unnest($4::jsonb[]);
 `, idParams, userIdParams, changesetParams, metadataParams)
 			if err != nil {
-				logger.Debug("Error writing user wallet ledgers.", zap.Error(err))
+				logger.Error("Error writing user wallet ledgers.", zap.Error(err))
 				return nil, err
 			}
 		}

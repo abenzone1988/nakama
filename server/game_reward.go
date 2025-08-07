@@ -24,10 +24,6 @@ var signatureFailCounter = make(map[string]int)
 // 作弊检测阈值
 const CheatDetectionThreshold = 300 // 广告券>=300视为作弊
 
-func (s *ApiServer) updatePlayerWallet(ctx context.Context, coinChange, gemChange, adChange int64, record string) ([]*runtime.WalletUpdateResult, error) {
-	return s.updatePlayerWalletWithID(ctx, coinChange, gemChange, adChange, record, nil)
-}
-
 func (s *ApiServer) updatePlayerWalletWithID(ctx context.Context, coinChange, gemChange, adChange int64, record string, externalID *uuid.UUID) ([]*runtime.WalletUpdateResult, error) {
 	// 如果没有任何货币变化，则不执行任何操作
 	if coinChange == 0 && gemChange == 0 && adChange == 0 {
@@ -248,7 +244,17 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 		return &game.WalletResponse{Code: 7, Msg: "钱包更新失败"}, nil
 	}
 	if len(results) == 0 {
-		s.logger.Error("未找到钱包更新结果", zap.String("user_id", userID.String()), zap.String("record", record))
+		s.logger.Error("未找到钱包更新结果",
+			zap.String("user_id", userID.String()),
+			zap.String("username", username),
+			zap.String("record", record),
+			zap.String("wallet_id", in.GetWalletId()),
+			zap.Int64("coin_change", coinChange),
+			zap.Int64("gem_change", gemChange),
+			zap.Int64("ad_change", adChange),
+			zap.String("reason", reason),
+			zap.String("operation", op.String()),
+			zap.String("signature", in.GetSignature()))
 		return &game.WalletResponse{Code: 8, Msg: "未找到钱包更新结果"}, nil
 	}
 

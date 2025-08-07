@@ -6,6 +6,12 @@ database:
 logger:
   level: "debug"
 
+
+
+
+
+
+
 session:
   encryption_key: "defaultencryptionkey"
   token_expiry_sec: 86400
@@ -27,3 +33,8 @@ console:
   port: 7351
   username: "admin"
   password: "password"
+
+
+
+
+

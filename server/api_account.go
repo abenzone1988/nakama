@@ -60,10 +60,10 @@ func (s *ApiServer) GetAccount(ctx context.Context, in *emptypb.Empty) (*api.Acc
 	account.DisableTime = nil
 
 	// 检查过期挑战赛奖励
-	//err, _ = s.checkAndSendExpiredChallengeRewardsForGetAccount(ctx)
-	//if err != nil {
-	//	s.logger.Error("检查过期挑战赛奖励失败", zap.Error(err))
-	//}
+	// err, _ = s.checkAndSendExpiredChallengeRewardsForGetAccount(ctx)
+	// if err != nil {
+	// 	s.logger.Error("检查过期挑战赛奖励失败", zap.Error(err))
+	// }
 
 	// After hook.
 	if fn := s.runtime.AfterGetAccount(); fn != nil {

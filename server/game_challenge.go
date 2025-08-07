@@ -624,13 +624,10 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewardsForGetAccount(ctx context
 		return err, false
 	}
 
-	// 如果有奖励更新，保存数据
-	if hasRewardUpdate {
-		err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
-		if err != nil {
-			s.logger.Error("保存挑战赛状态失败", zap.String("user_id", userID.String()), zap.Error(err))
-			return err, false
-		}
+	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+	if err != nil {
+		s.logger.Error("保存挑战赛状态失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return err, false
 	}
 
 	return nil, hasRewardUpdate
@@ -642,6 +639,11 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 
 	for _, challenge := range userMatch.Challenges {
 		if challenge.TournamentID != "" {
+
+			if challenge.LowScoreReward && challenge.MidScoreReward && challenge.HighScoreReward && challenge.RankReward {
+				continue
+			}
+
 			// 获取挑战赛模板信息
 			tplChallenge, found := s.template.GetTplChallenge().FindByKey(challenge.ID)
 			if !found {
@@ -662,7 +664,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 				// 获取用户在竞标赛中的记录
 				records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
 				if err != nil || len(records.OwnerRecords) == 0 {
-					s.logger.Info("没有提交成绩没有奖励")
+					s.logger.Info("没有提交成绩没有奖励", zap.String("user_id", userID.String()), zap.String("tournament_id", challenge.TournamentID))
 					continue
 				}
 				ownerRecord := records.OwnerRecords[0]
@@ -822,9 +824,7 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 
 	s.logger.Info("成功发送挑战赛奖励通知",
 		zap.String("user_id", userID.String()),
-		zap.String("subject", subject),
-		zap.String("description", description),
-		zap.Int("rewards_count", len(rewards)))
+		zap.String("subject", subject))
 
 	return true, nil
 }
@@ -1093,8 +1093,8 @@ func (s *ApiServer) updateTopThreeStats(userID uuid.UUID, userMatch *UserMatch, 
 	return updated
 }
 
-// GetTopThreeStats 获取用户前三名统计数据
-func (s *ApiServer) GetTopThreeStats(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
+// 获取用户前三名统计数据
+func (s *ApiServer) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
 	// 获取用户ID
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
