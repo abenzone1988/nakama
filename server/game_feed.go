@@ -19,14 +19,14 @@ const (
 	ErrNoSignatureFailed = 28006009 // 校验签名失败
 
 	// 场景内容ID
-	ContentOfflineIncome = "CONTENT963547906" // 离线收益场景内容ID
-	ContentReFight       = "CONTENT586019586" // 重新进入关卡
+	ContentOfflineIncome = "CONTENT12593210626" // 离线收益场景内容ID
+	ContentReFight       = "CONTENT12538224386" // 重新进入关卡
 
 	// 测试模式
-	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景
+	TestModeEnabled = true // 是否启用测试模式，启用后将返回所有场景
 )
 
-const TestSecret = "Mkj586019074Fdh"
+const TestSecret = "dUp12580609282jDX"
 
 // Scene 场景信息
 type Scene struct {
