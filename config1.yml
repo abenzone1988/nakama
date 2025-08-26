@@ -4,7 +4,7 @@ database:
   address:
     - "root@192.168.102.223:26257/test"
 logger:
-  level: "info"
+  level: "debug"
 
 session:
   encryption_key: "defaultencryptionkey"
@@ -13,9 +13,9 @@ session:
   refresh_token_expiry_sec: 186400
   single_socket: true
   single_session: true
-#  use_redis: true
-#  redis_address: "192.168.102.223:6379"
-#  redis_password: ""
+  use_redis: true
+  redis_address: "192.168.102.223:6379"
+  redis_password: ""
 
 socket:
   server_key: "sparkgame"

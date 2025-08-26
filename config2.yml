@@ -2,7 +2,7 @@ name: nakama-node-jp
 
 database:
   address:
-    - "root@192.168.102.223:26257"
+    - "root@192.168.102.223:26257/test"
 logger:
   level: "debug"
 
@@ -21,14 +21,6 @@ socket:
   server_key: "sparkgame"
   port: 7450
 
-
-social:
-  wechat:
-    app_id: "wx1861752aaba00455"
-    app_secret: "3d0490d1fb17f6905989cf2561c34a42"
-  tiktok:
-    app_id: "tte8269e9b77120eb407"
-    app_secret: "54a13ecae262f25237f57cfafb20a4a454087edd"
 
 console:
   port: 7451

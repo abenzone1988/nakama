@@ -179,7 +179,7 @@ func main() {
 
 	var sessionCache server.SessionCache
 	if config.GetSession().UseRedis {
-		sessionCache = server.NewRedisSessionCache(
+		sessionCache = server.NewRedisSessionCacheV2(
 			logger,
 			config.GetSession().RedisAddress,
 			config.GetSession().RedisPassword,
