@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace Framework
 {
@@ -99,6 +100,53 @@ namespace Framework
             };
         
             return GenerateSignature(data);
+        }
+        
+        /// <summary>
+        /// 为storage操作生成签名
+        /// </summary>
+        /// <param name="collection">存储集合名称</param>
+        /// <param name="key">存储键名</param>
+        /// <param name="value">存储值（JSON字符串，不包含signature字段）</param>
+        /// <param name="userId">用户ID</param>
+        /// <returns>签名字符串</returns>
+        public static string GenerateStorageSignature(string collection, string key, string value, string userId)
+        {
+            var data = new Dictionary<string, object>
+            {
+                ["collection"] = collection ?? "",
+                ["key"] = key ?? "",
+                ["value"] = value ?? "",
+                ["user_id"] = userId ?? "",
+            };
+        
+            return GenerateSignature(data);
+        }
+
+        /// <summary>
+        /// 为storage操作准备带签名的value
+        /// </summary>
+        /// <param name="collection">存储集合名称</param>
+        /// <param name="key">存储键名</param>
+        /// <param name="valueData">存储数据（不包含signature字段）</param>
+        /// <param name="userId">用户ID</param>
+        /// <returns>包含签名的完整value JSON字符串</returns>
+        public static string PrepareStorageValueWithSignature(string collection, string key, Dictionary<string, object> valueData, string userId)
+        {
+            // 将valueData转换为JSON字符串（不包含signature）
+            var valueJson = JsonConvert.SerializeObject(valueData);
+            
+            // 生成签名
+            var signature = GenerateStorageSignature(collection, key, valueJson, userId);
+            
+            // 将签名添加到valueData中
+            var valueWithSignature = new Dictionary<string, object>(valueData)
+            {
+                ["signature"] = signature
+            };
+            
+            // 返回包含签名的完整JSON
+            return JsonConvert.SerializeObject(valueWithSignature);
         }
         
         /// <summary>

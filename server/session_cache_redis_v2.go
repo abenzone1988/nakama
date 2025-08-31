@@ -91,7 +91,7 @@ func (s *RedisSessionCacheV2) IsValidSession(userID uuid.UUID, exp int64, tokenI
 		return false
 	}
 	if err == redis.Nil {
-		s.logger.Debug("banKey不能存在验证通过",
+		s.logger.Debug("banKey不存在验证通过",
 			zap.String("userId", userID.String()))
 		return true
 	}
@@ -145,7 +145,7 @@ func (s *RedisSessionCacheV2) IsValidRefresh(userID uuid.UUID, exp int64, tokenI
 		return false
 	}
 	if err == redis.Nil {
-		s.logger.Debug("banKey不能存在验证通过",
+		s.logger.Debug("banKey不存在验证通过",
 			zap.String("userId", userID.String()))
 		return true
 	}

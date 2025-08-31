@@ -1383,6 +1383,8 @@ message WriteStorageObject {
   google.protobuf.Int32Value permission_read = 5;
   // The write access permissions for the object.
   google.protobuf.Int32Value permission_write = 6;
+  // Signature
+  string signature = 7;
 }
 
 // Write objects to the storage engine.

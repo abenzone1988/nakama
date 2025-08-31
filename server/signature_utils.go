@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gofrs/uuid/v5"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/gofrs/uuid/v5"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -264,5 +265,27 @@ func GenerateWalletSignatureV2(operationType string, coin, gem, ad int64, reason
 		"wallet_id":      walletID,
 	}
 
+	return generateSignature(data, DefaultSignatureConfig.SecretKey)
+}
+
+// VerifyStorageSignature 验证storage操作签名
+func VerifyStorageSignature(collection, key, value, userID, signature string) bool {
+	data := map[string]interface{}{
+		"collection": collection,
+		"key":        key,
+		"value":      value,
+		"user_id":    userID,
+	}
+	return verifySignature(data, signature, DefaultSignatureConfig.SecretKey)
+}
+
+// GenerateStorageSignature 生成storage操作签名
+func GenerateStorageSignature(collection, key, value, userID string) (string, error) {
+	data := map[string]interface{}{
+		"collection": collection,
+		"key":        key,
+		"value":      value,
+		"user_id":    userID,
+	}
 	return generateSignature(data, DefaultSignatureConfig.SecretKey)
 }
