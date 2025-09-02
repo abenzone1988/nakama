@@ -135,6 +135,7 @@ const (
 	Nakama_ClaimNotificationAttachments_FullMethodName      = "/nakama.api.Nakama/ClaimNotificationAttachments"
 	Nakama_SaveHomeLevelData_FullMethodName                 = "/nakama.api.Nakama/SaveHomeLevelData"
 	Nakama_GetHomeLevelData_FullMethodName                  = "/nakama.api.Nakama/GetHomeLevelData"
+	Nakama_ResetHomeLevelData_FullMethodName                = "/nakama.api.Nakama/ResetHomeLevelData"
 	Nakama_OperateWallet_FullMethodName                     = "/nakama.api.Nakama/OperateWallet"
 	Nakama_GetChallenge_FullMethodName                      = "/nakama.api.Nakama/GetChallenge"
 	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
@@ -338,6 +339,8 @@ type NakamaClient interface {
 	SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLevelDataRequest, opts ...grpc.CallOption) (*game.SaveHomeLevelDataResponse, error)
 	// Get home level data
 	GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelDataRequest, opts ...grpc.CallOption) (*game.GetHomeLevelDataResponse, error)
+	// Reset home level data
+	ResetHomeLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// OperateWallet
 	OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
 	// Get Challenge
@@ -1222,6 +1225,15 @@ func (c *nakamaClient) GetHomeLevelData(ctx context.Context, in *game.GetHomeLev
 	return out, nil
 }
 
+func (c *nakamaClient) ResetHomeLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Nakama_ResetHomeLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
 	out := new(game.WalletResponse)
 	err := c.cc.Invoke(ctx, Nakama_OperateWallet_FullMethodName, in, out, opts...)
@@ -1463,6 +1475,8 @@ type NakamaServer interface {
 	SaveHomeLevelData(context.Context, *game.SaveHomeLevelDataRequest) (*game.SaveHomeLevelDataResponse, error)
 	// Get home level data
 	GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error)
+	// Reset home level data
+	ResetHomeLevelData(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// OperateWallet
 	OperateWallet(context.Context, *game.OperateWalletRequest) (*game.WalletResponse, error)
 	// Get Challenge
@@ -1767,6 +1781,9 @@ func (UnimplementedNakamaServer) SaveHomeLevelData(context.Context, *game.SaveHo
 }
 func (UnimplementedNakamaServer) GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHomeLevelData not implemented")
+}
+func (UnimplementedNakamaServer) ResetHomeLevelData(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetHomeLevelData not implemented")
 }
 func (UnimplementedNakamaServer) OperateWallet(context.Context, *game.OperateWalletRequest) (*game.WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OperateWallet not implemented")
@@ -3524,6 +3541,24 @@ func _Nakama_GetHomeLevelData_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_ResetHomeLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ResetHomeLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ResetHomeLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ResetHomeLevelData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_OperateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.OperateWalletRequest)
 	if err := dec(in); err != nil {
@@ -4004,6 +4039,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetHomeLevelData",
 			Handler:    _Nakama_GetHomeLevelData_Handler,
+		},
+		{
+			MethodName: "ResetHomeLevelData",
+			Handler:    _Nakama_ResetHomeLevelData_Handler,
 		},
 		{
 			MethodName: "OperateWallet",

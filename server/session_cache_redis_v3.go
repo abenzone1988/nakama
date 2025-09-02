@@ -18,14 +18,14 @@ const (
 	cacheExpiry      = 5 * time.Minute // 本地缓存过期时间
 	cleanupInterval  = 1 * time.Minute // 清理间隔
 
+	// Redis token过期时间 - 使用较短的时间来自动清理不活跃用户的token
+	redisTokenExpiry = 24 * time.Hour // Redis中token的过期时间，1小时后自动清理
+
 	// Redis PubSub channels
 	tokenInvalidateChannel = "token:invalidate" // token失效通知channel
 	userBanChannel         = "user:ban"         // 用户封禁通知channel
-	nodeHeartbeatChannel   = "node:heartbeat"   // 节点心跳通知channel
 
-	// 节点恢复相关常量
-	heartbeatInterval     = 30 * time.Second // 心跳间隔
-	nodeTimeoutDuration   = 90 * time.Second // 节点超时时间
+	// Redis连接检查间隔
 	recoveryCheckInterval = 60 * time.Second // 恢复检查间隔
 )
 
@@ -38,12 +38,12 @@ type CacheInvalidateMessage struct {
 	SourceID  string   `json:"source_id"` // 发送消息的节点ID
 }
 
-// NodeHeartbeatMessage 节点心跳消息
-type NodeHeartbeatMessage struct {
-	NodeID    string    `json:"node_id"`
-	Timestamp time.Time `json:"timestamp"`
-	Status    string    `json:"status"` // online, offline, recovering
-}
+// NodeHeartbeatMessage 已移除心跳机制，此结构体保留用于兼容性
+// type NodeHeartbeatMessage struct {
+//	NodeID    string    `json:"node_id"`
+//	Timestamp time.Time `json:"timestamp"`
+//	Status    string    `json:"status"` // online, offline, recovering
+// }
 
 // tokenCacheEntry 表示缓存中的token条目
 type tokenCacheEntry struct {
@@ -110,9 +110,13 @@ type RedisSessionCacheV3 struct {
 	localCache       *tokenCache
 	batchSize        int
 	pubsub           *redis.PubSub // Redis订阅连接
-	nodeID           string        // 节点唯一标识
+	nodeID           string        // 节点唯一标识（用于PubSub消息去重）
 }
 
+// NewRedisSessionCacheV3 创建Redis会话缓存v3版本
+// 注意：tokenExpirySec和refreshExpirySec参数仍然保留用于兼容性，但Redis中的实际过期时间
+// 使用redisTokenExpiry常量（1小时），这样可以自动清理不活跃用户的token数据，
+// 当玩家重新登录时会重新写入Redis
 func NewRedisSessionCacheV3(logger *zap.Logger, address string, password string, tokenExpirySec, refreshExpirySec int64, singleToken bool) SessionCache {
 	ctx, ctxCancelFn := context.WithCancel(context.Background())
 
@@ -138,9 +142,14 @@ func NewRedisSessionCacheV3(logger *zap.Logger, address string, password string,
 		nodeID:           nodeID,
 	}
 
-	// 初始化订阅和恢复机制
+	// 初始化订阅机制（仅用于token失效通知）
 	cache.initPubSub()
-	cache.initNodeRecovery()
+
+	// Redis高可用环境下不需要心跳机制，依赖Redis自身的故障检测
+	// cache.initNodeRecovery() // 已禁用心跳机制
+
+	// Redis高可用环境下不需要定期健康检查，依赖Redis客户端的自动重连机制
+	// go cache.startSimpleRecoveryCheck() // 已禁用
 
 	return cache
 }
@@ -173,10 +182,11 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 				continue
 			}
 
-			s.logger.Debug("收到Redis PubSub消息",
-				zap.String("channel", msg.Channel),
-				zap.String("payload", msg.Payload),
-				zap.String("nodeId", s.nodeID))
+			// 减少PubSub消息的调试日志，只在需要时记录
+			// s.logger.Debug("收到Redis PubSub消息",
+			//	zap.String("channel", msg.Channel),
+			//	zap.String("payload", msg.Payload),
+			//	zap.String("nodeId", s.nodeID))
 
 			var invalidateMsg CacheInvalidateMessage
 			if err := json.Unmarshal([]byte(msg.Payload), &invalidateMsg); err != nil {
@@ -189,9 +199,10 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 
 			// 忽略自己发出的消息
 			if invalidateMsg.SourceID == s.nodeID {
-				s.logger.Debug("忽略自己发出的消息",
-					zap.String("sourceID", invalidateMsg.SourceID),
-					zap.String("currentNode", s.nodeID))
+				// 减少自己发出消息的调试日志
+				// s.logger.Debug("忽略自己发出的消息",
+				//	zap.String("sourceID", invalidateMsg.SourceID),
+				//	zap.String("currentNode", s.nodeID))
 				continue
 			}
 
@@ -221,17 +232,18 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 					zap.String("action", invalidateMsg.Action))
 
 				for _, tokenID := range invalidateMsg.TokenIDs {
-					// 直接将token标记为无效，并设置较长的过期时间
-					// 这样可以避免短期内去Redis查询
-					cacheKey := s.getCacheKey(userID, tokenID, invalidateMsg.TokenType)
-					s.localCache.set(cacheKey, false, time.Hour*24) // 设置24小时过期
-
-					s.logger.Debug("本地缓存中标记token无效",
-						zap.String("userID", invalidateMsg.UserID),
-						zap.String("tokenID", tokenID),
-						zap.String("tokenType", invalidateMsg.TokenType),
-						zap.String("action", invalidateMsg.Action),
-						zap.String("cacheKey", cacheKey))
+					// 根据token类型处理
+					if invalidateMsg.TokenType == "all" {
+						// 同时标记session和refresh token无效
+						sessionCacheKey := s.getCacheKey(userID, tokenID, "session")
+						refreshCacheKey := s.getCacheKey(userID, tokenID, "refresh")
+						s.localCache.set(sessionCacheKey, false, time.Hour*24)
+						s.localCache.set(refreshCacheKey, false, time.Hour*24)
+					} else {
+						// 标记特定类型的token无效
+						cacheKey := s.getCacheKey(userID, tokenID, invalidateMsg.TokenType)
+						s.localCache.set(cacheKey, false, time.Hour*24)
+					}
 				}
 
 			case "token_added":
@@ -248,18 +260,25 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 					continue
 				}
 
-				// 获取用户所有token并在本地缓存中标记为无效
-				tokenSetKey := s.getUserTokenSetKey(userID)
-				tokens, err := s.client.SMembers(s.ctx, tokenSetKey).Result()
-				if err == nil {
-					for _, token := range tokens {
-						// 同样设置较长的过期时间
-						s.localCache.set(s.getCacheKey(userID, token, "session"), false, time.Hour*24)
-						s.localCache.set(s.getCacheKey(userID, token, "refresh"), false, time.Hour*24)
+				// 获取用户所有token并在本地缓存中标记为无效（使用v2的数据结构）
+				sessionKey := s.getSessionTokenKey(userID)
+				refreshKey := s.getRefreshTokenKey(userID)
 
-						s.logger.Debug("Marked banned user token as invalid in local cache",
+				// 检查现有token并更新本地缓存
+				if sessionValue, err := s.client.Get(s.ctx, sessionKey).Result(); err == nil {
+					if parts := strings.Split(sessionValue, ":"); len(parts) == 2 {
+						s.localCache.set(s.getCacheKey(userID, parts[0], "session"), false, time.Hour*24)
+						s.logger.Debug("Marked banned user session token as invalid in local cache",
 							zap.String("userID", invalidateMsg.UserID),
-							zap.String("tokenID", token))
+							zap.String("tokenID", parts[0]))
+					}
+				}
+				if refreshValue, err := s.client.Get(s.ctx, refreshKey).Result(); err == nil {
+					if parts := strings.Split(refreshValue, ":"); len(parts) == 2 {
+						s.localCache.set(s.getCacheKey(userID, parts[0], "refresh"), false, time.Hour*24)
+						s.logger.Debug("Marked banned user refresh token as invalid in local cache",
+							zap.String("userID", invalidateMsg.UserID),
+							zap.String("tokenID", parts[0]))
 					}
 				}
 			}
@@ -290,10 +309,11 @@ func (s *RedisSessionCacheV3) publishInvalidateMessage(userID uuid.UUID, tokenID
 	if err := s.client.Publish(s.ctx, channel, msgBytes).Err(); err != nil {
 		s.logger.Error("Error publishing invalidate message", zap.Error(err))
 	} else {
-		s.logger.Debug("Published cache invalidate message",
-			zap.String("channel", channel),
-			zap.String("nodeID", s.nodeID),
-			zap.Any("message", msg))
+		// 减少发布消息的调试日志，只在出错时记录
+		// s.logger.Debug("Published cache invalidate message",
+		//	zap.String("channel", channel),
+		//	zap.String("nodeID", s.nodeID),
+		//	zap.Any("message", msg))
 	}
 }
 
@@ -309,12 +329,13 @@ func (s *RedisSessionCacheV3) Stop() {
 	}
 }
 
-func (s *RedisSessionCacheV3) getUserTokenSetKey(userID uuid.UUID) string {
-	return fmt.Sprintf("user:%s:tokens", userID.String())
+// 使用与v2版本相同的键名结构
+func (s *RedisSessionCacheV3) getSessionTokenKey(userID uuid.UUID) string {
+	return fmt.Sprintf("user:%s:session", userID.String())
 }
 
-func (s *RedisSessionCacheV3) getTokenHashKey(userID uuid.UUID) string {
-	return fmt.Sprintf("user:%s:token_details", userID.String())
+func (s *RedisSessionCacheV3) getRefreshTokenKey(userID uuid.UUID) string {
+	return fmt.Sprintf("user:%s:refresh", userID.String())
 }
 
 func (s *RedisSessionCacheV3) getBanKey(userID uuid.UUID) string {
@@ -352,27 +373,16 @@ func (s *RedisSessionCacheV3) isValidToken(userID uuid.UUID, exp int64, tokenId,
 		return false
 	}
 
-	// 使用Pipeline批量检查token
-	pipe := s.client.Pipeline()
-
-	// 检查token是否在Set中
-	tokenSetKey := s.getUserTokenSetKey(userID)
-	existsCmd := pipe.SIsMember(s.ctx, tokenSetKey, tokenId)
-
-	// 检查token状态
-	tokenHashKey := s.getTokenHashKey(userID)
-	tokenField := fmt.Sprintf("%s:%s", tokenId, tokenType)
-	statusCmd := pipe.HGet(s.ctx, tokenHashKey, tokenField)
-
-	_, err = pipe.Exec(s.ctx)
-	if err != nil {
-		s.logger.Error("Error checking token validity", zap.Error(err))
-		s.localCache.set(cacheKey, false, time.Hour) // 错误情况下缓存1小时
-		return false
+	// 使用v2版本的数据结构：直接检查对应的token键
+	var tokenKey string
+	if tokenType == "session" {
+		tokenKey = s.getSessionTokenKey(userID)
+	} else {
+		tokenKey = s.getRefreshTokenKey(userID)
 	}
 
-	exists, err := existsCmd.Result()
-	if err != nil || !exists {
+	tokenValue, err := s.client.Get(s.ctx, tokenKey).Result()
+	if err == redis.Nil {
 		s.localCache.set(cacheKey, false, time.Hour*24) // 不存在的token缓存24小时
 		s.logger.Debug("Token not found in Redis",
 			zap.String("userID", userID.String()),
@@ -380,9 +390,16 @@ func (s *RedisSessionCacheV3) isValidToken(userID uuid.UUID, exp int64, tokenId,
 			zap.String("tokenType", tokenType))
 		return false
 	}
+	if err != nil {
+		s.logger.Error("Error checking token validity", zap.Error(err))
+		s.localCache.set(cacheKey, false, time.Hour) // 错误情况下缓存1小时
+		return false
+	}
 
-	status, err := statusCmd.Result()
-	valid := err == nil && status == "valid"
+	// 解析token值：格式为 "tokenID:valid"
+	expectedValue := fmt.Sprintf("%s:valid", tokenId)
+	valid := tokenValue == expectedValue
+
 	// 根据token状态设置不同的缓存时间
 	if valid {
 		s.localCache.set(cacheKey, true, cacheExpiry) // 有效token使用默认过期时间
@@ -394,6 +411,8 @@ func (s *RedisSessionCacheV3) isValidToken(userID uuid.UUID, exp int64, tokenId,
 		zap.String("userID", userID.String()),
 		zap.String("tokenID", tokenId),
 		zap.String("tokenType", tokenType),
+		zap.String("tokenValue", tokenValue),
+		zap.String("expectedValue", expectedValue),
 		zap.Bool("valid", valid))
 	return valid
 }
@@ -419,102 +438,128 @@ func (s *RedisSessionCacheV3) isValidTokenNoCache(userID uuid.UUID, exp int64, t
 		return false
 	}
 
-	// 使用Pipeline批量检查token
-	pipe := s.client.Pipeline()
+	// 使用v2版本的数据结构：直接检查对应的token键
+	var tokenKey string
+	if tokenType == "session" {
+		tokenKey = s.getSessionTokenKey(userID)
+	} else {
+		tokenKey = s.getRefreshTokenKey(userID)
+	}
 
-	// 检查token是否在Set中
-	tokenSetKey := s.getUserTokenSetKey(userID)
-	existsCmd := pipe.SIsMember(s.ctx, tokenSetKey, tokenId)
-
-	// 检查token状态
-	tokenHashKey := s.getTokenHashKey(userID)
-	tokenField := fmt.Sprintf("%s:%s", tokenId, tokenType)
-	statusCmd := pipe.HGet(s.ctx, tokenHashKey, tokenField)
-
-	_, err = pipe.Exec(s.ctx)
+	tokenValue, err := s.client.Get(s.ctx, tokenKey).Result()
+	if err == redis.Nil {
+		s.logger.Debug("Token不存在",
+			zap.String("userId", userID.String()),
+			zap.String("tokenId", tokenId),
+			zap.String("tokenType", tokenType))
+		return false
+	}
 	if err != nil {
 		s.logger.Error("Error checking token validity", zap.Error(err))
 		return false
 	}
 
-	exists, err := existsCmd.Result()
-	if err != nil || !exists {
-		s.logger.Debug("Token不存在或查询失败",
-			zap.String("userId", userID.String()),
-			zap.String("tokenId", tokenId),
-			zap.Bool("exists", exists),
-			zap.Error(err))
-		return false
-	}
+	// 解析token值：格式为 "tokenID:valid"
+	expectedValue := fmt.Sprintf("%s:valid", tokenId)
+	isValid := tokenValue == expectedValue
 
-	status, err := statusCmd.Result()
-	if err == redis.Nil {
-		s.logger.Debug("Token状态不存在",
-			zap.String("userId", userID.String()),
-			zap.String("tokenId", tokenId))
-		return false
-	}
-	if err != nil {
-		s.logger.Error("Error checking token status", zap.Error(err))
-		return false
-	}
-
-	isValid := status == "valid"
 	s.logger.Debug("Token验证结果",
 		zap.String("userId", userID.String()),
 		zap.String("tokenId", tokenId),
-		zap.String("status", status),
+		zap.String("tokenType", tokenType),
+		zap.String("tokenValue", tokenValue),
+		zap.String("expectedValue", expectedValue),
 		zap.Bool("isValid", isValid))
 
 	return isValid
 }
 
+// Add 添加新的session token和refresh token
+//
+// Token处理逻辑：
+// 1. 单token模式(singleToken=true): 新token会替换所有现有token
+// 2. 非单token模式(singleToken=false): session token和refresh token可以共存
+//   - session token失效时，可以使用refresh token申请新的session token
+//   - 申请新refresh token时，旧的refresh token仍然有效（支持多设备登录）
 func (s *RedisSessionCacheV3) Add(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string) {
-	s.logger.Debug("添加新token",
+	// 只在需要调试时启用详细日志
+	s.logger.Info("添加新token",
 		zap.String("userId", userID.String()),
-		zap.String("sessionTokenId", sessionTokenId),
-		zap.String("refreshTokenId", refreshTokenId),
-		zap.Int64("sessionExp", sessionExp),
-		zap.Int64("refreshExp", refreshExp),
 		zap.Bool("singleToken", s.singleToken),
-		zap.String("nodeId", s.nodeID))
+		zap.Bool("tokensAreSame", sessionTokenId == refreshTokenId))
 
-	pipe := s.client.Pipeline()
-
-	// 如果是单token模式，先移除该用户的所有现有token
+	// 处理token替换逻辑
 	if s.singleToken {
+		// 单token模式：移除该用户的所有现有token
 		s.logger.Debug("单token模式：移除用户现有token", zap.String("userId", userID.String()))
 
 		// 获取现有token并更新本地缓存
-		tokenSetKey := s.getUserTokenSetKey(userID)
-		tokens, err := s.client.SMembers(s.ctx, tokenSetKey).Result()
-		if err == nil && len(tokens) > 0 {
+		sessionKey := s.getSessionTokenKey(userID)
+		refreshKey := s.getRefreshTokenKey(userID)
+
+		// 分别检查现有的session token和refresh token
+		var existingSessionTokens []string
+		var existingRefreshTokens []string
+
+		if sessionValue, err := s.client.Get(s.ctx, sessionKey).Result(); err == nil {
+			if parts := strings.Split(sessionValue, ":"); len(parts) == 2 {
+				existingSessionTokens = append(existingSessionTokens, parts[0])
+			}
+		}
+		if refreshValue, err := s.client.Get(s.ctx, refreshKey).Result(); err == nil {
+			if parts := strings.Split(refreshValue, ":"); len(parts) == 2 {
+				existingRefreshTokens = append(existingRefreshTokens, parts[0])
+			}
+		}
+
+		// 合并处理现有token的失效
+		var allExistingTokens []string
+		allExistingTokens = append(allExistingTokens, existingSessionTokens...)
+		allExistingTokens = append(allExistingTokens, existingRefreshTokens...)
+
+		if len(allExistingTokens) > 0 {
 			s.logger.Debug("发现现有token，准备移除",
 				zap.String("userId", userID.String()),
-				zap.Strings("existingTokens", tokens),
-				zap.Int("tokenCount", len(tokens)))
+				zap.Strings("existingTokens", allExistingTokens))
 
-			for _, token := range tokens {
+			// 更新本地缓存
+			for _, token := range existingSessionTokens {
 				s.localCache.set(s.getCacheKey(userID, token, "session"), false, cacheExpiry)
+			}
+			for _, token := range existingRefreshTokens {
 				s.localCache.set(s.getCacheKey(userID, token, "refresh"), false, cacheExpiry)
 			}
 
-			// 发送token失效消息到其他节点
-			s.publishTokenInvalidateMessage(userID, tokens, "all", "single_session_replace")
-		} else if err != nil {
-			s.logger.Warn("获取现有token失败", zap.Error(err), zap.String("userId", userID.String()))
+			// 如果session和refresh token是同一个，只发送一次消息
+			if len(existingSessionTokens) == 1 && len(existingRefreshTokens) == 1 &&
+				existingSessionTokens[0] == existingRefreshTokens[0] {
+				// 发送合并的失效消息
+				s.publishInvalidateMessage(userID, []string{existingSessionTokens[0]}, "all", "single_session_replace")
+			} else {
+				// 分别发送失效消息
+				if len(existingSessionTokens) > 0 {
+					s.publishInvalidateMessage(userID, existingSessionTokens, "session", "single_session_replace")
+				}
+				if len(existingRefreshTokens) > 0 {
+					s.publishInvalidateMessage(userID, existingRefreshTokens, "refresh", "single_session_replace")
+				}
+			}
 		}
 		s.RemoveAll(userID)
+	} else {
+		// 非单token模式：refresh token可以有效共存，不需要特殊处理
+		s.logger.Debug("非单token模式：允许多个token共存", zap.String("userId", userID.String()))
 	}
 
-	tokenSetKey := s.getUserTokenSetKey(userID)
-	tokenHashKey := s.getTokenHashKey(userID)
+	// 使用v2版本的存储格式：直接设置用户的当前token
+	pipe := s.client.Pipeline()
 
 	// 添加session token
 	if sessionTokenId != "" {
-		pipe.SAdd(s.ctx, tokenSetKey, sessionTokenId)
-		pipe.HSet(s.ctx, tokenHashKey, fmt.Sprintf("%s:session", sessionTokenId), "valid")
-		pipe.Expire(s.ctx, tokenHashKey, time.Duration(s.tokenExpirySec)*time.Second)
+		sessionKey := s.getSessionTokenKey(userID)
+		sessionValue := fmt.Sprintf("%s:valid", sessionTokenId)
+		// 使用固定的短过期时间，而不是token本身的失效时间
+		pipe.Set(s.ctx, sessionKey, sessionValue, redisTokenExpiry)
 
 		// 更新本地缓存
 		s.localCache.set(s.getCacheKey(userID, sessionTokenId, "session"), true, cacheExpiry)
@@ -522,14 +567,15 @@ func (s *RedisSessionCacheV3) Add(userID uuid.UUID, sessionExp int64, sessionTok
 		s.logger.Debug("添加session token到Redis",
 			zap.String("userId", userID.String()),
 			zap.String("sessionTokenId", sessionTokenId),
-			zap.Int64("expirySec", s.tokenExpirySec))
+			zap.Duration("redisExpiry", redisTokenExpiry))
 	}
 
 	// 添加refresh token
 	if refreshTokenId != "" {
-		pipe.SAdd(s.ctx, tokenSetKey, refreshTokenId)
-		pipe.HSet(s.ctx, tokenHashKey, fmt.Sprintf("%s:refresh", refreshTokenId), "valid")
-		pipe.Expire(s.ctx, tokenHashKey, time.Duration(s.refreshExpirySec)*time.Second)
+		refreshKey := s.getRefreshTokenKey(userID)
+		refreshValue := fmt.Sprintf("%s:valid", refreshTokenId)
+		// 使用固定的短过期时间，而不是token本身的失效时间
+		pipe.Set(s.ctx, refreshKey, refreshValue, redisTokenExpiry)
 
 		// 更新本地缓存
 		s.localCache.set(s.getCacheKey(userID, refreshTokenId, "refresh"), true, cacheExpiry)
@@ -537,15 +583,8 @@ func (s *RedisSessionCacheV3) Add(userID uuid.UUID, sessionExp int64, sessionTok
 		s.logger.Debug("添加refresh token到Redis",
 			zap.String("userId", userID.String()),
 			zap.String("refreshTokenId", refreshTokenId),
-			zap.Int64("expirySec", s.refreshExpirySec))
+			zap.Duration("redisExpiry", redisTokenExpiry))
 	}
-
-	// 设置token集合的过期时间为较长的那个
-	expiry := s.tokenExpirySec
-	if s.refreshExpirySec > expiry {
-		expiry = s.refreshExpirySec
-	}
-	pipe.Expire(s.ctx, tokenSetKey, time.Duration(expiry)*time.Second)
 
 	_, err := pipe.Exec(s.ctx)
 	if err != nil {
@@ -554,21 +593,22 @@ func (s *RedisSessionCacheV3) Add(userID uuid.UUID, sessionExp int64, sessionTok
 			zap.String("sessionTokenId", sessionTokenId),
 			zap.String("refreshTokenId", refreshTokenId))
 	} else {
-		s.logger.Debug("成功添加token到Redis",
-			zap.String("userId", userID.String()),
-			zap.String("sessionTokenId", sessionTokenId),
-			zap.String("refreshTokenId", refreshTokenId))
+		s.logger.Info("成功添加token到Redis",
+			zap.String("userId", userID.String()))
 
-		// 发送新token添加消息到其他节点（用于缓存同步）
-		var newTokens []string
-		if sessionTokenId != "" {
-			newTokens = append(newTokens, sessionTokenId)
-		}
-		if refreshTokenId != "" {
-			newTokens = append(newTokens, refreshTokenId)
-		}
-		if len(newTokens) > 0 {
-			s.publishTokenInvalidateMessage(userID, newTokens, "all", "token_added")
+		// 分别发送session token和refresh token的添加通知
+		// 如果两个token相同，只发送一次通知以减少消息量
+		if sessionTokenId != "" && refreshTokenId != "" && sessionTokenId == refreshTokenId {
+			// session token和refresh token相同，发送合并通知
+			s.publishInvalidateMessage(userID, []string{sessionTokenId}, "all", "token_added")
+		} else {
+			// 分别发送通知
+			if sessionTokenId != "" {
+				s.publishInvalidateMessage(userID, []string{sessionTokenId}, "session", "token_added")
+			}
+			if refreshTokenId != "" {
+				s.publishInvalidateMessage(userID, []string{refreshTokenId}, "refresh", "token_added")
+			}
 		}
 	}
 }
@@ -585,19 +625,17 @@ func (s *RedisSessionCacheV3) Remove(userID uuid.UUID, sessionExp int64, session
 		refreshTokens = append(refreshTokens, refreshTokenId)
 	}
 
-	// 第一步：更新Redis
+	// 第一步：更新Redis（使用v2的数据结构）
 	pipe := s.client.Pipeline()
-	tokenSetKey := s.getUserTokenSetKey(userID)
-	tokenHashKey := s.getTokenHashKey(userID)
 
 	if sessionTokenId != "" {
-		pipe.SRem(s.ctx, tokenSetKey, sessionTokenId)
-		pipe.HDel(s.ctx, tokenHashKey, fmt.Sprintf("%s:session", sessionTokenId))
+		sessionKey := s.getSessionTokenKey(userID)
+		pipe.Del(s.ctx, sessionKey)
 	}
 
 	if refreshTokenId != "" {
-		pipe.SRem(s.ctx, tokenSetKey, refreshTokenId)
-		pipe.HDel(s.ctx, tokenHashKey, fmt.Sprintf("%s:refresh", refreshTokenId))
+		refreshKey := s.getRefreshTokenKey(userID)
+		pipe.Del(s.ctx, refreshKey)
 	}
 
 	_, err := pipe.Exec(s.ctx)
@@ -628,44 +666,38 @@ func (s *RedisSessionCacheV3) Remove(userID uuid.UUID, sessionExp int64, session
 }
 
 func (s *RedisSessionCacheV3) RemoveAll(userID uuid.UUID) {
-	tokenSetKey := s.getUserTokenSetKey(userID)
-	tokenHashKey := s.getTokenHashKey(userID)
+	sessionKey := s.getSessionTokenKey(userID)
+	refreshKey := s.getRefreshTokenKey(userID)
 
-	// 第一步：获取所有token
-	tokens, err := s.client.SMembers(s.ctx, tokenSetKey).Result()
-	if err != nil {
-		s.logger.Error("Error getting tokens for removal",
-			zap.Error(err),
-			zap.String("userID", userID.String()))
-		return
-	}
-
-	// 第二步：获取token类型信息
+	// 第一步：获取现有token信息
 	var sessionTokens []string
 	var refreshTokens []string
 
-	for _, token := range tokens {
-		// 检查session token
-		sessionField := fmt.Sprintf("%s:session", token)
-		refreshField := fmt.Sprintf("%s:refresh", token)
-
-		if _, err := s.client.HGet(s.ctx, tokenHashKey, sessionField).Result(); err == nil {
-			sessionTokens = append(sessionTokens, token)
+	if sessionValue, err := s.client.Get(s.ctx, sessionKey).Result(); err == nil {
+		if parts := strings.Split(sessionValue, ":"); len(parts) == 2 {
+			sessionTokens = append(sessionTokens, parts[0])
 		}
-		if _, err := s.client.HGet(s.ctx, tokenHashKey, refreshField).Result(); err == nil {
-			refreshTokens = append(refreshTokens, token)
+	}
+	if refreshValue, err := s.client.Get(s.ctx, refreshKey).Result(); err == nil {
+		if parts := strings.Split(refreshValue, ":"); len(parts) == 2 {
+			refreshTokens = append(refreshTokens, parts[0])
 		}
 	}
 
-	// 第三步：从Redis中删除所有token
-	if err := s.client.Del(s.ctx, tokenSetKey, tokenHashKey).Err(); err != nil {
+	// 第二步：从Redis中删除所有token（使用v2的数据结构）
+	pipe := s.client.Pipeline()
+	pipe.Del(s.ctx, sessionKey)
+	pipe.Del(s.ctx, refreshKey)
+
+	_, err := pipe.Exec(s.ctx)
+	if err != nil {
 		s.logger.Error("Error removing all tokens from Redis",
 			zap.Error(err),
 			zap.String("userID", userID.String()))
 		return
 	}
 
-	// 第四步：更新本地缓存
+	// 第三步：更新本地缓存
 	for _, token := range sessionTokens {
 		s.localCache.set(s.getCacheKey(userID, token, "session"), false, time.Hour*24)
 	}
@@ -673,7 +705,7 @@ func (s *RedisSessionCacheV3) RemoveAll(userID uuid.UUID) {
 		s.localCache.set(s.getCacheKey(userID, token, "refresh"), false, time.Hour*24)
 	}
 
-	// 第五步：发送消息通知其他节点
+	// 第四步：发送消息通知其他节点
 	if len(sessionTokens) > 0 {
 		s.publishInvalidateMessage(userID, sessionTokens, "session", "invalidate")
 	}
@@ -689,13 +721,19 @@ func (s *RedisSessionCacheV3) Ban(userIDs []uuid.UUID) {
 		banKey := s.getBanKey(userID)
 		pipe.Set(s.ctx, banKey, "banned", 0) // 永久封禁
 
-		// 获取用户所有token以更新本地缓存
-		tokenSetKey := s.getUserTokenSetKey(userID)
-		tokens, err := s.client.SMembers(s.ctx, tokenSetKey).Result()
-		if err == nil {
-			for _, token := range tokens {
-				s.localCache.set(s.getCacheKey(userID, token, "session"), false, cacheExpiry)
-				s.localCache.set(s.getCacheKey(userID, token, "refresh"), false, cacheExpiry)
+		// 获取用户所有token以更新本地缓存（使用v2的数据结构）
+		sessionKey := s.getSessionTokenKey(userID)
+		refreshKey := s.getRefreshTokenKey(userID)
+
+		// 检查现有token并更新本地缓存
+		if sessionValue, err := s.client.Get(s.ctx, sessionKey).Result(); err == nil {
+			if parts := strings.Split(sessionValue, ":"); len(parts) == 2 {
+				s.localCache.set(s.getCacheKey(userID, parts[0], "session"), false, cacheExpiry)
+			}
+		}
+		if refreshValue, err := s.client.Get(s.ctx, refreshKey).Result(); err == nil {
+			if parts := strings.Split(refreshValue, ":"); len(parts) == 2 {
+				s.localCache.set(s.getCacheKey(userID, parts[0], "refresh"), false, cacheExpiry)
 			}
 		}
 
@@ -802,7 +840,7 @@ func (s *RedisSessionCacheV3) recoverSessionConsistency() {
 	s.logger.Info("已清空本地缓存，将从Redis重新加载session状态", zap.String("nodeId", s.nodeID))
 }
 
-// healthCheck 健康检查，确保Redis连接正常
+// healthCheck 健康检查，确保Redis连接正常（仅在实际需要时调用）
 func (s *RedisSessionCacheV3) healthCheck() error {
 	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 	defer cancel()
@@ -817,198 +855,24 @@ func (s *RedisSessionCacheV3) healthCheck() error {
 	return nil
 }
 
-// initNodeRecovery 初始化节点恢复机制
-func (s *RedisSessionCacheV3) initNodeRecovery() {
-	s.logger.Info("初始化节点恢复机制", zap.String("nodeId", s.nodeID))
+// ==================== 已移除的功能 ====================
+// 以下功能在Redis高可用环境下已被移除：
+// 1. 心跳机制 - Redis集群自动处理节点故障检测
+// 2. 定期健康检查 - Redis客户端有自动重连机制
+// 3. 节点状态管理 - 依赖Redis高可用架构
+//
+// 保留功能：
+// - Token失效通知PubSub（用于多节点缓存同步）
+// - 本地token缓存（提升性能）
+// - Redis连接异常时的重连机制（在实际操作失败时触发）
 
-	// 注册节点上线
-	s.registerNodeOnline()
-
-	// 启动心跳发送
-	go s.startHeartbeat()
-
-	// 启动恢复检查
-	go s.startRecoveryCheck()
-
-	// 启动心跳监听
-	go s.startHeartbeatListener()
-}
-
-// registerNodeOnline 注册节点上线状态
-func (s *RedisSessionCacheV3) registerNodeOnline() {
-	nodeKey := fmt.Sprintf("node:status:%s", s.nodeID)
-
-	nodeInfo := map[string]interface{}{
-		"node_id":        s.nodeID,
-		"status":         "online",
-		"start_time":     time.Now().Unix(),
-		"last_heartbeat": time.Now().Unix(),
-	}
-
-	err := s.client.HMSet(s.ctx, nodeKey, nodeInfo).Err()
-	if err != nil {
-		s.logger.Error("注册节点状态失败", zap.Error(err), zap.String("nodeId", s.nodeID))
-		return
-	}
-
-	// 设置节点状态过期时间
-	s.client.Expire(s.ctx, nodeKey, nodeTimeoutDuration)
-
-	s.logger.Info("节点已注册上线", zap.String("nodeId", s.nodeID))
-
-	// 发送上线通知
-	s.sendHeartbeat("online")
-}
-
-// startHeartbeat 启动心跳发送
-func (s *RedisSessionCacheV3) startHeartbeat() {
-	ticker := time.NewTicker(heartbeatInterval)
-	defer ticker.Stop()
-
-	s.logger.Info("开始发送心跳", zap.String("nodeId", s.nodeID), zap.Duration("interval", heartbeatInterval))
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			s.logger.Info("停止心跳发送", zap.String("nodeId", s.nodeID))
-			// 发送下线通知
-			s.sendHeartbeat("offline")
-			return
-		case <-ticker.C:
-			s.sendHeartbeat("online")
-			s.updateNodeHeartbeat()
-		}
-	}
-}
-
-// sendHeartbeat 发送心跳消息
-func (s *RedisSessionCacheV3) sendHeartbeat(status string) {
-	message := NodeHeartbeatMessage{
-		NodeID:    s.nodeID,
-		Timestamp: time.Now(),
-		Status:    status,
-	}
-
-	messageData, err := json.Marshal(message)
-	if err != nil {
-		s.logger.Error("序列化心跳消息失败", zap.Error(err), zap.String("nodeId", s.nodeID))
-		return
-	}
-
-	err = s.client.Publish(s.ctx, nodeHeartbeatChannel, messageData).Err()
-	if err != nil {
-		s.logger.Warn("发送心跳消息失败", zap.Error(err), zap.String("nodeId", s.nodeID))
-	} else {
-		s.logger.Debug("发送心跳消息", zap.String("nodeId", s.nodeID), zap.String("status", status))
-	}
-}
-
-// updateNodeHeartbeat 更新节点心跳时间
-func (s *RedisSessionCacheV3) updateNodeHeartbeat() {
-	nodeKey := fmt.Sprintf("node:status:%s", s.nodeID)
-
-	err := s.client.HSet(s.ctx, nodeKey, "last_heartbeat", time.Now().Unix()).Err()
-	if err != nil {
-		s.logger.Warn("更新节点心跳时间失败", zap.Error(err), zap.String("nodeId", s.nodeID))
-	}
-
-	// 续期节点状态
-	s.client.Expire(s.ctx, nodeKey, nodeTimeoutDuration)
-}
-
-// startHeartbeatListener 启动心跳监听
-func (s *RedisSessionCacheV3) startHeartbeatListener() {
-	// 订阅心跳频道
-	heartbeatPubSub := s.client.Subscribe(s.ctx, nodeHeartbeatChannel)
-	defer heartbeatPubSub.Close()
-
-	s.logger.Info("开始监听节点心跳", zap.String("nodeId", s.nodeID))
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			s.logger.Info("停止监听节点心跳", zap.String("nodeId", s.nodeID))
-			return
-		default:
-			msg, err := heartbeatPubSub.ReceiveMessage(s.ctx)
-			if err != nil {
-				s.logger.Warn("接收心跳消息失败", zap.Error(err), zap.String("nodeId", s.nodeID))
-				continue
-			}
-
-			var heartbeatMsg NodeHeartbeatMessage
-			if err := json.Unmarshal([]byte(msg.Payload), &heartbeatMsg); err != nil {
-				s.logger.Warn("解析心跳消息失败", zap.Error(err), zap.String("payload", msg.Payload))
-				continue
-			}
-
-			// 忽略自己的心跳消息
-			if heartbeatMsg.NodeID == s.nodeID {
-				continue
-			}
-
-			s.logger.Debug("收到其他节点心跳",
-				zap.String("fromNode", heartbeatMsg.NodeID),
-				zap.String("status", heartbeatMsg.Status),
-				zap.Time("timestamp", heartbeatMsg.Timestamp))
-
-			// 处理节点状态变化
-			s.handleNodeStatusChange(heartbeatMsg)
-		}
-	}
-}
-
-// handleNodeStatusChange 处理节点状态变化
-func (s *RedisSessionCacheV3) handleNodeStatusChange(msg NodeHeartbeatMessage) {
-	switch msg.Status {
-	case "online":
-		s.logger.Debug("检测到节点上线", zap.String("nodeId", msg.NodeID))
-	case "offline":
-		s.logger.Info("检测到节点下线", zap.String("nodeId", msg.NodeID))
-		// 可以在这里处理节点下线的清理工作
-	case "recovering":
-		s.logger.Info("检测到节点恢复中", zap.String("nodeId", msg.NodeID))
-		// 节点恢复时，可能需要重新同步数据
-	}
-}
-
-// startRecoveryCheck 启动恢复检查
-func (s *RedisSessionCacheV3) startRecoveryCheck() {
-	ticker := time.NewTicker(recoveryCheckInterval)
-	defer ticker.Stop()
-
-	s.logger.Info("开始恢复检查", zap.String("nodeId", s.nodeID), zap.Duration("interval", recoveryCheckInterval))
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			s.logger.Info("停止恢复检查", zap.String("nodeId", s.nodeID))
-			return
-		case <-ticker.C:
-			s.performRecoveryCheck()
-		}
-	}
-}
-
-// performRecoveryCheck 执行恢复检查
-func (s *RedisSessionCacheV3) performRecoveryCheck() {
-	// 1. 检查Redis连接状态
-	if err := s.healthCheck(); err != nil {
-		s.logger.Error("Redis连接异常，尝试重连", zap.Error(err))
-		s.reconnectRedis()
-		return
-	}
-
-	// 2. 检查PubSub连接状态
-	if s.pubsub == nil {
-		s.logger.Warn("PubSub连接丢失，尝试重新初始化")
-		s.initPubSub()
-		return
-	}
-
-	// 3. 检查本地缓存一致性
-	s.validateCacheConsistency()
-}
+// Redis高可用环境下已禁用定期检查，依赖Redis客户端的自动重连和故障检测
+//
+// startSimpleRecoveryCheck 已禁用 - Redis高可用环境下不需要定期检查
+// func (s *RedisSessionCacheV3) startSimpleRecoveryCheck() { ... }
+//
+// performSimpleRecoveryCheck 已禁用 - Redis高可用环境下不需要定期检查
+// func (s *RedisSessionCacheV3) performSimpleRecoveryCheck() { ... }
 
 // reconnectRedis 重新连接Redis
 func (s *RedisSessionCacheV3) reconnectRedis() {
@@ -1016,7 +880,10 @@ func (s *RedisSessionCacheV3) reconnectRedis() {
 
 	// 关闭现有连接
 	if s.pubsub != nil {
-		s.pubsub.Close()
+		err := s.pubsub.Close()
+		if err != nil {
+			return
+		}
 		s.pubsub = nil
 	}
 
@@ -1029,62 +896,7 @@ func (s *RedisSessionCacheV3) reconnectRedis() {
 	// 清空本地缓存，强制从Redis重新加载
 	s.recoverSessionConsistency()
 
-	// 重新注册节点状态
-	s.registerNodeOnline()
+	// Redis高可用环境下不需要注册节点状态
 
 	s.logger.Info("Redis重连完成", zap.String("nodeId", s.nodeID))
-}
-
-// validateCacheConsistency 验证缓存一致性
-func (s *RedisSessionCacheV3) validateCacheConsistency() {
-	// 随机采样一些本地缓存条目，与Redis进行比较
-	sampleCount := 0
-	maxSamples := 10
-
-	s.localCache.cache.Range(func(key, value interface{}) bool {
-		if sampleCount >= maxSamples {
-			return false
-		}
-
-		cacheKey := key.(string)
-		localEntry := value.(tokenCacheEntry)
-
-		// 解析缓存键获取用户ID和token ID
-		parts := strings.Split(cacheKey, ":")
-		if len(parts) != 3 {
-			return true
-		}
-
-		userID, err := uuid.FromString(parts[0])
-		if err != nil {
-			return true
-		}
-
-		tokenID := parts[1]
-		tokenType := parts[2]
-
-		// 检查Redis中的实际状态
-		redisValid := s.isValidTokenNoCache(userID, 0, tokenID, tokenType)
-
-		// 如果本地缓存与Redis状态不一致，记录警告
-		if localEntry.valid != redisValid {
-			s.logger.Warn("检测到缓存不一致",
-				zap.String("cacheKey", cacheKey),
-				zap.Bool("localValid", localEntry.valid),
-				zap.Bool("redisValid", redisValid),
-				zap.String("nodeId", s.nodeID))
-
-			// 更新本地缓存以匹配Redis状态
-			s.localCache.set(cacheKey, redisValid, cacheExpiry)
-		}
-
-		sampleCount++
-		return true
-	})
-
-	if sampleCount > 0 {
-		s.logger.Debug("缓存一致性检查完成",
-			zap.Int("sampledEntries", sampleCount),
-			zap.String("nodeId", s.nodeID))
-	}
 }

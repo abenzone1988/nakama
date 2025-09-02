@@ -212,6 +212,8 @@ func (s *ApiServer) WriteStorageObjects(ctx context.Context, in *api.WriteStorag
 			if !VerifyStorageSignature(object.GetCollection(), object.GetKey(), object.GetValue(), userID, object.GetSignature()) {
 				return nil, status.Error(codes.InvalidArgument, "Signature is invalid.")
 			}
+		} else {
+			//正式上线需要必须签名
 		}
 	}
 

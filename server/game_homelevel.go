@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
@@ -212,4 +214,26 @@ func (s *ApiServer) GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelD
 		TotalCount: int32(len(homeLevelData.LevelData)),
 		MaxLevelId: homeLevelData.MaxLevelId,
 	}, nil
+}
+
+func (s *ApiServer) ResetHomeLevelData(ctx context.Context, in *emptypb.Empty) (*emptypb.Empty, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 创建一个新的空的关卡数据结构
+	homeLevelData := &HomeLevelData{}
+	homeLevelData.Init() // 初始化为空数据
+
+	// 保存重置后的关卡数据
+	err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, homeLevelData)
+	if err != nil {
+		s.logger.Error("重置关卡数据失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return nil, err
+	}
+
+	s.logger.Info("关卡数据重置成功",
+		zap.String("user_id", userID.String()),
+		zap.String("operation", "reset_home_level_data"),
+	)
+
+	return &emptypb.Empty{}, nil
 }

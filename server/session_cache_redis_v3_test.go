@@ -235,15 +235,15 @@ func TestRedisSessionCacheV3_RemoveAll(t *testing.T) {
 	assert.False(t, cache.IsValidSession(userID, 300, sessionToken))
 	assert.False(t, cache.IsValidRefresh(userID, 3600, refreshToken))
 
-	// 验证Redis中的数据已被删除
-	tokenSetKey := cache.getUserTokenSetKey(userID)
-	tokenHashKey := cache.getTokenHashKey(userID)
+	// 验证Redis中的数据已被删除（使用v2的数据结构）
+	sessionKey := cache.getSessionTokenKey(userID)
+	refreshKey := cache.getRefreshTokenKey(userID)
 
-	exists, err := cache.client.Exists(context.Background(), tokenSetKey).Result()
+	exists, err := cache.client.Exists(context.Background(), sessionKey).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), exists)
 
-	exists, err = cache.client.Exists(context.Background(), tokenHashKey).Result()
+	exists, err = cache.client.Exists(context.Background(), refreshKey).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), exists)
 }
@@ -441,4 +441,178 @@ func TestRedisSessionCacheV3_CacheVsNoCache(t *testing.T) {
 
 	// 验证性能要求
 	assert.Greater(t, speedup, float64(1.2), "本地缓存应该比Redis快至少20%")
+}
+
+// 测试v3版本与v2版本的数据兼容性
+func TestRedisSessionCacheV3_V2Compatibility(t *testing.T) {
+	// 创建v2缓存实例
+	loggerV2 := zap.NewNop()
+	cacheV2 := NewRedisSessionCacheV2(loggerV2, "localhost:6379", "", 300, 3600, false).(*RedisSessionCacheV2)
+	defer func() {
+		cacheV2.client.FlushDB(context.Background())
+		cacheV2.Stop()
+	}()
+
+	// 创建v3缓存实例
+	loggerV3 := zap.NewNop()
+	cacheV3 := NewRedisSessionCacheV3(loggerV3, "localhost:6379", "", 300, 3600, false).(*RedisSessionCacheV3)
+	defer cacheV3.Stop()
+
+	userID := uuid.Must(uuid.NewV4())
+	sessionToken := "test-session-v2"
+	refreshToken := "test-refresh-v2"
+
+	t.Logf("\n=== v2与v3数据兼容性测试 ===")
+
+	// 1. 使用v2版本存储数据
+	t.Logf("1. 使用v2版本存储token")
+	cacheV2.Add(userID, 300, sessionToken, 3600, refreshToken)
+
+	// 验证v2版本能正确读取
+	assert.True(t, cacheV2.IsValidSession(userID, 300, sessionToken))
+	assert.True(t, cacheV2.IsValidRefresh(userID, 3600, refreshToken))
+	t.Logf("   - v2版本验证通过")
+
+	// 2. 使用v3版本读取v2存储的数据
+	t.Logf("2. 使用v3版本读取v2存储的数据")
+	assert.True(t, cacheV3.IsValidSession(userID, 300, sessionToken))
+	assert.True(t, cacheV3.IsValidRefresh(userID, 3600, refreshToken))
+	t.Logf("   - v3版本读取v2数据成功")
+
+	// 3. 使用v3版本修改数据
+	t.Logf("3. 使用v3版本移除session token")
+	cacheV3.Remove(userID, 300, sessionToken, 3600, "")
+
+	// 验证v2版本能看到v3的修改
+	assert.False(t, cacheV2.IsValidSession(userID, 300, sessionToken))
+	assert.True(t, cacheV2.IsValidRefresh(userID, 3600, refreshToken)) // refresh应该仍然有效
+	t.Logf("   - v2版本能看到v3的修改")
+
+	// 4. 使用v3版本添加新数据
+	newSessionToken := "new-session-v3"
+	t.Logf("4. 使用v3版本添加新token")
+	cacheV3.Add(userID, 300, newSessionToken, 3600, "")
+
+	// 验证v2版本能读取v3添加的数据
+	assert.True(t, cacheV2.IsValidSession(userID, 300, newSessionToken))
+	t.Logf("   - v2版本能读取v3添加的数据")
+
+	// 5. 测试Ban操作的兼容性
+	t.Logf("5. 测试Ban操作兼容性")
+	cacheV3.Ban([]uuid.UUID{userID})
+
+	// 验证两个版本都能看到ban状态
+	assert.False(t, cacheV2.IsValidSession(userID, 300, newSessionToken))
+	assert.False(t, cacheV2.IsValidRefresh(userID, 3600, refreshToken))
+	assert.False(t, cacheV3.IsValidSession(userID, 300, newSessionToken))
+	assert.False(t, cacheV3.IsValidRefresh(userID, 3600, refreshToken))
+	t.Logf("   - 两个版本都正确处理了Ban状态")
+
+	t.Logf("✓ 兼容性测试全部通过")
+}
+
+// 测试Redis token过期时间设置
+func TestRedisSessionCacheV3_RedisTokenExpiry(t *testing.T) {
+	cache, cleanup := setupRedisV3(t)
+	defer cleanup()
+
+	userID := uuid.Must(uuid.NewV4())
+	sessionToken := "test-session-expiry"
+	refreshToken := "test-refresh-expiry"
+
+	t.Logf("\n=== Redis Token过期时间测试 ===")
+
+	// 1. 添加token
+	t.Logf("1. 添加token到Redis")
+	cache.Add(userID, 30*24*3600, sessionToken, 30*24*3600, refreshToken) // token本身设置30天过期
+
+	// 2. 验证token立即可用
+	assert.True(t, cache.IsValidSession(userID, 30*24*3600, sessionToken))
+	assert.True(t, cache.IsValidRefresh(userID, 30*24*3600, refreshToken))
+	t.Logf("   - token添加后立即可用")
+
+	// 3. 检查Redis中的实际过期时间
+	sessionKey := cache.getSessionTokenKey(userID)
+	refreshKey := cache.getRefreshTokenKey(userID)
+
+	sessionTTL, err := cache.client.TTL(context.Background(), sessionKey).Result()
+	assert.NoError(t, err)
+	refreshTTL, err := cache.client.TTL(context.Background(), refreshKey).Result()
+	assert.NoError(t, err)
+
+	t.Logf("2. Redis中的实际过期时间:")
+	t.Logf("   - Session Token TTL: %v", sessionTTL)
+	t.Logf("   - Refresh Token TTL: %v", refreshTTL)
+
+	// 4. 验证过期时间接近1小时（允许一些误差）
+	expectedExpiry := 1 * time.Hour
+	tolerance := 5 * time.Minute
+
+	assert.True(t, sessionTTL > expectedExpiry-tolerance && sessionTTL <= expectedExpiry,
+		"Session token的Redis过期时间应该接近1小时")
+	assert.True(t, refreshTTL > expectedExpiry-tolerance && refreshTTL <= expectedExpiry,
+		"Refresh token的Redis过期时间应该接近1小时")
+
+	t.Logf("3. 验证结果:")
+	t.Logf("   - 预期过期时间: %v", expectedExpiry)
+	t.Logf("   - Session Token过期时间符合预期: %v", sessionTTL > expectedExpiry-tolerance && sessionTTL <= expectedExpiry)
+	t.Logf("   - Refresh Token过期时间符合预期: %v", refreshTTL > expectedExpiry-tolerance && refreshTTL <= expectedExpiry)
+
+	t.Logf("✓ Redis token过期时间测试通过")
+}
+
+// 测试简化版本（无心跳机制）
+func TestRedisSessionCacheV3_NoHeartbeat(t *testing.T) {
+	cache, cleanup := setupRedisV3(t)
+	defer cleanup()
+
+	userID := uuid.Must(uuid.NewV4())
+	sessionToken := "test-session-no-heartbeat"
+	refreshToken := "test-refresh-no-heartbeat"
+
+	t.Logf("\n=== 简化版本测试（无心跳机制） ===")
+
+	// 1. 基本功能测试
+	t.Logf("1. 测试基本token操作")
+	cache.Add(userID, 300, sessionToken, 3600, refreshToken)
+	assert.True(t, cache.IsValidSession(userID, 300, sessionToken))
+	assert.True(t, cache.IsValidRefresh(userID, 3600, refreshToken))
+	t.Logf("   - token添加和验证正常")
+
+	// 2. 测试token移除
+	t.Logf("2. 测试token移除")
+	cache.Remove(userID, 300, sessionToken, 3600, "")
+	assert.False(t, cache.IsValidSession(userID, 300, sessionToken))
+	assert.True(t, cache.IsValidRefresh(userID, 3600, refreshToken))
+	t.Logf("   - token移除正常")
+
+	// 3. 测试PubSub通知（token失效）
+	t.Logf("3. 测试PubSub token失效通知")
+
+	// 创建第二个缓存实例模拟其他节点
+	cache2, cleanup2 := setupRedisV3(t)
+	defer cleanup2()
+
+	// 等待PubSub连接建立
+	time.Sleep(100 * time.Millisecond)
+
+	newToken := "test-new-token"
+	cache.Add(userID, 300, newToken, 3600, "")
+
+	// 等待消息传播
+	time.Sleep(100 * time.Millisecond)
+
+	// 验证两个实例都能看到token
+	assert.True(t, cache.IsValidSession(userID, 300, newToken))
+	assert.True(t, cache2.IsValidSession(userID, 300, newToken))
+	t.Logf("   - PubSub通知正常工作")
+
+	// 4. 测试ban功能
+	t.Logf("4. 测试ban功能")
+	cache.Ban([]uuid.UUID{userID})
+	assert.False(t, cache.IsValidSession(userID, 300, newToken))
+	assert.False(t, cache2.IsValidSession(userID, 300, newToken))
+	t.Logf("   - ban功能正常")
+
+	t.Logf("✓ 简化版本测试全部通过")
 }

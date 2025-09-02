@@ -175,16 +175,16 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 
 	// 可选：最大值校验，防止溢出 金币钻石 10w 广告券 10
-	const maxAmount = 100000
+	const maxAmount = 1000000
 	if in.GetCoin() > maxAmount || in.GetGem() > maxAmount {
 		s.logger.Warn("钱包操作参数过大", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
 		return &game.WalletResponse{Code: 3, Msg: "数量过大"}, nil
 	}
 
-	if in.GetAd() > 10 {
-		s.logger.Warn("玩家作弊", zap.String("user_id", userID.String()), zap.Int32("ad", in.GetAd()))
-		return &game.WalletResponse{Code: 3, Msg: "作弊行为"}, nil
-	}
+	//if in.GetAd() > 1000 {
+	//	s.logger.Warn("玩家作弊", zap.String("user_id", userID.String()), zap.Int32("ad", in.GetAd()))
+	//	return &game.WalletResponse{Code: 3, Msg: "作弊行为"}, nil
+	//}
 
 	// 验证walletID是否为有效的UUID
 	walletId, err := uuid.FromString(in.GetWalletId())
@@ -260,11 +260,11 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 
 	result := results[0]
 	// 5. 作弊检测和处理
-	finalWalletData, isCheatDetected, err := s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
-	if err != nil {
-		s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(err))
-		// 不返回错误，继续正常流程
-	}
+	//finalWalletData, isCheatDetected, err := s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
+	//if err != nil {
+	//	s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(err))
+	//	// 不返回错误，继续正常流程
+	//}
 
 	previousWallet := &game.Wallet{
 		Coin: int32(result.Previous["coin"]),
@@ -274,29 +274,29 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 
 	// 使用最终的钱包数据（如果检测到作弊，使用清空后的数据）
 	updatedWallet := &game.Wallet{
-		Coin: int32(finalWalletData["coin"]),
-		Gem:  int32(finalWalletData["gem"]),
-		Ad:   int32(finalWalletData["ad"]),
+		Coin: int32(result.Updated["coin"]),
+		Gem:  int32(result.Updated["gem"]),
+		Ad:   int32(result.Updated["ad"]),
 	}
 
 	// 如果检测到作弊，记录日志
-	if isCheatDetected {
-		s.logger.Warn("钱包操作成功（检测到作弊并已处理）",
-			zap.String("user_id", userID.String()),
-			zap.String("username", username),
-			zap.Int64("coin", coinChange),
-			zap.Int64("gem", gemChange),
-			zap.Int64("ad", adChange),
-			zap.String("reason", reason))
-	} else {
-		s.logger.Info("钱包操作成功",
-			zap.String("user_id", userID.String()),
-			zap.String("username", username),
-			zap.Int64("coin", coinChange),
-			zap.Int64("gem", gemChange),
-			zap.Int64("ad", adChange),
-			zap.String("reason", reason))
-	}
+	//if isCheatDetected {
+	//	s.logger.Warn("钱包操作成功（检测到作弊并已处理）",
+	//		zap.String("user_id", userID.String()),
+	//		zap.String("username", username),
+	//		zap.Int64("coin", coinChange),
+	//		zap.Int64("gem", gemChange),
+	//		zap.Int64("ad", adChange),
+	//		zap.String("reason", reason))
+	//} else {
+	//	s.logger.Info("钱包操作成功",
+	//		zap.String("user_id", userID.String()),
+	//		zap.String("username", username),
+	//		zap.Int64("coin", coinChange),
+	//		zap.Int64("gem", gemChange),
+	//		zap.Int64("ad", adChange),
+	//		zap.String("reason", reason))
+	//}
 
 	return &game.WalletResponse{
 		Code:           0,

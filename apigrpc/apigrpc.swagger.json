@@ -1999,6 +1999,30 @@
         ]
       }
     },
+    "/v2/game/homelevel/reset": {
+      "get": {
+        "summary": "Reset home level data",
+        "operationId": "Nakama_ResetHomeLevelData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/homelevel/save": {
       "post": {
         "summary": "Save home level data",
@@ -6047,6 +6071,10 @@
           "type": "integer",
           "format": "int32",
           "description": "The write access permissions for the object."
+        },
+        "signature": {
+          "type": "string",
+          "title": "Signature"
         }
       },
       "description": "The object to store."
