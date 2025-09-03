@@ -51,6 +51,7 @@ import {NotificationsComponent, NotificationsResolver} from './account/notificat
 import {AnnouncementsComponent} from './announcements/announcements.component';
 import {SystemNotificationsComponent} from './system-notifications/system-notifications.component';
 import {PersonalNotificationsComponent} from './personal-notifications/personal-notifications.component';
+import {VipAccountsComponent, VipAccountsResolver} from './vip-accounts/vip-accounts.component';
 
 const routes: Routes = [
   {
@@ -107,7 +108,8 @@ const routes: Routes = [
       {path: 'settings/mfa', component: MfaSetupComponent, resolve: []},
       {path: 'announcements', component: AnnouncementsComponent},
       {path: 'system-notifications', component: SystemNotificationsComponent},
-      {path: 'personal-notifications', component: PersonalNotificationsComponent}
+      {path: 'personal-notifications', component: PersonalNotificationsComponent},
+      {path: 'vip-accounts', component: VipAccountsComponent, resolve: [VipAccountsResolver]}
     ]},
   {
     path: 'login', component: LoginComponent, canActivate: [LoginGuard],

@@ -62,6 +62,7 @@ export class BaseComponent implements OnInit, OnDestroy {
     {navItem: 'announcements', routerLink: ['/announcements'], label: 'Announcements', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'announcement', group: 'accounts'},
     {navItem: 'system-notifications', routerLink: ['/system-notifications'], label: 'SystemNotice', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'system-notifications', group: 'accounts'},
     {navItem: 'personal-notifications', routerLink: ['/personal-notifications'], label: 'PersonalNotice', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'gift', group: 'accounts'},
+    {navItem: 'vip-accounts', routerLink: ['/vip-accounts'], label: 'VIP管理', minRole: UserRole.USER_ROLE_READONLY, icon: 'vip', group: 'accounts'},
     {navItem: 'purchases', routerLink: ['/purchases'], label: 'Purchases', minRole: UserRole.USER_ROLE_READONLY, icon: 'purchases', group: 'accounts'},
     {navItem: 'subscriptions', routerLink: ['/subscriptions'], label: 'Subscriptions', minRole: UserRole.USER_ROLE_READONLY, icon: 'subscriptions', group: 'accounts'},
     {navItem: 'matches', routerLink: ['/matches'], label: 'Matches', minRole: UserRole.USER_ROLE_READONLY, icon: 'running-matches', group: 'accounts'},

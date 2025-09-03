@@ -110,13 +110,13 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 			return nil, status.Error(codes.InvalidArgument, "个人类型必须指定目标用户")
 		}
 
-		userIDs, err := fetchUserID(ctx, s.db, in.GetTarget())
+		userMap, err := fetchUserIDsByUsernames(ctx, s.db, in.GetTarget())
 		if err != nil {
 			s.logger.Error("获取用户ID失败", zap.Error(err))
 			return nil, status.Error(codes.Internal, "获取用户ID失败")
 		}
 
-		if len(userIDs) == 0 {
+		if len(userMap) == 0 {
 			return nil, status.Error(codes.InvalidArgument, "未找到有效的用户")
 		}
 
@@ -130,14 +130,14 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 		notifications := make(map[uuid.UUID][]*api.Notification)
 		successUserIDs := make([]string, 0)
 
-		for _, id := range userIDs {
-			uid := uuid.FromStringOrNil(id)
-			if uid == uuid.Nil {
-				// 跳过无效的用户ID
+		// 处理每个用户名
+		for _, username := range in.GetTarget() {
+			userInfo, exists := userMap[username]
+			if !exists {
+				// 用户名不存在
 				continue
 			}
-
-			notifications[uid] = []*api.Notification{{
+			notifications[userInfo.UserID] = []*api.Notification{{
 				Id:         uuid.Must(uuid.NewV4()).String(),
 				Subject:    notice.GetSubject(),
 				Content:    string(contentJson),
@@ -145,7 +145,7 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 				Code:       0,
 				Persistent: true,
 			}}
-			successUserIDs = append(successUserIDs, id)
+			successUserIDs = append(successUserIDs, userInfo.Username)
 		}
 
 		if len(notifications) == 0 {
@@ -166,7 +166,6 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 				// 不阻止通知发送，只记录错误
 			}
 		}
-
 		// 个人类型不返回系统通知，因为直接发送了
 		return nil, nil
 	}

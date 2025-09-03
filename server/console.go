@@ -155,6 +155,15 @@ var restrictedMethods = map[string]console.UserRole{
 	"/nakama.console.Console/DeleteSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
 	"/nakama.console.Console/GetSystemNotification":    console.UserRole_USER_ROLE_READONLY,
 	"/nakama.console.Console/ListSystemNotifications":  console.UserRole_USER_ROLE_READONLY,
+
+	// Personal Notification Logs
+	"/nakama.console.Console/ListPersonalNotificationLogs": console.UserRole_USER_ROLE_READONLY,
+
+	// VIP Management
+	"/nakama.console.Console/AddVipAccount":    console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/ListVipAccounts":  console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/RemoveVipAccount": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/CheckVipStatus":   console.UserRole_USER_ROLE_READONLY,
 }
 
 type ctxConsoleIdKey struct{}

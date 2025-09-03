@@ -208,6 +208,29 @@ service Console {
     option (google.api.http).get = "/v2/console/personal-notification-logs";
   }
 
+  // Add VIP account
+  rpc AddVipAccount (AddVipAccountRequest) returns (AddVipAccountResponse) {
+    option (google.api.http) = {
+      post: "/v2/console/vip/account",
+      body: "*"
+    };
+  }
+
+  // List VIP accounts
+  rpc ListVipAccounts (ListVipAccountsRequest) returns (VipAccountList) {
+    option (google.api.http).get = "/v2/console/vip/accounts";
+  }
+
+  // Remove VIP account (set as expired)
+  rpc RemoveVipAccount (VipAccountId) returns (google.protobuf.Empty) {
+    option (google.api.http).delete = "/v2/console/vip/account/{user_id}";
+  }
+
+  // Check if user is VIP
+  rpc CheckVipStatus (VipAccountId) returns (VipStatusResponse) {
+    option (google.api.http).get = "/v2/console/vip/status/{user_id}";
+  }
+
   // Delete (non-recorded) all user accounts.
   rpc DeleteAccounts (google.protobuf.Empty) returns (google.protobuf.Empty) {
     option (google.api.http).delete = "/v2/console/account";
@@ -1561,4 +1584,79 @@ message ListPersonalNotificationLogResponse {
   string prev_cursor = 3;
   // Total count
   int32 total_count = 4;
+}
+
+// VIP account message definition
+message VipAccount {
+  // VIP account ID
+  string id = 1;
+  // User ID
+  string user_id = 2;
+  // Username
+  string username = 3;
+  // Creation time
+  google.protobuf.Timestamp create_time = 4;
+  // Expiry time
+  google.protobuf.Timestamp expire_time = 5;
+  // Is VIP active
+  bool is_active = 6;
+}
+
+message AddVipAccountRequest {
+  // Usernames to add VIP
+  repeated string usernames = 1;
+  // Custom expiry time (optional, if not provided, will be set to current time + 1 year)
+  google.protobuf.Timestamp expire_time = 2;
+}
+
+message AddVipAccountResponse {
+  // Successfully added VIP accounts
+  repeated VipAccount success_accounts = 1;
+  // Failed username mappings
+  repeated VipAccountError failed_accounts = 2;
+  // Summary
+  int32 total_count = 3;
+  int32 success_count = 4;
+  int32 failed_count = 5;
+}
+
+message VipAccountError {
+  // Username that failed
+  string username = 1;
+  // Error message
+  string error_message = 2;
+  // Error code
+  string error_code = 3;
+}
+
+message ListVipAccountsRequest {
+  // Filter condition
+  string filter = 1;
+  // Cursor
+  string cursor = 2;
+  // Items per page
+  int32 limit = 3;
+}
+
+message VipAccountList {
+  // VIP account list
+  repeated VipAccount accounts = 1;
+  // Next page cursor
+  string next_cursor = 2;
+  // Previous page cursor
+  string prev_cursor = 3;
+  // Total count
+  int32 total_count = 4;
+}
+
+message VipAccountId {
+  // User ID
+  string user_id = 1;
+}
+
+message VipStatusResponse {
+  // Is VIP active
+  bool is_vip = 1;
+  // VIP account info (if exists)
+  VipAccount vip_account = 2;
 }

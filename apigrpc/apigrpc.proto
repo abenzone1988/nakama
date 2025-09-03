@@ -903,5 +903,10 @@ service Nakama {
   rpc GetChallengeTopStats(google.protobuf.Empty) returns (game.GetChallengeTopStatsResponse) {
     option (google.api.http).get = "/v2/game/challenges/top-three-stats";
   }
+
+  // Check if current user is VIP
+  rpc CheckVipStatus(google.protobuf.Empty) returns (game.CheckVipStatusResponse) {
+    option (google.api.http).get = "/v2/user/vip/status";
+  }
 }
 

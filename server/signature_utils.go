@@ -289,3 +289,12 @@ func GenerateStorageSignature(collection, key, value, userID string) (string, er
 	}
 	return generateSignature(data, DefaultSignatureConfig.SecretKey)
 }
+
+// GenerateVipSignature 生成VIP操作签名
+func GenerateVipSignature(userID string, isVip bool) (string, error) {
+	data := map[string]interface{}{
+		"user_id": userID,
+		"is_vip":  isVip,
+	}
+	return generateSignature(data, DefaultSignatureConfig.SecretKey)
+}

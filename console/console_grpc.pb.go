@@ -58,6 +58,10 @@ const (
 	Console_GetChallengeTemplate_FullMethodName         = "/nakama.console.Console/GetChallengeTemplate"
 	Console_GetAllChallengeTemplates_FullMethodName     = "/nakama.console.Console/GetAllChallengeTemplates"
 	Console_ListPersonalNotificationLogs_FullMethodName = "/nakama.console.Console/ListPersonalNotificationLogs"
+	Console_AddVipAccount_FullMethodName                = "/nakama.console.Console/AddVipAccount"
+	Console_ListVipAccounts_FullMethodName              = "/nakama.console.Console/ListVipAccounts"
+	Console_RemoveVipAccount_FullMethodName             = "/nakama.console.Console/RemoveVipAccount"
+	Console_CheckVipStatus_FullMethodName               = "/nakama.console.Console/CheckVipStatus"
 	Console_DeleteAccounts_FullMethodName               = "/nakama.console.Console/DeleteAccounts"
 	Console_DeleteLeaderboard_FullMethodName            = "/nakama.console.Console/DeleteLeaderboard"
 	Console_DeleteLeaderboardRecord_FullMethodName      = "/nakama.console.Console/DeleteLeaderboardRecord"
@@ -168,6 +172,14 @@ type ConsoleClient interface {
 	GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error)
 	// Get personal notification logs
 	ListPersonalNotificationLogs(ctx context.Context, in *ListPersonalNotificationLogRequest, opts ...grpc.CallOption) (*ListPersonalNotificationLogResponse, error)
+	// Add VIP account
+	AddVipAccount(ctx context.Context, in *AddVipAccountRequest, opts ...grpc.CallOption) (*AddVipAccountResponse, error)
+	// List VIP accounts
+	ListVipAccounts(ctx context.Context, in *ListVipAccountsRequest, opts ...grpc.CallOption) (*VipAccountList, error)
+	// Remove VIP account (set as expired)
+	RemoveVipAccount(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Check if user is VIP
+	CheckVipStatus(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*VipStatusResponse, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -480,6 +492,42 @@ func (c *consoleClient) GetAllChallengeTemplates(ctx context.Context, in *emptyp
 func (c *consoleClient) ListPersonalNotificationLogs(ctx context.Context, in *ListPersonalNotificationLogRequest, opts ...grpc.CallOption) (*ListPersonalNotificationLogResponse, error) {
 	out := new(ListPersonalNotificationLogResponse)
 	err := c.cc.Invoke(ctx, Console_ListPersonalNotificationLogs_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) AddVipAccount(ctx context.Context, in *AddVipAccountRequest, opts ...grpc.CallOption) (*AddVipAccountResponse, error) {
+	out := new(AddVipAccountResponse)
+	err := c.cc.Invoke(ctx, Console_AddVipAccount_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ListVipAccounts(ctx context.Context, in *ListVipAccountsRequest, opts ...grpc.CallOption) (*VipAccountList, error) {
+	out := new(VipAccountList)
+	err := c.cc.Invoke(ctx, Console_ListVipAccounts_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) RemoveVipAccount(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_RemoveVipAccount_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) CheckVipStatus(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*VipStatusResponse, error) {
+	out := new(VipStatusResponse)
+	err := c.cc.Invoke(ctx, Console_CheckVipStatus_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1106,6 +1154,14 @@ type ConsoleServer interface {
 	GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error)
 	// Get personal notification logs
 	ListPersonalNotificationLogs(context.Context, *ListPersonalNotificationLogRequest) (*ListPersonalNotificationLogResponse, error)
+	// Add VIP account
+	AddVipAccount(context.Context, *AddVipAccountRequest) (*AddVipAccountResponse, error)
+	// List VIP accounts
+	ListVipAccounts(context.Context, *ListVipAccountsRequest) (*VipAccountList, error)
+	// Remove VIP account (set as expired)
+	RemoveVipAccount(context.Context, *VipAccountId) (*emptypb.Empty, error)
+	// Check if user is VIP
+	CheckVipStatus(context.Context, *VipAccountId) (*VipStatusResponse, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -1300,6 +1356,18 @@ func (UnimplementedConsoleServer) GetAllChallengeTemplates(context.Context, *emp
 }
 func (UnimplementedConsoleServer) ListPersonalNotificationLogs(context.Context, *ListPersonalNotificationLogRequest) (*ListPersonalNotificationLogResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPersonalNotificationLogs not implemented")
+}
+func (UnimplementedConsoleServer) AddVipAccount(context.Context, *AddVipAccountRequest) (*AddVipAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddVipAccount not implemented")
+}
+func (UnimplementedConsoleServer) ListVipAccounts(context.Context, *ListVipAccountsRequest) (*VipAccountList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListVipAccounts not implemented")
+}
+func (UnimplementedConsoleServer) RemoveVipAccount(context.Context, *VipAccountId) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveVipAccount not implemented")
+}
+func (UnimplementedConsoleServer) CheckVipStatus(context.Context, *VipAccountId) (*VipStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckVipStatus not implemented")
 }
 func (UnimplementedConsoleServer) DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccounts not implemented")
@@ -1862,6 +1930,78 @@ func _Console_ListPersonalNotificationLogs_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).ListPersonalNotificationLogs(ctx, req.(*ListPersonalNotificationLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_AddVipAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddVipAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).AddVipAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_AddVipAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).AddVipAccount(ctx, req.(*AddVipAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ListVipAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVipAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListVipAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListVipAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListVipAccounts(ctx, req.(*ListVipAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_RemoveVipAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VipAccountId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).RemoveVipAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_RemoveVipAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).RemoveVipAccount(ctx, req.(*VipAccountId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_CheckVipStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VipAccountId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CheckVipStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CheckVipStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CheckVipStatus(ctx, req.(*VipAccountId))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3104,6 +3244,22 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPersonalNotificationLogs",
 			Handler:    _Console_ListPersonalNotificationLogs_Handler,
+		},
+		{
+			MethodName: "AddVipAccount",
+			Handler:    _Console_AddVipAccount_Handler,
+		},
+		{
+			MethodName: "ListVipAccounts",
+			Handler:    _Console_ListVipAccounts_Handler,
+		},
+		{
+			MethodName: "RemoveVipAccount",
+			Handler:    _Console_RemoveVipAccount_Handler,
+		},
+		{
+			MethodName: "CheckVipStatus",
+			Handler:    _Console_CheckVipStatus_Handler,
 		},
 		{
 			MethodName: "DeleteAccounts",

@@ -65,6 +65,24 @@ export interface AddUserRequest {
   username?:string
 }
 
+export interface AddVipAccountRequest {
+  // Custom expiry time (optional, if not provided, will be set to current time + 1 year)
+  expire_time?:string
+  // Usernames to add VIP
+  usernames?:Array<string>
+}
+
+export interface AddVipAccountResponse {
+  // Failed username mappings
+  failed_accounts?:Array<VipAccountError>
+  failed_count?:number
+  // Successfully added VIP accounts
+  success_accounts?:Array<VipAccount>
+  success_count?:number
+  // Summary
+  total_count?:number
+}
+
 export interface Announcement {
   // Announcement content
   content?:string
@@ -654,6 +672,48 @@ export enum UserRole {
   USER_ROLE_DEVELOPER = 2,
   USER_ROLE_MAINTAINER = 3,
   USER_ROLE_READONLY = 4,
+}
+
+export interface VipAccount {
+  // Creation time
+  create_time?:string
+  // Expiry time
+  expire_time?:string
+  // VIP account ID
+  id?:string
+  // Is VIP active
+  is_active?:boolean
+  // User ID
+  user_id?:string
+  // Username
+  username?:string
+}
+
+export interface VipAccountError {
+  // Error code
+  error_code?:string
+  // Error message
+  error_message?:string
+  // Username that failed
+  username?:string
+}
+
+export interface VipAccountList {
+  // VIP account list
+  accounts?:Array<VipAccount>
+  // Next page cursor
+  next_cursor?:string
+  // Previous page cursor
+  prev_cursor?:string
+  // Total count
+  total_count?:number
+}
+
+export interface VipStatusResponse {
+  // Is VIP active
+  is_vip?:boolean
+  // VIP account info (if exists)
+  vip_account?:VipAccount
 }
 
 /** An individual update to a user's wallet. */
@@ -1958,6 +2018,45 @@ export class ConsoleService {
     const urlPath = `/v2/console/user/${encodedUsername}/mfa/reset`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
     return this.httpClient.post(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Add VIP account */
+  addVipAccount(auth_token: string, body: AddVipAccountRequest): Observable<AddVipAccountResponse> {
+    const urlPath = `/v2/console/vip/account`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.post<AddVipAccountResponse>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Remove VIP account (set as expired) */
+  removeVipAccount(auth_token: string, user_id: string): Observable<any> {
+    const encodedUser_id = encodeURIComponent(String(user_id))
+    const urlPath = `/v2/console/vip/account/${encodedUser_id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** List VIP accounts */
+  listVipAccounts(auth_token: string, filter?: string, cursor?: string, limit?: number): Observable<VipAccountList> {
+    const urlPath = `/v2/console/vip/accounts`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    if (filter) {
+      params = params.set('filter', filter);
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    if (limit) {
+      params = params.set('limit', String(limit));
+    }
+    return this.httpClient.get<VipAccountList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Check if user is VIP */
+  checkVipStatus(auth_token: string, user_id: string): Observable<VipStatusResponse> {
+    const encodedUser_id = encodeURIComponent(String(user_id))
+    const urlPath = `/v2/console/vip/status/${encodedUser_id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.get<VipStatusResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   private getTokenAuthHeaders(token: string): HttpHeaders {

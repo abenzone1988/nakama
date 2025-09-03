@@ -4219,6 +4219,29 @@
         ]
       }
     },
+    "/v2/user/vip/status": {
+      "get": {
+        "summary": "Check if current user is VIP",
+        "operationId": "Nakama_CheckVipStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameCheckVipStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/user/{userId}/group": {
       "get": {
         "summary": "List groups the current user belongs to.",
@@ -6164,6 +6187,20 @@
           "title": "玩家当前参与的竞标赛ID，如果为空表示未参与"
         }
       }
+    },
+    "gameCheckVipStatusResponse": {
+      "type": "object",
+      "properties": {
+        "isVip": {
+          "type": "boolean",
+          "title": "Is user VIP"
+        },
+        "signature": {
+          "type": "string",
+          "title": "Signature"
+        }
+      },
+      "title": "VIP status response"
     },
     "gameClaimInviteRewardRequest": {
       "type": "object",

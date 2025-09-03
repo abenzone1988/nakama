@@ -18,13 +18,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
-
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"strings"
 )
 
 func GetUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, ids, usernames, fbIDs []string) (*api.Users, error) {
@@ -290,19 +289,55 @@ func fetchUserID(ctx context.Context, db *sql.DB, usernames []string) ([]string,
 	return ids, nil
 }
 
-// IsUserInactive 检查用户是否超过指定天数未登录
-func IsUserInactive(ctx context.Context, db *sql.DB, userID uuid.UUID, days int) (bool, error) {
-	var updateTime pgtype.Timestamptz
-	query := "SELECT update_time FROM users WHERE id = $1"
+// UserInfo 用户信息结构
+type UserInfo struct {
+	UserID   uuid.UUID
+	Username string
+}
 
-	err := db.QueryRowContext(ctx, query, userID).Scan(&updateTime)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, err
+func fetchUserIDsByUsernames(ctx context.Context, db *sql.DB, usernames []string) (map[string]UserInfo, error) {
+	if len(usernames) == 0 {
+		return make(map[string]UserInfo), nil
 	}
 
-	inactiveThreshold := time.Now().AddDate(0, 0, -days)
-	return updateTime.Time.Before(inactiveThreshold), nil
+	// 构建IN查询的占位符
+	placeholders := make([]string, len(usernames))
+	args := make([]interface{}, len(usernames))
+	for i, username := range usernames {
+		placeholders[i] = "$" + fmt.Sprintf("%d", i+1)
+		args[i] = username
+	}
+
+	query := fmt.Sprintf("SELECT id, username FROM users WHERE username IN (%s)",
+		strings.Join(placeholders, ","))
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	userMap := make(map[string]UserInfo)
+	for rows.Next() {
+		var userIDStr, username string
+		if err := rows.Scan(&userIDStr, &username); err != nil {
+			return nil, err
+		}
+
+		userID, err := uuid.FromString(userIDStr)
+		if err != nil {
+			return nil, err
+		}
+
+		userMap[username] = UserInfo{
+			UserID:   userID,
+			Username: username,
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return userMap, nil
 }

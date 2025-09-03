@@ -301,3 +301,11 @@ message GetChallengeTopStatsResponse {
   string msg = 2;                // 响应消息
   TopThreeStats stats = 3;       // 前三名统计数据
 }
+
+// VIP status response
+message CheckVipStatusResponse {
+  // Is user VIP
+  bool is_vip = 1;
+  // Signature
+  string signature = 2;
+}
