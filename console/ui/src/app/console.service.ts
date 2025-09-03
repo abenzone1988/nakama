@@ -321,6 +321,17 @@ export enum ListChannelMessagesRequestType {
   DIRECT = 3,
 }
 
+export interface ListPersonalNotificationLogResponse {
+  // Log list
+  logs?:Array<PersonalNotificationLog>
+  // Next page cursor
+  next_cursor?:string
+  // Previous page cursor
+  prev_cursor?:string
+  // Total count
+  total_count?:number
+}
+
 export interface ListSystemNoticeResponse {
   // Next page cursor
   next_cursor?:string
@@ -390,6 +401,23 @@ export interface NotificationList {
   notifications?:Array<Notification>
   // Previous page cursor if any.
   prev_cursor?:string
+}
+
+export interface PersonalNotificationLog {
+  // Notification content
+  content?:NoticeContent
+  // Log ID
+  id?:string
+  // Notification count
+  notification_count?:number
+  // Send time
+  send_time?:string
+  // Sender Name
+  sender?:string
+  // Notification subject
+  subject?:string
+  // Target ids
+  target_ids?:string
 }
 
 export interface RequireUserMfaRequest {
@@ -1676,6 +1704,28 @@ export class ConsoleService {
     const urlPath = `/v2/console/notification/${encodedId}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
     return this.httpClient.get<Notification>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Get personal notification logs */
+  listPersonalNotificationLogs(auth_token: string, filter?: string, date_from?: string, date_to?: string, cursor?: string, limit?: number): Observable<ListPersonalNotificationLogResponse> {
+    const urlPath = `/v2/console/personal-notification-logs`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    if (filter) {
+      params = params.set('filter', filter);
+    }
+    if (date_from) {
+      params = params.set('date_from', date_from);
+    }
+    if (date_to) {
+      params = params.set('date_to', date_to);
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    if (limit) {
+      params = params.set('limit', String(limit));
+    }
+    return this.httpClient.get<ListPersonalNotificationLogResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   /** List validated purchases */

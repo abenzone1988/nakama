@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"time"
@@ -651,4 +652,164 @@ func QuerySystemNotifications(ctx context.Context, db *sql.DB, logger *zap.Logge
 	}
 
 	return notifications, nil
+}
+
+// PersonalNotificationLogCreate 创建个人通知发送日志
+func PersonalNotificationLogCreate(ctx context.Context, db *sql.DB, logger *zap.Logger, logID, subject, content string, targetUserIds []string, sender string) error {
+	query := `
+		INSERT INTO personal_notification_log (
+			id,
+			subject,
+			content,
+			target_ids,
+			sender,
+			notification_count
+		) VALUES ($1, $2, $3, $4, $5, $6)
+	`
+
+	_, err := db.ExecContext(ctx, query, logID, subject, content, targetUserIds, sender, len(targetUserIds))
+	if err != nil {
+		logger.Error("创建个人通知日志失败", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// PersonalNotificationLogList 获取个人通知日志列表
+func PersonalNotificationLogList(ctx context.Context, db *sql.DB, logger *zap.Logger, limit int, cursor string, filter, dateFrom, dateTo string) (*console.ListPersonalNotificationLogResponse, error) {
+	// 构建查询条件
+	whereClause := "WHERE 1=1"
+	args := []interface{}{}
+	argIndex := 1
+
+	if filter != "" {
+		whereClause += " AND (subject ILIKE $1 OR content::text ILIKE $1)"
+		args = append(args, "%"+filter+"%")
+		argIndex++
+	}
+
+	if dateFrom != "" {
+		whereClause += fmt.Sprintf(" AND send_time >= $%d", argIndex)
+		args = append(args, dateFrom)
+		argIndex++
+	}
+
+	if dateTo != "" {
+		whereClause += fmt.Sprintf(" AND send_time <= $%d", argIndex)
+		args = append(args, dateTo)
+		argIndex++
+	}
+
+	if cursor != "" {
+		whereClause += fmt.Sprintf(" AND send_time < (SELECT send_time FROM personal_notification_log WHERE id = $%d)", argIndex)
+		args = append(args, cursor)
+		argIndex++
+	}
+
+	// 查询总数 (不包含分页限制)
+	countQuery := "SELECT COUNT(*) FROM personal_notification_log " + whereClause
+	var totalCount int64
+	err := db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount)
+	if err != nil {
+		logger.Error("查询个人通知日志总数失败", zap.Error(err))
+		return nil, err
+	}
+
+	// 添加分页限制
+	limitClause := fmt.Sprintf(" LIMIT $%d", argIndex)
+	args = append(args, limit+1) // 多查询一条用于判断是否有下一页
+
+	// 查询数据
+	query := `
+		SELECT
+			id,
+			subject,
+			content,
+			target_ids,
+			sender,
+			send_time,
+			notification_count
+		FROM personal_notification_log
+		` + whereClause + `
+		ORDER BY send_time DESC
+		` + limitClause
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		logger.Error("查询个人通知日志失败", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	logs := make([]*console.PersonalNotificationLog, 0, limit)
+	var nextCursor string
+
+	for rows.Next() {
+		var (
+			id                string
+			subject           string
+			contentStr        string
+			targetIds         string
+			sender            string
+			sendTime          pgtype.Timestamptz
+			notificationCount int
+		)
+
+		if err := rows.Scan(&id, &subject, &contentStr, &targetIds, &sender, &sendTime, &notificationCount); err != nil {
+			logger.Error("扫描个人通知日志数据失败", zap.Error(err))
+			continue
+		}
+
+		// 如果已经获取了足够的记录，设置下一页cursor并退出
+		if len(logs) >= limit {
+			nextCursor = id
+			break
+		}
+
+		var content console.NoticeContent
+		if err := json.Unmarshal([]byte(contentStr), &content); err != nil {
+			logger.Error("解析通知内容失败", zap.Error(err))
+			return nil, err
+		}
+
+		log := &console.PersonalNotificationLog{
+			Id:                id,
+			Subject:           subject,
+			Content:           &content,
+			TargetIds:         targetIds,
+			Sender:            sender,
+			SendTime:          timestamppb.New(sendTime.Time),
+			NotificationCount: int32(notificationCount),
+		}
+
+		logs = append(logs, log)
+	}
+
+	if err = rows.Err(); err != nil {
+		logger.Error("遍历个人通知日志数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	// 计算上一页的cursor
+	var prevCursor string
+	if cursor != "" {
+		prevQuery := `
+			SELECT id FROM personal_notification_log
+			WHERE send_time > (SELECT send_time FROM personal_notification_log WHERE id = $1)
+			ORDER BY send_time ASC
+			LIMIT 1
+		`
+		err := db.QueryRowContext(ctx, prevQuery, cursor).Scan(&prevCursor)
+		if err != nil && err != sql.ErrNoRows {
+			logger.Error("查询上一页cursor失败", zap.Error(err))
+		}
+	}
+
+	return &console.ListPersonalNotificationLogResponse{
+		Logs:       logs,
+		TotalCount: int32(totalCount),
+		NextCursor: nextCursor,
+		PrevCursor: prevCursor,
+	}, nil
 }

@@ -2406,6 +2406,67 @@
         ]
       }
     },
+    "/v2/console/personal-notification-logs": {
+      "get": {
+        "summary": "Get personal notification logs",
+        "operationId": "Console_ListPersonalNotificationLogs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleListPersonalNotificationLogResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "filter",
+            "description": "Filter condition",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "date_from",
+            "description": "Date from",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "date_to",
+            "description": "Date to",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "description": "Cursor",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "Items per page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/purchase": {
       "get": {
         "summary": "List validated purchases",
@@ -4453,6 +4514,32 @@
       ],
       "default": "UNKNOWN"
     },
+    "consoleListPersonalNotificationLogResponse": {
+      "type": "object",
+      "properties": {
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/consolePersonalNotificationLog"
+          },
+          "title": "Log list"
+        },
+        "next_cursor": {
+          "type": "string",
+          "title": "Next page cursor"
+        },
+        "prev_cursor": {
+          "type": "string",
+          "title": "Previous page cursor"
+        },
+        "total_count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Total count"
+        }
+      }
+    },
     "consoleListSystemNoticeResponse": {
       "type": "object",
       "properties": {
@@ -4531,6 +4618,42 @@
           "title": "Reward items"
         }
       }
+    },
+    "consolePersonalNotificationLog": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "Log ID"
+        },
+        "subject": {
+          "type": "string",
+          "title": "Notification subject"
+        },
+        "content": {
+          "$ref": "#/definitions/consoleNoticeContent",
+          "title": "Notification content"
+        },
+        "target_ids": {
+          "type": "string",
+          "title": "Target ids"
+        },
+        "sender": {
+          "type": "string",
+          "title": "Sender Name"
+        },
+        "send_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Send time"
+        },
+        "notification_count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Notification count"
+        }
+      },
+      "title": "Personal notification log message definition"
     },
     "consoleRuntimeInfo": {
       "type": "object",

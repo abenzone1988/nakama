@@ -203,6 +203,11 @@ service Console {
     option (google.api.http).get = "/v2/console/template/challenges";
   }
 
+  // Get personal notification logs
+  rpc ListPersonalNotificationLogs (ListPersonalNotificationLogRequest) returns (ListPersonalNotificationLogResponse) {
+    option (google.api.http).get = "/v2/console/personal-notification-logs";
+  }
+
   // Delete (non-recorded) all user accounts.
   rpc DeleteAccounts (google.protobuf.Empty) returns (google.protobuf.Empty) {
     option (google.api.http).delete = "/v2/console/account";
@@ -1514,4 +1519,46 @@ message ChallengeTemplate {
 message GetAllChallengeTemplatesResponse {
   // Challenge template list
   repeated ChallengeTemplate templates = 1;
+}
+
+// Personal notification log message definition
+message PersonalNotificationLog {
+  // Log ID
+  string id = 1;
+  // Notification subject
+  string subject = 2;
+  // Notification content
+  NoticeContent content = 3;
+  // Target ids
+  string target_ids = 4;
+  // Sender Name
+  string sender = 5;
+  // Send time
+  google.protobuf.Timestamp send_time = 6;
+  // Notification count
+  int32 notification_count = 7;
+}
+
+message ListPersonalNotificationLogRequest {
+  // Filter condition
+  string filter = 1;
+  // Date from
+  string date_from = 2;
+  // Date to
+  string date_to = 3;
+  // Cursor
+  string cursor = 4;
+  // Items per page
+  int32 limit = 5;
+}
+
+message ListPersonalNotificationLogResponse {
+  // Log list
+  repeated PersonalNotificationLog logs = 1;
+  // Next page cursor
+  string next_cursor = 2;
+  // Previous page cursor
+  string prev_cursor = 3;
+  // Total count
+  int32 total_count = 4;
 }

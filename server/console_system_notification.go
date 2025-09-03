@@ -17,6 +17,8 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/console"
@@ -25,7 +27,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"time"
 )
 
 func (s *ConsoleServer) ListSystemNotifications(ctx context.Context, in *console.ListSystemNoticeRequest) (*console.ListSystemNoticeResponse, error) {
@@ -119,9 +120,23 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 			return nil, status.Error(codes.InvalidArgument, "未找到有效的用户")
 		}
 
+		// 获取当前管理员信息
+		adminUsername, ok := ctx.Value(ctxConsoleUsernameKey{}).(string)
+		s.logger.Info("adminUsername", zap.String("adminUsername", adminUsername))
+		if !ok || adminUsername == "" {
+			adminUsername = "admin"
+		}
+
 		notifications := make(map[uuid.UUID][]*api.Notification)
+		successUserIDs := make([]string, 0)
+
 		for _, id := range userIDs {
 			uid := uuid.FromStringOrNil(id)
+			if uid == uuid.Nil {
+				// 跳过无效的用户ID
+				continue
+			}
+
 			notifications[uid] = []*api.Notification{{
 				Id:         uuid.Must(uuid.NewV4()).String(),
 				Subject:    notice.GetSubject(),
@@ -130,12 +145,28 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 				Code:       0,
 				Persistent: true,
 			}}
+			successUserIDs = append(successUserIDs, id)
+		}
+
+		if len(notifications) == 0 {
+			return nil, status.Error(codes.InvalidArgument, "没有有效的用户ID")
 		}
 
 		if err := NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications); err != nil {
 			s.logger.Error("发送个人通知失败", zap.Error(err))
 			return nil, status.Error(codes.Internal, "发送个人通知失败")
 		}
+
+		// 记录成功发送的日志
+		if len(successUserIDs) > 0 {
+			logID := uuid.Must(uuid.NewV4())
+			err = PersonalNotificationLogCreate(ctx, s.db, s.logger, logID.String(), notice.GetSubject(), string(contentJson), successUserIDs, adminUsername)
+			if err != nil {
+				s.logger.Error("创建个人通知日志失败", zap.Error(err))
+				// 不阻止通知发送，只记录错误
+			}
+		}
+
 		// 个人类型不返回系统通知，因为直接发送了
 		return nil, nil
 	}
@@ -208,4 +239,19 @@ func (s *ConsoleServer) GetSystemNotification(ctx context.Context, in *console.S
 	}
 
 	return notification, nil
+}
+
+func (s *ConsoleServer) ListPersonalNotificationLogs(ctx context.Context, in *console.ListPersonalNotificationLogRequest) (*console.ListPersonalNotificationLogResponse, error) {
+	// 参数验证
+	if in.Limit <= 0 || in.Limit > 100 {
+		in.Limit = 100
+	}
+
+	logs, err := PersonalNotificationLogList(ctx, s.db, s.logger, int(in.Limit), in.Cursor, in.Filter, in.DateFrom, in.DateTo)
+	if err != nil {
+		s.logger.Error("获取个人通知日志失败", zap.Error(err))
+		return nil, status.Error(codes.Internal, "获取个人通知日志失败")
+	}
+
+	return logs, nil
 }

@@ -50,6 +50,7 @@ import {NotificationsListComponent} from './notifications/notifications-list.com
 import {NotificationsComponent, NotificationsResolver} from './account/notifications/notifications.component';
 import {AnnouncementsComponent} from './announcements/announcements.component';
 import {SystemNotificationsComponent} from './system-notifications/system-notifications.component';
+import {PersonalNotificationsComponent} from './personal-notifications/personal-notifications.component';
 
 const routes: Routes = [
   {
@@ -105,7 +106,8 @@ const routes: Routes = [
       {path: 'subscriptions', component: SubscriptionsListComponent, resolve: [SubscriptionsResolver]},
       {path: 'settings/mfa', component: MfaSetupComponent, resolve: []},
       {path: 'announcements', component: AnnouncementsComponent},
-      {path: 'system-notifications', component: SystemNotificationsComponent}
+      {path: 'system-notifications', component: SystemNotificationsComponent},
+      {path: 'personal-notifications', component: PersonalNotificationsComponent}
     ]},
   {
     path: 'login', component: LoginComponent, canActivate: [LoginGuard],

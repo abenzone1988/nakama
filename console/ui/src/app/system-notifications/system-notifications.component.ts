@@ -19,6 +19,7 @@ import {
   SystemNotice,
   ListSystemNoticeResponse, CreateSystemNotificationRequest, GameItem, NoticeContent, UserRole, GameReward,
 } from '../console.service';
+import {DEFAULT_GAME_ITEMS} from '../shared/constants';
 import {Observable} from 'rxjs';
 import {FormBuilder, FormGroup, FormControl, FormArray, AbstractControl, Validators, ReactiveFormsModule} from '@angular/forms';
 import {AuthenticationService} from '../authentication.service';
@@ -171,12 +172,7 @@ export class SystemNotificationsComponent implements OnInit {
   isSearchMode = false;
   editingNotification: SystemNotice | null = null;
 
-  defaultItems = [
-    {id: '10000', name: '金币', icon: 'GoldCoin'},
-    {id: '10001', name: '钻石', icon: 'Gem'},
-    {id: '10002', name: '体力', icon: 'Strength'},
-    {id: '20000', name: '广告券', icon: 'Coupon'},
-  ];
+  readonly defaultItems = DEFAULT_GAME_ITEMS;
 
   challenges: any[] = [];
   selectedChallenge: any = null;
