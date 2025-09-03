@@ -24,6 +24,10 @@
 package console
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	api "github.com/heroiclabs/nakama-common/api"
 	rtapi "github.com/heroiclabs/nakama-common/rtapi"
@@ -34,9 +38,6 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -54,6 +55,7 @@ const (
 	UserRole_USER_ROLE_DEVELOPER  UserRole = 2 // Best for developers, also enables APIs and API explorer
 	UserRole_USER_ROLE_MAINTAINER UserRole = 3 // Best for users who regularly update player information.
 	UserRole_USER_ROLE_READONLY   UserRole = 4 // Read-only role for those only need to view data
+	UserRole_USER_ROLE_OPERATOR   UserRole = 5 // Operations role for managing notifications and VIP accounts
 )
 
 // Enum value maps for UserRole.

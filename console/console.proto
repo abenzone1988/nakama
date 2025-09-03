@@ -203,6 +203,14 @@ service Console {
     option (google.api.http).get = "/v2/console/template/challenges";
   }
 
+  // Create personal notification
+  rpc CreatePersonalNotification (CreatePersonalNotificationRequest) returns (CreatePersonalNotificationResponse) {
+    option (google.api.http) = {
+      post: "/v2/console/personal_notification"
+      body: "*"
+    };
+  }
+
   // Get personal notification logs
   rpc ListPersonalNotificationLogs (ListPersonalNotificationLogRequest) returns (ListPersonalNotificationLogResponse) {
     option (google.api.http).get = "/v2/console/personal-notification-logs";
@@ -1464,12 +1472,33 @@ message SystemNotificationId {
 }
 
 message CreateSystemNotificationRequest {
-  // Type 0:all users 1:challenge 2:specific users
+  // Type 0:all users 1:challenge
   int32 type = 1;
-  // Target user ID list
-  repeated string target = 2;
   // Notification content
-  SystemNotice notice = 3;
+  SystemNotice notice = 2;
+}
+
+message CreatePersonalNotificationRequest {
+  // Target user names list
+  repeated string target = 1;
+  // Notification content
+  PersonalNotice notice = 2;
+}
+
+message CreatePersonalNotificationResponse {
+  // Success message
+  string message = 1;
+  // Successfully sent user count
+  int32 success_count = 2;
+  // Failed user names
+  repeated string failed_users = 3;
+}
+
+message PersonalNotice {
+  // Notification subject
+  string subject = 1;
+  // Notification content
+  NoticeContent content = 2;
 }
 
 message UpdateSystemNotificationRequest {
