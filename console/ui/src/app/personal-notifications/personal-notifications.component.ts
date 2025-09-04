@@ -17,7 +17,14 @@ import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnap
 import {
   ConsoleService,
   PersonalNotificationLog,
-  ListPersonalNotificationLogResponse, CreateSystemNotificationRequest, GameItem, NoticeContent, UserRole, GameReward, SystemNotice,
+  ListPersonalNotificationLogResponse,
+  CreateSystemNotificationRequest,
+  GameItem,
+  NoticeContent,
+  UserRole,
+  GameReward,
+  SystemNotice,
+  CreatePersonalNotificationRequest,
 } from '../console.service';
 import {DEFAULT_GAME_ITEMS} from '../shared/constants';
 import {Observable} from 'rxjs';
@@ -195,12 +202,11 @@ export class PersonalNotificationsComponent implements OnInit {
       ? formValue.targetUsers.trim().split(/\s+/).filter((username: string) => username.trim() !== '')
       : [];
 
-    const request: CreateSystemNotificationRequest = {
+    const request: CreatePersonalNotificationRequest = {
       type: 2, // 个人类型
       notice: {
         subject: formValue.subject,
         content: content,
-        notice_type: 0
       },
       target: targetUsers
     };

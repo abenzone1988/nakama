@@ -291,10 +291,10 @@ func GenerateStorageSignature(collection, key, value, userID string) (string, er
 }
 
 // GenerateVipSignature 生成VIP操作签名
-func GenerateVipSignature(userID string, isVip bool) (string, error) {
+func GenerateVipSignature(userID string, expiryTime int64) (string, error) {
 	data := map[string]interface{}{
-		"user_id": userID,
-		"is_vip":  isVip,
+		"user_id":     userID,
+		"expiry_time": expiryTime,
 	}
 	return generateSignature(data, DefaultSignatureConfig.SecretKey)
 }

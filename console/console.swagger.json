@@ -2467,6 +2467,39 @@
         ]
       }
     },
+    "/v2/console/personal_notification": {
+      "post": {
+        "summary": "Create Personal notification",
+        "operationId": "Console_CreatePersonalNotification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consolePersonalNotice"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/consoleCreatePersonalNotificationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/purchase": {
       "get": {
         "summary": "List validated purchases",
@@ -4638,6 +4671,27 @@
         }
       }
     },
+    "consoleCreatePersonalNotificationRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Type 0:all users 1:challenge 2:specific users"
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Target user ID list"
+        },
+        "notice": {
+          "$ref": "#/definitions/consolePersonalNotice",
+          "title": "Notification content"
+        }
+      }
+    },
     "consoleCreateSystemNotificationRequest": {
       "type": "object",
       "properties": {
@@ -4812,6 +4866,19 @@
             "$ref": "#/definitions/gameReward"
           },
           "title": "Reward items"
+        }
+      }
+    },
+    "consolePersonalNotice": {
+      "type": "object",
+      "properties": {
+        "subject": {
+          "type": "string",
+          "title": "Notification subject"
+        },
+        "content": {
+          "$ref": "#/definitions/consoleNoticeContent",
+          "title": "Notification content"
         }
       }
     },
@@ -5177,7 +5244,7 @@
           "format": "date-time",
           "title": "Creation time"
         },
-        "expire_time": {
+        "expiry_time": {
           "type": "string",
           "format": "date-time",
           "title": "Expiry time"

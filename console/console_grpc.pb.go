@@ -57,6 +57,7 @@ const (
 	Console_ReloadTemplate_FullMethodName               = "/nakama.console.Console/ReloadTemplate"
 	Console_GetChallengeTemplate_FullMethodName         = "/nakama.console.Console/GetChallengeTemplate"
 	Console_GetAllChallengeTemplates_FullMethodName     = "/nakama.console.Console/GetAllChallengeTemplates"
+	Console_CreatePersonalNotification_FullMethodName   = "/nakama.console.Console/CreatePersonalNotification"
 	Console_ListPersonalNotificationLogs_FullMethodName = "/nakama.console.Console/ListPersonalNotificationLogs"
 	Console_AddVipAccount_FullMethodName                = "/nakama.console.Console/AddVipAccount"
 	Console_ListVipAccounts_FullMethodName              = "/nakama.console.Console/ListVipAccounts"
@@ -170,6 +171,8 @@ type ConsoleClient interface {
 	GetChallengeTemplate(ctx context.Context, in *ChallengeTemplateRequest, opts ...grpc.CallOption) (*ChallengeTemplateResponse, error)
 	// Get all challenge templates
 	GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error)
+	// Create Personal notification
+	CreatePersonalNotification(ctx context.Context, in *CreatePersonalNotificationRequest, opts ...grpc.CallOption) (*PersonalNotice, error)
 	// Get personal notification logs
 	ListPersonalNotificationLogs(ctx context.Context, in *ListPersonalNotificationLogRequest, opts ...grpc.CallOption) (*ListPersonalNotificationLogResponse, error)
 	// Add VIP account
@@ -483,6 +486,15 @@ func (c *consoleClient) GetChallengeTemplate(ctx context.Context, in *ChallengeT
 func (c *consoleClient) GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error) {
 	out := new(GetAllChallengeTemplatesResponse)
 	err := c.cc.Invoke(ctx, Console_GetAllChallengeTemplates_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) CreatePersonalNotification(ctx context.Context, in *CreatePersonalNotificationRequest, opts ...grpc.CallOption) (*PersonalNotice, error) {
+	out := new(PersonalNotice)
+	err := c.cc.Invoke(ctx, Console_CreatePersonalNotification_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1152,6 +1164,8 @@ type ConsoleServer interface {
 	GetChallengeTemplate(context.Context, *ChallengeTemplateRequest) (*ChallengeTemplateResponse, error)
 	// Get all challenge templates
 	GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error)
+	// Create Personal notification
+	CreatePersonalNotification(context.Context, *CreatePersonalNotificationRequest) (*PersonalNotice, error)
 	// Get personal notification logs
 	ListPersonalNotificationLogs(context.Context, *ListPersonalNotificationLogRequest) (*ListPersonalNotificationLogResponse, error)
 	// Add VIP account
@@ -1353,6 +1367,9 @@ func (UnimplementedConsoleServer) GetChallengeTemplate(context.Context, *Challen
 }
 func (UnimplementedConsoleServer) GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAllChallengeTemplates not implemented")
+}
+func (UnimplementedConsoleServer) CreatePersonalNotification(context.Context, *CreatePersonalNotificationRequest) (*PersonalNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePersonalNotification not implemented")
 }
 func (UnimplementedConsoleServer) ListPersonalNotificationLogs(context.Context, *ListPersonalNotificationLogRequest) (*ListPersonalNotificationLogResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPersonalNotificationLogs not implemented")
@@ -1912,6 +1929,24 @@ func _Console_GetAllChallengeTemplates_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).GetAllChallengeTemplates(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_CreatePersonalNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePersonalNotificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CreatePersonalNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CreatePersonalNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CreatePersonalNotification(ctx, req.(*CreatePersonalNotificationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3240,6 +3275,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAllChallengeTemplates",
 			Handler:    _Console_GetAllChallengeTemplates_Handler,
+		},
+		{
+			MethodName: "CreatePersonalNotification",
+			Handler:    _Console_CreatePersonalNotification_Handler,
 		},
 		{
 			MethodName: "ListPersonalNotificationLogs",

@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
-import { ConsoleService, ListPersonalNotificationLogResponse, CreateSystemNotificationRequest } from '../console.service';
+import {
+  ConsoleService,
+  ListPersonalNotificationLogResponse,
+  CreatePersonalNotificationRequest
+} from '../console.service';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -8,8 +12,8 @@ import { Observable } from 'rxjs';
 export class PersonalNotificationsService {
   constructor(private readonly consoleService: ConsoleService) {}
 
-  sendPersonalNotification(data: CreateSystemNotificationRequest): Observable<any> {
-    return this.consoleService.createSystemNotification('', data);
+  sendPersonalNotification(data: CreatePersonalNotificationRequest): Observable<any> {
+    return this.consoleService.createPersonalNotification('', data);
   }
 
   getPersonalNotificationLogs(params: { limit?: number; cursor?: string; filter?: string }): Observable<ListPersonalNotificationLogResponse> {

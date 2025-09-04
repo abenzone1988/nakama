@@ -14,7 +14,7 @@
       </form>
     </div>
     <div class="col-md-3 text-center">
-      <button type="button" class="btn btn-success" (click)="openAddVipModal(addVipModalContent)" *ngIf="addAllowed()">
+      <button type="button" class="btn btn-success" (click)="openAddVipModal(addVipModalContent)">
         <img src="/static/svg/green-plus.svg" alt="" width="20" height="" class="mr-1">
         添加VIP
       </button>
@@ -72,7 +72,7 @@
         <small>{{formatDate(account.create_time)}}</small>
       </td>
       <td (click)="viewAccount(account)" class="text-muted">
-        <small>{{formatDate(account.expire_time)}}</small>
+        <small>{{formatDate(account.expiry_time)}}</small>
       </td>
       <td (click)="viewAccount(account)">
         <span class="badge" [class.badge-success]="isVipActive(account)" [class.badge-secondary]="!isVipActive(account)">
@@ -80,11 +80,11 @@
         </span>
       </td>
       <td class="text-center">
-        <button 
-          type="button" 
-          class="btn btn-sm btn-outline-danger" 
-          (click)="removeVipAccount($event, i, account)" 
-          *ngIf="removeAllowed() && isVipActive(account)"
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          (click)="removeVipAccount($event, i, account)"
+          *ngIf="isVipActive(account)"
           title="移除VIP">
           <img src="/static/svg/red-trash.svg" alt="" width="16" height="">
         </button>
@@ -111,10 +111,10 @@
     <form [formGroup]="addVipForm" (ngSubmit)="addVipAccount()" role="form">
       <div class="form-group">
         <label for="usernames">用户名 <span class="text-danger">*</span></label>
-        <textarea 
-          class="form-control" 
-          id="usernames" 
-          formControlName="usernames" 
+        <textarea
+          class="form-control"
+          id="usernames"
+          formControlName="usernames"
           rows="3"
           placeholder="输入目标用户名，多个用户名用空格分隔"
           aria-describedby="usernames-help"
@@ -126,13 +126,13 @@
           用户名是必填项
         </div>
       </div>
-      
+
       <div class="form-group">
         <label for="expire_time">到期时间（可选）</label>
-        <input 
-          type="datetime-local" 
-          class="form-control" 
-          id="expire_time" 
+        <input
+          type="datetime-local"
+          class="form-control"
+          id="expire_time"
           formControlName="expire_time">
         <small class="form-text text-muted">如果不设置，默认为一年后到期</small>
       </div>

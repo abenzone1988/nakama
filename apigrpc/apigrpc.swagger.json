@@ -1780,6 +1780,29 @@
         ]
       }
     },
+    "/v2/game/activity/status": {
+      "get": {
+        "summary": "Check if current user is VIP",
+        "operationId": "Nakama_CheckVipStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameCheckVipStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/announcements": {
       "get": {
         "summary": "List published announcements",
@@ -4219,29 +4242,6 @@
         ]
       }
     },
-    "/v2/user/vip/status": {
-      "get": {
-        "summary": "Check if current user is VIP",
-        "operationId": "Nakama_CheckVipStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameCheckVipStatusResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
     "/v2/user/{userId}/group": {
       "get": {
         "summary": "List groups the current user belongs to.",
@@ -6191,9 +6191,10 @@
     "gameCheckVipStatusResponse": {
       "type": "object",
       "properties": {
-        "isVip": {
-          "type": "boolean",
-          "title": "Is user VIP"
+        "expireTime": {
+          "type": "string",
+          "format": "int64",
+          "title": "Expire time in seconds (int64 to avoid 2038 problem)"
         },
         "signature": {
           "type": "string",

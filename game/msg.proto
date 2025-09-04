@@ -304,8 +304,8 @@ message GetChallengeTopStatsResponse {
 
 // VIP status response
 message CheckVipStatusResponse {
-  // Is user VIP
-  bool is_vip = 1;
+  // Expire time in seconds (int64 to avoid 2038 problem)
+  int64 expire_time = 1;
   // Signature
   string signature = 2;
 }

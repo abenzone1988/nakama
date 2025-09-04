@@ -34,10 +34,10 @@ var (
 )
 
 // VipAccountAdd 添加VIP账户
-func VipAccountAdd(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, username string, expireTime time.Time) (*console.VipAccount, error) {
+func VipAccountAdd(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, username string, expiryTime time.Time) (*console.VipAccount, error) {
 	// 检查用户是否已经是VIP
 	var existingID string
-	err := db.QueryRowContext(ctx, "SELECT id FROM vip_accounts WHERE user_id = $1 AND expire_time > NOW()", userID).Scan(&existingID)
+	err := db.QueryRowContext(ctx, "SELECT id FROM vip_accounts WHERE user_id = $1 AND expiry_time > NOW()", userID).Scan(&existingID)
 	if err == nil {
 		return nil, ErrVipAccountAlreadyExists
 	} else if err != sql.ErrNoRows {
@@ -51,12 +51,12 @@ func VipAccountAdd(ctx context.Context, logger *zap.Logger, db *sql.DB, userID u
 
 	// 插入新的VIP记录
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO vip_accounts (id, user_id, username, create_time, expire_time)
+		INSERT INTO vip_accounts (id, user_id, username, create_time, expiry_time)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (user_id) DO UPDATE SET
-			expire_time = $5,
+			expiry_time = $5,
 			create_time = $4
-	`, vipID, userID, username, createTime, expireTime)
+	`, vipID, userID, username, createTime, expiryTime)
 
 	if err != nil {
 		logger.Error("插入VIP账户失败", zap.Error(err))
@@ -68,8 +68,8 @@ func VipAccountAdd(ctx context.Context, logger *zap.Logger, db *sql.DB, userID u
 		UserId:     userID.String(),
 		Username:   username,
 		CreateTime: timestamppb.New(createTime),
-		ExpireTime: timestamppb.New(expireTime),
-		IsActive:   expireTime.After(time.Now()),
+		ExpiryTime: timestamppb.New(expiryTime),
+		IsActive:   expiryTime.After(time.Now()),
 	}, nil
 }
 
@@ -80,7 +80,7 @@ func VipAccountList(ctx context.Context, logger *zap.Logger, db *sql.DB, limit i
 	argIndex := 1
 
 	query.WriteString(`
-		SELECT id, user_id, username, create_time, expire_time
+		SELECT id, user_id, username, create_time, expiry_time
 		FROM vip_accounts
 		WHERE 1=1
 	`)
@@ -122,9 +122,9 @@ func VipAccountList(ctx context.Context, logger *zap.Logger, db *sql.DB, limit i
 
 		var vipAccount console.VipAccount
 		var id, userID, username string
-		var createTime, expireTime time.Time
+		var createTime, expiryTime time.Time
 
-		err := rows.Scan(&id, &userID, &username, &createTime, &expireTime)
+		err := rows.Scan(&id, &userID, &username, &createTime, &expiryTime)
 		if err != nil {
 			logger.Error("扫描VIP账户数据失败", zap.Error(err))
 			return nil, err
@@ -135,8 +135,8 @@ func VipAccountList(ctx context.Context, logger *zap.Logger, db *sql.DB, limit i
 			UserId:     userID,
 			Username:   username,
 			CreateTime: timestamppb.New(createTime),
-			ExpireTime: timestamppb.New(expireTime),
-			IsActive:   expireTime.After(time.Now()),
+			ExpiryTime: timestamppb.New(expiryTime),
+			IsActive:   expiryTime.After(time.Now()),
 		}
 
 		accounts = append(accounts, &vipAccount)
@@ -173,9 +173,9 @@ func VipAccountList(ctx context.Context, logger *zap.Logger, db *sql.DB, limit i
 // VipAccountRemove 移除VIP账户（设置为过期）
 func VipAccountRemove(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) error {
 	result, err := db.ExecContext(ctx, `
-		UPDATE vip_accounts 
-		SET expire_time = NOW() 
-		WHERE user_id = $1 AND expire_time > NOW()
+		UPDATE vip_accounts
+		SET expiry_time = NOW()
+		WHERE user_id = $1 AND expiry_time > NOW()
 	`, userID)
 
 	if err != nil {
@@ -199,15 +199,15 @@ func VipAccountRemove(ctx context.Context, logger *zap.Logger, db *sql.DB, userI
 // VipAccountCheck 检查用户VIP状态
 func VipAccountCheck(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) (*console.VipAccount, bool, error) {
 	var id, username string
-	var createTime, expireTime time.Time
+	var createTime, expiryTime time.Time
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, username, create_time, expire_time
+		SELECT id, username, create_time, expiry_time
 		FROM vip_accounts
 		WHERE user_id = $1
 		ORDER BY create_time DESC
 		LIMIT 1
-	`, userID).Scan(&id, &username, &createTime, &expireTime)
+	`, userID).Scan(&id, &username, &createTime, &expiryTime)
 
 	if err == sql.ErrNoRows {
 		return nil, false, nil
@@ -218,13 +218,13 @@ func VipAccountCheck(ctx context.Context, logger *zap.Logger, db *sql.DB, userID
 		return nil, false, err
 	}
 
-	isActive := expireTime.After(time.Now())
+	isActive := expiryTime.After(time.Now())
 	vipAccount := &console.VipAccount{
 		Id:         id,
 		UserId:     userID.String(),
 		Username:   username,
 		CreateTime: timestamppb.New(createTime),
-		ExpireTime: timestamppb.New(expireTime),
+		ExpiryTime: timestamppb.New(expiryTime),
 		IsActive:   isActive,
 	}
 
@@ -237,7 +237,7 @@ func IsUserVip(ctx context.Context, db *sql.DB, userID uuid.UUID) (bool, error) 
 	err := db.QueryRowContext(ctx, `
 		SELECT COUNT(*)
 		FROM vip_accounts
-		WHERE user_id = $1 AND expire_time > NOW()
+		WHERE user_id = $1 AND expiry_time > NOW()
 	`, userID).Scan(&count)
 
 	if err != nil {

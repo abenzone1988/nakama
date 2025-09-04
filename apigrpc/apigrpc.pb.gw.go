@@ -7275,7 +7275,7 @@ func RegisterNakamaHandlerServer(ctx context.Context, mux *runtime.ServeMux, ser
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nakama.api.Nakama/CheckVipStatus", runtime.WithHTTPPathPattern("/v2/user/vip/status"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nakama.api.Nakama/CheckVipStatus", runtime.WithHTTPPathPattern("/v2/game/activity/status"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -9649,7 +9649,7 @@ func RegisterNakamaHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nakama.api.Nakama/CheckVipStatus", runtime.WithHTTPPathPattern("/v2/user/vip/status"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nakama.api.Nakama/CheckVipStatus", runtime.WithHTTPPathPattern("/v2/game/activity/status"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -9879,7 +9879,7 @@ var (
 
 	pattern_Nakama_GetChallengeTopStats_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "game", "challenges", "top-three-stats"}, ""))
 
-	pattern_Nakama_CheckVipStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "user", "vip", "status"}, ""))
+	pattern_Nakama_CheckVipStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "game", "activity", "status"}, ""))
 )
 
 var (

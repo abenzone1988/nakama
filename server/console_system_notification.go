@@ -239,18 +239,3 @@ func (s *ConsoleServer) GetSystemNotification(ctx context.Context, in *console.S
 
 	return notification, nil
 }
-
-func (s *ConsoleServer) ListPersonalNotificationLogs(ctx context.Context, in *console.ListPersonalNotificationLogRequest) (*console.ListPersonalNotificationLogResponse, error) {
-	// 参数验证
-	if in.Limit <= 0 || in.Limit > 100 {
-		in.Limit = 100
-	}
-
-	logs, err := PersonalNotificationLogList(ctx, s.db, s.logger, int(in.Limit), in.Cursor, in.Filter, in.DateFrom, in.DateTo)
-	if err != nil {
-		s.logger.Error("获取个人通知日志失败", zap.Error(err))
-		return nil, status.Error(codes.Internal, "获取个人通知日志失败")
-	}
-
-	return logs, nil
-}

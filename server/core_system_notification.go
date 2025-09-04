@@ -661,7 +661,7 @@ func PersonalNotificationLogCreate(ctx context.Context, db *sql.DB, logger *zap.
 			id,
 			subject,
 			content,
-			target_ids,a
+			target_ids,
 			sender,
 			notification_count
 		) VALUES ($1, $2, $3, $4, $5, $6)

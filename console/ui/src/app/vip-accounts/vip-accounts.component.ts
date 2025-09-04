@@ -196,7 +196,7 @@ export class VipAccountsComponent implements OnInit, OnDestroy {
 
         // 显示结果
         this.showBatchResultFromResponse(response);
-        
+
         // 关闭模态框并重置表单
         this.modalService.dismissAll();
         this.addVipForm.reset();
@@ -221,10 +221,10 @@ export class VipAccountsComponent implements OnInit, OnDestroy {
     } else if (successCount === 0) {
       this.error = `添加失败，所有 ${totalCount} 个用户都无法添加`;
       this.success = '';
-      
+
       // 显示详细的失败信息
       if (response.failed_accounts && response.failed_accounts.length > 0) {
-        const failedDetails = response.failed_accounts.map(failed => 
+        const failedDetails = response.failed_accounts.map(failed =>
           `${failed.username}: ${failed.error_message}`
         ).join('\n');
         this.error = `添加失败的详细信息：\n${failedDetails}`;
@@ -232,10 +232,10 @@ export class VipAccountsComponent implements OnInit, OnDestroy {
     } else {
       this.success = `成功添加 ${successCount} 个VIP用户`;
       this.error = `有 ${failedCount} 个用户添加失败`;
-      
+
       // 显示详细的失败信息
       if (response.failed_accounts && response.failed_accounts.length > 0) {
-        const failedDetails = response.failed_accounts.map(failed => 
+        const failedDetails = response.failed_accounts.map(failed =>
           `${failed.username}: ${failed.error_message}`
         ).join('\n');
         console.warn('添加VIP失败的详细信息:', failedDetails);
@@ -254,14 +254,14 @@ export class VipAccountsComponent implements OnInit, OnDestroy {
           this.error = '';
           // 更新本地数据，将VIP设为失效
           this.vipAccounts[i].is_active = false;
-          this.vipAccounts[i].expire_time = new Date().toISOString();
+          this.vipAccounts[i].expiry_time = new Date().toISOString();
         }, err => {
           this.error = err;
           this.success = '';
           event.target.disabled = false;
-        });
+        }, );
       }
-    );
+    ,null, "确认删除", "确认删除vip权限？");
   }
 
   viewAccount(account: VipAccount): void {
@@ -269,8 +269,8 @@ export class VipAccountsComponent implements OnInit, OnDestroy {
   }
 
   isVipActive(account: VipAccount): boolean {
-    if (!account.expire_time) return false;
-    const expireDate = new Date(account.expire_time);
+    if (!account.expiry_time) return false;
+    const expireDate = new Date(account.expiry_time);
     return expireDate > new Date();
   }
 
@@ -280,17 +280,7 @@ export class VipAccountsComponent implements OnInit, OnDestroy {
     return date.toLocaleString('zh-CN');
   }
 
-  addAllowed(): boolean {
-    // only admin and developers are allowed.
-    return this.authService.sessionRole <= UserRole.USER_ROLE_MAINTAINER;
-  }
-
-  removeAllowed(): boolean {
-    // only admin and developers are allowed.
-    return this.authService.sessionRole <= UserRole.USER_ROLE_MAINTAINER;
-  }
-
-  get f(): any {
+   get f(): any {
     return this.searchForm.controls;
   }
 

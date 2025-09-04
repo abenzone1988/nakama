@@ -906,7 +906,7 @@ service Nakama {
 
   // Check if current user is VIP
   rpc CheckVipStatus(google.protobuf.Empty) returns (game.CheckVipStatusResponse) {
-    option (google.api.http).get = "/v2/user/vip/status";
+    option (google.api.http).get = "/v2/game/activity/status";
   }
 }
 

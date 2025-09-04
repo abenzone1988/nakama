@@ -203,8 +203,8 @@ service Console {
     option (google.api.http).get = "/v2/console/template/challenges";
   }
 
-  // Create personal notification
-  rpc CreatePersonalNotification (CreatePersonalNotificationRequest) returns (CreatePersonalNotificationResponse) {
+  // Create Personal notification
+  rpc CreatePersonalNotification (CreatePersonalNotificationRequest) returns (PersonalNotice) {
     option (google.api.http) = {
       post: "/v2/console/personal_notification"
       body: "*"
@@ -1472,17 +1472,21 @@ message SystemNotificationId {
 }
 
 message CreateSystemNotificationRequest {
-  // Type 0:all users 1:challenge
+  // Type 0:all users 1:challenge 2:specific users
   int32 type = 1;
+  // Target user ID list
+  repeated string target = 2;
   // Notification content
-  SystemNotice notice = 2;
+  SystemNotice notice = 3;
 }
 
 message CreatePersonalNotificationRequest {
-  // Target user names list
-  repeated string target = 1;
+  // Type 0:all users 1:challenge 2:specific users
+  int32 type = 1;
+  // Target user ID list
+  repeated string target = 2;
   // Notification content
-  PersonalNotice notice = 2;
+  PersonalNotice notice = 3;
 }
 
 message CreatePersonalNotificationResponse {
@@ -1626,7 +1630,7 @@ message VipAccount {
   // Creation time
   google.protobuf.Timestamp create_time = 4;
   // Expiry time
-  google.protobuf.Timestamp expire_time = 5;
+  google.protobuf.Timestamp expiry_time = 5;
   // Is VIP active
   bool is_active = 6;
 }

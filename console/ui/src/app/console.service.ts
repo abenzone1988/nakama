@@ -229,6 +229,15 @@ export interface CreateAnnouncementRequest {
   title?:string
 }
 
+export interface CreatePersonalNotificationRequest {
+  // Notification content
+  notice?:PersonalNotice
+  // Target user ID list
+  target?:Array<string>
+  // Type 0:all users 1:challenge 2:specific users
+  type?:number
+}
+
 export interface CreateSystemNotificationRequest {
   // Notification content
   notice?:SystemNotice
@@ -419,6 +428,13 @@ export interface NotificationList {
   notifications?:Array<Notification>
   // Previous page cursor if any.
   prev_cursor?:string
+}
+
+export interface PersonalNotice {
+  // Notification content
+  content?:NoticeContent
+  // Notification subject
+  subject?:string
 }
 
 export interface PersonalNotificationLog {
@@ -678,7 +694,7 @@ export interface VipAccount {
   // Creation time
   create_time?:string
   // Expiry time
-  expire_time?:string
+  expiry_time?:string
   // VIP account ID
   id?:string
   // Is VIP active
@@ -1786,6 +1802,13 @@ export class ConsoleService {
       params = params.set('limit', String(limit));
     }
     return this.httpClient.get<ListPersonalNotificationLogResponse>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Create Personal notification */
+  createPersonalNotification(auth_token: string, body: CreatePersonalNotificationRequest): Observable<PersonalNotice> {
+    const urlPath = `/v2/console/personal_notification`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.post<PersonalNotice>(this.config.host + urlPath, body, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
   /** List validated purchases */
