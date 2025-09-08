@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -23,12 +22,12 @@ type TplLevelInfo struct {
 	Name                    string        `json:"name"`
 	OnHookRewardCoin        int32         `json:"onHookRewardCoin"`
 	OnHookRewardDebrisCount int32         `json:"onHookRewardDebrisCount"`
-	OnHookRewardGroupID     string        `json:"onHookRewardGroupId"`
 	Reward01                string        `json:"reward01"`
 	Reward02                string        `json:"reward02"`
 	Reward03                string        `json:"reward03"`
 	SceneConfigData         string        `json:"sceneConfigData"`
 	SceneNode               string        `json:"sceneNode"`
+	StarsNeed               int32         `json:"starsNeed"`
 	Subsection              int32         `json:"subsection"`
 	WinRewards              string        `json:"winRewards"`
 }
@@ -49,8 +48,8 @@ func NewTableTplLevelInfo(logger *zap.Logger, loadPath string) *TableTplLevelInf
 	}
 }
 
-func (t *TableTplLevelInfo) FindByKey(key interface{}) (TplLevelInfo, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplLevelInfo) FindByKey(key string) (TplLevelInfo, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

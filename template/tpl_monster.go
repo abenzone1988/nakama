@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -12,26 +11,34 @@ type TplMonster struct {
 	ActivityScore       int32    `json:"activityScore"`
 	Atk                 int32    `json:"atk"`
 	AtkRange            int32    `json:"atkRange"`
-	AtkSpeed            float64  `json:"atkSpeed"`
+	AtkSpeed            int32    `json:"atkSpeed"`
 	Brief               string   `json:"brief"`
+	BulletResist        int32    `json:"bulletResist"`
+	CanBeEaten          int32    `json:"canBeEaten"`
 	CharacteristicValue string   `json:"characteristicValue"`
+	EnergyResist        int32    `json:"energyResist"`
 	FaintImmune         int32    `json:"faintImmune"`
+	FireResist          int32    `json:"fireResist"`
 	Flee                int32    `json:"flee"`
 	FreezeImmune        int32    `json:"freezeImmune"`
 	GhostHouseGold      int32    `json:"ghostHouseGold"`
 	HitbackImmune       int32    `json:"hitbackImmune"`
 	Hp                  int32    `json:"hp"`
+	IceResist           int32    `json:"iceResist"`
 	Icon                string   `json:"icon"`
 	ID                  string   `json:"id"`
 	IsActiveAtk         int32    `json:"isActiveAtk"`
+	LightningResist     int32    `json:"lightningResist"`
 	MonsterTag          []string `json:"monsterTag"`
 	Name                string   `json:"name"`
 	PalsyImmune         int32    `json:"palsyImmune"`
+	PhysicalResist      int32    `json:"physicalResist"`
 	ResPath             string   `json:"resPath"`
 	RewardWeight        int32    `json:"rewardWeight"`
-	Scale               int32    `json:"scale"`
+	Scale               float64  `json:"scale"`
+	ShellResist         int32    `json:"shellResist"`
 	SlowDownImmune      int32    `json:"slowDownImmune"`
-	Speed               int32    `json:"speed"`
+	Speed               float64  `json:"speed"`
 	Type                int32    `json:"type"`
 	UnitType            int32    `json:"unitType"`
 	WayPathType         int32    `json:"wayPathType"`
@@ -53,8 +60,8 @@ func NewTableTplMonster(logger *zap.Logger, loadPath string) *TableTplMonster {
 	}
 }
 
-func (t *TableTplMonster) FindByKey(key interface{}) (TplMonster, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplMonster) FindByKey(key string) (TplMonster, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

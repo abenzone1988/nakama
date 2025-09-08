@@ -70,7 +70,7 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 		challengeID := notice.GetChallengeId()
 		if challengeID > 0 {
 			tplChallenge := s.template.GetTplChallenge()
-			_, found := tplChallenge.FindByKey(int(challengeID))
+			_, found := tplChallenge.FindByKey(challengeID)
 			if !found {
 				s.logger.Warn("挑战赛模板不存在", zap.Int32("challenge_id", challengeID))
 				return nil, status.Error(codes.InvalidArgument, "挑战赛模板不存在")

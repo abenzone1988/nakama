@@ -2,18 +2,17 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 )
 
 type TplBattleWave struct {
-	GroupID  string  `json:"groupId"`
-	ID       int32   `json:"id"`
-	LvUp     float64 `json:"lvUp"`
-	Money    int32   `json:"money"`
-	Progress int32   `json:"progress"`
+	GroupID  string `json:"groupId"`
+	ID       int32  `json:"id"`
+	LvUp     int32  `json:"lvUp"`
+	Money    int32  `json:"money"`
+	Progress int32  `json:"progress"`
 }
 
 type TableTplBattleWave struct {
@@ -32,8 +31,8 @@ func NewTableTplBattleWave(logger *zap.Logger, loadPath string) *TableTplBattleW
 	}
 }
 
-func (t *TableTplBattleWave) FindByKey(key interface{}) (TplBattleWave, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplBattleWave) FindByKey(key string) (TplBattleWave, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

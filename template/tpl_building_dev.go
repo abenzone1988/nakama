@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -14,8 +13,8 @@ type TplBuildingDev struct {
 	ID         string `json:"id"`
 	Level      int32  `json:"level"`
 	P1         string `json:"p1"`
-	P2         int32  `json:"p2"`
-	P3         int32  `json:"p3"`
+	P2         string `json:"p2"`
+	P3         string `json:"p3"`
 	RogueID    string `json:"rogueId"`
 	RougeDesc  string `json:"rougeDesc"`
 	V1         int32  `json:"v1"`
@@ -39,8 +38,8 @@ func NewTableTplBuildingDev(logger *zap.Logger, loadPath string) *TableTplBuildi
 	}
 }
 
-func (t *TableTplBuildingDev) FindByKey(key interface{}) (TplBuildingDev, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplBuildingDev) FindByKey(key string) (TplBuildingDev, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

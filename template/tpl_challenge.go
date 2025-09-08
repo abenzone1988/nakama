@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -23,7 +22,7 @@ type TplChallenge struct {
 type TableTplChallenge struct {
 	logger    *zap.Logger
 	loadPath  string
-	tableData map[string]TplChallenge
+	tableData map[int32]TplChallenge
 	result    []TplChallenge
 }
 
@@ -31,13 +30,13 @@ func NewTableTplChallenge(logger *zap.Logger, loadPath string) *TableTplChalleng
 	return &TableTplChallenge{
 		logger:    logger,
 		loadPath:  loadPath,
-		tableData: make(map[string]TplChallenge),
+		tableData: make(map[int32]TplChallenge),
 		result:    make([]TplChallenge, 0),
 	}
 }
 
-func (t *TableTplChallenge) FindByKey(key interface{}) (TplChallenge, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplChallenge) FindByKey(key int32) (TplChallenge, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 
@@ -78,15 +77,15 @@ func (t *TableTplChallenge) LoadData(content []byte) {
 	t.tableData = DeserializeStringToTplChallengeMap(fileContent, t.logger)
 }
 
-func DeserializeStringToTplChallengeMap(jsonStr []byte, logger *zap.Logger) map[string]TplChallenge {
+func DeserializeStringToTplChallengeMap(jsonStr []byte, logger *zap.Logger) map[int32]TplChallenge {
 	if len(jsonStr) == 0 {
-		return make(map[string]TplChallenge)
+		return make(map[int32]TplChallenge)
 	}
-	var jsonMap map[string]TplChallenge
+	var jsonMap map[int32]TplChallenge
 	err := json.Unmarshal(jsonStr, &jsonMap)
 	if err != nil {
 		logger.Error("JSON 反序列化错误", zap.Error(err))
-		return make(map[string]TplChallenge)
+		return make(map[int32]TplChallenge)
 	}
 	return jsonMap
 }

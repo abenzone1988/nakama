@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -30,8 +29,8 @@ func NewTableTplMonsterDev(logger *zap.Logger, loadPath string) *TableTplMonster
 	}
 }
 
-func (t *TableTplMonsterDev) FindByKey(key interface{}) (TplMonsterDev, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplMonsterDev) FindByKey(key string) (TplMonsterDev, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

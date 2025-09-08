@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -29,8 +28,8 @@ func NewTableTplRogueLevel(logger *zap.Logger, loadPath string) *TableTplRogueLe
 	}
 }
 
-func (t *TableTplRogueLevel) FindByKey(key interface{}) (TplRogueLevel, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplRogueLevel) FindByKey(key string) (TplRogueLevel, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

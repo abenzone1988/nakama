@@ -3,9 +3,10 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 type TplRedemption struct {
@@ -35,6 +36,10 @@ func NewTableTplRedemption(logger *zap.Logger, loadPath string) *TableTplRedempt
 }
 
 func (t *TableTplRedemption) FindByKey(key interface{}) (TplRedemption, bool) {
+	// 添加安全检查，防止传入损坏的字符串
+	if key == nil {
+		return TplRedemption{}, false
+	}
 	val, ok := t.tableData[fmt.Sprintf("%v", key)]
 	return val, ok
 }

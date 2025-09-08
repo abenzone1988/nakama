@@ -2,24 +2,24 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 )
 
 type TplBuilding struct {
-	Brief         string `json:"brief"`
-	BuildingGroup int32  `json:"buildingGroup"`
-	DebrisID      string `json:"debrisId"`
-	ID            string `json:"id"`
-	InitLevel     int32  `json:"initLevel"`
-	Name          string `json:"name"`
-	PrefabPath    string `json:"prefabPath"`
-	SortIndex     int32  `json:"sortIndex"`
-	TargetType    int32  `json:"targetType"`
-	UIPath        string `json:"uiPath"`
-	UnlockLevel   int32  `json:"unlockLevel"`
+	BaseParameter []string `json:"baseParameter"`
+	Brief         string   `json:"brief"`
+	BuildingGroup int32    `json:"buildingGroup"`
+	DebrisID      string   `json:"debrisId"`
+	ID            string   `json:"id"`
+	InitLevel     int32    `json:"initLevel"`
+	Name          string   `json:"name"`
+	PrefabPath    string   `json:"prefabPath"`
+	SortIndex     int32    `json:"sortIndex"`
+	TargetType    int32    `json:"targetType"`
+	UIPath        string   `json:"uiPath"`
+	UnlockLevel   int32    `json:"unlockLevel"`
 }
 
 type TableTplBuilding struct {
@@ -38,8 +38,8 @@ func NewTableTplBuilding(logger *zap.Logger, loadPath string) *TableTplBuilding 
 	}
 }
 
-func (t *TableTplBuilding) FindByKey(key interface{}) (TplBuilding, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplBuilding) FindByKey(key string) (TplBuilding, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -37,8 +36,8 @@ func NewTableTplLevelProgress(logger *zap.Logger, loadPath string) *TableTplLeve
 	}
 }
 
-func (t *TableTplLevelProgress) FindByKey(key interface{}) (TplLevelProgress, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplLevelProgress) FindByKey(key string) (TplLevelProgress, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

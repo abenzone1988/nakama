@@ -214,6 +214,7 @@ func (s *ApiServer) WriteStorageObjects(ctx context.Context, in *api.WriteStorag
 			}
 		} else {
 			//正式上线需要必须签名
+			return nil, status.Error(codes.InvalidArgument, "Invalid value.")
 		}
 	}
 

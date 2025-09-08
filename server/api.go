@@ -141,7 +141,17 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 			defer func() {
 				if r := recover(); r != nil {
 					stackInfo := string(debug.Stack())
-					logger.Error("Recovered from panic:", zap.Any("panic", r), zap.String("stack", stackInfo))
+					logger.Error("Recovered from panic:",
+						zap.Any("panic", r),
+						zap.String("stack", stackInfo),
+						zap.String("method", info.FullMethod),
+						zap.Any("request", req))
+
+					// 对于严重错误，可以选择让服务崩溃重启
+					// 这样可以避免数据不一致状态
+					if isCriticalError(r) {
+						logger.Fatal("Critical panic detected, server will restart", zap.Any("panic", r))
+					}
 				}
 			}()
 			return handler(ctx, req)
@@ -784,4 +794,32 @@ func (s *ApiServer) GetChallengeBatchInfo() map[int32]int32 {
 		result[k] = v
 	}
 	return result
+}
+
+// isCriticalError 判断是否为严重错误，需要重启服务
+func isCriticalError(panicValue interface{}) bool {
+	// 检查panic类型
+	switch v := panicValue.(type) {
+	case string:
+		// 内存相关错误 - 这些错误通常表示内存损坏或严重的内存问题
+		if strings.Contains(v, "out of memory") ||
+			strings.Contains(v, "growslice") ||
+			strings.Contains(v, "runtime error") ||
+			strings.Contains(v, "index out of range") ||
+			strings.Contains(v, "nil pointer dereference") {
+			return true
+		}
+	case error:
+		// 系统级错误 - 这些错误可能导致数据不一致或服务不可用
+		errorMsg := v.Error()
+		if strings.Contains(errorMsg, "runtime") ||
+			strings.Contains(errorMsg, "connection") ||
+			strings.Contains(errorMsg, "database") ||
+			strings.Contains(errorMsg, "deadlock") ||
+			strings.Contains(errorMsg, "context deadline exceeded") ||
+			strings.Contains(errorMsg, "broken pipe") {
+			return true
+		}
+	}
+	return false
 }

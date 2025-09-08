@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -31,8 +30,8 @@ func NewTableTplDailySignIn(logger *zap.Logger, loadPath string) *TableTplDailyS
 	}
 }
 
-func (t *TableTplDailySignIn) FindByKey(key interface{}) (TplDailySignIn, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplDailySignIn) FindByKey(key string) (TplDailySignIn, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

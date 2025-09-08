@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -13,7 +12,7 @@ type TplPresetUnitDev struct {
 	Level        int32  `json:"level"`
 	P1           string `json:"p1"`
 	P2           string `json:"p2"`
-	P3           int32  `json:"p3"`
+	P3           string `json:"p3"`
 	PresetUnitID string `json:"presetUnitId"`
 	V1           int32  `json:"v1"`
 	V2           int32  `json:"v2"`
@@ -36,8 +35,8 @@ func NewTableTplPresetUnitDev(logger *zap.Logger, loadPath string) *TableTplPres
 	}
 }
 
-func (t *TableTplPresetUnitDev) FindByKey(key interface{}) (TplPresetUnitDev, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplPresetUnitDev) FindByKey(key string) (TplPresetUnitDev, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

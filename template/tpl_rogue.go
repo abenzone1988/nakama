@@ -2,44 +2,39 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 )
 
 type TplRogue struct {
-	Brief               string        `json:"brief"`
-	Cost                int32         `json:"cost"`
-	Count               int32         `json:"count"`
-	ExistExclusion      []interface{} `json:"existExclusion"`
-	IconRes             string        `json:"iconRes"`
-	ID                  string        `json:"id"`
-	LinkEquipID         []interface{} `json:"linkEquipId"`
-	O1                  string        `json:"o1"`
-	O2                  int32         `json:"o2"`
-	O3                  int32         `json:"o3"`
-	O4                  int32         `json:"o4"`
-	O5                  int32         `json:"o5"`
-	O6                  int32         `json:"o6"`
-	P1                  int32         `json:"p1"`
-	P2                  int32         `json:"p2"`
-	P3                  int32         `json:"p3"`
-	P4                  int32         `json:"p4"`
-	P5                  int32         `json:"p5"`
-	P6                  int32         `json:"p6"`
-	Prerequisite        []interface{} `json:"prerequisite"`
-	SelectableExclusion []interface{} `json:"selectableExclusion"`
-	Senior              int32         `json:"senior"`
-	T1                  string        `json:"t1"`
-	T2                  int32         `json:"t2"`
-	T3                  int32         `json:"t3"`
-	T4                  int32         `json:"t4"`
-	T5                  int32         `json:"t5"`
-	T6                  int32         `json:"t6"`
-	Title               string        `json:"title"`
-	Type                int32         `json:"type"`
-	Weight              int32         `json:"weight"`
+	Brief   string `json:"brief"`
+	Cost    int32  `json:"cost"`
+	Count   int32  `json:"count"`
+	IconRes string `json:"iconRes"`
+	ID      string `json:"id"`
+	O1      int32  `json:"o1"`
+	O2      int32  `json:"o2"`
+	O3      int32  `json:"o3"`
+	O4      int32  `json:"o4"`
+	O5      int32  `json:"o5"`
+	O6      int32  `json:"o6"`
+	P1      int32  `json:"p1"`
+	P2      int32  `json:"p2"`
+	P3      int32  `json:"p3"`
+	P4      int32  `json:"p4"`
+	P5      int32  `json:"p5"`
+	P6      int32  `json:"p6"`
+	Senior  int32  `json:"senior"`
+	T1      string `json:"t1"`
+	T2      string `json:"t2"`
+	T3      string `json:"t3"`
+	T4      string `json:"t4"`
+	T5      string `json:"t5"`
+	T6      string `json:"t6"`
+	Title   string `json:"title"`
+	Type    int32  `json:"type"`
+	Weight  int32  `json:"weight"`
 }
 
 type TableTplRogue struct {
@@ -58,8 +53,8 @@ func NewTableTplRogue(logger *zap.Logger, loadPath string) *TableTplRogue {
 	}
 }
 
-func (t *TableTplRogue) FindByKey(key interface{}) (TplRogue, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplRogue) FindByKey(key string) (TplRogue, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

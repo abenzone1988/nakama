@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -33,8 +32,8 @@ func NewTableTplItem(logger *zap.Logger, loadPath string) *TableTplItem {
 	}
 }
 
-func (t *TableTplItem) FindByKey(key interface{}) (TplItem, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplItem) FindByKey(key string) (TplItem, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ type TplShopEx struct {
 	BuyType0  int32  `json:"buyType0"`
 	BuyType1  int32  `json:"buyType1"`
 	BuyType2  int32  `json:"buyType2"`
+	Discount  int32  `json:"discount"`
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Price0    int32  `json:"price0"`
@@ -40,8 +40,8 @@ func NewTableTplShopEx(logger *zap.Logger, loadPath string) *TableTplShopEx {
 	}
 }
 
-func (t *TableTplShopEx) FindByKey(key interface{}) (TplShopEx, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplShopEx) FindByKey(key string) (TplShopEx, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

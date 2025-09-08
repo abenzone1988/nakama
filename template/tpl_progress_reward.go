@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -31,8 +30,8 @@ func NewTableTplProgressReward(logger *zap.Logger, loadPath string) *TableTplPro
 	}
 }
 
-func (t *TableTplProgressReward) FindByKey(key interface{}) (TplProgressReward, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplProgressReward) FindByKey(key string) (TplProgressReward, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

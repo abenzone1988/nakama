@@ -2,25 +2,24 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 )
 
 type TplHero struct {
-	Brief          string `json:"brief"`
-	ComboSkill     string `json:"comboSkill"`
-	DebrisID       string `json:"debrisId"`
-	DynamicsUIPath string `json:"dynamicsUiPath"`
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	PrefabPath     string `json:"prefabPath"`
-	Skill0         string `json:"skill0"`
-	Skill1         string `json:"skill1"`
-	Skill2         string `json:"skill2"`
-	TargetType     int32  `json:"targetType"`
-	UIPath         string `json:"uiPath"`
+	BaseParameter  []string `json:"baseParameter"`
+	Brief          string   `json:"brief"`
+	DebrisID       string   `json:"debrisId"`
+	DynamicsUIPath string   `json:"dynamicsUiPath"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	PrefabPath     string   `json:"prefabPath"`
+	Skill0         string   `json:"skill0"`
+	Skill1         string   `json:"skill1"`
+	Skill2         string   `json:"skill2"`
+	TargetType     int32    `json:"targetType"`
+	UIPath         string   `json:"uiPath"`
 }
 
 type TableTplHero struct {
@@ -39,8 +38,8 @@ func NewTableTplHero(logger *zap.Logger, loadPath string) *TableTplHero {
 	}
 }
 
-func (t *TableTplHero) FindByKey(key interface{}) (TplHero, bool) {
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplHero) FindByKey(key string) (TplHero, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 

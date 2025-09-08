@@ -503,10 +503,6 @@ func leaderboardCacheInitWorker(
 		var generation int32
 		var ownerIDStr string
 
-		mu.Lock()
-		*cachedLeaderboards = append(*cachedLeaderboards, leaderboard.Id)
-		mu.Unlock()
-
 		// Current expiry for this leaderboard.
 		// This matches calculateTournamentDeadlines
 		var expiryUnix int64
@@ -523,6 +519,10 @@ func leaderboardCacheInitWorker(
 			// Last scores for this leaderboard have expired, do not cache them.
 			continue
 		}
+
+		mu.Lock()
+		*cachedLeaderboards = append(*cachedLeaderboards, leaderboard.Id)
+		mu.Unlock()
 
 		// Prepare structure to receive rank data.
 		key := LeaderboardWithExpiry{LeaderboardId: leaderboard.Id, Expiry: expiryUnix}
