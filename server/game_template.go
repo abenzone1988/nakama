@@ -19,6 +19,8 @@ type TemplateManager interface {
 	GetTplChallenge() *TableTplChallenge
 	GetTplActivityReward() *TableTplActivityReward
 	GetTplActivityInfo() *TableTplActivityInfo
+	GetTplStarterPack() *TableTplStarterPack
+	GetTplDailySignIn() *TableTplDailySignIn
 }
 
 type LocalTemplateManager struct {
@@ -29,6 +31,8 @@ type LocalTemplateManager struct {
 	tableTplChallenge      *TableTplChallenge
 	tableTplActivityReward *TableTplActivityReward
 	tableTplActivityInfo   *TableTplActivityInfo
+	tableTplStarterPack    *TableTplStarterPack
+	tableTplDailySignIn    *TableTplDailySignIn
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -41,9 +45,19 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplChallenge:      NewTableTplChallenge(logger, jsonPath),
 		tableTplActivityReward: NewTableTplActivityReward(logger, jsonPath),
 		tableTplActivityInfo:   NewTableTplActivityInfo(logger, jsonPath),
+		tableTplStarterPack:    NewTableTplStarterPack(logger, jsonPath),
+		tableTplDailySignIn:    NewTableTplDailySignIn(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
+}
+
+func (t *LocalTemplateManager) GetTplStarterPack() *TableTplStarterPack {
+	return t.tableTplStarterPack
+}
+
+func (t *LocalTemplateManager) GetTplDailySignIn() *TableTplDailySignIn {
+	return t.tableTplDailySignIn
 }
 
 func (t *LocalTemplateManager) GetTplActivityInfo() *TableTplActivityInfo {
