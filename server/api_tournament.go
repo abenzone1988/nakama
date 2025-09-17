@@ -471,6 +471,11 @@ func (s *ApiServer) WriteTournamentRecord(ctx context.Context, in *api.WriteTour
 		}
 	}
 
+	// 检查是否进入前3名，如果是则标记其他用户被超越
+	if record.Rank <= 3 {
+		s.markOvertakenUsers(ctx, in.GetTournamentId(), record.Rank, userID)
+	}
+
 	// After hook.
 	if fn := s.runtime.AfterWriteTournamentRecord(); fn != nil {
 		afterFn := func(clientIP, clientPort string) error {
@@ -552,4 +557,73 @@ func (s *ApiServer) ListTournamentRecordsAroundOwner(ctx context.Context, in *ap
 	}
 
 	return records, nil
+}
+
+// markOvertakenUsers 标记被超越的用户
+func (s *ApiServer) markOvertakenUsers(ctx context.Context, tournamentID string, newRank int64, currentUserID uuid.UUID) {
+	// 获取竞标赛的前3名记录
+	records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, tournamentID, nil, nil, "", 0)
+	if err != nil {
+		s.logger.Error("获取竞标赛记录失败", zap.Error(err), zap.String("tournament_id", tournamentID))
+		return
+	}
+
+	// 找到被超越的用户（排名在newRank之后的用户）
+	var overtakenUserIDs []uuid.UUID
+	for _, record := range records.Records {
+		if record.Rank > newRank && record.Rank <= 3 {
+			userID, err := uuid.FromString(record.OwnerId)
+			if err != nil {
+				s.logger.Error("解析用户ID失败", zap.Error(err), zap.String("owner_id", record.OwnerId))
+				continue
+			}
+			// 排除当前用户自己
+			if userID != currentUserID {
+				overtakenUserIDs = append(overtakenUserIDs, userID)
+			}
+		}
+	}
+
+	// 为每个被超越的用户标记
+	for _, userID := range overtakenUserIDs {
+		s.markUserOvertaken(ctx, userID, tournamentID)
+	}
+
+	if len(overtakenUserIDs) > 0 {
+		s.logger.Info("标记被超越用户",
+			zap.String("tournament_id", tournamentID),
+			zap.Int64("new_rank", newRank),
+			zap.Int("overtaken_count", len(overtakenUserIDs)))
+	}
+}
+
+// markUserOvertaken 标记单个用户被超越
+func (s *ApiServer) markUserOvertaken(ctx context.Context, userID uuid.UUID, tournamentID string) {
+	// 读取用户的排名变化数据
+	var rankChangeData RankChangeData
+	err := LoadData(ctx, s.logger, s.db, userID, &rankChangeData)
+	if err != nil {
+		s.logger.Error("读取用户排名变化数据失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return
+	}
+
+	// 确保数据结构已初始化
+	if rankChangeData.OvertakenTournaments == nil {
+		rankChangeData.OvertakenTournaments = make(map[string]bool)
+	}
+
+	// 标记该竞标赛为被超越
+	rankChangeData.OvertakenTournaments[tournamentID] = true
+	rankChangeData.LastUpdated = time.Now().Unix()
+
+	// 保存数据
+	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, &rankChangeData)
+	if err != nil {
+		s.logger.Error("保存用户排名变化数据失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return
+	}
+
+	s.logger.Info("用户被超越标记成功",
+		zap.String("user_id", userID.String()),
+		zap.String("tournament_id", tournamentID))
 }

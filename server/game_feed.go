@@ -31,10 +31,10 @@ const (
 	ContentImportantSignIn     = "CONTENT12555269890" // 签到奖励
 	ContentImportantChallenge  = "CONTENT12581991426" // 挑战赛开始
 	ContentImportantRankChange = "CONTENT12611329282" // 挑战赛排名变化
-	ContentImportantInvasion   = "CONTENT12595815426" // 邪恶组织入侵
+	ContentImportantMainGame   = "CONTENT12595815426" // 主线关卡中途退出
 
 	// 测试模式
-	TestModeEnabled = true // 是否启用测试模式，启用后将返回所有场景
+	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景
 
 	// 场景缓存时间限制配置
 	SceneCacheExpireHours = 8 // 默认场景缓存过期时间（小时）
@@ -45,11 +45,30 @@ var SceneExpireHoursConfig = map[string]int{
 	ContentImportantGift:       24, // 超值赠礼：24小时
 	ContentImportantSignIn:     24, // 签到奖励：8小时
 	ContentImportantChallenge:  24, // 挑战赛开始：12小时
-	ContentImportantRankChange: 24, // 挑战赛排名变化：6小时
-	ContentImportantInvasion:   8,  // 邪恶组织入侵：4小时
+	ContentImportantRankChange: 8,  // 挑战赛排名变化：6小时
+	ContentImportantMainGame:   8,  // 主线关卡中途退出：4小时
 }
 
 const TestSecret = "Fql12512872962aRv"
+
+// Username 白名单配置
+// 开启后，仅当用户名在白名单内时才返回场景；否则返回空场景列表
+var UsernameWhitelistEnabled = false
+
+// 通过将需要放行的用户名加入该表来管理测试玩家
+var UsernameWhitelist = map[string]struct{}{
+	// 示例："tester001": {}, "dev_user": {},
+	"cINwZBvRGp": {},
+	"eDgvzuwMmz": {},
+}
+
+func isUsernameAllowed(username string) bool {
+	if !UsernameWhitelistEnabled {
+		return true
+	}
+	_, ok := UsernameWhitelist[username]
+	return ok
+}
 
 // Scene 场景信息
 type Scene struct {
@@ -60,7 +79,8 @@ type Scene struct {
 
 // DataStruct 数据结构
 type DataStruct struct {
-	Scenes []*Scene `json:"scenes"` // 场景列表
+	Scenes   []*Scene `json:"scenes"`   // 场景列表
+	Username string   `json:"username"` // 用户名
 }
 
 // SceneListResponse 场景列表响应
@@ -98,6 +118,12 @@ type SceneCacheInfo struct {
 // ByteGameDirectPlay 场景缓存数据
 type ByteGameDirectPlay struct {
 	SceneCache map[string]SceneCacheInfo `json:"scene_cache"` // 场景ID -> 场景缓存信息
+}
+
+// RankChangeData 排名变化数据
+type RankChangeData struct {
+	OvertakenTournaments map[string]bool `json:"overtaken_tournaments"` // 被超越的竞标赛ID集合
+	LastUpdated          int64           `json:"last_updated"`          // 最后更新时间戳
 }
 
 func (s *StaminaData) GetCollection() string {
@@ -150,6 +176,19 @@ func (s *ByteGameDirectPlay) GetKey() string {
 
 func (s *ByteGameDirectPlay) Init() {
 	s.SceneCache = make(map[string]SceneCacheInfo)
+}
+
+func (s *RankChangeData) GetCollection() string {
+	return "ByteGame"
+}
+
+func (s *RankChangeData) GetKey() string {
+	return "RankChange"
+}
+
+func (s *RankChangeData) Init() {
+	s.OvertakenTournaments = make(map[string]bool)
+	s.LastUpdated = 0
 }
 
 // getSignature 计算签名
@@ -452,6 +491,59 @@ func (s *ApiServer) checkChallengeAvailable(ctx context.Context, userID uuid.UUI
 	return false
 }
 
+// checkRankChangeAvailable 检查排名变化订阅是否可以触发
+func (s *ApiServer) checkRankChangeAvailable(ctx context.Context, userID uuid.UUID) bool {
+	// 1. 从存储中读取排名变化数据
+	var rankChangeData RankChangeData
+	err := LoadData(ctx, s.logger, s.db, userID, &rankChangeData)
+	if err != nil {
+		s.logger.Error("读取排名变化数据失败", zap.Error(err))
+		return false // 读取失败，不触发订阅
+	}
+
+	// 2. 检查是否有被超越的竞标赛
+	if len(rankChangeData.OvertakenTournaments) == 0 {
+		return false // 没有被超越的竞标赛
+	}
+
+	// 3. 获取当前时间
+	now := time.Now()
+
+	// 4. 检查被超越的竞标赛是否还在进行中
+	for tournamentID := range rankChangeData.OvertakenTournaments {
+		// 获取竞标赛信息
+		tournament := s.leaderboardCache.Get(tournamentID)
+		if tournament == nil {
+			// 竞标赛不存在，移除该记录
+			delete(rankChangeData.OvertakenTournaments, tournamentID)
+			continue
+		}
+
+		// 检查竞标赛是否还在进行中
+		if tournament.EndTime > 0 && tournament.EndTime <= now.Unix() {
+			// 竞标赛已结束，移除该记录
+			delete(rankChangeData.OvertakenTournaments, tournamentID)
+			continue
+		}
+
+		// 找到正在进行的被超越竞标赛，可以触发订阅
+		s.logger.Info("发现用户被超越的竞标赛",
+			zap.String("user_id", userID.String()),
+			zap.String("tournament_id", tournamentID),
+			zap.Time("tournament_end", time.Unix(tournament.EndTime, 0)))
+
+		return true
+	}
+
+	// 5. 如果没有正在进行的被超越竞标赛，清空数据
+	if len(rankChangeData.OvertakenTournaments) == 0 {
+		rankChangeData.LastUpdated = now.Unix()
+		SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, &rankChangeData)
+	}
+
+	return false
+}
+
 // checkSceneCache 检查场景缓存，判断是否在时间限制内
 func (s *ApiServer) checkSceneCache(sceneID string, directPlayData *ByteGameDirectPlay) bool {
 	// 1. 检查场景ID是否在缓存中
@@ -534,6 +626,20 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		return nil, err
 	}
 
+	// 1.1 获取用户名
+	//account, err := GetAccount(ctx, s.logger, s.db, s.statusRegistry, userID)
+	//if err != nil {
+	//	s.logger.Error("查询用户信息失败", zap.Error(err), zap.String("user_id", userID.String()))
+	//	return nil, err
+	//}
+	//username := account.User.Username
+
+	// 1.2 白名单校验：不在白名单内则直接返回空场景
+	//if !isUsernameAllowed(username) {
+	//	s.logger.Info("用户名未在白名单内，跳过返回场景", zap.String("username", username), zap.String("user_id", userID.String()))
+	//	return []*Scene{}, nil
+	//}
+
 	// 2. 只加载一次场景缓存数据
 	var directPlayData ByteGameDirectPlay
 	err = LoadData(ctx, s.logger, s.db, userID, &directPlayData)
@@ -556,22 +662,23 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 					ContentImportantSignIn,
 					ContentImportantChallenge,
 					ContentImportantRankChange,
-					ContentImportantInvasion,
+					ContentImportantMainGame,
 				},
 				Extra: "",
 			},
 		}, nil
 	}
 
+	needUpdate := false
+
 	// 检查超值赠礼是否可以领取
 	if !s.checkSceneCache(ContentImportantGift, &directPlayData) && s.checkStarterPackAvailable(ctx, userID) {
 		scenes = append(scenes, &Scene{
 			Scene:      SceneImportant,
 			ContentIDs: []string{ContentImportantGift},
-			Extra:      "ContentImportantGift",
+			Extra:      ContentImportantGift,
 		})
-		// 更新场景缓存
-		_ = s.updateSceneCache(ctx, userID, ContentImportantGift, &directPlayData)
+		needUpdate = true
 	}
 
 	// 检查登录奖励是否可以领取
@@ -579,10 +686,9 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		scenes = append(scenes, &Scene{
 			Scene:      SceneImportant,
 			ContentIDs: []string{ContentImportantSignIn},
-			Extra:      "ContentImportantSignIn",
+			Extra:      ContentImportantSignIn,
 		})
-		// 更新场景缓存
-		_ = s.updateSceneCache(ctx, userID, ContentImportantSignIn, &directPlayData)
+		needUpdate = true
 	}
 
 	// 检查挑战赛开战订阅
@@ -590,10 +696,33 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		scenes = append(scenes, &Scene{
 			Scene:      SceneImportant,
 			ContentIDs: []string{ContentImportantChallenge},
-			Extra:      "ContentImportantChallenge",
+			Extra:      ContentImportantChallenge,
 		})
-		// 更新场景缓存
-		_ = s.updateSceneCache(ctx, userID, ContentImportantChallenge, &directPlayData)
+		needUpdate = true
+	}
+
+	// 检查主线关卡中途退出订阅
+	if !s.checkSceneCache(ContentImportantMainGame, &directPlayData) {
+		scenes = append(scenes, &Scene{
+			Scene:      SceneImportant,
+			ContentIDs: []string{ContentImportantMainGame},
+			Extra:      ContentImportantMainGame,
+		})
+		needUpdate = true
+	}
+
+	// 检查排名变化订阅
+	if !s.checkSceneCache(ContentImportantRankChange, &directPlayData) && s.checkRankChangeAvailable(ctx, userID) {
+		scenes = append(scenes, &Scene{
+			Scene:      SceneImportant,
+			ContentIDs: []string{ContentImportantRankChange},
+			Extra:      ContentImportantRankChange,
+		})
+		needUpdate = true
+	}
+
+	if needUpdate {
+		_ = s.updateSceneCache(ctx, userID, ContentImportantMainGame, &directPlayData)
 	}
 
 	return scenes, nil
