@@ -70,6 +70,8 @@ type ctxTokenIssuedAtKey = ctxkeys.TokenIssuedAtKey
 
 type ctxFullMethodKey struct{}
 
+// ChallengeBatch 已废弃，现在使用数据库原子操作管理批次号
+// 保留结构体定义以兼容现有代码，但不再使用
 type ChallengeBatch struct {
 	Batch map[int32]int32 `json:"batch"`
 }
@@ -111,10 +113,10 @@ type ApiServer struct {
 	grpcGatewayServer    *http.Server
 	template             TemplateManager
 
-	// 批次号管理
-	challengeBatchMutex sync.RWMutex
-	challengeBatch      *ChallengeBatch
-	challengeBatchDirty bool // 标记是否需要保存
+	// 批次号管理 - 现在使用数据库原子操作，不再需要内存缓存
+	// challengeBatchMutex sync.RWMutex  // 已废弃
+	// challengeBatch      *ChallengeBatch // 已废弃
+	// challengeBatchDirty bool // 已废弃
 }
 
 func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, version string, socialClient *social.Client, storageIndex StorageIndex, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, matchmaker Matchmaker, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, pipeline *Pipeline, runtime *Runtime, templateManger TemplateManager) *ApiServer {
@@ -375,30 +377,6 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 		} else {
 			if err := s.grpcGatewayServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				startupLogger.Fatal("API server gateway listener failed", zap.Error(err))
-			}
-		}
-	}()
-
-	// 初始化挑战赛批次号管理
-	s.InitChallengeBatch()
-
-	// 启动定时保存挑战赛批次号的goroutine
-	go func() {
-		for {
-			time.Sleep(time.Minute)
-			if s.challengeBatchDirty {
-				s.logger.Info("定时检测到挑战赛批次号有变化，尝试保存")
-				s.challengeBatchMutex.Lock()
-				if s.challengeBatchDirty {
-					err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, s.challengeBatch)
-					if err != nil {
-						s.logger.Error("定时保存挑战赛批次号数据失败", zap.Error(err))
-					} else {
-						s.challengeBatchDirty = false
-						s.logger.Info("定时保存挑战赛批次号数据成功", zap.Int("challenge_count", len(s.challengeBatch.Batch)))
-					}
-				}
-				s.challengeBatchMutex.Unlock()
 			}
 		}
 	}()
@@ -728,72 +706,128 @@ func handleRoutingError(ctx context.Context, mux *grpcgw.ServeMux, marshaler grp
 }
 
 // InitChallengeBatch 初始化挑战赛批次号管理
+// 现在使用数据库原子操作，无需初始化内存缓存
 func (s *ApiServer) InitChallengeBatch() {
-	s.challengeBatch = &ChallengeBatch{}
-	s.challengeBatch.Init()
-
-	// 从数据库加载批次号数据
-	err := LoadData(context.Background(), s.logger, s.db, uuid.Nil, s.challengeBatch)
-	if err != nil {
-		s.logger.Warn("加载挑战赛批次号数据失败，使用默认值", zap.Error(err))
-	}
-
-	s.logger.Info("挑战赛批次号管理器已初始化", zap.Int("loaded_challenges", len(s.challengeBatch.Batch)))
+	s.logger.Info("挑战赛批次号管理器已初始化 - 使用数据库原子操作")
 }
 
 // GetNextChallengeBatch 获取下一个挑战赛批次号
+// 使用数据库原子操作确保多节点一致性
 func (s *ApiServer) GetNextChallengeBatch(challengeID int32) int32 {
-	s.challengeBatchMutex.Lock()
-	defer s.challengeBatchMutex.Unlock()
+	ctx := context.Background()
 
-	// 获取当前批次号并自增
-	currentBatch, exists := s.challengeBatch.Batch[challengeID]
-	if !exists {
-		currentBatch = 0
+	// 使用UPSERT操作实现原子递增
+	var nextBatch int32
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO challenge_batch (challenge_id, current_batch)
+		VALUES ($1, 1)
+		ON CONFLICT (challenge_id)
+		DO UPDATE SET
+			current_batch = challenge_batch.current_batch + 1,
+			updated_at = NOW()
+		RETURNING current_batch
+	`, challengeID).Scan(&nextBatch)
+
+	if err != nil {
+		s.logger.Error("获取挑战赛批次号失败",
+			zap.Int32("challenge_id", challengeID),
+			zap.Error(err))
+		// 如果数据库操作失败，返回1作为默认值
+		return 1
 	}
-
-	nextBatch := currentBatch + 1
-	s.challengeBatch.Batch[challengeID] = nextBatch
-	s.challengeBatchDirty = true // 标记需要保存
 
 	s.logger.Info("分配新的挑战赛批次号",
 		zap.Int32("challenge_id", challengeID),
-		zap.Int32("current_batch", currentBatch),
 		zap.Int32("next_batch", nextBatch))
 
 	return nextBatch
 }
 
 // SaveChallengeBatch 保存挑战赛批次号数据
+// 现在使用数据库原子操作，无需手动保存
 func (s *ApiServer) SaveChallengeBatch() {
-	s.challengeBatchMutex.Lock()
-	defer s.challengeBatchMutex.Unlock()
-
-	if !s.challengeBatchDirty {
-		s.logger.Debug("挑战赛批次号数据无变化，跳过保存")
-		return
-	}
-
-	err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, s.challengeBatch)
-	if err != nil {
-		s.logger.Error("保存挑战赛批次号数据失败", zap.Error(err))
-		return
-	}
-
-	s.challengeBatchDirty = false
-	s.logger.Info("挑战赛批次号数据已保存", zap.Int("challenge_count", len(s.challengeBatch.Batch)))
+	s.logger.Debug("挑战赛批次号使用数据库原子操作，无需手动保存")
 }
 
 // GetChallengeBatchInfo 获取挑战赛批次号信息（用于调试）
+// 现在从数据库查询实时数据
 func (s *ApiServer) GetChallengeBatchInfo() map[int32]int32 {
-	s.challengeBatchMutex.RLock()
-	defer s.challengeBatchMutex.RUnlock()
+	ctx := context.Background()
+	result := make(map[int32]int32)
 
-	result := make(map[int32]int32, len(s.challengeBatch.Batch))
-	for k, v := range s.challengeBatch.Batch {
-		result[k] = v
+	// 从数据库查询所有挑战赛的批次号信息
+	rows, err := s.db.QueryContext(ctx, "SELECT challenge_id, current_batch FROM challenge_batch ORDER BY challenge_id")
+	if err != nil {
+		s.logger.Error("查询挑战赛批次号信息失败", zap.Error(err))
+		return result
 	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var challengeID, currentBatch int32
+		if err := rows.Scan(&challengeID, &currentBatch); err != nil {
+			s.logger.Error("扫描挑战赛批次号数据失败", zap.Error(err))
+			continue
+		}
+		result[challengeID] = currentBatch
+	}
+
+	if err := rows.Err(); err != nil {
+		s.logger.Error("遍历挑战赛批次号数据失败", zap.Error(err))
+	}
+
 	return result
+}
+
+// GetCurrentChallengeBatch 获取当前挑战赛批次号（不递增）
+func (s *ApiServer) GetCurrentChallengeBatch(challengeID int32) int32 {
+	ctx := context.Background()
+
+	var currentBatch int32
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COALESCE(current_batch, 0)
+		FROM challenge_batch
+		WHERE challenge_id = $1
+	`, challengeID).Scan(&currentBatch)
+
+	if err != nil {
+		s.logger.Error("获取当前挑战赛批次号失败",
+			zap.Int32("challenge_id", challengeID),
+			zap.Error(err))
+		return 0
+	}
+
+	return currentBatch
+}
+
+// ResetChallengeBatch 重置挑战赛批次号（用于测试或特殊情况）
+func (s *ApiServer) ResetChallengeBatch(challengeID int32, batchNumber int32) int32 {
+	ctx := context.Background()
+
+	var newBatch int32
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO challenge_batch (challenge_id, current_batch)
+		VALUES ($1, $2)
+		ON CONFLICT (challenge_id)
+		DO UPDATE SET
+			current_batch = $2,
+			updated_at = NOW()
+		RETURNING current_batch
+	`, challengeID, batchNumber).Scan(&newBatch)
+
+	if err != nil {
+		s.logger.Error("重置挑战赛批次号失败",
+			zap.Int32("challenge_id", challengeID),
+			zap.Int32("batch_number", batchNumber),
+			zap.Error(err))
+		return batchNumber
+	}
+
+	s.logger.Info("重置挑战赛批次号",
+		zap.Int32("challenge_id", challengeID),
+		zap.Int32("new_batch", newBatch))
+
+	return newBatch
 }
 
 // isCriticalError 判断是否为严重错误，需要重启服务
