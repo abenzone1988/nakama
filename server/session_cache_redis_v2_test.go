@@ -48,30 +48,31 @@ func TestRedisSessionCacheV2(t *testing.T) {
 
 	// 测试添加和验证session
 	t.Run("Add and validate session", func(t *testing.T) {
-		// 清理之前的数据
-		tokenSetKey := fmt.Sprintf("user:%s:tokens", userID.String())
-		tokenHashKey := fmt.Sprintf("user:%s:token_details", userID.String())
-		client.Del(context.Background(), tokenSetKey, tokenHashKey)
+		// 清理之前的数据 - 使用V2版本的实际键名
+		sessionKey := fmt.Sprintf("user:%s:session", userID.String())
+		refreshKey := fmt.Sprintf("user:%s:refresh", userID.String())
+		client.Del(context.Background(), sessionKey, refreshKey)
 
 		t.Logf("Adding session for user %s with token %s", userID.String(), tokenID)
 		cache.Add(userID, exp, tokenID, exp, tokenID)
 
-		// 验证token是否正确添加到Set中
-		exists, err := client.SIsMember(context.Background(), tokenSetKey, tokenID).Result()
+		// 验证session token是否正确存储
+		sessionValue, err := client.Get(context.Background(), sessionKey).Result()
 		if err != nil {
-			t.Errorf("Failed to check token in Redis Set: %v", err)
+			t.Errorf("Failed to get session token from Redis: %v", err)
 		}
-		t.Logf("Token exists in Set: %v", exists)
-		assert.True(t, exists)
+		t.Logf("Session token value: %s", sessionValue)
+		expectedSessionValue := fmt.Sprintf("%s:valid", tokenID)
+		assert.Equal(t, expectedSessionValue, sessionValue)
 
-		// 验证token状态是否正确添加到Hash中
-		sessionField := fmt.Sprintf("%s:session", tokenID)
-		val, err := client.HGet(context.Background(), tokenHashKey, sessionField).Result()
+		// 验证refresh token是否正确存储
+		refreshValue, err := client.Get(context.Background(), refreshKey).Result()
 		if err != nil {
-			t.Errorf("Failed to get token status from Redis Hash: %v", err)
+			t.Errorf("Failed to get refresh token from Redis: %v", err)
 		}
-		t.Logf("Token status in Hash: %s", val)
-		assert.Equal(t, "valid", val)
+		t.Logf("Refresh token value: %s", refreshValue)
+		expectedRefreshValue := fmt.Sprintf("%s:valid", tokenID)
+		assert.Equal(t, expectedRefreshValue, refreshValue)
 
 		// 检查session是否有效
 		valid := cache.IsValidSession(userID, exp, tokenID)
@@ -88,17 +89,17 @@ func TestRedisSessionCacheV2(t *testing.T) {
 		t.Logf("Session validity after removal: %v", valid)
 		assert.False(t, valid, "Session should be invalid after removal")
 
-		// 验证Set和Hash中的数据是否被正确删除
-		tokenSetKey := fmt.Sprintf("user:%s:tokens", userID.String())
-		exists, err := client.SIsMember(context.Background(), tokenSetKey, tokenID).Result()
-		assert.NoError(t, err)
-		assert.False(t, exists, "Token should be removed from Set")
+		// 验证V2版本的数据是否被正确删除
+		sessionKey := fmt.Sprintf("user:%s:session", userID.String())
+		refreshKey := fmt.Sprintf("user:%s:refresh", userID.String())
 
-		tokenHashKey := fmt.Sprintf("user:%s:token_details", userID.String())
-		sessionField := fmt.Sprintf("%s:session", tokenID)
-		val, err := client.HGet(context.Background(), tokenHashKey, sessionField).Result()
-		assert.Error(t, redis.Nil, err)
-		assert.Empty(t, val, "Token status should be removed from Hash")
+		// 检查session token是否被删除
+		_, err := client.Get(context.Background(), sessionKey).Result()
+		assert.ErrorIs(t, err, redis.Nil, "Session token should be removed from Redis")
+
+		// 检查refresh token是否被删除
+		_, err = client.Get(context.Background(), refreshKey).Result()
+		assert.ErrorIs(t, err, redis.Nil, "Refresh token should be removed from Redis")
 	})
 
 	// 测试Ban和Unban功能
@@ -190,19 +191,21 @@ func TestRedisSessionCacheV2_SingleToken(t *testing.T) {
 		t.Logf("Second session validity: %v", valid)
 		assert.True(t, valid, "Second session should be valid")
 
-		// 验证Redis中的数据
-		tokenSetKey := fmt.Sprintf("user:%s:tokens", userID.String())
-		members, err := client.SMembers(context.Background(), tokenSetKey).Result()
-		assert.NoError(t, err)
-		assert.Len(t, members, 1, "Should only have one token in Set")
-		assert.Contains(t, members, token2, "Set should contain the second token")
+		// 验证V2版本Redis中的数据
+		sessionKey := fmt.Sprintf("user:%s:session", userID.String())
+		refreshKey := fmt.Sprintf("user:%s:refresh", userID.String())
 
-		tokenHashKey := fmt.Sprintf("user:%s:token_details", userID.String())
-		values, err := client.HGetAll(context.Background(), tokenHashKey).Result()
+		// 检查session token
+		sessionValue, err := client.Get(context.Background(), sessionKey).Result()
 		assert.NoError(t, err)
-		assert.Len(t, values, 2, "Should have two fields in Hash (session and refresh)")
-		assert.Equal(t, "valid", values[fmt.Sprintf("%s:session", token2)])
-		assert.Equal(t, "valid", values[fmt.Sprintf("%s:refresh", token2)])
+		expectedSessionValue := fmt.Sprintf("%s:valid", token2)
+		assert.Equal(t, expectedSessionValue, sessionValue, "Session token should be the second token")
+
+		// 检查refresh token
+		refreshValue, err := client.Get(context.Background(), refreshKey).Result()
+		assert.NoError(t, err)
+		expectedRefreshValue := fmt.Sprintf("%s:valid", token2)
+		assert.Equal(t, expectedRefreshValue, refreshValue, "Refresh token should be the second token")
 	})
 }
 
@@ -238,18 +241,35 @@ func TestRedisSessionCacheV2_Performance(t *testing.T) {
 	t.Logf("Validate %d session tokens took: %v (%.2f tokens/sec)", testTokenCount, validateDuration, float64(testTokenCount)/validateDuration.Seconds())
 	t.Logf("Valid session tokens found: %d", validCount)
 
-	// 验证数据结构
-	tokenSetKey := fmt.Sprintf("user:%s:tokens", userID.String())
-	tokenCount, err := client.SCard(context.Background(), tokenSetKey).Result()
-	assert.NoError(t, err)
-	t.Logf("Total tokens in Set: %d (including both session and refresh tokens)", tokenCount)
-	assert.Equal(t, int64(testTokenCount*2), tokenCount, "Should have %d tokens in Set (%d session + %d refresh)", testTokenCount*2, testTokenCount, testTokenCount)
+	// 验证V2版本的数据结构
+	sessionKey := fmt.Sprintf("user:%s:session", userID.String())
+	refreshKey := fmt.Sprintf("user:%s:refresh", userID.String())
 
-	tokenHashKey := fmt.Sprintf("user:%s:token_details", userID.String())
-	hashSize, err := client.HLen(context.Background(), tokenHashKey).Result()
+	// 检查session token是否存在
+	sessionExists, err := client.Exists(context.Background(), sessionKey).Result()
 	assert.NoError(t, err)
-	t.Logf("Fields in Hash: %d", hashSize)
-	assert.Equal(t, int64(testTokenCount*2), hashSize, "Should have %d fields in Hash (%d session + %d refresh)", testTokenCount*2, testTokenCount, testTokenCount)
+	t.Logf("Session token exists: %d", sessionExists)
+	assert.Equal(t, int64(1), sessionExists, "Session token should exist")
+
+	// 检查refresh token是否存在
+	refreshExists, err := client.Exists(context.Background(), refreshKey).Result()
+	assert.NoError(t, err)
+	t.Logf("Refresh token exists: %d", refreshExists)
+	assert.Equal(t, int64(1), refreshExists, "Refresh token should exist")
+
+	// 验证最后一个token的值
+	lastSessionToken := fmt.Sprintf("session%d", testTokenCount-1)
+	lastRefreshToken := fmt.Sprintf("refresh%d", testTokenCount-1)
+
+	sessionValue, err := client.Get(context.Background(), sessionKey).Result()
+	assert.NoError(t, err)
+	expectedSessionValue := fmt.Sprintf("%s:valid", lastSessionToken)
+	assert.Equal(t, expectedSessionValue, sessionValue, "Last session token should be stored")
+
+	refreshValue, err := client.Get(context.Background(), refreshKey).Result()
+	assert.NoError(t, err)
+	expectedRefreshValue := fmt.Sprintf("%s:valid", lastRefreshToken)
+	assert.Equal(t, expectedRefreshValue, refreshValue, "Last refresh token should be stored")
 
 	// 性能要求
 	assert.Less(t, addDuration.Seconds(), float64(5), "Adding tokens took too long")

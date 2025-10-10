@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -19,6 +20,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+// getServerAddress 获取正确的服务器地址
+func getServerAddress() string {
+	// 检查是否在 Docker 环境中
+	if os.Getenv("DOCKER_ENV") == "true" || os.Getenv("TEST_DB_URL") != "" {
+		return "nakama:7349"
+	}
+	return "localhost:7349"
+}
 
 // createSignedTournamentMetadata 创建包含签名的tournament record metadata
 func createSignedTournamentMetadata(tournamentID string, score, subscore int64, metadataFields map[string]interface{}) (string, error) {
@@ -83,9 +93,10 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	conn, err := grpc.Dial("localhost:7349", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	serverAddr := getServerAddress()
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		t.Fatalf("无法连接到 gRPC 服务器: %v", err)
+		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
 	}
 	defer conn.Close()
 
@@ -96,7 +107,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 	authCtx := metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("sparkgame:")))
 
 	t.Logf("=== 开始%d个玩家的API挑战赛测试 ===", config.PlayerCount)
-	t.Logf("服务器地址: localhost:7349")
+	t.Logf("服务器地址: %s", serverAddr)
 	t.Logf("认证方式: Basic Auth (sparkgame)")
 	t.Logf("测试模式: 严格模式=%v, 性能模式=%v, 详细日志=%v",
 		config.StrictMode, config.PerformanceMode, config.VerboseLogging)
@@ -466,9 +477,10 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	conn, err := grpc.Dial("localhost:7349", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	serverAddr := getServerAddress()
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		t.Fatalf("无法连接到 gRPC 服务器: %v", err)
+		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
 	}
 	defer conn.Close()
 
@@ -480,6 +492,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("sparkgame:")))
 
 	t.Logf("=== 开始并发tournament创建测试 ===")
+	t.Logf("服务器地址: %s", serverAddr)
 
 	// 创建玩家数据结构
 	type Player struct {

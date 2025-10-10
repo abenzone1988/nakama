@@ -251,7 +251,30 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 					zap.String("userId", invalidateMsg.UserID),
 					zap.Strings("tokenIds", invalidateMsg.TokenIDs),
 					zap.String("sourceNode", invalidateMsg.SourceID))
-				// 对于新添加的token，我们不需要特别处理，让它们通过正常验证流程
+
+				// 更新本地缓存，确保其他节点能立即验证新添加的token
+				userID, err := uuid.FromString(invalidateMsg.UserID)
+				if err != nil {
+					s.logger.Error("PubSub消息中的用户ID无效",
+						zap.Error(err),
+						zap.String("userId", invalidateMsg.UserID))
+					continue
+				}
+
+				for _, tokenID := range invalidateMsg.TokenIDs {
+					// 根据token类型更新本地缓存
+					if invalidateMsg.TokenType == "all" {
+						// 同时更新session和refresh token缓存
+						sessionCacheKey := s.getCacheKey(userID, tokenID, "session")
+						refreshCacheKey := s.getCacheKey(userID, tokenID, "refresh")
+						s.localCache.set(sessionCacheKey, true, cacheExpiry)
+						s.localCache.set(refreshCacheKey, true, cacheExpiry)
+					} else {
+						// 更新特定类型的token缓存
+						cacheKey := s.getCacheKey(userID, tokenID, invalidateMsg.TokenType)
+						s.localCache.set(cacheKey, true, cacheExpiry)
+					}
+				}
 
 			case "ban":
 				userID, err := uuid.FromString(invalidateMsg.UserID)

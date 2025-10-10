@@ -1,34 +1,28 @@
-name: nakama-node-jp
+name: nakama-test
 
 database:
   address:
-    - "root:sparkinfi123!@192.168.102.223:5432?dbname=hjzx-0"
+    - "postgres:localdb@db:5432/nakama"
+
 logger:
   level: "debug"
 
 session:
   encryption_key: "defaultencryptionkey"
-  token_expiry_sec: 86400
+  token_expiry_sec: 7200
   refresh_encryption_key: "defaultrefreshencryptionkey"
   refresh_token_expiry_sec: 186400
   single_socket: true
   single_session: true
-#  use_redis: true
-#  redis_address: "192.168.102.223:6379"
-#  redis_password: ""
+  use_redis: true
+  redis_address: "redis:6379"
+  redis_password: "redis123"
 
 socket:
   server_key: "sparkgame"
   port: 7350
 
-
-
 console:
   port: 7351
   username: "admin"
   password: "password"
-
-
-
-
-

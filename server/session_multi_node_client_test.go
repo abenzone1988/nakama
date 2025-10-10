@@ -71,7 +71,7 @@ func (c *TestClient) Login() error {
 	// 使用自定义认证，移除server_key从请求体中
 	// 注意：不包含nodePort，确保不同节点使用相同的用户ID来测试Single Session
 	loginData := map[string]interface{}{
-		"id":     fmt.Sprintf("test-user-%s", c.username),
+		"id":     fmt.Sprintf("%s", c.username),
 		"create": true,
 	}
 

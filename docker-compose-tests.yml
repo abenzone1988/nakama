@@ -15,6 +15,23 @@ services:
       timeout: 10s
       retries: 10
 
+  redis:
+    container_name: redis
+    image: redis:7.2-alpine
+    command: redis-server --appendonly yes
+    environment:
+      - REDIS_PASSWORD=redis123
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      start_period: 10s
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
   nakama:
     build:
       context: .
@@ -25,13 +42,19 @@ services:
       - "-ecx"
       - >
         /nakama/nakama migrate up --database.address postgres:localdb@db:5432/nakama &&
-        exec /nakama/nakama --logger.level DEBUG --name nakama --database.address postgres:localdb@db:5432/nakama --session.token_expiry_sec 7200 --socket.port 7350 --console.port 7351
+        exec /nakama/nakama --config /nakama/config.yml
     restart: always
     links:
       - "db:db"
+      - "redis:redis"
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config_docker_test.yml:/nakama/config.yml:ro
+      - ./data:/nakama/data:ro
     healthcheck:
       test: ["CMD", "/nakama/nakama", "healthcheck"]
       timeout: 10s
@@ -47,19 +70,26 @@ services:
       environment:
         - "GODEBUG=netdns=cgo"
         - TEST_DB_URL=postgresql://postgres:localdb@db:5432/nakama?sslmode=disable
+        - TEST_REDIS_URL=redis://redis:6379
+        - REDIS_HOST=redis
+        - REDIS_PORT=6379
+        - DOCKER_ENV=true
       volumes:
         - "./:/nakama"
         - "lua:/nakama/internal/gopher-lua/_lua5.1-tests/libs"
-      links:
-        - "db:db"
       depends_on:
         db:
           condition: service_healthy
+        redis:
+          condition: service_healthy
         nakama:
           condition: service_healthy
+      networks:
+        - default
 
 volumes:
   lua:
+  redis_data:
 
 networks:
   default:
