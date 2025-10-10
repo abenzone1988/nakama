@@ -108,7 +108,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 	}
 
 	tplChallenges := s.template.GetTplChallenge().FindAll()
-	if tplChallenges == nil {
+	if tplChallenges.Len() == 0 {
 		return &game.GetChallengeResponse{
 			Challenges: []*game.Challenge{},
 		}, nil
@@ -128,13 +128,21 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 	}
 
 	var allChallenges []challengeInfo
-	for _, tplChallenge := range tplChallenges {
+	for i := 0; i < tplChallenges.Len(); i++ {
+		tplChallenge := tplChallenges.Get(i)
+		// 安全检查：确保模板数据有效
+		if tplChallenge.ID == 0 {
+			s.logger.Warn("跳过无效的挑战赛模板", zap.String("reason", "ID为0"))
+			continue
+		}
+
 		// 解析开始时间
 		startTime, err := parseDateTime(tplChallenge.OpenTime)
 		if err != nil {
 			s.logger.Error("解析挑战赛开始时间失败",
 				zap.Int32("id", tplChallenge.ID),
 				zap.String("OpenTime", tplChallenge.OpenTime),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 				zap.Error(err))
 			continue
 		}
@@ -145,6 +153,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			s.logger.Error("解析挑战赛关闭时间失败",
 				zap.Int32("id", tplChallenge.ID),
 				zap.String("CloseTime", tplChallenge.CloseTime),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 				zap.Error(err))
 			continue
 		}
@@ -155,11 +164,21 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			s.logger.Error("解析挑战赛结束时间失败",
 				zap.Int32("id", tplChallenge.ID),
 				zap.String("end_date", tplChallenge.EndTime),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 				zap.Error(err))
 			continue
 		}
 
-		// 判断挑战赛状态 endTime
+		// 时间逻辑验证
+		if startTime.After(endTime) {
+			s.logger.Warn("挑战赛时间配置错误：开始时间晚于结束时间",
+				zap.Int32("id", tplChallenge.ID),
+				zap.Time("start_time", startTime),
+				zap.Time("end_time", endTime))
+			continue
+		}
+
+		// 判断挑战赛状态
 		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
 		isFuture := startTime.After(now)
 
@@ -247,19 +266,28 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		// 从模板表中读取时间信息
 		openTime, err := parseDateTime(tplChallenge.OpenTime)
 		if err != nil {
-			s.logger.Error("解析挑战赛开始时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+			s.logger.Error("解析挑战赛开始时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
+				zap.Error(err))
 			continue
 		}
 
 		closeTime, err := parseDateTime(tplChallenge.CloseTime)
 		if err != nil {
-			s.logger.Error("解析挑战赛关闭时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+			s.logger.Error("解析挑战赛关闭时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
+				zap.Error(err))
 			continue
 		}
 
 		endTime, err := parseDateTime(tplChallenge.EndTime)
 		if err != nil {
-			s.logger.Error("解析挑战赛结束时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+			s.logger.Error("解析挑战赛结束时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
+				zap.Error(err))
 			continue
 		}
 
@@ -334,6 +362,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		s.logger.Error("解析挑战赛开始时间失败",
 			zap.Int32("id", tplChallenge.ID),
 			zap.String("start_time", tplChallenge.OpenTime),
+			zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 			zap.Error(err))
 		return &game.JoinChallengeResponse{
 			Code: 3,
@@ -347,6 +376,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		s.logger.Error("解析挑战赛关闭时间失败",
 			zap.Int32("id", tplChallenge.ID),
 			zap.String("close_time", tplChallenge.CloseTime),
+			zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 			zap.Error(err))
 		return &game.JoinChallengeResponse{
 			Code: 3,
@@ -360,6 +390,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		s.logger.Error("解析挑战赛结束时间失败",
 			zap.Int32("id", tplChallenge.ID),
 			zap.String("end_time", tplChallenge.EndTime),
+			zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 			zap.Error(err))
 		return &game.JoinChallengeResponse{
 			Code: 3,
@@ -481,7 +512,8 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 		})
 
 		rewardId := ""
-		for _, acReward := range acRewards {
+		for i := 0; i < acRewards.Len(); i++ {
+			acReward := acRewards.Get(i)
 			if int64(acReward.MinRank) <= ownerRecord.Rank && int64(acReward.MaxRank) >= ownerRecord.Rank {
 				rewardId = acReward.RewardID
 				break
@@ -716,7 +748,8 @@ func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID,
 	})
 
 	rewardId := ""
-	for _, acReward := range acRewards {
+	for i := 0; i < acRewards.Len(); i++ {
+		acReward := acRewards.Get(i)
 		if int64(acReward.MinRank) <= ownerRecord.Rank && int64(acReward.MaxRank) >= ownerRecord.Rank {
 			s.logger.Info("找到过期排名奖励",
 				zap.Int32("minRank", acReward.MinRank),

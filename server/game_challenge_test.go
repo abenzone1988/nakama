@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -19,6 +21,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+// getServerAddress 获取正确的服务器地址
+func getServerAddress() string {
+	// 检查是否在 Docker 环境中
+	if os.Getenv("DOCKER_ENV") == "true" || os.Getenv("TEST_DB_URL") != "" {
+		return "nakama:7349"
+	}
+	return "localhost:7349"
+}
 
 // createSignedTournamentMetadata 创建包含签名的tournament record metadata
 func createSignedTournamentMetadata(tournamentID string, score, subscore int64, metadataFields map[string]interface{}) (string, error) {
@@ -83,9 +94,10 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	conn, err := grpc.Dial("localhost:7349", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	serverAddr := getServerAddress()
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		t.Fatalf("无法连接到 gRPC 服务器: %v", err)
+		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
 	}
 	defer conn.Close()
 
@@ -96,7 +108,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 	authCtx := metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("sparkgame:")))
 
 	t.Logf("=== 开始%d个玩家的API挑战赛测试 ===", config.PlayerCount)
-	t.Logf("服务器地址: localhost:7349")
+	t.Logf("服务器地址: %s", serverAddr)
 	t.Logf("认证方式: Basic Auth (sparkgame)")
 	t.Logf("测试模式: 严格模式=%v, 性能模式=%v, 详细日志=%v",
 		config.StrictMode, config.PerformanceMode, config.VerboseLogging)
@@ -466,9 +478,10 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	conn, err := grpc.Dial("localhost:7349", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	serverAddr := getServerAddress()
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		t.Fatalf("无法连接到 gRPC 服务器: %v", err)
+		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
 	}
 	defer conn.Close()
 
@@ -480,6 +493,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("sparkgame:")))
 
 	t.Logf("=== 开始并发tournament创建测试 ===")
+	t.Logf("服务器地址: %s", serverAddr)
 
 	// 创建玩家数据结构
 	type Player struct {
@@ -799,4 +813,303 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 
 	t.Logf("=== 并发测试完成 ===")
 	t.Logf("测试已正常结束")
+}
+
+// 测试GetChallenge性能 - 连续请求1000次
+func TestGetChallengePerformance(t *testing.T) {
+	// 检查是否需要跳过长时间运行的测试
+	if testing.Short() {
+		t.Log("检测到-short标志，但继续运行性能测试...")
+	}
+
+	// 设置测试超时时间（10分钟）
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	// 测试配置
+	config := struct {
+		RequestCount    int
+		ConcurrentUsers int
+		VerboseLogging  bool
+		PerformanceMode bool
+	}{
+		RequestCount:    1000,
+		ConcurrentUsers: 10, // 10个并发用户
+		VerboseLogging:  true,
+		PerformanceMode: true,
+	}
+
+	// 检查上下文是否已取消
+	select {
+	case <-ctx.Done():
+		t.Fatal("测试上下文已取消")
+	default:
+	}
+
+	// 创建 gRPC 客户端连接
+	serverAddr := getServerAddress()
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
+	}
+	defer conn.Close()
+
+	// 创建 Nakama 客户端
+	client := apigrpc.NewNakamaClient(conn)
+
+	// 设置认证头
+	authCtx := metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("sparkgame:")))
+
+	t.Logf("=== 开始GetChallenge性能测试 ===")
+	t.Logf("服务器地址: %s", serverAddr)
+	t.Logf("请求次数: %d", config.RequestCount)
+	t.Logf("并发用户数: %d", config.ConcurrentUsers)
+	t.Logf("详细日志: %v", config.VerboseLogging)
+
+	// 创建测试用户
+	type TestUser struct {
+		ID      int
+		Session *api.Session
+		Context context.Context
+	}
+
+	users := make([]*TestUser, config.ConcurrentUsers)
+
+	// 创建并发用户
+	t.Logf("=== 阶段1: 创建%d个测试用户 ===", config.ConcurrentUsers)
+	for i := 0; i < config.ConcurrentUsers; i++ {
+		user := &TestUser{
+			ID: i + 1,
+		}
+
+		// 创建/认证账号
+		authReq := &api.AuthenticateCustomRequest{
+			Account: &api.AccountCustom{
+				Id: fmt.Sprintf("perf_test_user_%d", i+1),
+			},
+			Username: fmt.Sprintf("PerfTestUser_%d", i+1),
+			Create:   &wrapperspb.BoolValue{Value: true},
+		}
+
+		session, err := client.AuthenticateCustom(authCtx, authReq)
+		if err != nil {
+			t.Fatalf("用户 %d 认证失败: %v", i+1, err)
+		}
+
+		user.Session = session
+		user.Context = metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+session.Token)
+		users[i] = user
+
+		if config.VerboseLogging {
+			t.Logf("✓ 用户 %d 创建成功", i+1)
+		}
+	}
+
+	t.Logf("用户创建完成: 成功 %d 个", config.ConcurrentUsers)
+
+	// 性能统计
+	stats := struct {
+		StartTime         time.Time
+		EndTime           time.Time
+		TotalRequests     int
+		SuccessRequests   int
+		FailedRequests    int
+		MinResponseTime   time.Duration
+		MaxResponseTime   time.Duration
+		TotalResponseTime time.Duration
+		ResponseTimes     []time.Duration
+		ErrorCounts       map[string]int
+	}{
+		ResponseTimes: make([]time.Duration, 0, config.RequestCount),
+		ErrorCounts:   make(map[string]int),
+		StartTime:     time.Now(),
+	}
+
+	// 使用channel收集结果
+	resultChan := make(chan struct {
+		Success      bool
+		ResponseTime time.Duration
+		Error        error
+		UserID       int
+		RequestID    int
+	}, config.RequestCount)
+
+	// 启动并发请求
+	t.Logf("=== 阶段2: 开始%d次并发GetChallenge请求 ===", config.RequestCount)
+
+	// 为每个用户分配请求数量
+	requestsPerUser := config.RequestCount / config.ConcurrentUsers
+	extraRequests := config.RequestCount % config.ConcurrentUsers
+
+	requestID := 0
+	for userIndex, user := range users {
+		userRequestCount := requestsPerUser
+		if userIndex < extraRequests {
+			userRequestCount++
+		}
+
+		// 为每个用户启动goroutine
+		go func(u *TestUser, userID, requestCount int) {
+			for i := 0; i < requestCount; i++ {
+				startTime := time.Now()
+
+				// 调用GetChallenge
+				_, err := client.GetChallenge(u.Context, &emptypb.Empty{})
+
+				responseTime := time.Since(startTime)
+
+				resultChan <- struct {
+					Success      bool
+					ResponseTime time.Duration
+					Error        error
+					UserID       int
+					RequestID    int
+				}{
+					Success:      err == nil,
+					ResponseTime: responseTime,
+					Error:        err,
+					UserID:       userID,
+					RequestID:    requestID + i,
+				}
+			}
+		}(user, user.ID, userRequestCount)
+
+		requestID += userRequestCount
+	}
+
+	// 收集所有结果
+	t.Logf("等待 %d 个请求完成...", config.RequestCount)
+
+	progressTicker := time.NewTicker(2 * time.Second)
+	defer progressTicker.Stop()
+
+	for i := 0; i < config.RequestCount; i++ {
+		select {
+		case result := <-resultChan:
+			stats.TotalRequests++
+
+			if result.Success {
+				stats.SuccessRequests++
+			} else {
+				stats.FailedRequests++
+				if result.Error != nil {
+					stats.ErrorCounts[result.Error.Error()]++
+				}
+			}
+
+			// 记录响应时间
+			stats.ResponseTimes = append(stats.ResponseTimes, result.ResponseTime)
+			stats.TotalResponseTime += result.ResponseTime
+
+			// 更新最小/最大响应时间
+			if stats.MinResponseTime == 0 || result.ResponseTime < stats.MinResponseTime {
+				stats.MinResponseTime = result.ResponseTime
+			}
+			if result.ResponseTime > stats.MaxResponseTime {
+				stats.MaxResponseTime = result.ResponseTime
+			}
+
+			// 每100个请求输出一次进度
+			if (i+1)%100 == 0 {
+				select {
+				case <-progressTicker.C:
+					t.Logf("进度: 已完成 %d/%d 个请求 (%.1f%%)",
+						i+1, config.RequestCount, float64(i+1)/float64(config.RequestCount)*100)
+				default:
+				}
+			}
+
+			if config.VerboseLogging && result.Error != nil {
+				t.Logf("请求 %d (用户 %d) 失败: %v (响应时间: %v)",
+					result.RequestID, result.UserID, result.Error, result.ResponseTime)
+			}
+
+		case <-ctx.Done():
+			t.Logf("测试超时，已完成 %d 个请求", i)
+			goto finish
+		}
+	}
+
+finish:
+	stats.EndTime = time.Now()
+	totalDuration := stats.EndTime.Sub(stats.StartTime)
+
+	// 计算统计信息
+	t.Logf("=== 性能测试结果 ===")
+	t.Logf("测试总耗时: %v", totalDuration)
+	t.Logf("总请求数: %d", stats.TotalRequests)
+	t.Logf("成功请求: %d", stats.SuccessRequests)
+	t.Logf("失败请求: %d", stats.FailedRequests)
+	t.Logf("成功率: %.2f%%", float64(stats.SuccessRequests)/float64(stats.TotalRequests)*100)
+
+	if len(stats.ResponseTimes) > 0 {
+		// 计算平均响应时间
+		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
+		t.Logf("平均响应时间: %v", avgResponseTime)
+		t.Logf("最小响应时间: %v", stats.MinResponseTime)
+		t.Logf("最大响应时间: %v", stats.MaxResponseTime)
+
+		// 计算QPS (每秒请求数)
+		qps := float64(stats.TotalRequests) / totalDuration.Seconds()
+		t.Logf("QPS (每秒请求数): %.2f", qps)
+
+		// 计算P50, P90, P95, P99响应时间
+		sort.Slice(stats.ResponseTimes, func(i, j int) bool {
+			return stats.ResponseTimes[i] < stats.ResponseTimes[j]
+		})
+
+		p50Index := int(float64(len(stats.ResponseTimes)) * 0.5)
+		p90Index := int(float64(len(stats.ResponseTimes)) * 0.9)
+		p95Index := int(float64(len(stats.ResponseTimes)) * 0.95)
+		p99Index := int(float64(len(stats.ResponseTimes)) * 0.99)
+
+		if p50Index < len(stats.ResponseTimes) {
+			t.Logf("P50响应时间: %v", stats.ResponseTimes[p50Index])
+		}
+		if p90Index < len(stats.ResponseTimes) {
+			t.Logf("P90响应时间: %v", stats.ResponseTimes[p90Index])
+		}
+		if p95Index < len(stats.ResponseTimes) {
+			t.Logf("P95响应时间: %v", stats.ResponseTimes[p95Index])
+		}
+		if p99Index < len(stats.ResponseTimes) {
+			t.Logf("P99响应时间: %v", stats.ResponseTimes[p99Index])
+		}
+	}
+
+	// 输出错误统计
+	if len(stats.ErrorCounts) > 0 {
+		t.Logf("=== 错误统计 ===")
+		for errorMsg, count := range stats.ErrorCounts {
+			t.Logf("错误: %s (次数: %d)", errorMsg, count)
+		}
+	}
+
+	// 性能验证
+	successRate := float64(stats.SuccessRequests) / float64(stats.TotalRequests) * 100
+	if successRate < 95 {
+		t.Errorf("成功率过低: %.2f%% (期望 >= 95%%)", successRate)
+	}
+
+	// 响应时间验证
+	if len(stats.ResponseTimes) > 0 {
+		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
+		if avgResponseTime > 1*time.Second {
+			t.Errorf("平均响应时间过长: %v (期望 < 1秒)", avgResponseTime)
+		}
+
+		// 检查P95响应时间
+		p95Index := int(float64(len(stats.ResponseTimes)) * 0.95)
+		if p95Index < len(stats.ResponseTimes) && stats.ResponseTimes[p95Index] > 2*time.Second {
+			t.Errorf("P95响应时间过长: %v (期望 < 2秒)", stats.ResponseTimes[p95Index])
+		}
+	}
+
+	// QPS验证
+	qps := float64(stats.TotalRequests) / totalDuration.Seconds()
+	if qps < 50 {
+		t.Errorf("QPS过低: %.2f (期望 >= 50)", qps)
+	}
+
+	t.Logf("=== GetChallenge性能测试完成 ===")
 }

@@ -2,10 +2,18 @@ package template
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
+
+// ReadOnlyActivityInfoSlice 只读活动信息切片接口
+type ReadOnlyActivityInfoSlice interface {
+	Len() int
+	Get(index int) TplActivityInfo
+	ToSlice() []TplActivityInfo
+}
 
 type TplActivityInfo struct {
 	LevelMonsterDev    string   `json:"LevelMonsterDev"`
@@ -35,11 +43,33 @@ type TplActivityInfo struct {
 	WinRewards         string   `json:"winRewards"`
 }
 
+// readOnlyActivityInfoSlice 只读活动信息切片实现
+type readOnlyActivityInfoSlice struct {
+	data []TplActivityInfo
+}
+
+func (r *readOnlyActivityInfoSlice) Len() int {
+	return len(r.data)
+}
+
+func (r *readOnlyActivityInfoSlice) Get(index int) TplActivityInfo {
+	if index < 0 || index >= len(r.data) {
+		return TplActivityInfo{} // 返回零值
+	}
+	return r.data[index]
+}
+
+func (r *readOnlyActivityInfoSlice) ToSlice() []TplActivityInfo {
+	// 返回副本，确保外部无法修改原始数据
+	result := make([]TplActivityInfo, len(r.data))
+	copy(result, r.data)
+	return result
+}
+
 type TableTplActivityInfo struct {
 	logger    *zap.Logger
 	loadPath  string
 	tableData map[string]TplActivityInfo
-	result    []TplActivityInfo
 }
 
 func NewTableTplActivityInfo(logger *zap.Logger, loadPath string) *TableTplActivityInfo {
@@ -47,7 +77,6 @@ func NewTableTplActivityInfo(logger *zap.Logger, loadPath string) *TableTplActiv
 		logger:    logger,
 		loadPath:  loadPath,
 		tableData: make(map[string]TplActivityInfo),
-		result:    make([]TplActivityInfo, 0),
 	}
 }
 
@@ -56,22 +85,25 @@ func (t *TableTplActivityInfo) FindByKey(key string) (TplActivityInfo, bool) {
 	return val, ok
 }
 
-func (t *TableTplActivityInfo) FindByFilter(f func(TplActivityInfo) bool) []TplActivityInfo {
-	t.result = make([]TplActivityInfo, 0)
+func (t *TableTplActivityInfo) FindByFilter(f func(TplActivityInfo) bool) ReadOnlyActivityInfoSlice {
+	// 创建新的切片，避免共享字段竞争
+	result := make([]TplActivityInfo, 0)
 	for _, item := range t.tableData {
 		if f(item) {
-			t.result = append(t.result, item)
+			result = append(result, item)
 		}
 	}
-	return t.result
+	return &readOnlyActivityInfoSlice{data: result}
 }
 
-func (t *TableTplActivityInfo) FindAll() []TplActivityInfo {
-	t.result = make([]TplActivityInfo, 0)
+func (t *TableTplActivityInfo) FindAll() ReadOnlyActivityInfoSlice {
+	// 直接从 tableData 创建切片，避免共享字段竞争
+	// 返回只读切片，调用者无法修改原始数据
+	result := make([]TplActivityInfo, 0, len(t.tableData))
 	for _, item := range t.tableData {
-		t.result = append(t.result, item)
+		result = append(result, item)
 	}
-	return t.result
+	return &readOnlyActivityInfoSlice{data: result}
 }
 
 func (t *TableTplActivityInfo) Release() {

@@ -63,15 +63,16 @@ func (s *ConsoleServer) GetAllChallengeTemplates(ctx context.Context, in *emptyp
 	tplChallenge := s.template.GetTplChallenge()
 	allChallenges := tplChallenge.FindAll()
 
-	if allChallenges == nil || len(allChallenges) == 0 {
+	if allChallenges.Len() == 0 {
 		return &console.GetAllChallengeTemplatesResponse{
 			Templates: []*console.ChallengeTemplate{},
 		}, nil
 	}
 
 	// 转换为响应格式
-	templates := make([]*console.ChallengeTemplate, 0, len(allChallenges))
-	for _, challenge := range allChallenges {
+	templates := make([]*console.ChallengeTemplate, 0, allChallenges.Len())
+	for i := 0; i < allChallenges.Len(); i++ {
+		challenge := allChallenges.Get(i)
 		template := &console.ChallengeTemplate{
 			Id:            challenge.ID,
 			Name:          challenge.Name,

@@ -2,10 +2,18 @@ package template
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
+
+// ReadOnlyChallengeSlice 只读挑战赛切片接口
+type ReadOnlyChallengeSlice interface {
+	Len() int
+	Get(index int) TplChallenge
+	ToSlice() []TplChallenge
+}
 
 type TplChallenge struct {
 	ActivityID    string `json:"activity_id"`
@@ -19,11 +27,33 @@ type TplChallenge struct {
 	Status        int32  `json:"status"`
 }
 
+// readOnlyChallengeSlice 只读挑战赛切片实现
+type readOnlyChallengeSlice struct {
+	data []TplChallenge
+}
+
+func (r *readOnlyChallengeSlice) Len() int {
+	return len(r.data)
+}
+
+func (r *readOnlyChallengeSlice) Get(index int) TplChallenge {
+	if index < 0 || index >= len(r.data) {
+		return TplChallenge{} // 返回零值
+	}
+	return r.data[index]
+}
+
+func (r *readOnlyChallengeSlice) ToSlice() []TplChallenge {
+	// 返回副本，确保外部无法修改原始数据
+	result := make([]TplChallenge, len(r.data))
+	copy(result, r.data)
+	return result
+}
+
 type TableTplChallenge struct {
 	logger    *zap.Logger
 	loadPath  string
 	tableData map[int32]TplChallenge
-	result    []TplChallenge
 }
 
 func NewTableTplChallenge(logger *zap.Logger, loadPath string) *TableTplChallenge {
@@ -31,7 +61,6 @@ func NewTableTplChallenge(logger *zap.Logger, loadPath string) *TableTplChalleng
 		logger:    logger,
 		loadPath:  loadPath,
 		tableData: make(map[int32]TplChallenge),
-		result:    make([]TplChallenge, 0),
 	}
 }
 
@@ -40,22 +69,25 @@ func (t *TableTplChallenge) FindByKey(key int32) (TplChallenge, bool) {
 	return val, ok
 }
 
-func (t *TableTplChallenge) FindByFilter(f func(TplChallenge) bool) []TplChallenge {
-	t.result = make([]TplChallenge, 0)
+func (t *TableTplChallenge) FindByFilter(f func(TplChallenge) bool) ReadOnlyChallengeSlice {
+	// 创建新的切片，避免共享字段竞争
+	result := make([]TplChallenge, 0)
 	for _, item := range t.tableData {
 		if f(item) {
-			t.result = append(t.result, item)
+			result = append(result, item)
 		}
 	}
-	return t.result
+	return &readOnlyChallengeSlice{data: result}
 }
 
-func (t *TableTplChallenge) FindAll() []TplChallenge {
-	t.result = make([]TplChallenge, 0)
+func (t *TableTplChallenge) FindAll() ReadOnlyChallengeSlice {
+	// 直接从 tableData 创建切片，避免共享字段竞争
+	// 返回只读切片，调用者无法修改原始数据
+	result := make([]TplChallenge, 0, len(t.tableData))
 	for _, item := range t.tableData {
-		t.result = append(t.result, item)
+		result = append(result, item)
 	}
-	return t.result
+	return &readOnlyChallengeSlice{data: result}
 }
 
 func (t *TableTplChallenge) Release() {
