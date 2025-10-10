@@ -436,7 +436,7 @@ func (s *ApiServer) checkChallengeAvailable(ctx context.Context, userID uuid.UUI
 
 	// 2. 获取所有挑战赛模板
 	tplChallenges := s.template.GetTplChallenge().FindAll()
-	if len(tplChallenges) == 0 {
+	if tplChallenges.Len() == 0 {
 		return false // 没有挑战赛配置
 	}
 
@@ -444,7 +444,8 @@ func (s *ApiServer) checkChallengeAvailable(ctx context.Context, userID uuid.UUI
 	now := time.Now()
 
 	// 4. 检查是否有正在进行的比赛且用户未参加
-	for _, tplChallenge := range tplChallenges {
+	for i := 0; i < tplChallenges.Len(); i++ {
+		tplChallenge := tplChallenges.Get(i)
 		// 解析开始时间
 		startTime, err := parseDateTime(tplChallenge.OpenTime)
 		if err != nil {

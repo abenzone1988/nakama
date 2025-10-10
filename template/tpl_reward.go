@@ -2,10 +2,18 @@ package template
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
+
+// ReadOnlyRewardSlice 只读奖励切片接口
+type ReadOnlyRewardSlice interface {
+	Len() int
+	Get(index int) TplReward
+	ToSlice() []TplReward
+}
 
 type TplReward struct {
 	Coin   int32  `json:"coin"`
@@ -16,11 +24,33 @@ type TplReward struct {
 	Name   string `json:"name"`
 }
 
+// readOnlyRewardSlice 只读奖励切片实现
+type readOnlyRewardSlice struct {
+	data []TplReward
+}
+
+func (r *readOnlyRewardSlice) Len() int {
+	return len(r.data)
+}
+
+func (r *readOnlyRewardSlice) Get(index int) TplReward {
+	if index < 0 || index >= len(r.data) {
+		return TplReward{} // 返回零值
+	}
+	return r.data[index]
+}
+
+func (r *readOnlyRewardSlice) ToSlice() []TplReward {
+	// 返回副本，确保外部无法修改原始数据
+	result := make([]TplReward, len(r.data))
+	copy(result, r.data)
+	return result
+}
+
 type TableTplReward struct {
 	logger    *zap.Logger
 	loadPath  string
 	tableData map[string]TplReward
-	result    []TplReward
 }
 
 func NewTableTplReward(logger *zap.Logger, loadPath string) *TableTplReward {
@@ -28,7 +58,6 @@ func NewTableTplReward(logger *zap.Logger, loadPath string) *TableTplReward {
 		logger:    logger,
 		loadPath:  loadPath,
 		tableData: make(map[string]TplReward),
-		result:    make([]TplReward, 0),
 	}
 }
 
@@ -37,22 +66,25 @@ func (t *TableTplReward) FindByKey(key string) (TplReward, bool) {
 	return val, ok
 }
 
-func (t *TableTplReward) FindByFilter(f func(TplReward) bool) []TplReward {
-	t.result = make([]TplReward, 0)
+func (t *TableTplReward) FindByFilter(f func(TplReward) bool) ReadOnlyRewardSlice {
+	// 创建新的切片，避免共享字段竞争
+	result := make([]TplReward, 0)
 	for _, item := range t.tableData {
 		if f(item) {
-			t.result = append(t.result, item)
+			result = append(result, item)
 		}
 	}
-	return t.result
+	return &readOnlyRewardSlice{data: result}
 }
 
-func (t *TableTplReward) FindAll() []TplReward {
-	t.result = make([]TplReward, 0)
+func (t *TableTplReward) FindAll() ReadOnlyRewardSlice {
+	// 直接从 tableData 创建切片，避免共享字段竞争
+	// 返回只读切片，调用者无法修改原始数据
+	result := make([]TplReward, 0, len(t.tableData))
 	for _, item := range t.tableData {
-		t.result = append(t.result, item)
+		result = append(result, item)
 	}
-	return t.result
+	return &readOnlyRewardSlice{data: result}
 }
 
 func (t *TableTplReward) Release() {

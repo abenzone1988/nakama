@@ -2,10 +2,18 @@ package template
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
+
+// ReadOnlyActivityRewardSlice 只读活动奖励切片接口
+type ReadOnlyActivityRewardSlice interface {
+	Len() int
+	Get(index int) TplActivityReward
+	ToSlice() []TplActivityReward
+}
 
 type TplActivityReward struct {
 	ActiveID   string `json:"activeId"`
@@ -17,11 +25,33 @@ type TplActivityReward struct {
 	RewardID   string `json:"rewardId"`
 }
 
+// readOnlyActivityRewardSlice 只读活动奖励切片实现
+type readOnlyActivityRewardSlice struct {
+	data []TplActivityReward
+}
+
+func (r *readOnlyActivityRewardSlice) Len() int {
+	return len(r.data)
+}
+
+func (r *readOnlyActivityRewardSlice) Get(index int) TplActivityReward {
+	if index < 0 || index >= len(r.data) {
+		return TplActivityReward{} // 返回零值
+	}
+	return r.data[index]
+}
+
+func (r *readOnlyActivityRewardSlice) ToSlice() []TplActivityReward {
+	// 返回副本，确保外部无法修改原始数据
+	result := make([]TplActivityReward, len(r.data))
+	copy(result, r.data)
+	return result
+}
+
 type TableTplActivityReward struct {
 	logger    *zap.Logger
 	loadPath  string
 	tableData map[string]TplActivityReward
-	result    []TplActivityReward
 }
 
 func NewTableTplActivityReward(logger *zap.Logger, loadPath string) *TableTplActivityReward {
@@ -29,7 +59,6 @@ func NewTableTplActivityReward(logger *zap.Logger, loadPath string) *TableTplAct
 		logger:    logger,
 		loadPath:  loadPath,
 		tableData: make(map[string]TplActivityReward),
-		result:    make([]TplActivityReward, 0),
 	}
 }
 
@@ -38,22 +67,25 @@ func (t *TableTplActivityReward) FindByKey(key string) (TplActivityReward, bool)
 	return val, ok
 }
 
-func (t *TableTplActivityReward) FindByFilter(f func(TplActivityReward) bool) []TplActivityReward {
-	t.result = make([]TplActivityReward, 0)
+func (t *TableTplActivityReward) FindByFilter(f func(TplActivityReward) bool) ReadOnlyActivityRewardSlice {
+	// 创建新的切片，避免共享字段竞争
+	result := make([]TplActivityReward, 0)
 	for _, item := range t.tableData {
 		if f(item) {
-			t.result = append(t.result, item)
+			result = append(result, item)
 		}
 	}
-	return t.result
+	return &readOnlyActivityRewardSlice{data: result}
 }
 
-func (t *TableTplActivityReward) FindAll() []TplActivityReward {
-	t.result = make([]TplActivityReward, 0)
+func (t *TableTplActivityReward) FindAll() ReadOnlyActivityRewardSlice {
+	// 直接从 tableData 创建切片，避免共享字段竞争
+	// 返回只读切片，调用者无法修改原始数据
+	result := make([]TplActivityReward, 0, len(t.tableData))
 	for _, item := range t.tableData {
-		t.result = append(t.result, item)
+		result = append(result, item)
 	}
-	return t.result
+	return &readOnlyActivityRewardSlice{data: result}
 }
 
 func (t *TableTplActivityReward) Release() {
