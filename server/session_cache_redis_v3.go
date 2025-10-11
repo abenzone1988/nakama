@@ -19,7 +19,7 @@ const (
 	cleanupInterval  = 1 * time.Minute // 清理间隔
 
 	// Redis token过期时间 - 使用较短的时间来自动清理不活跃用户的token
-	redisTokenExpiry = 24 * time.Hour // Redis中token的过期时间，1小时后自动清理
+	redisTokenExpiry = 1 * time.Hour // Redis中token的过期时间，1小时后自动清理
 
 	// Redis PubSub channels
 	tokenInvalidateChannel = "token:invalidate" // token失效通知channel
