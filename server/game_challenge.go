@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -219,12 +220,12 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		userMatch.Challenges = map[int32]*ChallengeStatus{}
 	}
 
-	if challengeData, exists := userMatch.Challenges[in.ChallengeId]; exists && challengeData != nil {
-		return &game.JoinChallengeResponse{
-			Code: 2,
-			Msg:  "挑战赛不可重复参加",
-		}, nil
-	}
+	//if challengeData, exists := userMatch.Challenges[in.ChallengeId]; exists && challengeData != nil {
+	//	return &game.JoinChallengeResponse{
+	//		Code: 2,
+	//		Msg:  "挑战赛不可重复参加",
+	//	}, nil
+	//}
 
 	// 获取当前时间
 	now := time.Now()
@@ -737,73 +738,124 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 
 // 为玩家分配到挑战赛竞标赛
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+	// 使用重试机制处理并发冲突
+	maxRetries := 10
+	baseDelay := 50 * time.Millisecond
 
-	// 使用优化的数据库查询，直接查找第一个可加入的竞标赛
-	// 快速查找第一个可加入的竞标赛，避免遍历所有竞标赛
-	tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
-		int(tplChallenge.ID), int(tplChallenge.MaxPart))
-	if err != nil {
-		return "", err
-	}
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// 添加随机延迟，减少并发冲突
+		if attempt > 0 {
+			delay := time.Duration(attempt)*baseDelay + time.Duration(rand.Intn(100))*time.Millisecond
+			time.Sleep(delay)
+		}
 
-	// 找到可用的竞标赛
-	if tournament != nil {
-		s.logger.Info("找到可用竞标赛",
+		// 快速查找第一个可加入的竞标赛，避免遍历所有竞标赛
+		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
+			int(tplChallenge.ID), int(tplChallenge.MaxPart))
+		if err != nil {
+			return "", err
+		}
+
+		// 找到可用的竞标赛
+		if tournament != nil {
+			s.logger.Info("找到可用竞标赛",
+				zap.String("user_id", userID.String()),
+				zap.Int32("challenge_id", tplChallenge.ID),
+				zap.String("tournament_id", tournament.Id),
+				zap.Uint32("current_players", tournament.Size),
+				zap.Uint32("max_players", tournament.MaxSize),
+				zap.Int("attempt", attempt+1))
+
+			// 尝试加入该竞标赛
+			username := ctx.Value(ctxUsernameKey{}).(string)
+			err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
+			if err == nil {
+				// 加入成功
+				s.logger.Info("玩家成功加入现有竞标赛",
+					zap.String("user_id", userID.String()),
+					zap.String("tournament_id", tournament.Id),
+					zap.Int32("challenge_id", tplChallenge.ID),
+					zap.Uint32("tournament_size", tournament.Size),
+					zap.Uint32("max_size", tournament.MaxSize))
+
+				return tournament.Id, nil
+			} else {
+				s.logger.Warn("加入现有竞标赛失败",
+					zap.String("tournament_id", tournament.Id),
+					zap.Error(err))
+
+				// 检查是否是可重试的错误
+				if s.isRetryableError(err) {
+					// 计算指数退避延迟
+					delay := time.Duration(attempt+1) * baseDelay
+					s.logger.Info("检测到可重试错误，等待后重试",
+						zap.String("tournament_id", tournament.Id),
+						zap.Duration("delay", delay),
+						zap.Int("attempt", attempt+1))
+					time.Sleep(delay)
+					continue
+				}
+			}
+		}
+
+		// 没有可用的竞标赛，创建新的
+		// 使用持久化的批次号管理系统确保唯一性
+		batchNumber := s.GetNextChallengeBatch(tplChallenge.ID)
+
+		s.logger.Info("创建新竞标赛",
 			zap.String("user_id", userID.String()),
 			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.String("tournament_id", tournament.Id),
-			zap.Uint32("current_players", tournament.Size),
-			zap.Uint32("max_players", tournament.MaxSize))
+			zap.Int32("batch_number", batchNumber),
+			zap.String("reason", "没有找到可用的竞标赛"),
+			zap.Int("attempt", attempt+1))
 
-		// 尝试加入该竞标赛
-		username := ctx.Value(ctxUsernameKey{}).(string)
-		err := TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
-		if err == nil {
-			// 加入成功
-			s.logger.Info("玩家成功加入现有竞标赛",
+		newTournamentID, err := s.createNewChallengeTournament(ctx, tplChallenge, startTime, endTime, int(batchNumber))
+		if err != nil {
+			s.logger.Warn("创建新竞标赛失败",
 				zap.String("user_id", userID.String()),
-				zap.String("tournament_id", tournament.Id),
 				zap.Int32("challenge_id", tplChallenge.ID),
-				zap.Uint32("tournament_size", tournament.Size),
-				zap.Uint32("max_size", tournament.MaxSize))
+				zap.Error(err),
+				zap.Int("attempt", attempt+1))
 
-			return tournament.Id, nil
-		} else {
-			s.logger.Warn("加入现有竞标赛失败",
-				zap.String("tournament_id", tournament.Id),
-				zap.Error(err))
+			// 检查是否是可重试的错误
+			if s.isRetryableError(err) {
+				delay := time.Duration(attempt+1) * baseDelay
+				time.Sleep(delay)
+				continue
+			}
+			return "", fmt.Errorf("创建新竞标赛失败: %v", err)
 		}
+
+		// 玩家加入新创建的竞标赛
+		username := ctx.Value(ctxUsernameKey{}).(string)
+		err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
+		if err != nil {
+			s.logger.Warn("加入新竞标赛失败",
+				zap.String("user_id", userID.String()),
+				zap.String("tournament_id", newTournamentID),
+				zap.Error(err),
+				zap.Int("attempt", attempt+1))
+
+			// 检查是否是可重试的错误
+			if s.isRetryableError(err) {
+				delay := time.Duration(attempt+1) * baseDelay
+				time.Sleep(delay)
+				continue
+			}
+			return "", fmt.Errorf("加入新竞标赛失败: %v", err)
+		}
+
+		s.logger.Info("玩家成功加入新创建的竞标赛",
+			zap.String("user_id", userID.String()),
+			zap.String("tournament_id", newTournamentID),
+			zap.Int32("challenge_id", tplChallenge.ID),
+			zap.Int32("batch_number", batchNumber))
+
+		return newTournamentID, nil
 	}
 
-	// 没有可用的竞标赛，创建新的
-	// 使用持久化的批次号管理系统确保唯一性
-	batchNumber := s.GetNextChallengeBatch(tplChallenge.ID)
-
-	s.logger.Info("创建新竞标赛",
-		zap.String("user_id", userID.String()),
-		zap.Int32("challenge_id", tplChallenge.ID),
-		zap.Int32("batch_number", batchNumber),
-		zap.String("reason", "没有找到可用的竞标赛"))
-
-	newTournamentID, err := s.createNewChallengeTournament(ctx, tplChallenge, startTime, endTime, int(batchNumber))
-	if err != nil {
-		return "", fmt.Errorf("创建新竞标赛失败: %v", err)
-	}
-
-	// 玩家加入新创建的竞标赛
-	username := ctx.Value(ctxUsernameKey{}).(string)
-	err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
-	if err != nil {
-		return "", fmt.Errorf("加入新竞标赛失败: %v", err)
-	}
-
-	s.logger.Info("为玩家创建并加入新竞标赛",
-		zap.String("user_id", userID.String()),
-		zap.String("tournament_id", newTournamentID),
-		zap.Int32("challenge_id", tplChallenge.ID),
-		zap.Int32("batch_number", batchNumber))
-
-	return newTournamentID, nil
+	// 所有重试都失败了
+	return "", fmt.Errorf("经过 %d 次重试后仍无法分配到竞标赛", maxRetries)
 }
 
 // 创建新的挑战赛竞标赛
@@ -1223,4 +1275,35 @@ func (s *ApiServer) generateChallengeList(ctx context.Context) ([]*game.Challeng
 	}
 
 	return challenges, nil
+}
+
+// isRetryableError 检查错误是否可重试
+func (s *ApiServer) isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+
+	// 检查常见的可重试错误
+	retryableErrors := []string{
+		"WriteTooOldError",
+		"TransactionRetryWithProtoRefreshError",
+		"SerializationFailure",
+		"deadlock",
+		"lock timeout",
+		"connection reset",
+		"temporary failure",
+		"busy",
+		"SQLSTATE 40001", // PostgreSQL serialization failure
+		"SQLSTATE 40P01", // PostgreSQL deadlock detected
+	}
+
+	for _, retryableErr := range retryableErrors {
+		if strings.Contains(errStr, retryableErr) {
+			return true
+		}
+	}
+
+	return false
 }

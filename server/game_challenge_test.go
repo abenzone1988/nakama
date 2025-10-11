@@ -505,10 +505,10 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 		TournamentID string
 		JoinSuccess  bool
 		Error        error
+		ResponseTime time.Duration
 	}
 
-	const playerCount = 100           // 减少到20个玩家，更容易观察tournament创建
-	const maxPlayersPerTournament = 4 // 假设每个tournament最多4个玩家
+	const playerCount = 100
 
 	players := make([]*Player, playerCount)
 
@@ -602,11 +602,21 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 
 	// 统计信息
 	stats := struct {
-		JoinSuccessCount int
-		JoinFailureCount int
-		TournamentGroups map[string]int
+		JoinSuccessCount  int
+		JoinFailureCount  int
+		TournamentGroups  map[string]int
+		StartTime         time.Time
+		EndTime           time.Time
+		ResponseTimes     []time.Duration
+		MinResponseTime   time.Duration
+		MaxResponseTime   time.Duration
+		TotalResponseTime time.Duration
+		ErrorCounts       map[string]int
 	}{
 		TournamentGroups: make(map[string]int),
+		ResponseTimes:    make([]time.Duration, 0, playerCount),
+		ErrorCounts:      make(map[string]int),
+		StartTime:        time.Now(),
 	}
 
 	// 使用channel来收集结果
@@ -621,9 +631,13 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 
 		actualLaunchedCount++
 		go func(p *Player, index int) {
-			// 添加随机延迟（0-100毫秒），避免所有玩家同时发起请求
-			delay := time.Duration(rand.Intn(100)) * time.Millisecond
+			// 添加随机延迟（0-200毫秒），避免所有玩家同时发起请求
+			// 增加延迟范围以减少并发冲突
+			delay := time.Duration(rand.Intn(200)) * time.Millisecond
 			time.Sleep(delay)
+
+			// 记录请求开始时间
+			requestStartTime := time.Now()
 
 			// 加入挑战赛
 			joinReq := &game.JoinChallengeRequest{
@@ -631,6 +645,11 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 			}
 
 			joinResp, err := client.JoinChallenge(p.Context, joinReq)
+
+			// 记录响应时间
+			responseTime := time.Since(requestStartTime)
+			p.ResponseTime = responseTime
+
 			if err != nil {
 				p.Error = err
 				p.JoinSuccess = false
@@ -652,22 +671,58 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	t.Logf("启动了 %d 个玩家加入挑战赛", actualLaunchedCount)
 	t.Logf("等待 %d 个玩家的加入结果...", actualLaunchedCount)
 
-	for i := 0; i < actualLaunchedCount; i++ {
-		player := <-resultChan
+	progressTicker := time.NewTicker(2 * time.Second)
+	defer progressTicker.Stop()
 
-		if player.JoinSuccess {
-			stats.JoinSuccessCount++
-			if player.TournamentID != "" {
-				stats.TournamentGroups[player.TournamentID]++
+	for i := 0; i < actualLaunchedCount; i++ {
+		select {
+		case player := <-resultChan:
+			// 记录响应时间统计
+			stats.ResponseTimes = append(stats.ResponseTimes, player.ResponseTime)
+			stats.TotalResponseTime += player.ResponseTime
+
+			// 更新最小/最大响应时间
+			if stats.MinResponseTime == 0 || player.ResponseTime < stats.MinResponseTime {
+				stats.MinResponseTime = player.ResponseTime
 			}
-			// 简化日志输出，避免终端截断
-			t.Logf("✓ 玩家[%d] 成功加入挑战赛", player.ID)
-			t.Logf("   Tournament: %s", player.TournamentID)
-		} else {
-			stats.JoinFailureCount++
-			t.Logf("✗ 玩家[%d] 加入挑战赛失败: %v", player.ID, player.Error)
+			if player.ResponseTime > stats.MaxResponseTime {
+				stats.MaxResponseTime = player.ResponseTime
+			}
+
+			if player.JoinSuccess {
+				stats.JoinSuccessCount++
+				if player.TournamentID != "" {
+					stats.TournamentGroups[player.TournamentID]++
+				}
+				// 简化日志输出，避免终端截断
+				t.Logf("✓ 玩家[%d] 成功加入挑战赛 (响应时间: %v)", player.ID, player.ResponseTime)
+				t.Logf("   Tournament: %s", player.TournamentID)
+			} else {
+				stats.JoinFailureCount++
+				if player.Error != nil {
+					stats.ErrorCounts[player.Error.Error()]++
+				}
+				t.Logf("✗ 玩家[%d] 加入挑战赛失败: %v (响应时间: %v)", player.ID, player.Error, player.ResponseTime)
+			}
+
+			// 每10个玩家输出一次进度
+			if (i+1)%10 == 0 {
+				select {
+				case <-progressTicker.C:
+					t.Logf("进度: 已处理 %d/%d 个玩家 (%.1f%%)",
+						i+1, actualLaunchedCount, float64(i+1)/float64(actualLaunchedCount)*100)
+				default:
+				}
+			}
+
+		case <-time.After(30 * time.Second):
+			t.Logf("等待结果超时，已处理 %d 个玩家", i)
+			break
 		}
 	}
+
+	stats.EndTime = time.Now()
+	totalDuration := stats.EndTime.Sub(stats.StartTime)
 
 	// 第四阶段：分析结果
 	t.Logf("=== 阶段4: 分析结果 ===")
@@ -677,6 +732,52 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	t.Logf("成功加入: %d", stats.JoinSuccessCount)
 	t.Logf("加入失败: %d", stats.JoinFailureCount)
 	t.Logf("创建的tournament数量: %d", len(stats.TournamentGroups))
+	t.Logf("测试总耗时: %v", totalDuration)
+
+	// 性能统计
+	if len(stats.ResponseTimes) > 0 {
+		// 计算平均响应时间
+		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
+		t.Logf("=== 性能统计 ===")
+		t.Logf("平均响应时间: %v", avgResponseTime)
+		t.Logf("最小响应时间: %v", stats.MinResponseTime)
+		t.Logf("最大响应时间: %v", stats.MaxResponseTime)
+
+		// 计算QPS (每秒请求数)
+		qps := float64(actualLaunchedCount) / totalDuration.Seconds()
+		t.Logf("QPS (每秒请求数): %.2f", qps)
+
+		// 计算P50, P90, P95, P99响应时间
+		sort.Slice(stats.ResponseTimes, func(i, j int) bool {
+			return stats.ResponseTimes[i] < stats.ResponseTimes[j]
+		})
+
+		p50Index := int(float64(len(stats.ResponseTimes)) * 0.5)
+		p90Index := int(float64(len(stats.ResponseTimes)) * 0.9)
+		p95Index := int(float64(len(stats.ResponseTimes)) * 0.95)
+		p99Index := int(float64(len(stats.ResponseTimes)) * 0.99)
+
+		if p50Index < len(stats.ResponseTimes) {
+			t.Logf("P50响应时间: %v", stats.ResponseTimes[p50Index])
+		}
+		if p90Index < len(stats.ResponseTimes) {
+			t.Logf("P90响应时间: %v", stats.ResponseTimes[p90Index])
+		}
+		if p95Index < len(stats.ResponseTimes) {
+			t.Logf("P95响应时间: %v", stats.ResponseTimes[p95Index])
+		}
+		if p99Index < len(stats.ResponseTimes) {
+			t.Logf("P99响应时间: %v", stats.ResponseTimes[p99Index])
+		}
+	}
+
+	// 输出错误统计
+	if len(stats.ErrorCounts) > 0 {
+		t.Logf("=== 错误统计 ===")
+		for errorMsg, count := range stats.ErrorCounts {
+			t.Logf("错误: %s (次数: %d)", errorMsg, count)
+		}
+	}
 
 	// 验证tournament分配
 	t.Logf("计算期望的tournament数量...")
@@ -728,6 +829,32 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	}
 
 	t.Logf("满员的tournament数量: %d", fullTournaments)
+
+	// 性能验证
+	successRate := float64(stats.JoinSuccessCount) / float64(actualLaunchedCount) * 100
+	if successRate < 70 {
+		t.Errorf("加入挑战赛成功率过低: %.2f%% (期望 >= 70%%)", successRate)
+	}
+
+	// 响应时间验证
+	if len(stats.ResponseTimes) > 0 {
+		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
+		if avgResponseTime > 2*time.Second {
+			t.Errorf("平均响应时间过长: %v (期望 < 2秒)", avgResponseTime)
+		}
+
+		// 检查P95响应时间
+		p95Index := int(float64(len(stats.ResponseTimes)) * 0.95)
+		if p95Index < len(stats.ResponseTimes) && stats.ResponseTimes[p95Index] > 5*time.Second {
+			t.Errorf("P95响应时间过长: %v (期望 < 5秒)", stats.ResponseTimes[p95Index])
+		}
+	}
+
+	// QPS验证
+	qps := float64(actualLaunchedCount) / totalDuration.Seconds()
+	if qps < 10 {
+		t.Errorf("QPS过低: %.2f (期望 >= 10)", qps)
+	}
 
 	// 第五阶段：提交随机分数测试
 	t.Logf("=== 阶段5: 提交随机分数测试 ===")

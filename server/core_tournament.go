@@ -884,6 +884,9 @@ WHERE duration > 0
 	tournament, err := parseTournament(row, time.Now().UTC())
 	if err != nil {
 		if errors.Is(err, runtime.ErrTournamentNotFound) || errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("没有找到可加入的tournament",
+				zap.Int("category", category),
+				zap.Int("max_size", maxSize))
 			return nil, nil // 没有找到可加入的tournament
 		}
 		logger.Error("Error finding first available tournament", zap.Error(err))

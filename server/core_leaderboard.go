@@ -410,7 +410,7 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 		}
 	} else {
 		// 查询缓存成功
-		logger.Info("查询缓存成功",
+		logger.Debug("查询缓存成功",
 			zap.String("leaderboard_id", leaderboardId),
 			zap.Int64("rank_count", rankCount))
 	}
