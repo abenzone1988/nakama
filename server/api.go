@@ -276,8 +276,6 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 	grpcGatewayRouter.HandleFunc("/ws", NewSocketWsAcceptor(logger, config, sessionRegistry, sessionCache, statusRegistry, matchmaker, tracker, metrics, runtime, protojsonMarshaler, protojsonUnmarshaler, pipeline)).Methods(http.MethodGet)
 	// 添加微信消息推送验证路由
 	grpcGatewayRouter.HandleFunc("/v2/wechat/message/verify", s.HandleWechatVerify).Methods(http.MethodGet, http.MethodPost)
-	// 添加抖音直玩能力场景列表查询路由
-	grpcGatewayRouter.HandleFunc("/v2/tiktok/feed/scenes", s.HandleSceneList).Methods(http.MethodGet)
 
 	// Another nested router to hijack RPC requests bound for GRPC Gateway.
 	grpcGatewayMux := mux.NewRouter()
@@ -385,7 +383,7 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 	// 启动定时保存挑战赛批次号的goroutine
 	go func() {
 		for {
-			time.Sleep(time.Minute)
+			time.Sleep(time.Second)
 			if s.challengeBatchDirty {
 				s.logger.Info("定时检测到挑战赛批次号有变化，尝试保存")
 				s.challengeBatchMutex.Lock()
