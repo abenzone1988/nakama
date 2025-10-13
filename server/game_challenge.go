@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -20,9 +19,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-// 挑战赛缓存过期时间 - 可修改的常量
-const ChallengeCacheExpiry = time.Hour * 1
 
 // ChallengeTournamentMetadata 挑战赛竞标赛元数据
 type ChallengeTournamentMetadata struct {
@@ -111,21 +107,151 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 		return nil, err
 	}
 
-	// 使用缓存获取挑战赛列表
-	challenges, err := s.getCachedChallenges(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// 为每个挑战赛添加用户特定的TournamentID
-	for _, challenge := range challenges {
-		if challengeData, exists := userMatch.Challenges[challenge.Id]; exists && challengeData != nil {
-			challenge.TournamentId = challengeData.TournamentID
-		}
+	tplChallenges := s.template.GetTplChallenge().FindAll()
+	if tplChallenges.Len() == 0 {
+		return &game.GetChallengeResponse{
+			Challenges: []*game.Challenge{},
+		}, nil
 	}
 
 	// 获取当前时间
 	now := time.Now()
+
+	// 首先解析所有挑战赛的时间信息
+	type challengeInfo struct {
+		TplChallenge *template.TplChallenge
+		StartTime    time.Time
+		EndTime      time.Time
+		CloseTime    time.Time
+		IsOngoing    bool
+		IsFuture     bool
+	}
+
+	var allChallenges []challengeInfo
+	for i := 0; i < tplChallenges.Len(); i++ {
+		tplChallenge := tplChallenges.Get(i)
+		// 安全检查：确保模板数据有效
+		if tplChallenge.ID == 0 {
+			s.logger.Warn("跳过无效的挑战赛模板", zap.String("reason", "ID为0"))
+			continue
+		}
+
+		// 解析开始时间
+		startTime, err := parseDateTime(tplChallenge.OpenTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛开始时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("OpenTime", tplChallenge.OpenTime),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
+				zap.Error(err))
+			continue
+		}
+
+		// 解析关闭时间
+		closeTime, err := parseDateTime(tplChallenge.CloseTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛关闭时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("CloseTime", tplChallenge.CloseTime),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
+				zap.Error(err))
+			continue
+		}
+
+		// 解析结束时间
+		endTime, err := parseDateTime(tplChallenge.EndTime)
+		if err != nil {
+			s.logger.Error("解析挑战赛结束时间失败",
+				zap.Int32("id", tplChallenge.ID),
+				zap.String("end_date", tplChallenge.EndTime),
+				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
+				zap.Error(err))
+			continue
+		}
+
+		// 时间逻辑验证
+		if startTime.After(endTime) {
+			s.logger.Warn("挑战赛时间配置错误：开始时间晚于结束时间",
+				zap.Int32("id", tplChallenge.ID),
+				zap.Time("start_time", startTime),
+				zap.Time("end_time", endTime))
+			continue
+		}
+
+		// 判断挑战赛状态
+		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
+		isFuture := startTime.After(now)
+
+		allChallenges = append(allChallenges, challengeInfo{
+			TplChallenge: &tplChallenge,
+			StartTime:    startTime,
+			EndTime:      endTime,
+			CloseTime:    closeTime,
+			IsOngoing:    isOngoing,
+			IsFuture:     isFuture,
+		})
+	}
+
+	// 筛选要显示的挑战赛：正在进行的比赛 + 下一场比赛
+	var selectedChallenges []challengeInfo
+
+	// 1. 添加所有正在进行的比赛
+	for _, challenge := range allChallenges {
+		if challenge.IsOngoing {
+			selectedChallenges = append(selectedChallenges, challenge)
+		}
+	}
+
+	// 2. 找到未来三场比赛（按开始时间排序）
+	var futureChallenges []challengeInfo
+	for _, challenge := range allChallenges {
+		if challenge.IsFuture {
+			futureChallenges = append(futureChallenges, challenge)
+		}
+	}
+
+	// 按开始时间排序，取前三个
+	if len(futureChallenges) > 0 {
+		// 按开始时间排序
+		sort.Slice(futureChallenges, func(i, j int) bool {
+			return futureChallenges[i].StartTime.Before(futureChallenges[j].StartTime)
+		})
+
+		// 取前三个未来比赛
+		maxFutureChallenges := 3
+		if len(futureChallenges) < maxFutureChallenges {
+			maxFutureChallenges = len(futureChallenges)
+		}
+
+		for i := 0; i < maxFutureChallenges; i++ {
+			selectedChallenges = append(selectedChallenges, futureChallenges[i])
+		}
+	}
+
+	// 转换为 game.Challenge 数组
+	challenges := make([]*game.Challenge, 0, len(selectedChallenges))
+	for _, challengeInfo := range selectedChallenges {
+		tplChallenge := challengeInfo.TplChallenge
+
+		// 获取用户挑战赛状态中的竞标赛ID
+		var tournamentID string
+		if challengeData, exists := userMatch.Challenges[tplChallenge.ID]; exists && challengeData != nil {
+			tournamentID = challengeData.TournamentID
+		}
+
+		challenge := &game.Challenge{
+			Id:           tplChallenge.ID,
+			ActivityId:   tplChallenge.ActivityID,
+			Open:         timestamppb.New(challengeInfo.StartTime),
+			Close:        timestamppb.New(challengeInfo.CloseTime),
+			End:          timestamppb.New(challengeInfo.EndTime),
+			Over:         timestamppb.New(challengeInfo.EndTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)),
+			MaxPart:      tplChallenge.MaxPart,
+			TournamentId: tournamentID,
+		}
+
+		challenges = append(challenges, challenge)
+	}
 
 	// 转换用户已参与的挑战赛状态为JoinChallengeStatus数组
 	joinedChallenges := make([]*game.JoinChallengeStatus, 0, len(userMatch.Challenges))
@@ -220,12 +346,12 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		userMatch.Challenges = map[int32]*ChallengeStatus{}
 	}
 
-	//if challengeData, exists := userMatch.Challenges[in.ChallengeId]; exists && challengeData != nil {
-	//	return &game.JoinChallengeResponse{
-	//		Code: 2,
-	//		Msg:  "挑战赛不可重复参加",
-	//	}, nil
-	//}
+	if challengeData, exists := userMatch.Challenges[in.ChallengeId]; exists && challengeData != nil {
+		return &game.JoinChallengeResponse{
+			Code: 2,
+			Msg:  "挑战赛不可重复参加",
+		}, nil
+	}
 
 	// 获取当前时间
 	now := time.Now()
@@ -738,124 +864,73 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 
 // 为玩家分配到挑战赛竞标赛
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
-	// 使用重试机制处理并发冲突
-	maxRetries := 10
-	baseDelay := 50 * time.Millisecond
 
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		// 添加随机延迟，减少并发冲突
-		if attempt > 0 {
-			delay := time.Duration(attempt)*baseDelay + time.Duration(rand.Intn(100))*time.Millisecond
-			time.Sleep(delay)
-		}
-
-		// 快速查找第一个可加入的竞标赛，避免遍历所有竞标赛
-		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
-			int(tplChallenge.ID), int(tplChallenge.MaxPart))
-		if err != nil {
-			return "", err
-		}
-
-		// 找到可用的竞标赛
-		if tournament != nil {
-			s.logger.Info("找到可用竞标赛",
-				zap.String("user_id", userID.String()),
-				zap.Int32("challenge_id", tplChallenge.ID),
-				zap.String("tournament_id", tournament.Id),
-				zap.Uint32("current_players", tournament.Size),
-				zap.Uint32("max_players", tournament.MaxSize),
-				zap.Int("attempt", attempt+1))
-
-			// 尝试加入该竞标赛
-			username := ctx.Value(ctxUsernameKey{}).(string)
-			err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
-			if err == nil {
-				// 加入成功
-				s.logger.Info("玩家成功加入现有竞标赛",
-					zap.String("user_id", userID.String()),
-					zap.String("tournament_id", tournament.Id),
-					zap.Int32("challenge_id", tplChallenge.ID),
-					zap.Uint32("tournament_size", tournament.Size),
-					zap.Uint32("max_size", tournament.MaxSize))
-
-				return tournament.Id, nil
-			} else {
-				s.logger.Warn("加入现有竞标赛失败",
-					zap.String("tournament_id", tournament.Id),
-					zap.Error(err))
-
-				// 检查是否是可重试的错误
-				if s.isRetryableError(err) {
-					// 计算指数退避延迟
-					delay := time.Duration(attempt+1) * baseDelay
-					s.logger.Info("检测到可重试错误，等待后重试",
-						zap.String("tournament_id", tournament.Id),
-						zap.Duration("delay", delay),
-						zap.Int("attempt", attempt+1))
-					time.Sleep(delay)
-					continue
-				}
-			}
-		}
-
-		// 没有可用的竞标赛，创建新的
-		// 使用持久化的批次号管理系统确保唯一性
-		batchNumber := s.GetNextChallengeBatch(tplChallenge.ID)
-
-		s.logger.Info("创建新竞标赛",
-			zap.String("user_id", userID.String()),
-			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.Int32("batch_number", batchNumber),
-			zap.String("reason", "没有找到可用的竞标赛"),
-			zap.Int("attempt", attempt+1))
-
-		newTournamentID, err := s.createNewChallengeTournament(ctx, tplChallenge, startTime, endTime, int(batchNumber))
-		if err != nil {
-			s.logger.Warn("创建新竞标赛失败",
-				zap.String("user_id", userID.String()),
-				zap.Int32("challenge_id", tplChallenge.ID),
-				zap.Error(err),
-				zap.Int("attempt", attempt+1))
-
-			// 检查是否是可重试的错误
-			if s.isRetryableError(err) {
-				delay := time.Duration(attempt+1) * baseDelay
-				time.Sleep(delay)
-				continue
-			}
-			return "", fmt.Errorf("创建新竞标赛失败: %v", err)
-		}
-
-		// 玩家加入新创建的竞标赛
-		username := ctx.Value(ctxUsernameKey{}).(string)
-		err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
-		if err != nil {
-			s.logger.Warn("加入新竞标赛失败",
-				zap.String("user_id", userID.String()),
-				zap.String("tournament_id", newTournamentID),
-				zap.Error(err),
-				zap.Int("attempt", attempt+1))
-
-			// 检查是否是可重试的错误
-			if s.isRetryableError(err) {
-				delay := time.Duration(attempt+1) * baseDelay
-				time.Sleep(delay)
-				continue
-			}
-			return "", fmt.Errorf("加入新竞标赛失败: %v", err)
-		}
-
-		s.logger.Info("玩家成功加入新创建的竞标赛",
-			zap.String("user_id", userID.String()),
-			zap.String("tournament_id", newTournamentID),
-			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.Int32("batch_number", batchNumber))
-
-		return newTournamentID, nil
+	// 使用优化的数据库查询，直接查找第一个可加入的竞标赛
+	// 快速查找第一个可加入的竞标赛，避免遍历所有竞标赛
+	tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
+		int(tplChallenge.ID), int(tplChallenge.MaxPart))
+	if err != nil {
+		return "", err
 	}
 
-	// 所有重试都失败了
-	return "", fmt.Errorf("经过 %d 次重试后仍无法分配到竞标赛", maxRetries)
+	// 找到可用的竞标赛
+	if tournament != nil {
+		s.logger.Info("找到可用竞标赛",
+			zap.String("user_id", userID.String()),
+			zap.Int32("challenge_id", tplChallenge.ID),
+			zap.String("tournament_id", tournament.Id),
+			zap.Uint32("current_players", tournament.Size),
+			zap.Uint32("max_players", tournament.MaxSize))
+
+		// 尝试加入该竞标赛
+		username := ctx.Value(ctxUsernameKey{}).(string)
+		err := TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
+		if err == nil {
+			// 加入成功
+			s.logger.Info("玩家成功加入现有竞标赛",
+				zap.String("user_id", userID.String()),
+				zap.String("tournament_id", tournament.Id),
+				zap.Int32("challenge_id", tplChallenge.ID),
+				zap.Uint32("tournament_size", tournament.Size),
+				zap.Uint32("max_size", tournament.MaxSize))
+
+			return tournament.Id, nil
+		} else {
+			s.logger.Warn("加入现有竞标赛失败",
+				zap.String("tournament_id", tournament.Id),
+				zap.Error(err))
+		}
+	}
+
+	// 没有可用的竞标赛，创建新的
+	// 使用持久化的批次号管理系统确保唯一性
+	batchNumber := s.GetNextChallengeBatch(tplChallenge.ID)
+
+	s.logger.Info("创建新竞标赛",
+		zap.String("user_id", userID.String()),
+		zap.Int32("challenge_id", tplChallenge.ID),
+		zap.Int32("batch_number", batchNumber),
+		zap.String("reason", "没有找到可用的竞标赛"))
+
+	newTournamentID, err := s.createNewChallengeTournament(ctx, tplChallenge, startTime, endTime, int(batchNumber))
+	if err != nil {
+		return "", fmt.Errorf("创建新竞标赛失败: %v", err)
+	}
+
+	// 玩家加入新创建的竞标赛
+	username := ctx.Value(ctxUsernameKey{}).(string)
+	err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
+	if err != nil {
+		return "", fmt.Errorf("加入新竞标赛失败: %v", err)
+	}
+
+	s.logger.Info("为玩家创建并加入新竞标赛",
+		zap.String("user_id", userID.String()),
+		zap.String("tournament_id", newTournamentID),
+		zap.Int32("challenge_id", tplChallenge.ID),
+		zap.Int32("batch_number", batchNumber))
+
+	return newTournamentID, nil
 }
 
 // 创建新的挑战赛竞标赛
@@ -1065,7 +1140,7 @@ func (s *ApiServer) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty)
 		}, nil
 	}
 
-	// 初始化前三名统计数据
+	// 初始化前三名统计数据（如果需要）
 	err = s.initializeTopThreeStats(ctx, userID, userMatch)
 	if err != nil {
 		s.logger.Error("初始化前三名统计数据失败", zap.String("user_id", userID.String()), zap.Error(err))
@@ -1091,219 +1166,4 @@ func (s *ApiServer) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty)
 			LastUpdated: userMatch.TopThreeData.LastUpdated,
 		},
 	}, nil
-}
-
-// getCachedChallenges 获取缓存的挑战赛列表，如果缓存过期则重新生成
-func (s *ApiServer) getCachedChallenges(ctx context.Context) ([]*game.Challenge, error) {
-	// 先尝试读锁获取缓存
-	s.challengeCacheMutex.RLock()
-	if !s.challengeCacheTime.IsZero() && time.Since(s.challengeCacheTime) < ChallengeCacheExpiry {
-		// 缓存未过期，直接返回
-		cachedChallenges := make([]*game.Challenge, len(s.challengeCache))
-		copy(cachedChallenges, s.challengeCache)
-		s.challengeCacheMutex.RUnlock()
-		return cachedChallenges, nil
-	}
-	s.challengeCacheMutex.RUnlock()
-
-	// 缓存过期或不存在，需要重新生成
-	s.challengeCacheMutex.Lock()
-	defer s.challengeCacheMutex.Unlock()
-
-	// 双重检查：在获取写锁后再次检查缓存是否已被其他goroutine更新
-	if !s.challengeCacheTime.IsZero() && time.Since(s.challengeCacheTime) < ChallengeCacheExpiry {
-		cachedChallenges := make([]*game.Challenge, len(s.challengeCache))
-		copy(cachedChallenges, s.challengeCache)
-		return cachedChallenges, nil
-	}
-
-	// 重新生成缓存
-	challenges, err := s.generateChallengeList(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// 更新缓存
-	s.challengeCache = make([]*game.Challenge, len(challenges))
-	copy(s.challengeCache, challenges)
-	s.challengeCacheTime = time.Now()
-
-	// 返回副本，避免外部修改影响缓存
-	result := make([]*game.Challenge, len(challenges))
-	copy(result, challenges)
-	return result, nil
-}
-
-// generateChallengeList 生成挑战赛列表（从原GetChallenge方法中提取的公共逻辑）
-func (s *ApiServer) generateChallengeList(ctx context.Context) ([]*game.Challenge, error) {
-	tplChallenges := s.template.GetTplChallenge().FindAll()
-	if tplChallenges.Len() == 0 {
-		return []*game.Challenge{}, nil
-	}
-
-	// 获取当前时间
-	now := time.Now()
-
-	// 首先解析所有挑战赛的时间信息
-	type challengeInfo struct {
-		TplChallenge *template.TplChallenge
-		StartTime    time.Time
-		EndTime      time.Time
-		CloseTime    time.Time
-		IsOngoing    bool
-		IsFuture     bool
-	}
-
-	var allChallenges []challengeInfo
-	for i := 0; i < tplChallenges.Len(); i++ {
-		tplChallenge := tplChallenges.Get(i)
-		// 安全检查：确保模板数据有效
-		if tplChallenge.ID == 0 {
-			s.logger.Warn("跳过无效的挑战赛模板", zap.String("reason", "ID为0"))
-			continue
-		}
-
-		// 解析开始时间
-		startTime, err := parseDateTime(tplChallenge.OpenTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛开始时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("OpenTime", tplChallenge.OpenTime),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		// 解析关闭时间
-		closeTime, err := parseDateTime(tplChallenge.CloseTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛关闭时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("CloseTime", tplChallenge.CloseTime),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		// 解析结束时间
-		endTime, err := parseDateTime(tplChallenge.EndTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛结束时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("end_date", tplChallenge.EndTime),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		// 时间逻辑验证
-		if startTime.After(endTime) {
-			s.logger.Warn("挑战赛时间配置错误：开始时间晚于结束时间",
-				zap.Int32("id", tplChallenge.ID),
-				zap.Time("start_time", startTime),
-				zap.Time("end_time", endTime))
-			continue
-		}
-
-		// 判断挑战赛状态
-		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
-		isFuture := startTime.After(now)
-
-		allChallenges = append(allChallenges, challengeInfo{
-			TplChallenge: &tplChallenge,
-			StartTime:    startTime,
-			EndTime:      endTime,
-			CloseTime:    closeTime,
-			IsOngoing:    isOngoing,
-			IsFuture:     isFuture,
-		})
-	}
-
-	// 筛选要显示的挑战赛：正在进行的比赛 + 下一场比赛
-	var selectedChallenges []challengeInfo
-
-	// 1. 添加所有正在进行的比赛
-	for _, challenge := range allChallenges {
-		if challenge.IsOngoing {
-			selectedChallenges = append(selectedChallenges, challenge)
-		}
-	}
-
-	// 2. 找到未来三场比赛（按开始时间排序）
-	var futureChallenges []challengeInfo
-	for _, challenge := range allChallenges {
-		if challenge.IsFuture {
-			futureChallenges = append(futureChallenges, challenge)
-		}
-	}
-
-	// 按开始时间排序，取前三个
-	if len(futureChallenges) > 0 {
-		// 按开始时间排序
-		sort.Slice(futureChallenges, func(i, j int) bool {
-			return futureChallenges[i].StartTime.Before(futureChallenges[j].StartTime)
-		})
-
-		// 取前三个未来比赛
-		maxFutureChallenges := 3
-		if len(futureChallenges) < maxFutureChallenges {
-			maxFutureChallenges = len(futureChallenges)
-		}
-
-		for i := 0; i < maxFutureChallenges; i++ {
-			selectedChallenges = append(selectedChallenges, futureChallenges[i])
-		}
-	}
-
-	// 转换为 game.Challenge 数组
-	challenges := make([]*game.Challenge, 0, len(selectedChallenges))
-	for _, challengeInfo := range selectedChallenges {
-		tplChallenge := challengeInfo.TplChallenge
-
-		challenge := &game.Challenge{
-			Id:         tplChallenge.ID,
-			ActivityId: tplChallenge.ActivityID,
-			Open:       timestamppb.New(challengeInfo.StartTime),
-			Close:      timestamppb.New(challengeInfo.CloseTime),
-			End:        timestamppb.New(challengeInfo.EndTime),
-			Over:       timestamppb.New(challengeInfo.EndTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)),
-			MaxPart:    tplChallenge.MaxPart,
-			// 注意：TournamentID 在缓存版本中不设置，因为它是用户特定的
-		}
-
-		challenges = append(challenges, challenge)
-	}
-
-	return challenges, nil
-}
-
-// isRetryableError 检查错误是否可重试
-func (s *ApiServer) isRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errStr := err.Error()
-
-	// 检查常见的可重试错误
-	retryableErrors := []string{
-		"WriteTooOldError",
-		"TransactionRetryWithProtoRefreshError",
-		"SerializationFailure",
-		"deadlock",
-		"lock timeout",
-		"connection reset",
-		"temporary failure",
-		"busy",
-		"SQLSTATE 40001", // PostgreSQL serialization failure
-		"SQLSTATE 40P01", // PostgreSQL deadlock detected
-	}
-
-	for _, retryableErr := range retryableErrors {
-		if strings.Contains(errStr, retryableErr) {
-			return true
-		}
-	}
-
-	return false
 }

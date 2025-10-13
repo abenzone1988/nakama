@@ -39,7 +39,6 @@ import (
 	grpcgw "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/apigrpc"
-	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/internal/ctxkeys"
 	"github.com/heroiclabs/nakama/v3/social"
 	"go.uber.org/zap"
@@ -113,11 +112,6 @@ type ApiServer struct {
 	grpcServer           *grpc.Server
 	grpcGatewayServer    *http.Server
 	template             TemplateManager
-
-	// 挑战赛缓存 - 线程安全的缓存机制
-	challengeCacheMutex sync.RWMutex
-	challengeCache      []*game.Challenge
-	challengeCacheTime  time.Time
 
 	// 批次号管理 - 现在使用数据库原子操作，不再需要内存缓存
 	// challengeBatchMutex sync.RWMutex  // 已废弃
