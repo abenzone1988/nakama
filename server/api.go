@@ -117,6 +117,9 @@ type ApiServer struct {
 	// challengeBatchMutex sync.RWMutex  // 已废弃
 	// challengeBatch      *ChallengeBatch // 已废弃
 	// challengeBatchDirty bool // 已废弃
+
+	// 挑战赛分配锁 - 同节点内存锁，避免同节点并发竞争数据库行级锁
+	challengeAssignLocks sync.Map // map[int32]*sync.Mutex
 }
 
 func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, version string, socialClient *social.Client, storageIndex StorageIndex, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, matchmaker Matchmaker, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, pipeline *Pipeline, runtime *Runtime, templateManger TemplateManager) *ApiServer {
