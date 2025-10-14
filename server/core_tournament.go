@@ -858,7 +858,10 @@ func DisableTournamentRanks(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 // 快速查找第一个可加入的tournament
 func TournamentFindFirstAvailable(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, category int, maxSize int) (*api.Tournament, error) {
-	// 简化查询：只使用category和size条件
+	// 改进查询：添加时间窗口检查和更严格的并发控制
+	now := time.Now().UTC()
+	nowUnix := now.Unix()
+
 	query := `
 SELECT id, sort_order, operator, reset_schedule, metadata, create_time,
        category, description, duration, end_time, max_size, max_num_score,
@@ -866,18 +869,17 @@ SELECT id, sort_order, operator, reset_schedule, metadata, create_time,
 FROM leaderboard
 WHERE duration > 0
   AND category = $1
-  AND (max_size = 0 OR size < max_size)`
+  AND start_time <= $2
+  AND end_time > $3
+  AND size < max_size`
 
 	params := []interface{}{
 		category,
+		now, // start_time <= now
+		now, // end_time > now
 	}
 
-	// 如果有最大size要求，添加size限制
-	if maxSize > 0 {
-		query += " AND size < $2"
-		params = append(params, maxSize)
-	}
-
+	// 按创建时间排序，优先选择较老的tournament
 	query += " ORDER BY create_time ASC LIMIT 1"
 
 	row := db.QueryRowContext(ctx, query, params...)
@@ -886,7 +888,8 @@ WHERE duration > 0
 		if errors.Is(err, runtime.ErrTournamentNotFound) || errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("没有找到可加入的tournament",
 				zap.Int("category", category),
-				zap.Int("max_size", maxSize))
+				zap.Int("max_size", maxSize),
+				zap.Int64("current_time", nowUnix))
 			return nil, nil // 没有找到可加入的tournament
 		}
 		logger.Error("Error finding first available tournament", zap.Error(err))
@@ -897,7 +900,63 @@ WHERE duration > 0
 		zap.Int("category", category),
 		zap.String("tournament_id", tournament.Id),
 		zap.Uint32("current_size", tournament.Size),
-		zap.Uint32("max_size", tournament.MaxSize))
+		zap.Uint32("max_size", tournament.MaxSize),
+		zap.Int64("start_time", tournament.StartTime.Seconds),
+		zap.Int64("end_time", tournament.EndTime.Seconds))
 
 	return tournament, nil
+}
+
+// 使用数据库原子操作确保多节点一致性
+func GetNextChallengeBatch(ctx context.Context, logger *zap.Logger, db *sql.DB, challengeID int32) int32 {
+	// 使用重试机制处理并发冲突
+	maxRetries := 5
+	baseDelay := 10 * time.Millisecond
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		var nextBatch int32
+		err := db.QueryRowContext(ctx, `
+			INSERT INTO challenge_batch (challenge_id, current_batch)
+			VALUES ($1, 1)
+			ON CONFLICT (challenge_id)
+			DO UPDATE SET
+				current_batch = challenge_batch.current_batch + 1,
+				updated_at = NOW()
+			RETURNING current_batch
+		`, challengeID).Scan(&nextBatch)
+
+		if err != nil {
+			logger.Error("获取挑战赛批次号失败",
+				zap.Int32("challenge_id", challengeID),
+				zap.Int("attempt", attempt+1),
+				zap.Error(err))
+
+			// 如果是并发冲突，重试
+			if attempt < maxRetries-1 && isRetryableError(err, logger) {
+				delay := time.Duration(attempt+1) * baseDelay
+				logger.Info("批次号获取冲突，等待后重试",
+					zap.Int32("challenge_id", challengeID),
+					zap.Duration("delay", delay),
+					zap.Int("attempt", attempt+1))
+				time.Sleep(delay)
+				continue
+			}
+
+			// 如果数据库操作失败，返回1作为默认值
+			return 1
+		}
+
+		logger.Info("分配新的挑战赛批次号",
+			zap.Int32("challenge_id", challengeID),
+			zap.Int32("next_batch", nextBatch),
+			zap.Int("attempt", attempt+1))
+
+		return nextBatch
+	}
+
+	// 所有重试都失败了，返回1作为默认值
+	logger.Error("获取挑战赛批次号重试失败",
+		zap.Int32("challenge_id", challengeID),
+		zap.Int("max_retries", maxRetries))
+	return 1
 }

@@ -178,11 +178,12 @@ func main() {
 	sessionRegistry := server.NewLocalSessionRegistry(metrics)
 
 	var sessionCache server.SessionCache
-	if config.GetSession().UseRedis {
+	if config.GetCluster() != nil && config.GetCluster().Enabled {
+		// 集群模式：统一使用集群的 Redis 配置
 		sessionCache = server.NewRedisSessionCacheV3(
 			logger,
-			config.GetSession().RedisAddress,
-			config.GetSession().RedisPassword,
+			config.GetCluster().RedisAddress,
+			config.GetCluster().RedisPassword,
 			config.GetSession().TokenExpirySec,
 			config.GetSession().RefreshTokenExpirySec,
 			config.GetSession().SingleSession,
@@ -199,7 +200,17 @@ func main() {
 	leaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
 
 	var leaderboardRankCache server.LeaderboardRankCache
-	if config.GetLeaderboard().UseRedis {
+	if config.GetCluster() != nil && config.GetCluster().Enabled {
+		// 集群模式：统一使用集群的 Redis 配置
+		leaderboardRankCache = server.NewRedisLeaderboardRankCache(
+			ctx,
+			logger,
+			config.GetCluster().RedisAddress,
+			config.GetCluster().RedisPassword,
+			config.GetLeaderboard(),
+		)
+	} else if config.GetLeaderboard().UseRedis {
+		// 兼容旧配置：沿用 leaderboard 下的 Redis 配置
 		leaderboardRankCache = server.NewRedisLeaderboardRankCache(
 			ctx,
 			logger,

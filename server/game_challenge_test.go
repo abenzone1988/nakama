@@ -23,12 +23,55 @@ import (
 )
 
 // getServerAddress 获取正确的服务器地址
-func getServerAddress() string {
-	// 检查是否在 Docker 环境中
+func getServerAddress(node int) string {
+	// 节点映射（本地多节点）
+	nodes := []string{
+		"localhost:7349", // 节点0
+		"localhost:7449", // 节点1
+	}
+
+	// 检查是否在 Docker/CI 环境中（保持向后兼容）
 	if os.Getenv("DOCKER_ENV") == "true" || os.Getenv("TEST_DB_URL") != "" {
+		// 默认单入口，具体路由由集群/负载均衡决定
 		return "nakama:7349"
 	}
-	return "localhost:7349"
+
+	if node < 0 || node >= len(nodes) {
+		node = 0
+	}
+	return nodes[node]
+}
+
+// getTwoServerAddresses 获取两个节点的地址（用于多节点并发测试）
+// 优先读取环境变量 NAKAMA_ADDR_1 / NAKAMA_ADDR_2；未设置则回退到 getServerAddress()
+func getTwoServerAddresses() (string, string) {
+	addr1 := os.Getenv("NAKAMA_ADDR_1")
+	addr2 := os.Getenv("NAKAMA_ADDR_2")
+	if addr1 == "" {
+		addr1 = getServerAddress(0)
+	}
+	if addr2 == "" {
+		addr2 = getServerAddress(1)
+	}
+	return addr1, addr2
+}
+
+// getThreeServerAddresses 获取三个节点的地址（用于多节点并发测试）
+// 优先读取环境变量 NAKAMA_ADDR_1 / NAKAMA_ADDR_2 / NAKAMA_ADDR_3；未设置则回退到 getServerAddress()
+func getThreeServerAddresses() (string, string, string) {
+	addr1 := os.Getenv("NAKAMA_ADDR_1")
+	addr2 := os.Getenv("NAKAMA_ADDR_2")
+	addr3 := os.Getenv("NAKAMA_ADDR_3")
+	if addr1 == "" {
+		addr1 = getServerAddress(0)
+	}
+	if addr2 == "" {
+		addr2 = getServerAddress(1)
+	}
+	if addr3 == "" {
+		addr3 = getServerAddress(2)
+	}
+	return addr1, addr2, addr3
 }
 
 // createSignedTournamentMetadata 创建包含签名的tournament record metadata
@@ -94,7 +137,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	serverAddr := getServerAddress()
+	serverAddr := getServerAddress(0)
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
@@ -478,7 +521,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	serverAddr := getServerAddress()
+	serverAddr := getServerAddress(0)
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
@@ -631,19 +674,12 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 
 		actualLaunchedCount++
 		go func(p *Player, index int) {
-			// 添加随机延迟（0-200毫秒），避免所有玩家同时发起请求
-			// 增加延迟范围以减少并发冲突
-			delay := time.Duration(rand.Intn(200)) * time.Millisecond
-			time.Sleep(delay)
-
 			// 记录请求开始时间
 			requestStartTime := time.Now()
-
 			// 加入挑战赛
 			joinReq := &game.JoinChallengeRequest{
 				ChallengeId: targetChallenge.Id,
 			}
-
 			joinResp, err := client.JoinChallenge(p.Context, joinReq)
 
 			// 记录响应时间
@@ -717,7 +753,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 
 		case <-time.After(30 * time.Second):
 			t.Logf("等待结果超时，已处理 %d 个玩家", i)
-			break
+			i = actualLaunchedCount // 结束外层for
 		}
 	}
 
@@ -783,6 +819,19 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	t.Logf("计算期望的tournament数量...")
 	expectedTournaments := (stats.JoinSuccessCount + int(targetChallenge.MaxPart) - 1) / int(targetChallenge.MaxPart)
 	t.Logf("期望的tournament数量: %d", expectedTournaments)
+
+	// 期望与实际数量差异判断
+	actualTournaments := len(stats.TournamentGroups)
+	diff := expectedTournaments - actualTournaments
+	if diff != 0 {
+		if diff > 0 {
+			t.Errorf("Tournament数量与期望不一致: 期望=%d 实际=%d 差异=%d(少创建)", expectedTournaments, actualTournaments, diff)
+		} else {
+			t.Errorf("Tournament数量与期望不一致: 期望=%d 实际=%d 差异=%d(多创建)", expectedTournaments, actualTournaments, diff)
+		}
+	} else {
+		t.Logf("✓ Tournament数量与期望一致: %d", actualTournaments)
+	}
 
 	t.Logf("=== Tournament分配详情 ===")
 	if len(stats.TournamentGroups) == 0 {
@@ -856,88 +905,89 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 		t.Errorf("QPS过低: %.2f (期望 >= 10)", qps)
 	}
 
-	// 第五阶段：提交随机分数测试
-	t.Logf("=== 阶段5: 提交随机分数测试 ===")
+	// 第五阶段：提交随机分数测试 Start ========================== //
+	//t.Logf("=== 阶段5: 提交随机分数测试 ===")
+	//
+	//scoreSubmissionStats := struct {
+	//	SubmissionSuccess int
+	//	SubmissionFailure int
+	//	TotalScores       int
+	//}{}
+	//
+	//// 为每个成功加入的玩家提交随机分数
+	//for _, player := range players {
+	//	if player == nil || !player.JoinSuccess || player.TournamentID == "" {
+	//		continue
+	//	}
+	//
+	//	// 为每个玩家生成3个随机分数
+	//	scores := []int64{
+	//		int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+	//		int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+	//		int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+	//	}
+	//
+	//	for attemptNum, score := range scores {
+	//		// 创建包含签名的metadata
+	//		metadataFields := map[string]interface{}{
+	//			"player_id": player.ID,
+	//			"attempt":   attemptNum + 1,
+	//			"timestamp": time.Now().Format(time.RFC3339),
+	//		}
+	//
+	//		signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
+	//		if err != nil {
+	//			t.Logf("✗ 玩家[%d] 创建签名metadata失败: %v", player.ID, err)
+	//			scoreSubmissionStats.SubmissionFailure++
+	//			continue
+	//		}
+	//
+	//		writeReq := &api.WriteTournamentRecordRequest{
+	//			TournamentId: player.TournamentID,
+	//			Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
+	//				Score:    score,
+	//				Subscore: 0,
+	//				Metadata: signedMetadata,
+	//				Operator: api.Operator_BEST,
+	//			},
+	//		}
+	//
+	//		// 调用提交成绩API
+	//		recordResp, err := client.WriteTournamentRecord(player.Context, writeReq)
+	//		if err != nil {
+	//			t.Logf("✗ 玩家[%d] 提交分数失败: %v", player.ID, err)
+	//			scoreSubmissionStats.SubmissionFailure++
+	//		} else {
+	//			scoreSubmissionStats.SubmissionSuccess++
+	//			scoreSubmissionStats.TotalScores++
+	//			t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d, 已签名)",
+	//				player.ID, recordResp.Score, recordResp.Rank)
+	//		}
+	//
+	//		// 添加小延迟避免过快请求
+	//		time.Sleep(50 * time.Millisecond)
+	//	}
+	//}
+	//
+	//// 输出分数提交统计
+	//t.Logf("=== 分数提交统计 ===")
+	//t.Logf("成功提交: %d", scoreSubmissionStats.SubmissionSuccess)
+	//t.Logf("提交失败: %d", scoreSubmissionStats.SubmissionFailure)
+	//t.Logf("总分数记录: %d", scoreSubmissionStats.TotalScores)
+	//
+	//// 验证分数提交成功率
+	//expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
+	//if scoreSubmissionStats.SubmissionSuccess < expectedSubmissions*7/10 {
+	//	t.Logf("⚠️ 分数提交成功率过低: %d/%d (%.2f%%)",
+	//		scoreSubmissionStats.SubmissionSuccess, expectedSubmissions,
+	//		float64(scoreSubmissionStats.SubmissionSuccess)/float64(expectedSubmissions)*100)
+	//} else {
+	//	t.Logf("✓ 分数提交成功率验证通过: %d/%d (%.2f%%)",
+	//		scoreSubmissionStats.SubmissionSuccess, expectedSubmissions,
+	//		float64(scoreSubmissionStats.SubmissionSuccess)/float64(expectedSubmissions)*100)
+	//}
 
-	scoreSubmissionStats := struct {
-		SubmissionSuccess int
-		SubmissionFailure int
-		TotalScores       int
-	}{}
-
-	// 为每个成功加入的玩家提交随机分数
-	for _, player := range players {
-		if player == nil || !player.JoinSuccess || player.TournamentID == "" {
-			continue
-		}
-
-		// 为每个玩家生成3个随机分数
-		scores := []int64{
-			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-			int64(1500 + rand.Intn(8500)), // 第二次尝试
-			int64(2000 + rand.Intn(8000)), // 第三次尝试
-		}
-
-		for attemptNum, score := range scores {
-			// 创建包含签名的metadata
-			metadataFields := map[string]interface{}{
-				"player_id": player.ID,
-				"attempt":   attemptNum + 1,
-				"timestamp": time.Now().Format(time.RFC3339),
-			}
-
-			signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
-			if err != nil {
-				t.Logf("✗ 玩家[%d] 创建签名metadata失败: %v", player.ID, err)
-				scoreSubmissionStats.SubmissionFailure++
-				continue
-			}
-
-			writeReq := &api.WriteTournamentRecordRequest{
-				TournamentId: player.TournamentID,
-				Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
-					Score:    score,
-					Subscore: 0,
-					Metadata: signedMetadata,
-					Operator: api.Operator_BEST,
-				},
-			}
-
-			// 调用提交成绩API
-			recordResp, err := client.WriteTournamentRecord(player.Context, writeReq)
-			if err != nil {
-				t.Logf("✗ 玩家[%d] 提交分数失败: %v", player.ID, err)
-				scoreSubmissionStats.SubmissionFailure++
-			} else {
-				scoreSubmissionStats.SubmissionSuccess++
-				scoreSubmissionStats.TotalScores++
-				t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d, 已签名)",
-					player.ID, recordResp.Score, recordResp.Rank)
-			}
-
-			// 添加小延迟避免过快请求
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
-
-	// 输出分数提交统计
-	t.Logf("=== 分数提交统计 ===")
-	t.Logf("成功提交: %d", scoreSubmissionStats.SubmissionSuccess)
-	t.Logf("提交失败: %d", scoreSubmissionStats.SubmissionFailure)
-	t.Logf("总分数记录: %d", scoreSubmissionStats.TotalScores)
-
-	// 验证分数提交成功率
-	expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
-	if scoreSubmissionStats.SubmissionSuccess < expectedSubmissions*7/10 {
-		t.Logf("⚠️ 分数提交成功率过低: %d/%d (%.2f%%)",
-			scoreSubmissionStats.SubmissionSuccess, expectedSubmissions,
-			float64(scoreSubmissionStats.SubmissionSuccess)/float64(expectedSubmissions)*100)
-	} else {
-		t.Logf("✓ 分数提交成功率验证通过: %d/%d (%.2f%%)",
-			scoreSubmissionStats.SubmissionSuccess, expectedSubmissions,
-			float64(scoreSubmissionStats.SubmissionSuccess)/float64(expectedSubmissions)*100)
-	}
-
+	// 第五阶段：提交随机分数测试 End ========================== //
 	t.Logf("=== 并发测试完成 ===")
 	t.Logf("测试已正常结束")
 }
@@ -974,7 +1024,7 @@ func TestGetChallengePerformance(t *testing.T) {
 	}
 
 	// 创建 gRPC 客户端连接
-	serverAddr := getServerAddress()
+	serverAddr := getServerAddress(0)
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("无法连接到 gRPC 服务器 %s: %v", serverAddr, err)
@@ -1239,4 +1289,594 @@ finish:
 	}
 
 	t.Logf("=== GetChallenge性能测试完成 ===")
+}
+
+// TestMultiNodeJoinChallenge 并发地向两个不同节点发起加入挑战赛请求，验证多节点一致性与分布式锁效果
+// 现在使用通用的多节点测试函数，支持2-3个节点
+func TestMultiNodeJoinChallenge(t *testing.T) {
+	// 调用通用的多节点测试函数
+	TestMultiNodeJoinChallengeGeneric(t)
+}
+
+// TestMultiNodeJoinChallengeGeneric 通用的多节点并发加入挑战赛测试
+// 支持2-3个节点的并发测试，验证分布式锁和一致性
+func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
+	// 快速跳过策略：仅在显式要求时执行
+	if testing.Short() {
+		t.Log("-short 模式下仍执行多节点并发测试…")
+	}
+
+	t.Logf("=== 开始多节点并发加入挑战赛测试 ===")
+
+	// 第一阶段：获取节点地址和建立连接
+	t.Logf("=== 阶段1: 获取节点地址和建立连接 ===")
+
+	// 获取节点地址（支持2-3个节点）
+	addr1, addr2, addr3 := getThreeServerAddresses()
+
+	// 检查哪些节点可用
+	availableNodes := []string{addr1, addr2}
+	if addr3 != "" && addr3 != addr1 && addr3 != addr2 {
+		availableNodes = append(availableNodes, addr3)
+	}
+
+	nodeCount := len(availableNodes)
+	t.Logf("可用节点数: %d", nodeCount)
+	for i, addr := range availableNodes {
+		t.Logf("节点%d: %s", i+1, addr)
+	}
+
+	// 建立到所有节点的连接
+	type NodeConnection struct {
+		Address string
+		Conn    *grpc.ClientConn
+		Client  apigrpc.NakamaClient
+	}
+
+	connections := make([]*NodeConnection, 0, nodeCount)
+	dial := func(address string) (*NodeConnection, error) {
+		conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return nil, fmt.Errorf("无法连接到 gRPC 服务器 %s: %v", address, err)
+		}
+		client := apigrpc.NewNakamaClient(conn)
+		return &NodeConnection{
+			Address: address,
+			Conn:    conn,
+			Client:  client,
+		}, nil
+	}
+
+	// 建立所有连接
+	for _, addr := range availableNodes {
+		conn, err := dial(addr)
+		if err != nil {
+			t.Fatalf("连接失败: %v", err)
+		}
+		connections = append(connections, conn)
+	}
+
+	// 确保所有连接都被关闭
+	defer func() {
+		for _, conn := range connections {
+			if conn.Conn != nil {
+				conn.Conn.Close()
+			}
+		}
+	}()
+
+	// 基础认证头
+	baseAuth := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("sparkgame:")))
+
+	// 第二阶段：创建玩家账号
+	t.Logf("=== 阶段2: 创建玩家账号 ===")
+
+	const playersPerNode = 50
+	type Player struct {
+		ID           int
+		Username     string
+		Session      *api.Session
+		Context      context.Context
+		TournamentID string
+		JoinSuccess  bool
+		Error        error
+		ResponseTime time.Duration
+		Node         string
+	}
+
+	// 工具：创建或认证账号
+	authUser := func(c apigrpc.NakamaClient, prefix string, idx int) (*api.Session, error) {
+		req := &api.AuthenticateCustomRequest{
+			Account:  &api.AccountCustom{Id: fmt.Sprintf("%s_%d", prefix, idx)},
+			Username: fmt.Sprintf("%s_%d", prefix, idx),
+			Create:   &wrapperspb.BoolValue{Value: true},
+		}
+		return c.AuthenticateCustom(baseAuth, req)
+	}
+
+	// 为每个节点创建玩家
+	allPlayers := make([][]*Player, nodeCount)
+	totalPlayers := 0
+
+	for nodeIdx, conn := range connections {
+		nodeName := fmt.Sprintf("n%d", nodeIdx+1)
+		t.Logf("在节点 %s 创建 %d 个玩家", nodeName, playersPerNode)
+
+		players := make([]*Player, 0, playersPerNode)
+		for i := 0; i < playersPerNode; i++ {
+			playerID := totalPlayers + i + 1
+			sess, err := authUser(conn.Client, "multi_node_user_"+nodeName, i+1)
+			if err != nil {
+				t.Fatalf("%s 认证失败: %v", nodeName, err)
+			}
+			p := &Player{
+				ID:       playerID,
+				Username: fmt.Sprintf("multi_node_user_%s_%d", nodeName, i+1),
+				Session:  sess,
+				Context:  metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+sess.Token),
+				Node:     nodeName,
+			}
+			players = append(players, p)
+		}
+		allPlayers[nodeIdx] = players
+		totalPlayers += playersPerNode
+
+		if (nodeIdx+1)%10 == 0 || nodeIdx == nodeCount-1 {
+			t.Logf("已处理节点 %d/%d", nodeIdx+1, nodeCount)
+		}
+	}
+
+	t.Logf("成功创建玩家总数: %d", totalPlayers)
+
+	// 第三阶段：获取挑战赛信息
+	t.Logf("=== 阶段3: 获取挑战赛信息 ===")
+
+	var targetChallenge *game.Challenge
+	{
+		// 先创建一个探测用户
+		sess, err := authUser(connections[0].Client, "multi_node_probe", 1)
+		if err != nil {
+			t.Fatalf("探测用户认证失败: %v", err)
+		}
+		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+sess.Token)
+		resp, err := connections[0].Client.GetChallenge(ctx, &emptypb.Empty{})
+		if err != nil || resp == nil || len(resp.Challenges) == 0 {
+			t.Fatalf("获取挑战赛失败或为空: %v", err)
+		}
+		targetChallenge = resp.Challenges[0]
+		t.Logf("找到目标挑战赛: ID=%d, 活动ID=%s, 最大参与人数=%d",
+			targetChallenge.Id, targetChallenge.ActivityId, targetChallenge.MaxPart)
+	}
+
+	// 第四阶段：并发加入挑战赛
+	t.Logf("=== 阶段4: %d 个玩家并发加入挑战赛 ===", totalPlayers)
+
+	// 统计信息
+	stats := struct {
+		JoinSuccessCount  int
+		JoinFailureCount  int
+		TournamentGroups  map[string]int
+		NodeStats         map[string]int
+		StartTime         time.Time
+		EndTime           time.Time
+		ResponseTimes     []time.Duration
+		MinResponseTime   time.Duration
+		MaxResponseTime   time.Duration
+		TotalResponseTime time.Duration
+		ErrorCounts       map[string]int
+	}{
+		TournamentGroups: make(map[string]int),
+		NodeStats:        make(map[string]int),
+		ResponseTimes:    make([]time.Duration, 0, totalPlayers),
+		ErrorCounts:      make(map[string]int),
+		StartTime:        time.Now(),
+	}
+
+	// 使用channel来收集结果
+	resultChan := make(chan *Player, totalPlayers)
+
+	// 启动所有玩家加入挑战赛
+	actualLaunchedCount := 0
+	for nodeIdx, players := range allPlayers {
+		for _, player := range players {
+			if player == nil || player.Context == nil {
+				continue
+			}
+
+			actualLaunchedCount++
+			go func(p *Player, nodeIdx int) {
+				// 记录请求开始时间
+				requestStartTime := time.Now()
+				// 加入挑战赛
+				joinReq := &game.JoinChallengeRequest{
+					ChallengeId: targetChallenge.Id,
+				}
+				joinResp, err := connections[nodeIdx].Client.JoinChallenge(p.Context, joinReq)
+
+				// 记录响应时间
+				responseTime := time.Since(requestStartTime)
+				p.ResponseTime = responseTime
+
+				if err != nil {
+					p.Error = err
+					p.JoinSuccess = false
+				} else if joinResp.Code != 0 {
+					p.Error = fmt.Errorf("加入失败: Code=%d, Msg=%s", joinResp.Code, joinResp.Msg)
+					p.JoinSuccess = false
+				} else {
+					p.JoinSuccess = true
+					if joinResp.Challenge != nil {
+						p.TournamentID = joinResp.Challenge.TournamentId
+					}
+				}
+
+				resultChan <- p
+			}(player, nodeIdx)
+		}
+	}
+
+	// 收集所有结果
+	t.Logf("启动了 %d 个玩家加入挑战赛", actualLaunchedCount)
+	t.Logf("等待 %d 个玩家的加入结果...", actualLaunchedCount)
+
+	progressTicker := time.NewTicker(2 * time.Second)
+	defer progressTicker.Stop()
+
+	for i := 0; i < actualLaunchedCount; i++ {
+		select {
+		case player := <-resultChan:
+			// 记录响应时间统计
+			stats.ResponseTimes = append(stats.ResponseTimes, player.ResponseTime)
+			stats.TotalResponseTime += player.ResponseTime
+
+			// 更新最小/最大响应时间
+			if stats.MinResponseTime == 0 || player.ResponseTime < stats.MinResponseTime {
+				stats.MinResponseTime = player.ResponseTime
+			}
+			if player.ResponseTime > stats.MaxResponseTime {
+				stats.MaxResponseTime = player.ResponseTime
+			}
+
+			if player.JoinSuccess {
+				stats.JoinSuccessCount++
+				if player.TournamentID != "" {
+					stats.TournamentGroups[player.TournamentID]++
+				}
+				stats.NodeStats[player.Node]++
+				// 简化日志输出，避免终端截断
+				t.Logf("✓ 玩家[%d] 成功加入挑战赛 (响应时间: %v)", player.ID, player.ResponseTime)
+				t.Logf("   Tournament: %s, 节点: %s", player.TournamentID, player.Node)
+			} else {
+				stats.JoinFailureCount++
+				if player.Error != nil {
+					stats.ErrorCounts[player.Error.Error()]++
+				}
+				t.Logf("✗ 玩家[%d] 加入挑战赛失败: %v (响应时间: %v)", player.ID, player.Error, player.ResponseTime)
+			}
+
+			// 每10个玩家输出一次进度
+			if (i+1)%10 == 0 {
+				select {
+				case <-progressTicker.C:
+					t.Logf("进度: 已处理 %d/%d 个玩家 (%.1f%%)",
+						i+1, actualLaunchedCount, float64(i+1)/float64(actualLaunchedCount)*100)
+				default:
+				}
+			}
+
+		case <-time.After(30 * time.Second):
+			t.Logf("等待结果超时，已处理 %d 个玩家", i)
+			i = actualLaunchedCount // 结束外层for
+		}
+	}
+
+	stats.EndTime = time.Now()
+	totalDuration := stats.EndTime.Sub(stats.StartTime)
+
+	// 第五阶段：分析结果
+	t.Logf("=== 阶段5: 分析结果 ===")
+	t.Logf("开始分析结果...")
+
+	t.Logf("总玩家数: %d", actualLaunchedCount)
+	t.Logf("成功加入: %d", stats.JoinSuccessCount)
+	t.Logf("加入失败: %d", stats.JoinFailureCount)
+	t.Logf("创建的tournament数量: %d", len(stats.TournamentGroups))
+	t.Logf("测试总耗时: %v", totalDuration)
+
+	// 性能统计
+	if len(stats.ResponseTimes) > 0 {
+		// 计算平均响应时间
+		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
+		t.Logf("=== 性能统计 ===")
+		t.Logf("平均响应时间: %v", avgResponseTime)
+		t.Logf("最小响应时间: %v", stats.MinResponseTime)
+		t.Logf("最大响应时间: %v", stats.MaxResponseTime)
+
+		// 计算QPS (每秒请求数)
+		qps := float64(actualLaunchedCount) / totalDuration.Seconds()
+		t.Logf("QPS (每秒请求数): %.2f", qps)
+
+		// 计算P50, P90, P95, P99响应时间
+		sort.Slice(stats.ResponseTimes, func(i, j int) bool {
+			return stats.ResponseTimes[i] < stats.ResponseTimes[j]
+		})
+
+		p50Index := int(float64(len(stats.ResponseTimes)) * 0.5)
+		p90Index := int(float64(len(stats.ResponseTimes)) * 0.9)
+		p95Index := int(float64(len(stats.ResponseTimes)) * 0.95)
+		p99Index := int(float64(len(stats.ResponseTimes)) * 0.99)
+
+		if p50Index < len(stats.ResponseTimes) {
+			t.Logf("P50响应时间: %v", stats.ResponseTimes[p50Index])
+		}
+		if p90Index < len(stats.ResponseTimes) {
+			t.Logf("P90响应时间: %v", stats.ResponseTimes[p90Index])
+		}
+		if p95Index < len(stats.ResponseTimes) {
+			t.Logf("P95响应时间: %v", stats.ResponseTimes[p95Index])
+		}
+		if p99Index < len(stats.ResponseTimes) {
+			t.Logf("P99响应时间: %v", stats.ResponseTimes[p99Index])
+		}
+	}
+
+	// 输出错误统计
+	if len(stats.ErrorCounts) > 0 {
+		t.Logf("=== 错误统计 ===")
+		for errorMsg, count := range stats.ErrorCounts {
+			t.Logf("错误: %s (次数: %d)", errorMsg, count)
+		}
+	}
+
+	// 验证tournament分配
+	t.Logf("计算期望的tournament数量...")
+	expectedTournaments := (stats.JoinSuccessCount + int(targetChallenge.MaxPart) - 1) / int(targetChallenge.MaxPart)
+	t.Logf("期望的tournament数量: %d", expectedTournaments)
+
+	// 期望与实际数量差异判断
+	actualTournaments := len(stats.TournamentGroups)
+	diff := expectedTournaments - actualTournaments
+	if diff != 0 {
+		if diff > 0 {
+			t.Errorf("Tournament数量与期望不一致: 期望=%d 实际=%d 差异=%d(少创建)", expectedTournaments, actualTournaments, diff)
+		} else {
+			t.Errorf("Tournament数量与期望不一致: 期望=%d 实际=%d 差异=%d(多创建)", expectedTournaments, actualTournaments, diff)
+		}
+	} else {
+		t.Logf("✓ Tournament数量与期望一致: %d", actualTournaments)
+	}
+
+	t.Logf("=== Tournament分配详情 ===")
+	if len(stats.TournamentGroups) == 0 {
+		t.Logf("⚠️ 没有找到任何tournament分配")
+	} else {
+		for tournamentID, playerCount := range stats.TournamentGroups {
+			t.Logf("Tournament %s: %d 个玩家", tournamentID, playerCount)
+
+			// 验证每个tournament的玩家数量不超过限制
+			if int32(playerCount) > targetChallenge.MaxPart {
+				t.Errorf("Tournament %s 玩家数量超过限制: %d > %d",
+					tournamentID, playerCount, targetChallenge.MaxPart)
+			}
+		}
+	}
+
+	// 输出节点分布统计
+	t.Logf("=== 节点分布统计 ===")
+	for node, count := range stats.NodeStats {
+		t.Logf("节点 %s: %d 个玩家成功加入", node, count)
+	}
+
+	t.Logf("开始验证结果...")
+
+	// 验证结果
+	if len(stats.TournamentGroups) < expectedTournaments {
+		t.Logf("⚠️ 创建的tournament数量不足: 期望至少 %d 个，实际 %d 个",
+			expectedTournaments, len(stats.TournamentGroups))
+	} else {
+		t.Logf("✓ Tournament数量验证通过")
+	}
+
+	if stats.JoinSuccessCount < actualLaunchedCount*7/10 {
+		t.Logf("⚠️ 加入成功率过低: %d/%d (%.2f%%)",
+			stats.JoinSuccessCount, actualLaunchedCount,
+			float64(stats.JoinSuccessCount)/float64(actualLaunchedCount)*100)
+	} else {
+		t.Logf("✓ 加入成功率验证通过: %d/%d (%.2f%%)",
+			stats.JoinSuccessCount, actualLaunchedCount,
+			float64(stats.JoinSuccessCount)/float64(actualLaunchedCount)*100)
+	}
+
+	// 验证是否有适当的tournament分布
+	t.Logf("计算满员的tournament数量...")
+	fullTournaments := 0
+	for _, playerCount := range stats.TournamentGroups {
+		if int32(playerCount) == targetChallenge.MaxPart {
+			fullTournaments++
+		}
+	}
+
+	t.Logf("满员的tournament数量: %d", fullTournaments)
+
+	// 性能验证
+	successRate := float64(stats.JoinSuccessCount) / float64(actualLaunchedCount) * 100
+	if successRate < 70 {
+		t.Errorf("加入挑战赛成功率过低: %.2f%% (期望 >= 70%%)", successRate)
+	}
+
+	// 响应时间验证
+	if len(stats.ResponseTimes) > 0 {
+		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
+		if avgResponseTime > 2*time.Second {
+			t.Errorf("平均响应时间过长: %v (期望 < 2秒)", avgResponseTime)
+		}
+
+		// 检查P95响应时间
+		p95Index := int(float64(len(stats.ResponseTimes)) * 0.95)
+		if p95Index < len(stats.ResponseTimes) && stats.ResponseTimes[p95Index] > 5*time.Second {
+			t.Errorf("P95响应时间过长: %v (期望 < 5秒)", stats.ResponseTimes[p95Index])
+		}
+	}
+
+	// QPS验证
+	qps := float64(actualLaunchedCount) / totalDuration.Seconds()
+	if qps < 10 {
+		t.Errorf("QPS过低: %.2f (期望 >= 10)", qps)
+	}
+
+	// 验证节点分布相对均匀（允许一定偏差）
+	expectedPerNode := actualLaunchedCount / nodeCount
+	for node, count := range stats.NodeStats {
+		diff := count - expectedPerNode
+		if diff > expectedPerNode/2 || diff < -expectedPerNode/2 {
+			t.Logf("⚠️ 节点 %s 分布偏差较大: %d (期望约 %d)", node, count, expectedPerNode)
+		}
+	}
+
+	// 第六阶段：提交随机分数测试
+	t.Logf("=== 阶段6: 提交随机分数测试 ===")
+
+	scoreSubmissionStats := struct {
+		SubmissionSuccess   int
+		SubmissionFailure   int
+		TotalScores         int
+		SubmissionTimes     []time.Duration
+		MinSubmissionTime   time.Duration
+		MaxSubmissionTime   time.Duration
+		TotalSubmissionTime time.Duration
+		ErrorCounts         map[string]int
+	}{
+		SubmissionTimes: make([]time.Duration, 0, stats.JoinSuccessCount*3),
+		ErrorCounts:     make(map[string]int),
+	}
+
+	// 为每个成功加入的玩家提交随机分数
+	for nodeIdx, players := range allPlayers {
+		for _, player := range players {
+			if player == nil || !player.JoinSuccess || player.TournamentID == "" {
+				continue
+			}
+
+			// 为每个玩家生成3个随机分数
+			scores := []int64{
+				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+			}
+
+			for attemptNum, score := range scores {
+				// 记录提交开始时间
+				submissionStartTime := time.Now()
+
+				// 创建包含签名的metadata
+				metadataFields := map[string]interface{}{
+					"player_id": player.ID,
+					"attempt":   attemptNum + 1,
+					"timestamp": time.Now().Format(time.RFC3339),
+					"node":      player.Node,
+				}
+
+				signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
+				if err != nil {
+					t.Logf("✗ 玩家[%d] 创建签名metadata失败: %v", player.ID, err)
+					scoreSubmissionStats.SubmissionFailure++
+					scoreSubmissionStats.ErrorCounts[err.Error()]++
+					continue
+				}
+
+				writeReq := &api.WriteTournamentRecordRequest{
+					TournamentId: player.TournamentID,
+					Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
+						Score:    score,
+						Subscore: 0,
+						Metadata: signedMetadata,
+						Operator: api.Operator_BEST,
+					},
+				}
+
+				// 调用提交成绩API
+				recordResp, err := connections[nodeIdx].Client.WriteTournamentRecord(player.Context, writeReq)
+
+				// 记录提交时间
+				submissionTime := time.Since(submissionStartTime)
+				scoreSubmissionStats.SubmissionTimes = append(scoreSubmissionStats.SubmissionTimes, submissionTime)
+				scoreSubmissionStats.TotalSubmissionTime += submissionTime
+
+				// 更新最小/最大提交时间
+				if scoreSubmissionStats.MinSubmissionTime == 0 || submissionTime < scoreSubmissionStats.MinSubmissionTime {
+					scoreSubmissionStats.MinSubmissionTime = submissionTime
+				}
+				if submissionTime > scoreSubmissionStats.MaxSubmissionTime {
+					scoreSubmissionStats.MaxSubmissionTime = submissionTime
+				}
+
+				if err != nil {
+					t.Logf("✗ 玩家[%d] 提交分数失败: %v (耗时: %v)", player.ID, err, submissionTime)
+					scoreSubmissionStats.SubmissionFailure++
+					scoreSubmissionStats.ErrorCounts[err.Error()]++
+				} else {
+					scoreSubmissionStats.SubmissionSuccess++
+					scoreSubmissionStats.TotalScores++
+					t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d, 已签名, 耗时: %v)",
+						player.ID, recordResp.Score, recordResp.Rank, submissionTime)
+				}
+
+				// 添加小延迟避免过快请求
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}
+
+	// 输出分数提交统计
+	t.Logf("=== 分数提交统计 ===")
+	t.Logf("成功提交: %d", scoreSubmissionStats.SubmissionSuccess)
+	t.Logf("提交失败: %d", scoreSubmissionStats.SubmissionFailure)
+	t.Logf("总分数记录: %d", scoreSubmissionStats.TotalScores)
+
+	if len(scoreSubmissionStats.SubmissionTimes) > 0 {
+		avgSubmissionTime := scoreSubmissionStats.TotalSubmissionTime / time.Duration(len(scoreSubmissionStats.SubmissionTimes))
+		t.Logf("平均提交时间: %v", avgSubmissionTime)
+		t.Logf("最小提交时间: %v", scoreSubmissionStats.MinSubmissionTime)
+		t.Logf("最大提交时间: %v", scoreSubmissionStats.MaxSubmissionTime)
+	}
+
+	// 输出提交错误统计
+	if len(scoreSubmissionStats.ErrorCounts) > 0 {
+		t.Logf("=== 分数提交错误统计 ===")
+		for errorMsg, count := range scoreSubmissionStats.ErrorCounts {
+			t.Logf("错误: %s (次数: %d)", errorMsg, count)
+		}
+	}
+
+	// 验证分数提交成功率
+	expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
+	if expectedSubmissions > 0 {
+		submissionSuccessRate := float64(scoreSubmissionStats.SubmissionSuccess) / float64(expectedSubmissions) * 100
+		if submissionSuccessRate < 70 {
+			t.Logf("⚠️ 分数提交成功率过低: %d/%d (%.2f%%)",
+				scoreSubmissionStats.SubmissionSuccess, expectedSubmissions, submissionSuccessRate)
+		} else {
+			t.Logf("✓ 分数提交成功率验证通过: %d/%d (%.2f%%)",
+				scoreSubmissionStats.SubmissionSuccess, expectedSubmissions, submissionSuccessRate)
+		}
+	}
+
+	t.Logf("=== 多节点并发测试完成 ===")
+	t.Logf("测试已正常结束")
+}
+
+// TestThreeNodeJoinChallenge 专门测试3个节点的并发加入挑战赛
+func TestThreeNodeJoinChallenge(t *testing.T) {
+	// 快速跳过策略：仅在显式要求时执行
+	if testing.Short() {
+		t.Log("-short 模式下仍执行三节点并发测试…")
+	}
+
+	// 强制使用3个节点
+	os.Setenv("NAKAMA_ADDR_1", "localhost:7349")
+	os.Setenv("NAKAMA_ADDR_2", "localhost:7449")
+	os.Setenv("NAKAMA_ADDR_3", "localhost:7549")
+
+	// 调用通用的多节点测试函数
+	TestMultiNodeJoinChallengeGeneric(t)
 }

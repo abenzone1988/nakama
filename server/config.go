@@ -40,6 +40,7 @@ type Config interface {
 	GetLogger() *LoggerConfig
 	GetMetrics() *MetricsConfig
 	GetSession() *SessionConfig
+	GetCluster() *ClusterConfig
 	GetSocket() *SocketConfig
 	GetDatabase() *DatabaseConfig
 	GetSocial() *SocialConfig
@@ -466,6 +467,7 @@ type config struct {
 	Logger           *LoggerConfig      `yaml:"logger" json:"logger" usage:"Logger levels and output."`
 	Metrics          *MetricsConfig     `yaml:"metrics" json:"metrics" usage:"Metrics settings."`
 	Session          *SessionConfig     `yaml:"session" json:"session" usage:"Session authentication settings."`
+	Cluster          *ClusterConfig     `yaml:"cluster" json:"cluster" usage:"Cluster settings for distributed mode (Redis, etc)."`
 	Socket           *SocketConfig      `yaml:"socket" json:"socket" usage:"Socket configuration."`
 	Database         *DatabaseConfig    `yaml:"database" json:"database" usage:"Database connection settings."`
 	Social           *SocialConfig      `yaml:"social" json:"social" usage:"Properties for social provider integrations."`
@@ -496,6 +498,7 @@ func NewConfig(logger *zap.Logger) *config {
 		Logger:           NewLoggerConfig(),
 		Metrics:          NewMetricsConfig(),
 		Session:          NewSessionConfig(),
+		Cluster:          NewClusterConfig(),
 		Socket:           NewSocketConfig(),
 		Database:         NewDatabaseConfig(),
 		Social:           NewSocialConfig(),
@@ -527,6 +530,7 @@ func (c *config) Clone() (Config, error) {
 		Logger:           c.Logger.Clone(),
 		Metrics:          c.Metrics.Clone(),
 		Session:          c.Session.Clone(),
+		Cluster:          c.Cluster.Clone(),
 		Socket:           configSocket,
 		Database:         c.Database.Clone(),
 		Social:           c.Social.Clone(),
@@ -569,6 +573,10 @@ func (c *config) GetMetrics() *MetricsConfig {
 
 func (c *config) GetSession() *SessionConfig {
 	return c.Session
+}
+
+func (c *config) GetCluster() *ClusterConfig {
+	return c.Cluster
 }
 
 func (c *config) GetSocket() *SocketConfig {
@@ -799,6 +807,29 @@ func NewSessionConfig() *SessionConfig {
 		TokenExpirySec:        60,
 		RefreshEncryptionKey:  "defaultrefreshencryptionkey",
 		RefreshTokenExpirySec: 3600,
+	}
+}
+
+// ClusterConfig 用于统一集群模式下的中间件配置（Redis等）
+type ClusterConfig struct {
+	Enabled       bool   `yaml:"enabled" json:"enabled" usage:"Enable cluster mode. When enabled, shared Redis settings below will be used."`
+	RedisAddress  string `yaml:"redis_address" json:"redis_address" usage:"Redis server address for cluster middleware (session, leaderboard)."`
+	RedisPassword string `yaml:"redis_password" json:"redis_password" usage:"Redis password for cluster middleware."`
+}
+
+func (c *ClusterConfig) Clone() *ClusterConfig {
+	if c == nil {
+		return nil
+	}
+	cc := *c
+	return &cc
+}
+
+func NewClusterConfig() *ClusterConfig {
+	return &ClusterConfig{
+		Enabled:       false,
+		RedisAddress:  "localhost:6379",
+		RedisPassword: "",
 	}
 }
 

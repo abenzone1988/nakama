@@ -12,7 +12,7 @@ import (
 
 const (
 	// Redis token过期时间 - 使用较短的时间来自动清理不活跃用户的token
-	redisTokenExpiryV2 = 24 * time.Hour // Redis中token的过期时间，24小时后自动清理
+	redisTokenExpiryV2 = 1 * time.Hour // Redis中token的过期时间，24小时后自动清理
 )
 
 type RedisSessionCacheV2 struct {
@@ -27,7 +27,7 @@ type RedisSessionCacheV2 struct {
 
 // NewRedisSessionCacheV2 创建Redis会话缓存v2版本
 // 注意：tokenExpirySec和refreshExpirySec参数仍然保留用于兼容性，但Redis中的实际过期时间
-// 使用redisTokenExpiryV2常量（24小时），这样可以自动清理不活跃用户的token数据，
+// 使用redisTokenExpiryV2常量（1小时），这样可以自动清理不活跃用户的token数据，
 // 当玩家重新登录时会重新写入Redis
 func NewRedisSessionCacheV2(logger *zap.Logger, address string, password string, tokenExpirySec, refreshExpirySec int64, singleToken bool) SessionCache {
 	ctx, ctxCancelFn := context.WithCancel(context.Background())

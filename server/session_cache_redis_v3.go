@@ -182,8 +182,7 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 				continue
 			}
 
-			// 减少PubSub消息的调试日志，只在需要时记录
-			// s.logger.Debug("收到Redis PubSub消息",
+			//s.logger.Debug("收到Redis PubSub消息",
 			//	zap.String("channel", msg.Channel),
 			//	zap.String("payload", msg.Payload),
 			//	zap.String("nodeId", s.nodeID))
@@ -199,7 +198,6 @@ func (s *RedisSessionCacheV3) handlePubSubMessages() {
 
 			// 忽略自己发出的消息
 			if invalidateMsg.SourceID == s.nodeID {
-				// 减少自己发出消息的调试日志
 				// s.logger.Debug("忽略自己发出的消息",
 				//	zap.String("sourceID", invalidateMsg.SourceID),
 				//	zap.String("currentNode", s.nodeID))
@@ -332,11 +330,10 @@ func (s *RedisSessionCacheV3) publishInvalidateMessage(userID uuid.UUID, tokenID
 	if err := s.client.Publish(s.ctx, channel, msgBytes).Err(); err != nil {
 		s.logger.Error("Error publishing invalidate message", zap.Error(err))
 	} else {
-		// 减少发布消息的调试日志，只在出错时记录
-		// s.logger.Debug("Published cache invalidate message",
-		//	zap.String("channel", channel),
-		//	zap.String("nodeID", s.nodeID),
-		//	zap.Any("message", msg))
+		s.logger.Debug("Published cache invalidate message",
+			zap.String("channel", channel),
+			zap.String("nodeID", s.nodeID),
+			zap.Any("message", msg))
 	}
 }
 
