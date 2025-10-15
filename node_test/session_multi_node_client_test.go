@@ -1,4 +1,4 @@
-package server
+package node_test
 
 import (
 	"bytes"
@@ -319,32 +319,41 @@ func TestConcurrentLogin(t *testing.T) {
 		}
 
 		fmt.Printf("步骤 %d: 在节点%d登录用户 %s\n", i+1, client.nodePort, client.username)
+		loginTime := time.Now()
 		if err := client.Login(); err != nil {
 			t.Logf("客户端 %d (节点%d) 登录失败: %v", i+1, client.nodePort, err)
 			continue
 		}
 
+		// 等待 1 秒以确保：
+		// 1. Redis pub/sub 消息传播到其他节点
+		// 2. 下一次登录的 tokenIssuedAt 在不同的秒（避免秒级时间戳冲突）
+		fmt.Printf("  等待 Redis 消息同步和时间戳差异...\n")
+		syncWaitStart := time.Now()
+		time.Sleep(1 * time.Second)
+		fmt.Printf("  等待完成，耗时: %v\n", time.Since(syncWaitStart))
+
 		// 验证当前客户端的session
 		if err := client.ValidateSession(); err != nil {
 			t.Logf("客户端 %d (节点%d) session验证失败: %v", i+1, client.nodePort, err)
 		} else {
-			fmt.Printf("✓ 客户端 %d (节点%d) session验证成功\n", i+1, client.nodePort)
+			fmt.Printf("  ✓ 客户端 %d (节点%d) session验证成功\n", i+1, client.nodePort)
 		}
 
 		// 如果有上一个有效的客户端，验证其session是否已失效
 		if lastValidClient != nil && lastValidClient != client {
-			fmt.Printf("检查上一个客户端 (节点%d) 的session是否已失效...\n", lastValidClient.nodePort)
+			fmt.Printf("  检查上一个客户端 (节点%d) 的session是否已失效...\n", lastValidClient.nodePort)
+			checkTime := time.Now()
 			if err := lastValidClient.ValidateSession(); err != nil {
-				fmt.Printf("✓ 上一个客户端 (节点%d) session已失效: %v\n", lastValidClient.nodePort, err)
+				fmt.Printf("  ✓ 上一个客户端 (节点%d) session已失效 (总延迟: %v)\n", lastValidClient.nodePort, time.Since(loginTime))
+				fmt.Printf("    失效原因: %v\n", err)
 			} else {
-				t.Logf("⚠️  警告: 上一个客户端 (节点%d) session仍然有效，Single Session可能有问题", lastValidClient.nodePort)
+				t.Errorf("  ❌ 错误: 上一个客户端 (节点%d) session仍然有效 (总延迟: %v)，Single Session功能失败", lastValidClient.nodePort, time.Since(loginTime))
+				fmt.Printf("    验证耗时: %v\n", time.Since(checkTime))
 			}
 		}
 
 		lastValidClient = client
-
-		// 添加短暂延迟，确保Redis同步
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	fmt.Println("同账号不同节点登录测试完成")

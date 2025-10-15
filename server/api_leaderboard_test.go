@@ -111,7 +111,7 @@ nk.leaderboard_create(%q, %t, %q, %q, reset, metadata, %t)
 		db := NewDB(t)
 		router := &DummyMessageRouter{}
 		tracker := &LocalTracker{}
-		sessionCache := NewLocalSessionCache(1_000, 3_600)
+		sessionCache := NewLocalSessionCache(logger, cfg, 1_000, 3_600, "test")
 
 		pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, nil, nil, nil, nil, nil, tracker, router, runtime)
 
