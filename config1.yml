@@ -1,4 +1,4 @@
-name: nakama-node-jp
+name: nakama-node-jp1
 
 database:
   address:
@@ -14,10 +14,10 @@ session:
   single_socket: true
   single_session: true
 
-#cluster:
-#  use_redis: true
-#  redis_address: "192.168.102.223:6379"
-#  redis_password: ""
+cluster:
+  enabled: true
+  redis_address: "192.168.102.223:6379"
+  redis_password: ""
 
 socket:
   server_key: "sparkgame"

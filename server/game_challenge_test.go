@@ -551,7 +551,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 		ResponseTime time.Duration
 	}
 
-	const playerCount = 100
+	const playerCount = 1000
 
 	players := make([]*Player, playerCount)
 
@@ -1734,132 +1734,132 @@ func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
 	}
 
 	// 第六阶段：提交随机分数测试
-	t.Logf("=== 阶段6: 提交随机分数测试 ===")
-
-	scoreSubmissionStats := struct {
-		SubmissionSuccess   int
-		SubmissionFailure   int
-		TotalScores         int
-		SubmissionTimes     []time.Duration
-		MinSubmissionTime   time.Duration
-		MaxSubmissionTime   time.Duration
-		TotalSubmissionTime time.Duration
-		ErrorCounts         map[string]int
-	}{
-		SubmissionTimes: make([]time.Duration, 0, stats.JoinSuccessCount*3),
-		ErrorCounts:     make(map[string]int),
-	}
-
-	// 为每个成功加入的玩家提交随机分数
-	for nodeIdx, players := range allPlayers {
-		for _, player := range players {
-			if player == nil || !player.JoinSuccess || player.TournamentID == "" {
-				continue
-			}
-
-			// 为每个玩家生成3个随机分数
-			scores := []int64{
-				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-			}
-
-			for attemptNum, score := range scores {
-				// 记录提交开始时间
-				submissionStartTime := time.Now()
-
-				// 创建包含签名的metadata
-				metadataFields := map[string]interface{}{
-					"player_id": player.ID,
-					"attempt":   attemptNum + 1,
-					"timestamp": time.Now().Format(time.RFC3339),
-					"node":      player.Node,
-				}
-
-				signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
-				if err != nil {
-					t.Logf("✗ 玩家[%d] 创建签名metadata失败: %v", player.ID, err)
-					scoreSubmissionStats.SubmissionFailure++
-					scoreSubmissionStats.ErrorCounts[err.Error()]++
-					continue
-				}
-
-				writeReq := &api.WriteTournamentRecordRequest{
-					TournamentId: player.TournamentID,
-					Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
-						Score:    score,
-						Subscore: 0,
-						Metadata: signedMetadata,
-						Operator: api.Operator_BEST,
-					},
-				}
-
-				// 调用提交成绩API
-				recordResp, err := connections[nodeIdx].Client.WriteTournamentRecord(player.Context, writeReq)
-
-				// 记录提交时间
-				submissionTime := time.Since(submissionStartTime)
-				scoreSubmissionStats.SubmissionTimes = append(scoreSubmissionStats.SubmissionTimes, submissionTime)
-				scoreSubmissionStats.TotalSubmissionTime += submissionTime
-
-				// 更新最小/最大提交时间
-				if scoreSubmissionStats.MinSubmissionTime == 0 || submissionTime < scoreSubmissionStats.MinSubmissionTime {
-					scoreSubmissionStats.MinSubmissionTime = submissionTime
-				}
-				if submissionTime > scoreSubmissionStats.MaxSubmissionTime {
-					scoreSubmissionStats.MaxSubmissionTime = submissionTime
-				}
-
-				if err != nil {
-					t.Logf("✗ 玩家[%d] 提交分数失败: %v (耗时: %v)", player.ID, err, submissionTime)
-					scoreSubmissionStats.SubmissionFailure++
-					scoreSubmissionStats.ErrorCounts[err.Error()]++
-				} else {
-					scoreSubmissionStats.SubmissionSuccess++
-					scoreSubmissionStats.TotalScores++
-					t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d, 已签名, 耗时: %v)",
-						player.ID, recordResp.Score, recordResp.Rank, submissionTime)
-				}
-
-				// 添加小延迟避免过快请求
-				time.Sleep(50 * time.Millisecond)
-			}
-		}
-	}
-
-	// 输出分数提交统计
-	t.Logf("=== 分数提交统计 ===")
-	t.Logf("成功提交: %d", scoreSubmissionStats.SubmissionSuccess)
-	t.Logf("提交失败: %d", scoreSubmissionStats.SubmissionFailure)
-	t.Logf("总分数记录: %d", scoreSubmissionStats.TotalScores)
-
-	if len(scoreSubmissionStats.SubmissionTimes) > 0 {
-		avgSubmissionTime := scoreSubmissionStats.TotalSubmissionTime / time.Duration(len(scoreSubmissionStats.SubmissionTimes))
-		t.Logf("平均提交时间: %v", avgSubmissionTime)
-		t.Logf("最小提交时间: %v", scoreSubmissionStats.MinSubmissionTime)
-		t.Logf("最大提交时间: %v", scoreSubmissionStats.MaxSubmissionTime)
-	}
-
-	// 输出提交错误统计
-	if len(scoreSubmissionStats.ErrorCounts) > 0 {
-		t.Logf("=== 分数提交错误统计 ===")
-		for errorMsg, count := range scoreSubmissionStats.ErrorCounts {
-			t.Logf("错误: %s (次数: %d)", errorMsg, count)
-		}
-	}
-
-	// 验证分数提交成功率
-	expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
-	if expectedSubmissions > 0 {
-		submissionSuccessRate := float64(scoreSubmissionStats.SubmissionSuccess) / float64(expectedSubmissions) * 100
-		if submissionSuccessRate < 70 {
-			t.Logf("⚠️ 分数提交成功率过低: %d/%d (%.2f%%)",
-				scoreSubmissionStats.SubmissionSuccess, expectedSubmissions, submissionSuccessRate)
-		} else {
-			t.Logf("✓ 分数提交成功率验证通过: %d/%d (%.2f%%)",
-				scoreSubmissionStats.SubmissionSuccess, expectedSubmissions, submissionSuccessRate)
-		}
-	}
+	//t.Logf("=== 阶段6: 提交随机分数测试 ===")
+	//
+	//scoreSubmissionStats := struct {
+	//	SubmissionSuccess   int
+	//	SubmissionFailure   int
+	//	TotalScores         int
+	//	SubmissionTimes     []time.Duration
+	//	MinSubmissionTime   time.Duration
+	//	MaxSubmissionTime   time.Duration
+	//	TotalSubmissionTime time.Duration
+	//	ErrorCounts         map[string]int
+	//}{
+	//	SubmissionTimes: make([]time.Duration, 0, stats.JoinSuccessCount*3),
+	//	ErrorCounts:     make(map[string]int),
+	//}
+	//
+	//// 为每个成功加入的玩家提交随机分数
+	//for nodeIdx, players := range allPlayers {
+	//	for _, player := range players {
+	//		if player == nil || !player.JoinSuccess || player.TournamentID == "" {
+	//			continue
+	//		}
+	//
+	//		// 为每个玩家生成3个随机分数
+	//		scores := []int64{
+	//			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+	//			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+	//			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+	//		}
+	//
+	//		for attemptNum, score := range scores {
+	//			// 记录提交开始时间
+	//			submissionStartTime := time.Now()
+	//
+	//			// 创建包含签名的metadata
+	//			metadataFields := map[string]interface{}{
+	//				"player_id": player.ID,
+	//				"attempt":   attemptNum + 1,
+	//				"timestamp": time.Now().Format(time.RFC3339),
+	//				"node":      player.Node,
+	//			}
+	//
+	//			signedMetadata, err := createSignedTournamentMetadata(player.TournamentID, score, 0, metadataFields)
+	//			if err != nil {
+	//				t.Logf("✗ 玩家[%d] 创建签名metadata失败: %v", player.ID, err)
+	//				scoreSubmissionStats.SubmissionFailure++
+	//				scoreSubmissionStats.ErrorCounts[err.Error()]++
+	//				continue
+	//			}
+	//
+	//			writeReq := &api.WriteTournamentRecordRequest{
+	//				TournamentId: player.TournamentID,
+	//				Record: &api.WriteTournamentRecordRequest_TournamentRecordWrite{
+	//					Score:    score,
+	//					Subscore: 0,
+	//					Metadata: signedMetadata,
+	//					Operator: api.Operator_BEST,
+	//				},
+	//			}
+	//
+	//			// 调用提交成绩API
+	//			recordResp, err := connections[nodeIdx].Client.WriteTournamentRecord(player.Context, writeReq)
+	//
+	//			// 记录提交时间
+	//			submissionTime := time.Since(submissionStartTime)
+	//			scoreSubmissionStats.SubmissionTimes = append(scoreSubmissionStats.SubmissionTimes, submissionTime)
+	//			scoreSubmissionStats.TotalSubmissionTime += submissionTime
+	//
+	//			// 更新最小/最大提交时间
+	//			if scoreSubmissionStats.MinSubmissionTime == 0 || submissionTime < scoreSubmissionStats.MinSubmissionTime {
+	//				scoreSubmissionStats.MinSubmissionTime = submissionTime
+	//			}
+	//			if submissionTime > scoreSubmissionStats.MaxSubmissionTime {
+	//				scoreSubmissionStats.MaxSubmissionTime = submissionTime
+	//			}
+	//
+	//			if err != nil {
+	//				t.Logf("✗ 玩家[%d] 提交分数失败: %v (耗时: %v)", player.ID, err, submissionTime)
+	//				scoreSubmissionStats.SubmissionFailure++
+	//				scoreSubmissionStats.ErrorCounts[err.Error()]++
+	//			} else {
+	//				scoreSubmissionStats.SubmissionSuccess++
+	//				scoreSubmissionStats.TotalScores++
+	//				t.Logf("✓ 玩家[%d] 成功提交分数: %d (排名: %d, 已签名, 耗时: %v)",
+	//					player.ID, recordResp.Score, recordResp.Rank, submissionTime)
+	//			}
+	//
+	//			// 添加小延迟避免过快请求
+	//			time.Sleep(50 * time.Millisecond)
+	//		}
+	//	}
+	//}
+	//
+	//// 输出分数提交统计
+	//t.Logf("=== 分数提交统计 ===")
+	//t.Logf("成功提交: %d", scoreSubmissionStats.SubmissionSuccess)
+	//t.Logf("提交失败: %d", scoreSubmissionStats.SubmissionFailure)
+	//t.Logf("总分数记录: %d", scoreSubmissionStats.TotalScores)
+	//
+	//if len(scoreSubmissionStats.SubmissionTimes) > 0 {
+	//	avgSubmissionTime := scoreSubmissionStats.TotalSubmissionTime / time.Duration(len(scoreSubmissionStats.SubmissionTimes))
+	//	t.Logf("平均提交时间: %v", avgSubmissionTime)
+	//	t.Logf("最小提交时间: %v", scoreSubmissionStats.MinSubmissionTime)
+	//	t.Logf("最大提交时间: %v", scoreSubmissionStats.MaxSubmissionTime)
+	//}
+	//
+	//// 输出提交错误统计
+	//if len(scoreSubmissionStats.ErrorCounts) > 0 {
+	//	t.Logf("=== 分数提交错误统计 ===")
+	//	for errorMsg, count := range scoreSubmissionStats.ErrorCounts {
+	//		t.Logf("错误: %s (次数: %d)", errorMsg, count)
+	//	}
+	//}
+	//
+	//// 验证分数提交成功率
+	//expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
+	//if expectedSubmissions > 0 {
+	//	submissionSuccessRate := float64(scoreSubmissionStats.SubmissionSuccess) / float64(expectedSubmissions) * 100
+	//	if submissionSuccessRate < 70 {
+	//		t.Logf("⚠️ 分数提交成功率过低: %d/%d (%.2f%%)",
+	//			scoreSubmissionStats.SubmissionSuccess, expectedSubmissions, submissionSuccessRate)
+	//	} else {
+	//		t.Logf("✓ 分数提交成功率验证通过: %d/%d (%.2f%%)",
+	//			scoreSubmissionStats.SubmissionSuccess, expectedSubmissions, submissionSuccessRate)
+	//	}
+	//}
 
 	t.Logf("=== 多节点并发测试完成 ===")
 	t.Logf("测试已正常结束")

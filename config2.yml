@@ -1,4 +1,4 @@
-name: nakama-node-jp
+name: nakama-node-jp2
 
 database:
   address:
@@ -15,7 +15,7 @@ session:
   single_session: true
 
 cluster:
-  use_redis: true
+  enabled: true
   redis_address: "192.168.102.223:6379"
   redis_password: ""
 

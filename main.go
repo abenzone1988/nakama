@@ -209,15 +209,6 @@ func main() {
 			config.GetCluster().RedisPassword,
 			config.GetLeaderboard(),
 		)
-	} else if config.GetLeaderboard().UseRedis {
-		// 兼容旧配置：沿用 leaderboard 下的 Redis 配置
-		leaderboardRankCache = server.NewRedisLeaderboardRankCache(
-			ctx,
-			logger,
-			config.GetLeaderboard().RedisAddress,
-			config.GetLeaderboard().RedisPassword,
-			config.GetLeaderboard(),
-		)
 	} else {
 		leaderboardRankCache = server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
 	}

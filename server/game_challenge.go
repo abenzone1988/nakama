@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -15,6 +17,7 @@ import (
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -787,91 +790,138 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 
 // 为玩家分配到挑战赛竞标赛
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
-	// 使用重试机制处理并发冲突
-	maxRetries := 1
-	baseDelay := 50 * time.Millisecond
+	// 根据集群配置选择锁类型
+	if s.config.GetCluster().Enabled {
+		// 集群模式：双层锁策略（内存锁 + Redis锁）
+		return s.assignPlayerToChallengeTournamentWithHybridLock(ctx, userID, tplChallenge, startTime, endTime)
+	} else {
+		// 单节点模式：只使用内存锁（性能最优）
+		// 单节点无需Redis锁，内存锁足以保证一致性
+		return s.assignPlayerToChallengeTournamentWithMemoryLock(ctx, userID, tplChallenge, startTime, endTime)
+	}
+}
 
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		// 添加随机延迟，减少并发冲突
-		if attempt > 0 {
-			delay := time.Duration(attempt)*baseDelay + time.Duration(attempt*attempt)*time.Millisecond
-			s.logger.Debug("重试前等待",
+// 使用内存锁的分配方法
+func (s *ApiServer) assignPlayerToChallengeTournamentWithMemoryLock(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+	// 加锁：按 challenge_id 串行化查找、加入与创建
+	lockIface, _ := s.challengeAssignLocks.LoadOrStore(tplChallenge.ID, &sync.Mutex{})
+	mu := lockIface.(*sync.Mutex)
+	mu.Lock()
+
+	// 【性能监控】记录内存锁持有时间
+	lockAcquireTime := time.Now()
+	defer func() {
+		mu.Unlock()
+
+		lockHoldDuration := time.Since(lockAcquireTime)
+
+		// 记录锁持有时间（用于性能分析和调优）
+		s.logger.Info("内存锁持有时间统计",
+			zap.String("user_id", userID.String()),
+			zap.Int32("challenge_id", tplChallenge.ID),
+			zap.Duration("lock_hold_time", lockHoldDuration),
+			zap.Int64("lock_hold_ms", lockHoldDuration.Milliseconds()))
+
+		// 如果持有时间过长，发出警告
+		if lockHoldDuration > 50*time.Millisecond {
+			s.logger.Warn("内存锁持有时间过长",
 				zap.String("user_id", userID.String()),
-				zap.Duration("delay", delay),
-				zap.Int("attempt", attempt+1))
-			time.Sleep(delay)
+				zap.Int32("challenge_id", tplChallenge.ID),
+				zap.Duration("lock_hold_time", lockHoldDuration))
 		}
+	}()
 
-		// 快速查找第一个可加入的竞标赛，避免遍历所有竞标赛
-		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
-			int(tplChallenge.ID), int(tplChallenge.MaxPart))
-		if err != nil {
-			s.logger.Error("查找可用竞标赛失败",
+	return s.performTournamentAssignment(ctx, userID, tplChallenge, startTime, endTime)
+}
+
+// 使用Redis分布式锁的分配方法（集群模式专用）
+func (s *ApiServer) assignPlayerToChallengeTournamentWithHybridLock(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+	// 创建Redis客户端（如果还没有的话）
+	if s.redisClient == nil {
+		s.redisClient = redis.NewClient(&redis.Options{
+			Addr:     s.config.GetCluster().RedisAddress,
+			Password: s.config.GetCluster().RedisPassword,
+			DB:       0,
+		})
+	}
+
+	// 创建分布式锁实例
+	distributedLock := NewRedisDistributedLock(s.redisClient, s.logger)
+
+	// 【集群模式：只用Redis分布式锁】
+	// 说明：集群模式下，各节点独立，直接使用Redis锁协调即可
+	// 不需要内存锁，因为：
+	// 1. 内存锁只能保护单节点，无法跨节点
+	// 2. 先内存锁会导致节点内请求阻塞，降低吞吐
+	// 3. 先Redis锁会导致所有节点请求都打到Redis（没有过滤）
+	// 结论：集群模式接受部分请求失败，依赖客户端重试
+
+	lockKey := strconv.FormatInt(int64(tplChallenge.ID), 10)
+	acquired, lockValue, err := distributedLock.TryLockWithSpin(ctx, lockKey, redisLockTTL, redisSpinAttempts, redisSpinInterval)
+	if err != nil {
+		s.logger.Error("获取Redis自旋锁失败",
+			zap.String("user_id", userID.String()),
+			zap.Int32("challenge_id", tplChallenge.ID),
+			zap.Error(err))
+		return "", fmt.Errorf("获取分布式锁失败: %v", err)
+	}
+
+	if !acquired {
+		// Redis自旋锁失败，降级重试
+		s.logger.Debug("Redis自旋锁失败，尝试降级重试",
+			zap.String("user_id", userID.String()),
+			zap.Int32("challenge_id", tplChallenge.ID))
+
+		acquired, lockValue, err = distributedLock.TryLockWithFallback(ctx, lockKey, redisLockTTL, redisFallbackRetry, redisFallbackDelay)
+		if err != nil || !acquired {
+			s.logger.Info("无法获取Redis锁，快速失败（客户端应重试）",
+				zap.String("user_id", userID.String()),
+				zap.Int32("challenge_id", tplChallenge.ID))
+			return "", fmt.Errorf("服务器繁忙，请稍后重试")
+		}
+	}
+
+	// 【性能监控】记录Redis锁持有时间
+	lockAcquireTime := time.Now()
+	defer func() {
+		lockHoldDuration := time.Since(lockAcquireTime)
+
+		// 释放Redis锁
+		if err := distributedLock.ReleaseLock(ctx, lockKey, lockValue); err != nil {
+			s.logger.Error("释放Redis锁失败",
 				zap.String("user_id", userID.String()),
 				zap.Int32("challenge_id", tplChallenge.ID),
 				zap.Error(err))
-			return "", err
 		}
 
-		// 找到可用的竞标赛
-		if tournament != nil {
-			s.logger.Info("找到可用竞标赛",
-				zap.String("user_id", userID.String()),
-				zap.Int32("challenge_id", tplChallenge.ID),
-				zap.String("tournament_id", tournament.Id),
-				zap.Uint32("current_players", tournament.Size),
-				zap.Uint32("max_players", tournament.MaxSize),
-				zap.Int("attempt", attempt+1))
-
-			// 尝试加入该竞标赛
-			username := ctx.Value(ctxUsernameKey{}).(string)
-			err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
-			if err == nil {
-				// 加入成功
-				s.logger.Info("玩家成功加入现有竞标赛",
-					zap.String("user_id", userID.String()),
-					zap.String("tournament_id", tournament.Id),
-					zap.Int32("challenge_id", tplChallenge.ID),
-					zap.Uint32("tournament_size", tournament.Size),
-					zap.Uint32("max_size", tournament.MaxSize))
-
-				return tournament.Id, nil
-			} else {
-				s.logger.Warn("加入现有竞标赛失败",
-					zap.String("tournament_id", tournament.Id),
-					zap.String("user_id", userID.String()),
-					zap.Error(err))
-
-				// 检查是否是可重试的错误
-				if isRetryableError(err, s.logger) {
-					// 计算指数退避延迟
-					delay := time.Duration(attempt+1) * baseDelay
-					s.logger.Info("检测到可重试错误，等待后重试",
-						zap.String("tournament_id", tournament.Id),
-						zap.Duration("delay", delay),
-						zap.Int("attempt", attempt+1))
-					time.Sleep(delay)
-					continue
-				}
-
-				// 如果是非重试错误（如已满员），继续尝试查找其他可用竞标赛
-				s.logger.Info("竞标赛已满或不可加入，继续查找其他可用竞标赛",
-					zap.String("tournament_id", tournament.Id),
-					zap.String("user_id", userID.String()))
-				continue
-			}
-		}
-
-		// 没有可用的竞标赛，在创建新竞标赛前再次检查
-		// 防止在并发情况下重复创建
-		s.logger.Debug("没有找到可用竞标赛，再次检查是否有新创建的竞标赛",
+		// 记录锁持有时间（用于性能分析和调优）
+		s.logger.Info("Redis锁持有时间统计",
 			zap.String("user_id", userID.String()),
 			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.Int("attempt", attempt+1))
+			zap.Duration("lock_hold_time", lockHoldDuration),
+			zap.Int64("lock_hold_ms", lockHoldDuration.Milliseconds()))
 
-		// 再次查找可用竞标赛，防止并发创建
-		tournament, err = TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
-			int(tplChallenge.ID), int(tplChallenge.MaxPart))
+		// 如果持有时间过长，发出警告
+		if lockHoldDuration > 50*time.Millisecond {
+			s.logger.Warn("Redis锁持有时间过长",
+				zap.String("user_id", userID.String()),
+				zap.Int32("challenge_id", tplChallenge.ID),
+				zap.Duration("lock_hold_time", lockHoldDuration))
+		}
+	}()
+
+	s.logger.Debug("成功获取Redis分布式锁",
+		zap.String("user_id", userID.String()),
+		zap.Int32("challenge_id", tplChallenge.ID))
+
+	return s.performTournamentAssignment(ctx, userID, tplChallenge, startTime, endTime)
+}
+
+// 执行竞标赛分配的核心逻辑（锁内执行）
+func (s *ApiServer) performTournamentAssignment(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+	// 锁内查找并尝试加入（避免并发加入同一比赛），最多重试2次以避免不必要创建
+	for i := 0; i < 2; i++ {
+		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache, int(tplChallenge.ID))
 		if err != nil {
 			s.logger.Error("二次查找可用竞标赛失败",
 				zap.String("user_id", userID.String()),
@@ -879,129 +929,55 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 				zap.Error(err))
 			return "", err
 		}
+		if tournament == nil {
+			break
+		}
 
-		if tournament != nil {
-			s.logger.Info("二次检查发现可用竞标赛，尝试加入",
+		username := ctx.Value(ctxUsernameKey{}).(string)
+		err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
+		if err == nil {
+			s.logger.Info("玩家成功加入可用竞标赛",
 				zap.String("user_id", userID.String()),
 				zap.String("tournament_id", tournament.Id),
-				zap.Uint32("current_players", tournament.Size),
-				zap.Uint32("max_players", tournament.MaxSize))
-
-			// 尝试加入该竞标赛
-			username := ctx.Value(ctxUsernameKey{}).(string)
-			err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournament.Id)
-			if err == nil {
-				s.logger.Info("玩家成功加入二次检查发现的竞标赛",
-					zap.String("user_id", userID.String()),
-					zap.String("tournament_id", tournament.Id),
-					zap.Int32("challenge_id", tplChallenge.ID))
-				return tournament.Id, nil
-			} else {
-				s.logger.Warn("加入二次检查发现的竞标赛失败",
-					zap.String("tournament_id", tournament.Id),
-					zap.String("user_id", userID.String()),
-					zap.Error(err))
-			}
+				zap.Int32("challenge_id", tplChallenge.ID))
+			return tournament.Id, nil
 		}
 
-		// 确实没有可用的竞标赛，创建新的
-		// 使用持久化的批次号管理系统确保唯一性
-		batchNumber := GetNextChallengeBatch(ctx, s.logger, s.db, tplChallenge.ID)
-
-		// 在创建前最后一次检查，防止重复创建
-		s.logger.Debug("创建前最后一次检查可用竞标赛",
+		s.logger.Warn("加入可用竞标赛失败，锁内重试",
+			zap.String("tournament_id", tournament.Id),
 			zap.String("user_id", userID.String()),
-			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.Int32("batch_number", batchNumber))
-
-		finalCheckTournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache,
-			int(tplChallenge.ID), int(tplChallenge.MaxPart))
-		if err != nil {
-			s.logger.Error("最终检查可用竞标赛失败",
-				zap.String("user_id", userID.String()),
-				zap.Int32("challenge_id", tplChallenge.ID),
-				zap.Error(err))
-			return "", err
-		}
-
-		if finalCheckTournament != nil {
-			s.logger.Info("最终检查发现可用竞标赛，尝试加入",
-				zap.String("user_id", userID.String()),
-				zap.String("tournament_id", finalCheckTournament.Id),
-				zap.Uint32("current_players", finalCheckTournament.Size),
-				zap.Uint32("max_players", finalCheckTournament.MaxSize))
-
-			// 尝试加入该竞标赛
-			username := ctx.Value(ctxUsernameKey{}).(string)
-			err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, finalCheckTournament.Id)
-			if err == nil {
-				s.logger.Info("玩家成功加入最终检查发现的竞标赛",
-					zap.String("user_id", userID.String()),
-					zap.String("tournament_id", finalCheckTournament.Id),
-					zap.Int32("challenge_id", tplChallenge.ID))
-				return finalCheckTournament.Id, nil
-			} else {
-				s.logger.Warn("加入最终检查发现的竞标赛失败",
-					zap.String("tournament_id", finalCheckTournament.Id),
-					zap.String("user_id", userID.String()),
-					zap.Error(err))
-			}
-		}
-
-		s.logger.Info("创建新竞标赛",
-			zap.String("user_id", userID.String()),
-			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.Int32("batch_number", batchNumber),
-			zap.String("reason", "确实没有找到可用的竞标赛"),
-			zap.Int("attempt", attempt+1))
-
-		newTournamentID, err := CreateNewChallengeTournament(ctx, s.logger, s.leaderboardCache, s.leaderboardScheduler, tplChallenge, startTime, endTime, int(batchNumber))
-		if err != nil {
-			s.logger.Warn("创建新竞标赛失败",
-				zap.String("user_id", userID.String()),
-				zap.Int32("challenge_id", tplChallenge.ID),
-				zap.Error(err),
-				zap.Int("attempt", attempt+1))
-
-			// 检查是否是可重试的错误
-			if isRetryableError(err, s.logger) {
-				delay := time.Duration(attempt+1) * baseDelay
-				time.Sleep(delay)
-				continue
-			}
-			return "", fmt.Errorf("创建新竞标赛失败: %v", err)
-		}
-
-		// 玩家加入新创建的竞标赛
-		username := ctx.Value(ctxUsernameKey{}).(string)
-		err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
-		if err != nil {
-			s.logger.Warn("加入新竞标赛失败",
-				zap.String("user_id", userID.String()),
-				zap.String("tournament_id", newTournamentID),
-				zap.Error(err),
-				zap.Int("attempt", attempt+1))
-
-			// 检查是否是可重试的错误
-			if isRetryableError(err, s.logger) {
-				delay := time.Duration(attempt+1) * baseDelay
-				time.Sleep(delay)
-				continue
-			}
-			return "", fmt.Errorf("加入新竞标赛失败: %v", err)
-		}
-
-		s.logger.Info("玩家成功加入新创建的竞标赛",
-			zap.String("user_id", userID.String()),
-			zap.String("tournament_id", newTournamentID),
-			zap.Int32("challenge_id", tplChallenge.ID),
-			zap.Int32("batch_number", batchNumber))
-
-		return newTournamentID, nil
+			zap.Int("retry", i+1),
+			zap.Error(err))
 	}
 
-	// 所有重试都失败了
-	return "", fmt.Errorf("经过 %d 次重试后仍无法分配到竞标赛", maxRetries)
+	// 创建新的竞标赛并加入
+	batchNumber := GetNextChallengeBatch(ctx, s.logger, s.db, tplChallenge.ID)
+	newTournamentID, err := CreateNewChallengeTournament(ctx, s.logger, s.leaderboardCache, s.leaderboardScheduler, tplChallenge, startTime, endTime, int(batchNumber))
+	if err != nil {
+		s.logger.Warn("创建新竞标赛失败",
+			zap.String("user_id", userID.String()),
+			zap.Int32("challenge_id", tplChallenge.ID),
+			zap.Error(err))
+		return "", fmt.Errorf("创建新竞标赛失败: %v", err)
+	}
+
+	username := ctx.Value(ctxUsernameKey{}).(string)
+	err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
+	if err != nil {
+		s.logger.Warn("加入新竞标赛失败",
+			zap.String("user_id", userID.String()),
+			zap.String("tournament_id", newTournamentID),
+			zap.Error(err))
+		return "", fmt.Errorf("加入新竞标赛失败: %v", err)
+	}
+
+	s.logger.Info("玩家成功加入新创建的竞标赛",
+		zap.String("user_id", userID.String()),
+		zap.String("tournament_id", newTournamentID),
+		zap.Int32("challenge_id", tplChallenge.ID),
+		zap.Int32("batch_number", batchNumber))
+
+	return newTournamentID, nil
 }
 
 // 创建新的挑战赛竞标赛
