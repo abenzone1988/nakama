@@ -889,6 +889,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 	if len(stats.ResponseTimes) > 0 {
 		avgResponseTime := stats.TotalResponseTime / time.Duration(len(stats.ResponseTimes))
 		if avgResponseTime > 2*time.Second {
+
 			t.Errorf("平均响应时间过长: %v (期望 < 2秒)", avgResponseTime)
 		}
 

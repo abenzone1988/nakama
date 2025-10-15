@@ -176,42 +176,14 @@ func main() {
 	// Start up server components.
 	metrics := server.NewLocalMetrics(logger, startupLogger, db, config)
 	sessionRegistry := server.NewLocalSessionRegistry(metrics)
-
-	var sessionCache server.SessionCache
-	if config.GetCluster() != nil && config.GetCluster().Enabled {
-		// 集群模式：统一使用集群的 Redis 配置
-		sessionCache = server.NewRedisSessionCacheV3(
-			logger,
-			config.GetCluster().RedisAddress,
-			config.GetCluster().RedisPassword,
-			config.GetSession().TokenExpirySec,
-			config.GetSession().RefreshTokenExpirySec,
-			config.GetSession().SingleSession,
-		)
-	} else {
-		sessionCache = server.NewLocalSessionCache(config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
-	}
-
+	sessionCache := server.NewLocalSessionCache(config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
 	consoleSessionCache := server.NewLocalSessionCache(config.GetConsole().TokenExpirySec, 0)
 	loginAttemptCache := server.NewLocalLoginAttemptCache()
 	statusRegistry := server.NewLocalStatusRegistry(logger, config, sessionRegistry, jsonpbMarshaler)
 	tracker := server.StartLocalTracker(logger, config, sessionRegistry, statusRegistry, metrics, jsonpbMarshaler)
 	router := server.NewLocalMessageRouter(sessionRegistry, tracker, jsonpbMarshaler)
 	leaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
-
-	var leaderboardRankCache server.LeaderboardRankCache
-	if config.GetCluster() != nil && config.GetCluster().Enabled {
-		// 集群模式：统一使用集群的 Redis 配置
-		leaderboardRankCache = server.NewRedisLeaderboardRankCache(
-			ctx,
-			logger,
-			config.GetCluster().RedisAddress,
-			config.GetCluster().RedisPassword,
-			config.GetLeaderboard(),
-		)
-	} else {
-		leaderboardRankCache = server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
-	}
+	leaderboardRankCache := server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
 	leaderboardScheduler := server.NewLocalLeaderboardScheduler(logger, db, config, leaderboardCache, leaderboardRankCache)
 	googleRefundScheduler := server.NewGoogleRefundScheduler(logger, db, config)
 	matchRegistry := server.NewLocalMatchRegistry(logger, startupLogger, config, sessionRegistry, tracker, router, metrics, config.GetName())

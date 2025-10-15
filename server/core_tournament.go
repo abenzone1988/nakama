@@ -667,6 +667,54 @@ func TournamentRecordDelete(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	return nil
 }
 
+// TournamentIsFull 在并发下进行“准确”的满员判断。
+// 做法：在一个事务内执行“无副作用的条件更新”，只有当 size < max_size 时会影响一行；
+// - 影响1行 => 尚未满员；
+// - 影响0行 => 可能已满或不存在，再次校验行是否存在；
+// 这样可避免 TOCTOU 竞态，但仍建议将最终可加入判断与 Join 的原子更新结合使用。
+func TournamentIsFull(ctx context.Context, logger *zap.Logger, db *sql.DB, cache LeaderboardCache, tournamentID string) (bool, error) {
+	lb := cache.Get(tournamentID)
+	if lb == nil || !lb.IsTournament() {
+		return false, runtime.ErrTournamentNotFound
+	}
+	if !lb.HasMaxSize() {
+		// 未设置人数上限，永不满员
+		return false, nil
+	}
+
+	var isFull bool
+	err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
+		// 无副作用条件更新：仅当 size < max_size 时更新同值，从而返回 rowsAffected=1
+		res, err := tx.ExecContext(ctx, "UPDATE leaderboard SET size = size WHERE id = $1 AND size < max_size", tournamentID)
+		if err != nil {
+			return err
+		}
+		if rows, _ := res.RowsAffected(); rows == 1 {
+			isFull = false
+			return nil
+		}
+		// 影响0行：要么不存在，要么已满；做一次存在性校验
+		var exists int
+		if err := tx.QueryRowContext(ctx, "SELECT 1 FROM leaderboard WHERE id = $1", tournamentID).Scan(&exists); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return runtime.ErrTournamentNotFound
+			}
+			return err
+		}
+		isFull = true
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, runtime.ErrTournamentNotFound) {
+			logger.Info("Tournament not found when checking full.", zap.String("tournament_id", tournamentID))
+		} else {
+			logger.Error("Failed to check tournament full.", zap.String("tournament_id", tournamentID), zap.Error(err))
+		}
+		return false, err
+	}
+	return isFull, nil
+}
+
 func TournamentRecordsHaystack(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, leaderboardId, cursor string, ownerId uuid.UUID, limit int, expiryOverride int64) (*api.TournamentRecordList, error) {
 	leaderboard := leaderboardCache.Get(leaderboardId)
 	if leaderboard == nil || !leaderboard.IsTournament() {
@@ -857,7 +905,7 @@ func DisableTournamentRanks(ctx context.Context, logger *zap.Logger, db *sql.DB,
 }
 
 // 快速查找第一个可加入的tournament
-func TournamentFindFirstAvailable(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, category int, maxSize int) (*api.Tournament, error) {
+func TournamentFindFirstAvailable(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, category int) (*api.Tournament, error) {
 	// 改进查询：添加时间窗口检查和更严格的并发控制
 	now := time.Now().UTC()
 	nowUnix := now.Unix()
@@ -888,7 +936,6 @@ WHERE duration > 0
 		if errors.Is(err, runtime.ErrTournamentNotFound) || errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("没有找到可加入的tournament",
 				zap.Int("category", category),
-				zap.Int("max_size", maxSize),
 				zap.Int64("current_time", nowUnix))
 			return nil, nil // 没有找到可加入的tournament
 		}
