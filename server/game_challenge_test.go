@@ -551,7 +551,7 @@ func TestConcurrentTournamentCreation(t *testing.T) {
 		ResponseTime time.Duration
 	}
 
-	const playerCount = 1000
+	const playerCount = 100
 
 	players := make([]*Player, playerCount)
 

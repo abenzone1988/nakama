@@ -90,7 +90,7 @@ func runtimeWithModulesWithData(t *testing.T, modules map[string]string) (*Runti
 
 	ctx := context.Background()
 	db := NewDB(t)
-	lbCache := NewLocalLeaderboardCache(ctx, logger, logger, db)
+	lbCache := NewLocalLeaderboardCache(ctx, logger, logger, db, false, cfg)
 	lbRankCache := NewLocalLeaderboardRankCache(
 		ctx, logger, db, cfg.Leaderboard, lbCache)
 	lbSched := NewLocalLeaderboardScheduler(logger, db, cfg, lbCache, lbRankCache)

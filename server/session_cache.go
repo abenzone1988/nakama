@@ -28,11 +28,9 @@ import (
 
 const (
 	// Session cache sync message types
-	SessionCacheMsgTypeAdd       = "add"
 	SessionCacheMsgTypeRemove    = "remove"
 	SessionCacheMsgTypeRemoveAll = "remove_all"
 	SessionCacheMsgTypeBan       = "ban"
-	SessionCacheMsgTypeUnban     = "unban"
 )
 
 // sessionCacheSyncMsg 用于节点间同步的消息结构
@@ -94,7 +92,7 @@ type LocalSessionCache struct {
 	clusterMode  bool
 }
 
-func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, refreshTokenExpirySec int64, purpose string) SessionCache {
+func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, refreshTokenExpirySec int64, enableCluster bool, purpose string) SessionCache {
 	ctx, ctxCancelFn := context.WithCancel(context.Background())
 
 	// 生成唯一的节点ID
@@ -111,62 +109,18 @@ func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, ref
 		clusterMode:           false,
 	}
 
-	// 检查是否启用集群模式
-	if config.GetCluster().Enabled {
-		redisAddress := config.GetCluster().RedisAddress
-		redisPassword := config.GetCluster().RedisPassword
-
-		if redisAddress != "" {
-			s.logger.Info("Attempting to enable session cache cluster mode",
-				zap.String("node_id", nodeID),
-				zap.String("redis_address", redisAddress),
-				zap.String("purpose", purpose))
-
-			// 动态生成 Redis 频道名称
-			s.redisChannel = fmt.Sprintf("nakama:session_cache:%s:sync", purpose)
-
-			// 初始化 Redis 客户端
-			s.redisClient = redis.NewClient(&redis.Options{
-				Addr:     redisAddress,
-				Password: redisPassword,
-				DB:       0,
-			})
-
-			// 测试 Redis 连接
-			s.logger.Info("Connecting to Redis for session cache...",
-				zap.String("redis_address", redisAddress))
-
-			pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
-			defer pingCancel()
-
-			if err := s.redisClient.Ping(pingCtx).Err(); err != nil {
-				s.logger.Error("Failed to connect to Redis for session cache, cluster mode disabled",
-					zap.Error(err),
-					zap.String("redis_address", redisAddress))
-				s.redisClient.Close()
-				s.redisClient = nil
-			} else {
-				s.logger.Info("Successfully connected to Redis for session cache",
-					zap.String("redis_address", redisAddress))
-
-				// 订阅 Redis 频道
-				s.logger.Info("Subscribing to Redis channel for session cache sync",
-					zap.String("channel", s.redisChannel))
-				s.redisPubSub = s.redisClient.Subscribe(ctx, s.redisChannel)
-
-				s.clusterMode = true
-				s.logger.Info("Session cache cluster mode enabled",
-					zap.String("node_id", nodeID),
-					zap.String("redis_address", redisAddress),
-					zap.String("channel", s.redisChannel))
-
-				// 启动消息订阅 goroutine
-				go s.subscribeRedisMessages()
-			}
-		}
+	// 初始化集群模式
+	if enableCluster {
+		s.initializeClusterMode(config, purpose)
 	}
 
 	// 启动清理 goroutine
+	// 注意：清理操作是本地内存优化，不会触发 Redis 同步
+	// 原因：
+	// 1. 每个节点都会独立运行相同的清理逻辑
+	// 2. 过期时间是固定的，各节点会在相近时间自动清理
+	// 3. 清理不影响正确性（验证时会检查过期时间）
+	// 4. 避免产生大量不必要的网络流量
 	go func() {
 		ticker := time.NewTicker(2 * time.Duration(tokenExpirySec) * time.Second)
 		for {
@@ -177,6 +131,7 @@ func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, ref
 			case t := <-ticker.C:
 				ts := t.UTC().Unix()
 				s.Lock()
+				// 直接操作 map，不调用 Remove/RemoveAll 等方法，避免触发 Redis 同步
 				for userID, cache := range s.cache {
 					for token, exp := range cache.sessionTokens {
 						if exp <= ts {
@@ -198,6 +153,52 @@ func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, ref
 	}()
 
 	return s
+}
+
+// initializeClusterMode 初始化 Redis 集群模式
+func (s *LocalSessionCache) initializeClusterMode(config Config, purpose string) {
+	if !config.GetCluster().Enabled {
+		s.logger.Warn("Cluster mode requested for session cache but not enabled in config",
+			zap.String("purpose", purpose))
+		return
+	}
+
+	redisAddress := config.GetCluster().RedisAddress
+	redisPassword := config.GetCluster().RedisPassword
+
+	if redisAddress == "" {
+		s.logger.Warn("Cluster mode enabled but Redis address is empty",
+			zap.String("purpose", purpose))
+		return
+	}
+	// 动态生成 Redis 频道名称
+	s.redisChannel = fmt.Sprintf("nakama:session_cache:%s:sync", purpose)
+	// 创建 Redis 客户端
+	s.redisClient = redis.NewClient(&redis.Options{
+		Addr:     redisAddress,
+		Password: redisPassword,
+		DB:       0,
+	})
+
+	pingCtx, pingCancel := context.WithTimeout(s.ctx, 5*time.Second)
+	defer pingCancel()
+
+	if err := s.redisClient.Ping(pingCtx).Err(); err != nil {
+		s.logger.Error("Failed to connect to Redis for session cache, cluster mode disabled",
+			zap.Error(err),
+			zap.String("redis_address", redisAddress))
+		s.redisClient.Close()
+		s.redisClient = nil
+		return
+	}
+
+	s.logger.Info("Successfully connected to Redis for session cache",
+		zap.String("redis_address", redisAddress))
+
+	s.redisPubSub = s.redisClient.Subscribe(s.ctx, s.redisChannel)
+	s.clusterMode = true
+	// 启动消息订阅 goroutine
+	go s.subscribeRedisMessages()
 }
 
 func (s *LocalSessionCache) Stop() {
@@ -262,40 +263,11 @@ func (s *LocalSessionCache) IsValidRefresh(userID uuid.UUID, exp int64, tokenId 
 
 func (s *LocalSessionCache) Add(userID uuid.UUID, sessionExp int64, tokenId string, refreshExp int64, refreshTokenId string) {
 	// No-op, blacklist only.
-
-	// 但如果启用了集群模式，发送同步消息通知其他节点
-	if s.clusterMode {
-		msg := &sessionCacheSyncMsg{
-			Type:           SessionCacheMsgTypeAdd,
-			NodeID:         s.nodeID,
-			UserID:         userID.String(),
-			SessionExp:     sessionExp,
-			SessionTokenID: tokenId,
-			RefreshExp:     refreshExp,
-			RefreshTokenID: refreshTokenId,
-		}
-		s.publishSyncMessage(msg)
-	}
 }
 
 func (s *LocalSessionCache) Remove(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string) {
-	s.Lock()
-	cache, found := s.cache[userID]
-	if !found {
-		cache = &sessionCacheUser{
-			lastInvalidation: 0,
-			sessionTokens:    make(map[string]int64),
-			refreshTokens:    make(map[string]int64),
-		}
-		s.cache[userID] = cache
-	}
-	if sessionTokenId != "" {
-		cache.sessionTokens[sessionTokenId] = sessionExp + 1
-	}
-	if refreshTokenId != "" {
-		cache.refreshTokens[refreshTokenId] = refreshExp + 1
-	}
-	s.Unlock()
+	// 调用内部方法执行本地操作
+	s.removeInternal(userID, sessionExp, sessionTokenId, refreshExp, refreshTokenId)
 
 	// 发送同步消息到其他节点
 	if s.clusterMode {
@@ -312,11 +284,51 @@ func (s *LocalSessionCache) Remove(userID uuid.UUID, sessionExp int64, sessionTo
 	}
 }
 
+// removeInternal 内部方法：只操作本地缓存，不发布消息
+func (s *LocalSessionCache) removeInternal(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string) {
+	s.Lock()
+	defer s.Unlock()
+
+	cache, found := s.cache[userID]
+	if !found {
+		cache = &sessionCacheUser{
+			lastInvalidation: 0,
+			sessionTokens:    make(map[string]int64),
+			refreshTokens:    make(map[string]int64),
+		}
+		s.cache[userID] = cache
+	}
+	if sessionTokenId != "" {
+		cache.sessionTokens[sessionTokenId] = sessionExp + 1
+	}
+	if refreshTokenId != "" {
+		cache.refreshTokens[refreshTokenId] = refreshExp + 1
+	}
+}
+
 func (s *LocalSessionCache) RemoveAll(userID uuid.UUID) {
+	// 调用内部方法执行本地操作
+	s.removeAllInternal(userID)
+
+	// 发送同步消息到其他节点（不携带时间戳）
+	if s.clusterMode {
+		msg := &sessionCacheSyncMsg{
+			Type:   SessionCacheMsgTypeRemoveAll,
+			NodeID: s.nodeID,
+			UserID: userID.String(),
+		}
+		s.publishSyncMessage(msg)
+	}
+}
+
+// removeAllInternal 内部方法：只操作本地缓存，不发布消息
+func (s *LocalSessionCache) removeAllInternal(userID uuid.UUID) {
 	// 使用秒级时间戳，与 JWT exp 字段保持一致
 	ts := time.Now().UTC().Unix()
 
 	s.Lock()
+	defer s.Unlock()
+
 	cache, found := s.cache[userID]
 	if !found {
 		cache = &sessionCacheUser{
@@ -330,38 +342,11 @@ func (s *LocalSessionCache) RemoveAll(userID uuid.UUID) {
 	cache.lastInvalidation = ts
 	cache.sessionTokens = make(map[string]int64)
 	cache.refreshTokens = make(map[string]int64)
-	s.Unlock()
-
-	// 发送同步消息到其他节点（不携带时间戳）
-	if s.clusterMode {
-		msg := &sessionCacheSyncMsg{
-			Type:   SessionCacheMsgTypeRemoveAll,
-			NodeID: s.nodeID,
-			UserID: userID.String(),
-		}
-		s.publishSyncMessage(msg)
-	}
 }
 
 func (s *LocalSessionCache) Ban(userIDs []uuid.UUID) {
-	// 使用秒级时间戳，与 JWT exp 字段保持一致
-	ts := time.Now().UTC().Unix()
-
-	s.Lock()
-	for _, userID := range userIDs {
-		cache, found := s.cache[userID]
-		if !found {
-			cache = &sessionCacheUser{
-				lastInvalidation: 0,
-				sessionTokens:    make(map[string]int64),
-				refreshTokens:    make(map[string]int64),
-			}
-			s.cache[userID] = cache
-		}
-		// 直接更新，不比较时间戳
-		cache.lastInvalidation = ts
-	}
-	s.Unlock()
+	// 调用内部方法执行本地操作
+	s.banInternal(userIDs)
 
 	// 发送同步消息到其他节点（不携带时间戳）
 	if s.clusterMode && len(userIDs) > 0 {
@@ -378,37 +363,39 @@ func (s *LocalSessionCache) Ban(userIDs []uuid.UUID) {
 	}
 }
 
+// banInternal 内部方法：只操作本地缓存，不发布消息
+func (s *LocalSessionCache) banInternal(userIDs []uuid.UUID) {
+	// 使用秒级时间戳，与 JWT exp 字段保持一致
+	ts := time.Now().UTC().Unix()
+
+	s.Lock()
+	defer s.Unlock()
+
+	for _, userID := range userIDs {
+		cache, found := s.cache[userID]
+		if !found {
+			cache = &sessionCacheUser{
+				lastInvalidation: 0,
+				sessionTokens:    make(map[string]int64),
+				refreshTokens:    make(map[string]int64),
+			}
+			s.cache[userID] = cache
+		}
+		// 直接更新，不比较时间戳
+		cache.lastInvalidation = ts
+	}
+}
+
 func (s *LocalSessionCache) Unban(userIDs []uuid.UUID) {
 	// 本地不需要做任何操作（黑名单模式）
-
-	// 但如果启用了集群模式，发送同步消息通知其他节点
-	if s.clusterMode && len(userIDs) > 0 {
-		userIDStrs := make([]string, len(userIDs))
-		for i, uid := range userIDs {
-			userIDStrs[i] = uid.String()
-		}
-		msg := &sessionCacheSyncMsg{
-			Type:    SessionCacheMsgTypeUnban,
-			NodeID:  s.nodeID,
-			UserIDs: userIDStrs,
-		}
-		s.publishSyncMessage(msg)
-	}
 }
 
 // subscribeRedisMessages 订阅并处理来自其他节点的同步消息
 func (s *LocalSessionCache) subscribeRedisMessages() {
-	s.logger.Info("Session cache Redis message subscription started",
-		zap.String("node_id", s.nodeID),
-		zap.String("channel", s.redisChannel))
-
 	ch := s.redisPubSub.Channel()
-
 	for {
 		select {
 		case <-s.ctx.Done():
-			s.logger.Info("Session cache Redis message subscription stopped",
-				zap.String("node_id", s.nodeID))
 			return
 		case msg := <-ch:
 			if msg == nil {
@@ -425,17 +412,8 @@ func (s *LocalSessionCache) subscribeRedisMessages() {
 
 			// 忽略自己发布的消息
 			if syncMsg.NodeID == s.nodeID {
-				s.logger.Debug("Ignoring self-published session cache sync message",
-					zap.String("type", syncMsg.Type),
-					zap.String("node_id", syncMsg.NodeID))
 				continue
 			}
-
-			s.logger.Info("Received session cache sync message from other node",
-				zap.String("type", syncMsg.Type),
-				zap.String("from_node", syncMsg.NodeID),
-				zap.String("current_node", s.nodeID),
-				zap.String("user_id", syncMsg.UserID))
 
 			// 处理同步消息
 			s.handleSyncMessage(&syncMsg)
@@ -446,12 +424,6 @@ func (s *LocalSessionCache) subscribeRedisMessages() {
 // handleSyncMessage 处理从其他节点接收到的同步消息
 func (s *LocalSessionCache) handleSyncMessage(msg *sessionCacheSyncMsg) {
 	switch msg.Type {
-	case SessionCacheMsgTypeAdd:
-		// Add 操作在黑名单模式下是 no-op，不需要处理
-		s.logger.Debug("Received Add message (no-op in blacklist mode)",
-			zap.String("user_id", msg.UserID),
-			zap.String("from_node", msg.NodeID))
-
 	case SessionCacheMsgTypeRemove:
 		if msg.UserID == "" {
 			s.logger.Warn("Remove message missing user ID")
@@ -465,31 +437,8 @@ func (s *LocalSessionCache) handleSyncMessage(msg *sessionCacheSyncMsg) {
 			return
 		}
 
-		s.Lock()
-		cache, found := s.cache[userID]
-		if !found {
-			cache = &sessionCacheUser{
-				lastInvalidation: 0,
-				sessionTokens:    make(map[string]int64),
-				refreshTokens:    make(map[string]int64),
-			}
-			s.cache[userID] = cache
-		}
-		if msg.SessionTokenID != "" {
-			cache.sessionTokens[msg.SessionTokenID] = msg.SessionExp + 1
-			s.logger.Info("Marked session token as invalid via sync",
-				zap.String("user_id", msg.UserID),
-				zap.String("token_id", msg.SessionTokenID),
-				zap.String("from_node", msg.NodeID))
-		}
-		if msg.RefreshTokenID != "" {
-			cache.refreshTokens[msg.RefreshTokenID] = msg.RefreshExp + 1
-			s.logger.Info("Marked refresh token as invalid via sync",
-				zap.String("user_id", msg.UserID),
-				zap.String("token_id", msg.RefreshTokenID),
-				zap.String("from_node", msg.NodeID))
-		}
-		s.Unlock()
+		// 直接调用内部方法，避免重复代码和消息循环
+		s.removeInternal(userID, msg.SessionExp, msg.SessionTokenID, msg.RefreshExp, msg.RefreshTokenID)
 
 	case SessionCacheMsgTypeRemoveAll:
 		if msg.UserID == "" {
@@ -504,38 +453,17 @@ func (s *LocalSessionCache) handleSyncMessage(msg *sessionCacheSyncMsg) {
 			return
 		}
 
-		// 直接应用 RemoveAll，使用接收时的本地秒级时间戳，不依赖消息中的时间戳
-		ts := time.Now().UTC().Unix()
-
-		s.Lock()
-		cache, found := s.cache[userID]
-		if !found {
-			cache = &sessionCacheUser{
-				lastInvalidation: 0,
-				sessionTokens:    make(map[string]int64),
-				refreshTokens:    make(map[string]int64),
-			}
-			s.cache[userID] = cache
-		}
-
-		// 直接应用，不判断时间戳大小
-		cache.lastInvalidation = ts
-		cache.sessionTokens = make(map[string]int64)
-		cache.refreshTokens = make(map[string]int64)
-		s.Unlock()
-
-		s.logger.Info("Applied RemoveAll sync from other node",
-			zap.String("user_id", msg.UserID),
-			zap.String("from_node", msg.NodeID))
+		// 直接调用内部方法，避免重复代码和消息循环
+		s.removeAllInternal(userID)
 
 	case SessionCacheMsgTypeBan:
-		s.logger.Info("Processing Ban sync message",
-			zap.Int("user_count", len(msg.UserIDs)),
-			zap.String("from_node", msg.NodeID))
+		if len(msg.UserIDs) == 0 {
+			s.logger.Warn("Ban message missing user IDs")
+			return
+		}
 
-		// 直接应用 Ban，使用接收时的本地秒级时间戳
-		ts := time.Now().UTC().Unix()
-
+		// 解析 UserIDs
+		userIDs := make([]uuid.UUID, 0, len(msg.UserIDs))
 		for _, userIDStr := range msg.UserIDs {
 			userID, err := uuid.FromString(userIDStr)
 			if err != nil {
@@ -544,31 +472,13 @@ func (s *LocalSessionCache) handleSyncMessage(msg *sessionCacheSyncMsg) {
 					zap.Error(err))
 				continue
 			}
-
-			s.Lock()
-			cache, found := s.cache[userID]
-			if !found {
-				cache = &sessionCacheUser{
-					lastInvalidation: 0,
-					sessionTokens:    make(map[string]int64),
-					refreshTokens:    make(map[string]int64),
-				}
-				s.cache[userID] = cache
-			}
-			// 直接应用，不判断时间戳大小
-			cache.lastInvalidation = ts
-			s.Unlock()
-
-			s.logger.Info("Banned user via sync",
-				zap.String("user_id", userIDStr),
-				zap.String("from_node", msg.NodeID))
+			userIDs = append(userIDs, userID)
 		}
 
-	case SessionCacheMsgTypeUnban:
-		// Unban 是 no-op，不需要处理
-		s.logger.Debug("Received Unban message (no-op)",
-			zap.Int("user_count", len(msg.UserIDs)),
-			zap.String("from_node", msg.NodeID))
+		// 直接调用内部方法，避免重复代码和消息循环
+		if len(userIDs) > 0 {
+			s.banInternal(userIDs)
+		}
 	}
 }
 
@@ -577,30 +487,17 @@ func (s *LocalSessionCache) publishSyncMessage(msg *sessionCacheSyncMsg) {
 	if !s.clusterMode || s.redisClient == nil {
 		return
 	}
-
 	data, err := json.Marshal(msg)
 	if err != nil {
 		s.logger.Error("Failed to marshal session cache sync message", zap.Error(err))
 		return
 	}
 
-	s.logger.Debug("Publishing session cache sync message",
-		zap.String("type", msg.Type),
-		zap.String("node_id", msg.NodeID),
-		zap.String("user_id", msg.UserID),
-		zap.String("channel", s.redisChannel),
-		zap.Int("user_ids_count", len(msg.UserIDs)))
-
 	// 使用重试机制发送消息，确保消息能够成功发送
 	maxRetries := 3
 	for i := 0; i < maxRetries; i++ {
 		err = s.redisClient.Publish(s.ctx, s.redisChannel, data).Err()
 		if err == nil {
-			s.logger.Info("Successfully published session cache sync message",
-				zap.String("type", msg.Type),
-				zap.String("channel", s.redisChannel),
-				zap.String("user_id", msg.UserID),
-				zap.Int("attempt", i+1))
 			return
 		}
 
