@@ -668,54 +668,6 @@ func TournamentRecordDelete(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	return nil
 }
 
-// TournamentIsFull 在并发下进行“准确”的满员判断。
-// 做法：在一个事务内执行“无副作用的条件更新”，只有当 size < max_size 时会影响一行；
-// - 影响1行 => 尚未满员；
-// - 影响0行 => 可能已满或不存在，再次校验行是否存在；
-// 这样可避免 TOCTOU 竞态，但仍建议将最终可加入判断与 Join 的原子更新结合使用。
-func TournamentIsFull(ctx context.Context, logger *zap.Logger, db *sql.DB, cache LeaderboardCache, tournamentID string) (bool, error) {
-	lb := cache.Get(tournamentID)
-	if lb == nil || !lb.IsTournament() {
-		return false, runtime.ErrTournamentNotFound
-	}
-	if !lb.HasMaxSize() {
-		// 未设置人数上限，永不满员
-		return false, nil
-	}
-
-	var isFull bool
-	err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
-		// 无副作用条件更新：仅当 size < max_size 时更新同值，从而返回 rowsAffected=1
-		res, err := tx.ExecContext(ctx, "UPDATE leaderboard SET size = size WHERE id = $1 AND size < max_size", tournamentID)
-		if err != nil {
-			return err
-		}
-		if rows, _ := res.RowsAffected(); rows == 1 {
-			isFull = false
-			return nil
-		}
-		// 影响0行：要么不存在，要么已满；做一次存在性校验
-		var exists int
-		if err := tx.QueryRowContext(ctx, "SELECT 1 FROM leaderboard WHERE id = $1", tournamentID).Scan(&exists); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return runtime.ErrTournamentNotFound
-			}
-			return err
-		}
-		isFull = true
-		return nil
-	})
-	if err != nil {
-		if errors.Is(err, runtime.ErrTournamentNotFound) {
-			logger.Info("Tournament not found when checking full.", zap.String("tournament_id", tournamentID))
-		} else {
-			logger.Error("Failed to check tournament full.", zap.String("tournament_id", tournamentID), zap.Error(err))
-		}
-		return false, err
-	}
-	return isFull, nil
-}
-
 func TournamentRecordsHaystack(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, leaderboardId, cursor string, ownerId uuid.UUID, limit int, expiryOverride int64) (*api.TournamentRecordList, error) {
 	leaderboard := leaderboardCache.Get(leaderboardId)
 	if leaderboard == nil || !leaderboard.IsTournament() {
@@ -955,77 +907,10 @@ WHERE duration > 0
 	return tournament, nil
 }
 
-// 使用数据库原子操作确保多节点一致性
-func GetNextChallengeBatch(ctx context.Context, logger *zap.Logger, db *sql.DB, challengeID int32) int32 {
-	// 使用重试机制处理并发冲突
-	maxRetries := 5
-	baseDelay := 10 * time.Millisecond
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		var nextBatch int32
-		err := db.QueryRowContext(ctx, `
-			INSERT INTO challenge_batch (challenge_id, current_batch)
-			VALUES ($1, 1)
-			ON CONFLICT (challenge_id)
-			DO UPDATE SET
-				current_batch = challenge_batch.current_batch + 1,
-				updated_at = NOW()
-			RETURNING current_batch
-		`, challengeID).Scan(&nextBatch)
-
-		if err != nil {
-			logger.Error("获取挑战赛批次号失败",
-				zap.Int32("challenge_id", challengeID),
-				zap.Int("attempt", attempt+1),
-				zap.Error(err))
-
-			// 如果是并发冲突，重试
-			if attempt < maxRetries-1 && isRetryableError(err, logger) {
-				delay := time.Duration(attempt+1) * baseDelay
-				logger.Info("批次号获取冲突，等待后重试",
-					zap.Int32("challenge_id", challengeID),
-					zap.Duration("delay", delay),
-					zap.Int("attempt", attempt+1))
-				time.Sleep(delay)
-				continue
-			}
-
-			// 如果数据库操作失败，返回1作为默认值
-			return 1
-		}
-
-		logger.Info("分配新的挑战赛批次号",
-			zap.Int32("challenge_id", challengeID),
-			zap.Int32("next_batch", nextBatch),
-			zap.Int("attempt", attempt+1))
-
-		return nextBatch
-	}
-
-	// 所有重试都失败了，返回1作为默认值
-	logger.Error("获取挑战赛批次号重试失败",
-		zap.Int32("challenge_id", challengeID),
-		zap.Int("max_retries", maxRetries))
-	return 1
-}
-
-// GetNextChallengeBatchTx 在事务内安全地为指定 challenge 递增并返回批次号。
-// 要求调用方在外部控制并发（推荐搭配 pg_advisory_xact_lock）。
-// 删除独立的 GetNextChallengeBatchTx，合并到 EnsureChallengeTournament 内部
-
-// EnsureChallengeTournament 在多节点下安全地为指定 challenge 查找一个可加入的 tournament；
+// 在多节点下安全地为指定 challenge 查找一个可加入的 tournament；
 // 若不存在，则在事务内（持有事务级顾问锁）创建一个新的 tournament 并返回其 ID。
 // 仅在“创建路径”上串行化，避免影响“直接加入”的高并发性能。
-func EnsureChallengeTournament(
-	ctx context.Context,
-	logger *zap.Logger,
-	db *sql.DB,
-	cache LeaderboardCache,
-	challengeID int32,
-	challengeName string,
-	startTime, endTime time.Time,
-	maxParticipants int32,
-) (string, error) {
+func EnsureChallengeTournament(ctx context.Context, logger *zap.Logger, db *sql.DB, cache LeaderboardCache, challengeID int32, challengeName string, startTime, endTime time.Time, maxParticipants int32) (string, error) {
 	var tournamentID string
 	var created bool
 	// For cache insertion after commit (newly created)

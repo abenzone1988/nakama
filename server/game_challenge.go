@@ -23,7 +23,7 @@ import (
 
 // 旧锁已移除：使用数据库事务与顾问锁保证多节点安全
 
-const maxJoinRetry = 3
+const MaxJoinRetry = 3
 
 func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeResponse, error) {
 	// 获取用户ID
@@ -520,6 +520,47 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 	}, nil
 }
 
+func (s *ApiServer) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
+	// 获取用户ID
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	userMatch := &UserMatch{}
+	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
+	if err != nil {
+		return &game.GetChallengeTopStatsResponse{
+			Code: 1,
+			Msg:  "加载用户数据失败",
+		}, nil
+	}
+
+	// 初始化前三名统计数据
+	err = s.initializeTopThreeStats(ctx, userID, userMatch)
+	if err != nil {
+		s.logger.Error("初始化前三名统计数据失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return &game.GetChallengeTopStatsResponse{
+			Code: 2,
+			Msg:  "初始化统计数据失败",
+		}, nil
+	}
+
+	s.logger.Info("获取前三名统计数据",
+		zap.String("user_id", userID.String()),
+		zap.Int32("first_place", userMatch.TopThreeData.GetFirstPlaceCount()),
+		zap.Int32("second_place", userMatch.TopThreeData.GetSecondPlaceCount()),
+		zap.Int32("third_place", userMatch.TopThreeData.GetThirdPlaceCount()))
+
+	return &game.GetChallengeTopStatsResponse{
+		Code: 0,
+		Msg:  "获取成功",
+		Stats: &game.TopThreeStats{
+			FirstPlace:  userMatch.TopThreeData.GetFirstPlaceCount(),
+			SecondPlace: userMatch.TopThreeData.GetSecondPlaceCount(),
+			ThirdPlace:  userMatch.TopThreeData.GetThirdPlaceCount(),
+			LastUpdated: userMatch.TopThreeData.LastUpdated,
+		},
+	}, nil
+}
+
 // 检查积分等级奖励（公共逻辑）
 func (s *ApiServer) checkScoreRewards(challengeData *ChallengeStatus, ownerRecord *api.LeaderboardRecord, activityInfo *template.TplActivityInfo) *ScoreRewardResult {
 	result := &ScoreRewardResult{
@@ -794,7 +835,7 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
 	// 快路径：优先尝试直接加入已存在的可用竞标赛（无跨节点锁，靠 DB 原子判断 size < max_size）
 
-	for i := 0; i < maxJoinRetry; i++ {
+	for i := 0; i < MaxJoinRetry; i++ {
 		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache, int(tplChallenge.ID))
 		if err != nil {
 			s.logger.Error("二次查找可用竞标赛失败",
@@ -849,15 +890,13 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 	// 若锁内发现已有可用竞标赛，则直接用该 ID；否则用新建的 ID
 	username := ctx.Value(ctxUsernameKey{}).(string)
 	// 加入动作增加小延迟重试，以等待广播同步缓存
-	const maxJoinRetry = 3
 	var joinErr error
-	for attempt := 0; attempt < maxJoinRetry; attempt++ {
+	for attempt := 0; attempt < MaxJoinRetry; attempt++ {
 		joinErr = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
 		if joinErr == nil {
 			break
 		}
-		delay := time.Duration(1+rand.Intn(100)) * time.Millisecond
-		time.Sleep(delay)
+		time.Sleep(time.Duration(10+rand.Intn(90)) * time.Millisecond)
 	}
 	if joinErr != nil {
 		s.logger.Warn("加入竞标赛失败",
@@ -873,60 +912,6 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 		zap.Int32("challenge_id", tplChallenge.ID))
 
 	return newTournamentID, nil
-}
-
-// 创建新的挑战赛竞标赛
-func CreateNewChallengeTournament(ctx context.Context, logger *zap.Logger, leaderboardCache LeaderboardCache, leaderboardScheduler LeaderboardScheduler, tplChallenge *template.TplChallenge, startTime, endTime time.Time, batchNumber int) (string, error) {
-	// 构造标准化的竞标赛ID
-	// 格式: challenge_{challengeID}_{startTimestamp}_{batchNumber}
-	// batchNumber 使用持久化的递增序号确保唯一性，不限制位数以支持超过999的batch
-	tournamentID := fmt.Sprintf("challenge_%d_%d_%d",
-		tplChallenge.ID,
-		startTime.Unix(),
-		batchNumber)
-
-	// Tournament配置
-	operator := LeaderboardOperatorBest
-	sortOrder := LeaderboardSortOrderDescending
-	duration := int(endTime.Sub(startTime).Seconds())
-
-	// 构造竞标赛标题和描述
-	title := fmt.Sprintf("%s - 第%d轮", tplChallenge.Name, batchNumber)
-	description := fmt.Sprintf("挑战赛 %s 的竞标赛，由服务器自动创建和管理", tplChallenge.Name)
-
-	// 创建Tournament（服务器作为创建者，无玩家拥有者）
-	err := TournamentCreate(ctx, logger, leaderboardCache, leaderboardScheduler, // 使用正确的scheduler
-		tournamentID,              // id
-		false,                     //非权威模式 玩家可以自主提交
-		sortOrder,                 // sortOrder
-		operator,                  // operator
-		"",                        // resetSchedule (空表示不重置)
-		"{}",                      // metadata - 包含完整的挑战赛信息
-		title,                     // title
-		description,               // description
-		int(tplChallenge.ID),      // category - 修复：使用int类型 使用挑战赛id
-		int(startTime.Unix()),     // startTime
-		int(endTime.Unix()),       // endTime
-		duration,                  // duration
-		int(tplChallenge.MaxPart), // maxSize
-		1000,                      // maxNumScore - 允许的最大提交次数
-		true,                      // joinRequired - 修复：必须设为true以启用maxSize检查
-		true,                      // enableRanks - 启用排名
-	)
-
-	if err != nil {
-		return "", err
-	}
-
-	logger.Info("成功创建新的挑战赛竞标赛",
-		zap.String("tournament_id", tournamentID),
-		zap.Int32("challenge_id", tplChallenge.ID),
-		zap.String("title", title),
-		zap.Int("batch_number", batchNumber),
-		zap.Int32("max_participants", tplChallenge.MaxPart),
-		zap.String("created_by", "server"))
-
-	return tournamentID, nil
 }
 
 // 初始化前三名统计数据，首次查询历史记录
@@ -1049,78 +1034,4 @@ func (s *ApiServer) updateTopThreeStats(userID uuid.UUID, userMatch *UserMatch, 
 	}
 
 	return updated
-}
-
-// 获取用户前三名统计数据
-func (s *ApiServer) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
-	// 获取用户ID
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	userMatch := &UserMatch{}
-	err := LoadData(ctx, s.logger, s.db, userID, userMatch)
-	if err != nil {
-		return &game.GetChallengeTopStatsResponse{
-			Code: 1,
-			Msg:  "加载用户数据失败",
-		}, nil
-	}
-
-	// 初始化前三名统计数据
-	err = s.initializeTopThreeStats(ctx, userID, userMatch)
-	if err != nil {
-		s.logger.Error("初始化前三名统计数据失败", zap.String("user_id", userID.String()), zap.Error(err))
-		return &game.GetChallengeTopStatsResponse{
-			Code: 2,
-			Msg:  "初始化统计数据失败",
-		}, nil
-	}
-
-	s.logger.Info("获取前三名统计数据",
-		zap.String("user_id", userID.String()),
-		zap.Int32("first_place", userMatch.TopThreeData.GetFirstPlaceCount()),
-		zap.Int32("second_place", userMatch.TopThreeData.GetSecondPlaceCount()),
-		zap.Int32("third_place", userMatch.TopThreeData.GetThirdPlaceCount()))
-
-	return &game.GetChallengeTopStatsResponse{
-		Code: 0,
-		Msg:  "获取成功",
-		Stats: &game.TopThreeStats{
-			FirstPlace:  userMatch.TopThreeData.GetFirstPlaceCount(),
-			SecondPlace: userMatch.TopThreeData.GetSecondPlaceCount(),
-			ThirdPlace:  userMatch.TopThreeData.GetThirdPlaceCount(),
-			LastUpdated: userMatch.TopThreeData.LastUpdated,
-		},
-	}, nil
-}
-
-// isRetryableError 检查错误是否可重试
-func isRetryableError(err error, logger *zap.Logger) bool {
-	if err == nil {
-		return false
-	}
-
-	errStr := err.Error()
-
-	// 检查常见的可重试错误
-	retryableErrors := []string{
-		"WriteTooOldError",
-		"TransactionRetryWithProtoRefreshError",
-		"SerializationFailure",
-		"deadlock",
-		"lock timeout",
-		"connection reset",
-		"temporary failure",
-		"busy",
-		"SQLSTATE 40001", // PostgreSQL serialization failure
-		"SQLSTATE 40P01", // PostgreSQL deadlock detected
-	}
-
-	for _, retryableErr := range retryableErrors {
-		if strings.Contains(errStr, retryableErr) {
-			logger.Error("retryable error", zap.String("error", retryableErr))
-			return true
-		}
-	}
-
-	return false
 }

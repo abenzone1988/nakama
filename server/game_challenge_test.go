@@ -1712,16 +1712,9 @@ finish:
 	t.Logf("=== GetChallenge性能测试完成 ===")
 }
 
-// TestMultiNodeJoinChallenge 并发地向两个不同节点发起加入挑战赛请求，验证多节点一致性与分布式锁效果
-// 现在使用通用的多节点测试函数，支持2-3个节点
+// TestMultiNodeJoinChallenge 通用的多节点并发加入挑战赛测试
+// 默认2个节点，验证分布式锁和一致性
 func TestMultiNodeJoinChallenge(t *testing.T) {
-	// 调用通用的多节点测试函数
-	TestMultiNodeJoinChallengeGeneric(t)
-}
-
-// TestMultiNodeJoinChallengeGeneric 通用的多节点并发加入挑战赛测试
-// 支持2-3个节点的并发测试，验证分布式锁和一致性
-func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
 	// 快速跳过策略：仅在显式要求时执行
 	if testing.Short() {
 		t.Log("-short 模式下仍执行多节点并发测试…")
@@ -1795,6 +1788,7 @@ func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
 		Username          string
 		Session           *api.Session
 		Context           context.Context
+		UserID            string
 		TournamentID      string
 		JoinSuccess       bool
 		Error             error
@@ -1826,10 +1820,21 @@ func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
 			playerID := totalPlayers + i + 1
 			// 随机选择一个连接进行后续所有请求
 			selectedIdx := rand.Intn(nodeCount)
+			//selectedIdx := 0 // i % nodeCount // 固定分配到同一个节点
 			selectedConn := connections[selectedIdx]
 			sess, err := authUser(selectedConn.Client, "multi_node_user_"+nodeName, i+1)
 			if err != nil {
 				t.Fatalf("%s 认证失败: %v", nodeName, err)
+			}
+			// 解析用户ID
+			claims := &SessionTokenClaims{}
+			if token, _, perr := jwt.NewParser().ParseUnverified(sess.Token, claims); perr == nil {
+				if c, ok := token.Claims.(*SessionTokenClaims); ok {
+					puid := c.UserId
+					if puid != "" {
+						// continue with puid
+					}
+				}
 			}
 			p := &Player{
 				ID:                playerID,
@@ -1839,6 +1844,7 @@ func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
 				Node:              selectedConn.Address,
 				SelectedConnIndex: selectedIdx,
 			}
+			p.UserID = claims.UserId
 			players = append(players, p)
 		}
 		allPlayers[nodeIdx] = players
@@ -2263,6 +2269,101 @@ func TestMultiNodeJoinChallengeGeneric(t *testing.T) {
 		t.Logf("最大提交时间: %v", scoreSubmissionStats.MaxSubmissionTime)
 	}
 
+	// 工具：Dump 指定 tournament 的全量排行榜（跨节点）
+	dumpedTournaments := make(map[string]struct{})
+	dumpLeaderboard := func(ctx context.Context, tournamentID string) {
+		if _, ok := dumpedTournaments[tournamentID]; ok {
+			return
+		}
+		dumpedTournaments[tournamentID] = struct{}{}
+		t.Logf("=== 排行榜全量Dump: tournament=%s ===", tournamentID)
+		for _, conn := range connections {
+			t.Logf("节点[%s] 排行开始", conn.Address)
+			var cursor string
+			total := 0
+			for {
+				req := &api.ListTournamentRecordsRequest{
+					TournamentId: tournamentID,
+					Limit:        &wrapperspb.Int32Value{Value: 30},
+				}
+				// cursor 为字符串
+				req.Cursor = cursor
+				resp, err := conn.Client.ListTournamentRecords(ctx, req)
+				if err != nil {
+					t.Logf("Dump失败: 节点[%s] tournament=%s err=%v", conn.Address, tournamentID, err)
+					break
+				}
+				for i, r := range resp.Records {
+					t.Logf("节点[%s] #%d owner=%s score=%d sub=%d rank=%d", conn.Address, total+i+1, r.OwnerId, r.Score, r.Subscore, r.Rank)
+				}
+				total += len(resp.Records)
+				if resp.NextCursor == "" || len(resp.Records) == 0 {
+					break
+				}
+				cursor = resp.NextCursor
+			}
+			t.Logf("节点[%s] 排行结束，共 %d 条", conn.Address, total)
+		}
+	}
+
+	// 第七阶段：跨节点一致性校验（全量玩家校验分数一致性）
+	t.Logf("=== 阶段7: 跨节点一致性校验 ===")
+	// 收集成功玩家
+	successPlayers := make([]*Player, 0, totalPlayers)
+	for _, players := range allPlayers {
+		for _, p := range players {
+			if p != nil && p.JoinSuccess && p.TournamentID != "" && p.UserID != "" {
+				successPlayers = append(successPlayers, p)
+			}
+		}
+	}
+
+	// 全量校验
+	t.Logf("开始全量一致性校验，共 %d 名玩家", len(successPlayers))
+	for _, sp := range successPlayers {
+		// 在每个可用连接上读取该玩家的记录
+		var baseScore int64
+		var baseRank int64
+		consistent := true
+		for idx, conn := range connections {
+			// 读取该玩家的 tournament 记录
+			req := &api.ListTournamentRecordsRequest{
+				TournamentId: sp.TournamentID,
+				OwnerIds:     []string{sp.UserID},
+				Limit:        &wrapperspb.Int32Value{Value: 1},
+			}
+			resp, err := conn.Client.ListTournamentRecords(sp.Context, req)
+			if err != nil {
+				dumpLeaderboard(sp.Context, sp.TournamentID)
+				t.Errorf("一致性校验失败: 读取玩家[%d] tournament=%s 记录时在节点[%s] 出错: %v", sp.ID, sp.TournamentID, conn.Address, err)
+				consistent = false
+				break
+			}
+			if resp == nil || len(resp.OwnerRecords) == 0 {
+				dumpLeaderboard(sp.Context, sp.TournamentID)
+				t.Errorf("一致性校验失败: 节点[%s] 未返回玩家[%d] tournament=%s 的记录", conn.Address, sp.ID, sp.TournamentID)
+				consistent = false
+				break
+			}
+			rec := resp.OwnerRecords[0]
+			if idx == 0 {
+				baseScore = rec.Score
+				baseRank = rec.Rank
+				continue
+			}
+			if rec.Score != baseScore || rec.Rank != baseRank {
+				dumpLeaderboard(sp.Context, sp.TournamentID)
+				t.Errorf("一致性校验失败: 玩家[%d] tournament=%s 在不同节点分数/排名不一致 (节点[%s] score=%d,rank=%d vs 基准 score=%d,rank=%d)",
+					sp.ID, sp.TournamentID, conn.Address, rec.Score, rec.Rank, baseScore, baseRank)
+				consistent = false
+				break
+			}
+		}
+		if consistent {
+			t.Logf("✓ 一致性通过: 玩家[%d] tournament=%s 在 %d 个节点分数一致 (score=%d, rank=%d)", sp.ID, sp.TournamentID, len(connections), baseScore, baseRank)
+		}
+	}
+
 	// 输出提交错误统计
 	if len(scoreSubmissionStats.ErrorCounts) > 0 {
 		t.Logf("=== 分数提交错误统计 ===")
@@ -2301,5 +2402,5 @@ func TestThreeNodeJoinChallenge(t *testing.T) {
 	os.Setenv("NAKAMA_ADDR_3", "localhost:7549")
 
 	// 调用通用的多节点测试函数
-	TestMultiNodeJoinChallengeGeneric(t)
+	TestMultiNodeJoinChallenge(t)
 }

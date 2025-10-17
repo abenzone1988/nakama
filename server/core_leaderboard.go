@@ -388,31 +388,67 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 
 	sort.Slice(ownerRecords, sortFn)
 
-	// Bulk fill in the ranks of any owner records requested.
-	rankCount := rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
-
-	// 如果排名缓存没有数据，尝试重建缓存
-	if rankCount == 0 && leaderboard.EnableRanks && len(ownerRecords) > 0 {
-		logger.Info("排名缓存为空，尝试重建缓存",
+	// 计算 ownerRecords 的排名
+	// 场景1：当请求包含 OwnerIds（跨节点一致性关键路径），统一使用数据库窗口函数计算排名，避免节点间缓存不同步造成的不一致。
+	// 场景2：无 OwnerIds 时，保持原有缓存逻辑（性能优先）。
+	var rankCount int64
+	if leaderboard.EnableRanks && len(ownerRecords) > 0 && len(ownerIds) != 0 {
+		logger.Info("OwnerIds查询：使用数据库计算排名（跳过本地缓存）",
 			zap.String("leaderboard_id", leaderboardId),
-			zap.Int("owner_records_count", len(ownerRecords)))
+			zap.Int("owner_records", len(ownerRecords)))
+		if err := fillRanksFromDatabase(ctx, logger, db, leaderboard, expiryTime, ownerRecords); err != nil {
+			logger.Warn("OwnerIds查询：数据库计算排名失败",
+				zap.String("leaderboard_id", leaderboardId),
+				zap.Error(err))
+		}
+	} else {
+		// Bulk fill in the ranks via cache for general listing paths.
+		rankCount = rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
 
-		// 手动重建排名缓存
-		err := rebuildRankCache(ctx, logger, db, rankCache, leaderboard, expiryTime)
-		if err != nil {
-			logger.Warn("重建排名缓存失败", zap.Error(err))
+		// 如果排名缓存没有数据，尝试重建缓存
+		if rankCount == 0 && leaderboard.EnableRanks && len(ownerRecords) > 0 {
+			logger.Info("排名缓存为空，尝试重建缓存",
+				zap.String("leaderboard_id", leaderboardId),
+				zap.Int("owner_records_count", len(ownerRecords)))
+
+			// 手动重建排名缓存
+			err := rebuildRankCache(ctx, logger, db, rankCache, leaderboard, expiryTime)
+			if err != nil {
+				logger.Warn("重建排名缓存失败", zap.Error(err))
+			} else {
+				// 重新尝试填充排名
+				rankCount = rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
+				logger.Info("排名缓存重建完成",
+					zap.String("leaderboard_id", leaderboardId),
+					zap.Int64("rank_count", rankCount))
+			}
 		} else {
-			// 重新尝试填充排名
-			rankCount = rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
-			logger.Info("排名缓存重建完成",
+			// 查询缓存成功
+			logger.Debug("查询缓存成功",
 				zap.String("leaderboard_id", leaderboardId),
 				zap.Int64("rank_count", rankCount))
 		}
-	} else {
-		// 查询缓存成功
-		logger.Debug("查询缓存成功",
-			zap.String("leaderboard_id", leaderboardId),
-			zap.Int64("rank_count", rankCount))
+
+		// 若部分记录仍未填充排名（分数>0且rank==0），使用数据库兜底填充
+		if leaderboard.EnableRanks && len(ownerRecords) > 0 {
+			needBackfill := false
+			for _, r := range ownerRecords {
+				if r != nil && r.Rank == 0 && !(r.Score == 0 && r.Subscore == 0) {
+					needBackfill = true
+					break
+				}
+			}
+			if needBackfill {
+				logger.Info("排名兜底触发：使用数据库计算排名",
+					zap.String("leaderboard_id", leaderboardId),
+					zap.Int("owner_records", len(ownerRecords)))
+				if err := fillRanksFromDatabase(ctx, logger, db, leaderboard, expiryTime, ownerRecords); err != nil {
+					logger.Warn("使用数据库兜底填充排名失败",
+						zap.String("leaderboard_id", leaderboardId),
+						zap.Error(err))
+				}
+			}
+		}
 	}
 
 	// 对于score和subscore都为0的记录，将rank设置为0
@@ -1119,12 +1155,14 @@ func fillRanksFromDatabase(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 		ownerIDs[i] = record.OwnerId
 	}
 
-	// 构建排名查询SQL
+	// 构建排名查询SQL：分数→子分→创建时间（越早越靠前）→OwnerID（UUID字节序，最终兜底）
+	// 注意：owner_id 为 TEXT，这里显式转换为 UUID
 	var orderBy string
 	if leaderboard.SortOrder == LeaderboardSortOrderAscending {
-		orderBy = "ORDER BY score ASC, subscore ASC, owner_id ASC"
+		orderBy = "ORDER BY score ASC, subscore ASC, create_time ASC, (owner_id::uuid) ASC"
 	} else {
-		orderBy = "ORDER BY score DESC, subscore DESC, owner_id DESC"
+		// 降序下，同分同子分仍按最早提交优先
+		orderBy = "ORDER BY score DESC, subscore DESC, create_time ASC, (owner_id::uuid) ASC"
 	}
 
 	query := fmt.Sprintf(`
