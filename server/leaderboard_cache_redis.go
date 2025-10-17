@@ -49,12 +49,22 @@ func (l *LocalLeaderboardCache) initializeClusterMode(ctx context.Context, start
 	}
 
 	l.nodeID = uuid.Must(uuid.NewV4()).String()
+	// 记录 ctx 以便后续重连/退出控制
+	l.ctx = ctx
 	l.redisChannel = "nakama:leaderboard_cache:sync"
-	// 创建 Redis 客户端
+	// 创建 Redis 客户端（加入超时与重试配置，提高不稳定网络下的鲁棒性）
 	l.redisClient = redis.NewClient(&redis.Options{
-		Addr:     config.GetCluster().RedisAddress,
-		Password: config.GetCluster().RedisPassword,
-		DB:       0,
+		Addr:        config.GetCluster().RedisAddress,
+		Password:    config.GetCluster().RedisPassword,
+		DB:          1,
+		DialTimeout: 5 * time.Second,
+		// PubSub 长连接建议 ReadTimeout=0，避免客户端超时导致 EOF
+		ReadTimeout:     0,
+		WriteTimeout:    5 * time.Second,
+		MaxRetries:      3,
+		MinRetryBackoff: 100 * time.Millisecond,
+		MaxRetryBackoff: 2 * time.Second,
+		PoolSize:        10,
 	})
 
 	if err := l.redisClient.Ping(ctx).Err(); err != nil {
@@ -74,26 +84,96 @@ func (l *LocalLeaderboardCache) initializeClusterMode(ctx context.Context, start
 
 	// 启动消息订阅 goroutine
 	go l.subscribeRedisMessages()
+	// 定期 PING 心跳，减少空闲断连
+	go l.redisPingLoop()
 }
 
 // subscribeRedisMessages 订阅 Redis Pub/Sub 消息
 func (l *LocalLeaderboardCache) subscribeRedisMessages() {
-	ch := l.redisPubSub.Channel()
+	backoff := 500 * time.Millisecond
+	maxBackoff := 30 * time.Second
 
-	for msg := range ch {
-		var syncMsg leaderboardCacheSyncMsg
-		if err := json.Unmarshal([]byte(msg.Payload), &syncMsg); err != nil {
-			l.logger.Error("Failed to unmarshal leaderboard cache sync message",
-				zap.Error(err),
-				zap.String("payload", msg.Payload))
-			continue
+	for {
+		// 退出判断
+		if l.ctx != nil {
+			select {
+			case <-l.ctx.Done():
+				return
+			default:
+			}
 		}
 
-		// 过滤掉自己发送的消息
-		if syncMsg.NodeID == l.nodeID {
+		// 确保已订阅
+		if l.redisPubSub == nil {
+			l.redisPubSub = l.redisClient.Subscribe(l.ctx, l.redisChannel)
+		}
+
+		// 使用 ReceiveMessage 主动读，遇到错误重连
+		for {
+			if l.ctx != nil {
+				select {
+				case <-l.ctx.Done():
+					return
+				default:
+				}
+			}
+
+			msg, err := l.redisPubSub.ReceiveMessage(l.ctx)
+			if err != nil {
+				l.logger.Warn("Redis PubSub receive error, reconnecting",
+					zap.Error(err),
+					zap.String("channel", l.redisChannel))
+				break
+			}
+			var syncMsg leaderboardCacheSyncMsg
+			if err := json.Unmarshal([]byte(msg.Payload), &syncMsg); err != nil {
+				l.logger.Error("Failed to unmarshal leaderboard cache sync message",
+					zap.Error(err),
+					zap.String("payload", msg.Payload))
+				continue
+			}
+			if syncMsg.NodeID == l.nodeID {
+				continue
+			}
+			l.handleSyncMessage(&syncMsg)
+		}
+
+		// 清理并退避重连
+		if l.redisPubSub != nil {
+			_ = l.redisPubSub.Close()
+			l.redisPubSub = nil
+		}
+		time.Sleep(backoff)
+		if backoff < maxBackoff {
+			backoff *= 2
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
+		}
+	}
+}
+
+// redisPingLoop 定期向 PubSub/Client 发送 PING，减少空闲断连
+func (l *LocalLeaderboardCache) redisPingLoop() {
+	t := time.NewTicker(30 * time.Second)
+	defer t.Stop()
+	for {
+		if l.ctx != nil {
+			select {
+			case <-l.ctx.Done():
+				return
+			case <-t.C:
+			}
+		} else {
+			<-t.C
+		}
+		if l.redisPubSub != nil {
+			_ = l.redisPubSub.Ping(l.ctx)
 			continue
 		}
-		l.handleSyncMessage(&syncMsg)
+		if l.redisClient != nil {
+			_ = l.redisClient.Ping(l.ctx).Err()
+		}
 	}
 }
 

@@ -1,4 +1,4 @@
-name: nakama-node-jp1
+name: nakama-node-jp2
 
 database:
   address:
@@ -23,9 +23,9 @@ cluster:
 
 socket:
   server_key: "sparkgame"
-  port: 7350
+  port: 7550
 
 console:
-  port: 7351
+  port: 7551
   username: "admin"
   password: "password"

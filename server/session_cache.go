@@ -175,9 +175,14 @@ func (s *LocalSessionCache) initializeClusterMode(config Config, purpose string)
 	s.redisChannel = fmt.Sprintf("nakama:session_cache:%s:sync", purpose)
 	// 创建 Redis 客户端
 	s.redisClient = redis.NewClient(&redis.Options{
-		Addr:     redisAddress,
-		Password: redisPassword,
-		DB:       0,
+		Addr:         redisAddress,
+		Password:     redisPassword,
+		DB:           0,
+		DialTimeout:  5 * time.Second,
+		ReadTimeout:  0, // PubSub 建议 0，避免超时 EOF
+		WriteTimeout: 5 * time.Second,
+		PoolSize:     10,
+		MaxRetries:   3,
 	})
 
 	pingCtx, pingCancel := context.WithTimeout(s.ctx, 5*time.Second)
@@ -199,6 +204,23 @@ func (s *LocalSessionCache) initializeClusterMode(config Config, purpose string)
 	s.clusterMode = true
 	// 启动消息订阅 goroutine
 	go s.subscribeRedisMessages()
+	// 定期心跳，减少空闲断连
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-s.ctx.Done():
+				return
+			case <-ticker.C:
+				if s.redisPubSub != nil {
+					_ = s.redisPubSub.Ping(s.ctx)
+				} else if s.redisClient != nil {
+					_ = s.redisClient.Ping(s.ctx).Err()
+				}
+			}
+		}
+	}()
 }
 
 func (s *LocalSessionCache) Stop() {

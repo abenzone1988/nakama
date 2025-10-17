@@ -1349,9 +1349,6 @@ type LeaderboardConfig struct {
 	CallbackQueueSize    int      `yaml:"callback_queue_size" json:"callback_queue_size" usage:"Size of the leaderboard and tournament callback queue that sequences expiry/reset/end invocations. Default 65536."`
 	CallbackQueueWorkers int      `yaml:"callback_queue_workers" json:"callback_queue_workers" usage:"Number of workers to use for concurrent processing of leaderboard and tournament callbacks. Default 8."`
 	RankCacheWorkers     int      `yaml:"rank_cache_workers" json:"rank_cache_workers" usage:"The number of parallel workers to use while populating leaderboard rank cache from the database. Higher number of workers usually makes the process faster but at the cost of increased database load. Default 1."`
-	UseRedis             bool     `yaml:"use_redis" json:"use_redis" usage:"Use Redis for distributed leaderboard rank cache. Default false."`
-	RedisAddress         string   `yaml:"redis_address" json:"redis_address" usage:"Redis server address for leaderboard rank cache. Default 'localhost:6379'."`
-	RedisPassword        string   `yaml:"redis_password" json:"redis_password" usage:"Redis password for leaderboard rank cache. Default empty."`
 }
 
 func (cfg *LeaderboardConfig) Clone() *LeaderboardConfig {
@@ -1375,9 +1372,6 @@ func NewLeaderboardConfig() *LeaderboardConfig {
 		CallbackQueueSize:    65536,
 		CallbackQueueWorkers: 8,
 		RankCacheWorkers:     1,
-		UseRedis:             false,
-		RedisAddress:         "localhost:6379",
-		RedisPassword:        "",
 	}
 }
 

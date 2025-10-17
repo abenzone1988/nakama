@@ -422,6 +422,13 @@ func TournamentRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 
 func TournamentRecordWrite(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, caller uuid.UUID, tournamentId string, ownerId uuid.UUID, username string, score, subscore int64, metadata string, overrideOperator api.Operator) (*api.LeaderboardRecord, error) {
 	leaderboard := leaderboardCache.Get(tournamentId)
+	//if leaderboard == nil {
+	//	var err error
+	//	leaderboard, err = ensureTournamentCacheFromDBLocal(ctx, logger, db, leaderboardCache, tournamentId)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 	if leaderboard == nil || !leaderboard.IsTournament() {
 		return nil, runtime.ErrTournamentNotFound
 	}
@@ -838,6 +845,90 @@ func parseTournament(scannable Scannable, now time.Time) (*api.Tournament, error
 	return tournament, nil
 }
 
+// ensureTournamentCacheFromDBLocal 确保本地缓存存在指定 tournament；
+// 当缓存未命中时，从数据库加载并仅在本地节点填充缓存（不进行广播），返回填充后的缓存对象。
+func ensureTournamentCacheFromDBLocal(
+	ctx context.Context,
+	logger *zap.Logger,
+	db *sql.DB,
+	leaderboardCache LeaderboardCache,
+	tournamentId string,
+) (*Leaderboard, error) {
+	// 已有则直接返回
+	if lb := leaderboardCache.Get(tournamentId); lb != nil {
+		return lb, nil
+	}
+
+	// 从数据库读取定义
+	var dbAuthoritative bool
+	var dbSortOrder int
+	var dbOperator int
+	var dbResetSchedule string
+	var dbMetadata string
+	var dbCreateTime pgtype.Timestamptz
+	var dbCategory int
+	var dbDescription string
+	var dbDuration int
+	var dbEndTime pgtype.Timestamptz
+	var dbJoinRequired bool
+	var dbMaxSize int
+	var dbMaxNumScore int
+	var dbTitle string
+	var dbStartTime pgtype.Timestamptz
+	var dbEnableRanks bool
+
+	err := db.QueryRowContext(ctx, `SELECT authoritative, sort_order, operator, COALESCE(reset_schedule, ''), metadata, create_time,
+            category, description, duration, end_time, join_required, max_size, max_num_score, title, start_time, enable_ranks
+        FROM leaderboard WHERE id = $1`, tournamentId).
+		Scan(&dbAuthoritative, &dbSortOrder, &dbOperator, &dbResetSchedule, &dbMetadata, &dbCreateTime,
+			&dbCategory, &dbDescription, &dbDuration, &dbEndTime, &dbJoinRequired, &dbMaxSize, &dbMaxNumScore, &dbTitle, &dbStartTime, &dbEnableRanks)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, runtime.ErrTournamentNotFound
+		}
+		logger.Error("Error loading leaderboard for local cache fill", zap.Error(err))
+		return nil, err
+	}
+
+	// 必须是锦标赛
+	if dbDuration <= 0 {
+		return nil, runtime.ErrTournamentNotFound
+	}
+
+	// 仅在本地填充，不广播
+	if l, ok := leaderboardCache.(*LocalLeaderboardCache); ok {
+		var endUnix int64
+		if dbEndTime.Valid {
+			endUnix = dbEndTime.Time.Unix()
+		}
+		l.insertTournamentLocal(
+			tournamentId,
+			dbAuthoritative,
+			dbSortOrder,
+			dbOperator,
+			dbResetSchedule,
+			dbMetadata,
+			dbTitle,
+			dbDescription,
+			dbCategory,
+			dbDuration,
+			dbMaxSize,
+			dbMaxNumScore,
+			dbJoinRequired,
+			dbCreateTime.Time.Unix(),
+			dbStartTime.Time.Unix(),
+			endUnix,
+			dbEnableRanks,
+		)
+	}
+
+	// 返回填充后的缓存
+	if lb := leaderboardCache.Get(tournamentId); lb != nil {
+		return lb, nil
+	}
+	return nil, runtime.ErrTournamentNotFound
+}
+
 func DisableTournamentRanks(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, id string) error {
 	l := leaderboardCache.Get(id)
 	if l == nil || !l.IsTournament() {
@@ -960,13 +1051,13 @@ func EnsureChallengeTournament(ctx context.Context, logger *zap.Logger, db *sql.
 		// 3) 获取下一个批次号（事务内原子递增）
 		var nextBatch int32
 		if err := tx.QueryRowContext(ctx, `
-            INSERT INTO challenge_batch (challenge_id, current_batch)
-            VALUES ($1, 1)
-            ON CONFLICT (challenge_id)
-            DO UPDATE SET
-                current_batch = challenge_batch.current_batch + 1,
-                updated_at = NOW()
-            RETURNING current_batch
+			INSERT INTO challenge_batch (challenge_id, current_batch)
+			VALUES ($1, 1)
+			ON CONFLICT (challenge_id)
+			DO UPDATE SET
+				current_batch = challenge_batch.current_batch + 1,
+				updated_at = NOW()
+			RETURNING current_batch
         `, challengeID).Scan(&nextBatch); err != nil {
 			logger.Error("获取事务内挑战赛批次号失败",
 				zap.Int32("challenge_id", challengeID),
@@ -1033,4 +1124,176 @@ func EnsureChallengeTournament(ctx context.Context, logger *zap.Logger, db *sql.
 	}
 
 	return tournamentID, nil
+}
+
+// 在单个事务内（持有 challengeID 的事务级顾问锁）完成：
+// 1) 查找可加入的 tournament（size < max_size），若无则创建
+// 2) 将玩家加入该 tournament（原子插入记录并递增 size）
+// 不依赖本地缓存，不做客户端重试，完全依赖数据库串行化保证跨节点一致。
+func EnsureChallengeJoin(
+	ctx context.Context,
+	logger *zap.Logger,
+	db *sql.DB,
+	cache LeaderboardCache,
+	rankCache LeaderboardRankCache,
+	userID uuid.UUID,
+	username string,
+	challengeID int32,
+	challengeName string,
+	startTime, endTime time.Time,
+	maxParticipants int32,
+) (string, error) {
+	var selectedTournamentID string
+	var created bool
+	var createdCreateTime pgtype.Timestamptz
+
+	// 事务包裹 + 顾问锁串行化整个“选房/建房+加入”流程
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
+		// 1) 对 challenge 维度加事务级顾问锁，串行化同一挑战的分配
+		if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(challengeID)); err != nil {
+			return err
+		}
+
+		// 2) 查找可加入的 tournament（更空优先，其次创建时间早）
+		row := tx.QueryRowContext(ctx, `
+            SELECT id
+            FROM leaderboard
+            WHERE duration > 0
+              AND category = $1::int
+              AND start_time <= NOW()
+              AND end_time > NOW()
+              AND size < max_size
+            ORDER BY size ASC, create_time ASC
+            LIMIT 1
+        `, int(challengeID))
+		var existingID sql.NullString
+		_ = row.Scan(&existingID)
+		if existingID.Valid {
+			selectedTournamentID = existingID.String
+			created = false
+		} else {
+
+			// 3) 获取下一个批次号（事务内原子递增）
+			var nextBatch int32
+			if err := tx.QueryRowContext(ctx, `
+			INSERT INTO challenge_batch (challenge_id, current_batch)
+			VALUES ($1, 1)
+			ON CONFLICT (challenge_id)
+			DO UPDATE SET
+				current_batch = challenge_batch.current_batch + 1,
+				updated_at = NOW()
+			RETURNING current_batch
+        `, challengeID).Scan(&nextBatch); err != nil {
+				logger.Error("获取事务内挑战赛批次号失败",
+					zap.Int32("challenge_id", challengeID),
+					zap.Error(err))
+				return err
+			}
+
+			// 4) 生成唯一 tournamentID
+			newID := fmt.Sprintf("challenge_%d_%d_%d", challengeID, startTime.Unix(), nextBatch)
+
+			// 固定配置（与 EnsureChallengeTournament 保持一致）
+			authoritative := false
+			sortOrder := LeaderboardSortOrderDescending
+			operator := LeaderboardOperatorBest
+			// resetSchedule 为空，按固定周期由 start_time/duration 控制
+			metadata := "{}"
+			title := fmt.Sprintf("%s - 动态房间", challengeName)
+			description := fmt.Sprintf("挑战赛 %s 的竞标赛，由服务器自动创建和管理", challengeName)
+			category := int(challengeID)
+			duration := int(endTime.Sub(startTime).Seconds())
+			maxSize := int(maxParticipants)
+			maxNumScore := 1000
+			joinRequired := true
+			enableRanks := true
+
+			if err := tx.QueryRowContext(ctx, `
+                INSERT INTO leaderboard (
+                    id, authoritative, sort_order, operator, metadata, category, description,
+                    duration, end_time, title, start_time, max_size, max_num_score, join_required, enable_ranks
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7,
+                    $8, $9, $10, $11, $12, $13, $14, $15
+                )
+                RETURNING create_time
+            `,
+				newID, authoritative, sortOrder, operator, metadata, category, description,
+				duration, endTime.UTC(), title, startTime.UTC(), maxSize, maxNumScore, joinRequired, enableRanks,
+			).Scan(&createdCreateTime); err != nil {
+				return err
+			}
+
+			selectedTournamentID = newID
+			created = true
+		}
+
+		// 4) 计算本期记录过期时间（用于记录表）
+		// 复用 calculateTournamentDeadlines 逻辑获取 expiryUnix
+		// 这里简化：从 leaderboard 表取 start_time/duration/reset_schedule 重新计算更严谨
+		var dbStartTime pgtype.Timestamptz
+		var dbEndTime pgtype.Timestamptz
+		var dbDuration int
+		var dbResetSchedule sql.NullString
+		if err := tx.QueryRowContext(ctx, `SELECT start_time, end_time, duration, COALESCE(reset_schedule, '') FROM leaderboard WHERE id = $1::text`, selectedTournamentID).Scan(&dbStartTime, &dbEndTime, &dbDuration, &dbResetSchedule); err != nil {
+			return err
+		}
+		var resetExpr *cronexpr.Expression
+		if dbResetSchedule.Valid && dbResetSchedule.String != "" {
+			if expr, e := cronexpr.Parse(dbResetSchedule.String); e == nil {
+				resetExpr = expr
+			}
+		}
+		now := time.Now().UTC()
+		_, _, expiryUnix := calculateTournamentDeadlines(dbStartTime.Time.UTC().Unix(), dbEndTime.Time.UTC().Unix(), int64(dbDuration), resetExpr, now)
+		expiryTime := time.Unix(expiryUnix, 0).UTC()
+
+		// 5) 插入参赛记录（若已存在则忽略）
+		if _, err := tx.ExecContext(ctx, `
+            INSERT INTO leaderboard_record (leaderboard_id, owner_id, expiry_time, username, num_score, max_num_score)
+            SELECT $1::text, $2::uuid, $3::timestamptz, $4::text, 0, l.max_num_score FROM leaderboard l WHERE l.id = $1::text
+            ON CONFLICT (owner_id, leaderboard_id, expiry_time) DO NOTHING
+        `, selectedTournamentID, userID.String(), expiryTime, username); err != nil {
+			return err
+		}
+
+		// 6) 尝试占用一个名额
+		res, err := tx.ExecContext(ctx, `UPDATE leaderboard SET size = size + 1 WHERE id = $1::text AND (max_size = 0 OR size < max_size)`, selectedTournamentID)
+		if err != nil {
+			return err
+		}
+		if rows, _ := res.RowsAffected(); rows != 1 {
+			// 房间刚满，返回满员错误
+			return runtime.ErrTournamentMaxSizeReached
+		}
+
+		return nil
+	}); err != nil {
+		return "", err
+	}
+
+	// 提交后：若是新建房间，写入本地缓存（并依赖广播同步其它节点）
+	if created {
+		cache.InsertTournament(
+			selectedTournamentID,
+			false,
+			LeaderboardSortOrderDescending,
+			LeaderboardOperatorBest,
+			"",
+			"{}",
+			fmt.Sprintf("%s - 动态房间", challengeName),
+			fmt.Sprintf("挑战赛 %s 的竞标赛，由服务器自动创建和管理", challengeName),
+			int(challengeID),
+			int(endTime.Sub(startTime).Seconds()),
+			int(maxParticipants),
+			1000,
+			true,
+			createdCreateTime.Time.Unix(),
+			startTime.UTC().Unix(),
+			endTime.UTC().Unix(),
+			true,
+		)
+	}
+
+	return selectedTournamentID, nil
 }

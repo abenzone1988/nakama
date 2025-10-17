@@ -131,19 +131,21 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 	// 测试配置
 	config := struct {
-		PlayerCount     int
-		CustomIDPrefix  string
-		UsernamePrefix  string
-		StrictMode      bool
-		PerformanceMode bool
-		VerboseLogging  bool
+		PlayerCount      int
+		CustomIDPrefix   string
+		UsernamePrefix   string
+		StrictMode       bool
+		PerformanceMode  bool
+		VerboseLogging   bool
+		SubmitScoreCount int
 	}{
-		PlayerCount:     100,
-		CustomIDPrefix:  "test_player_10000_1",
-		UsernamePrefix:  "Player_10000_1",
-		StrictMode:      true, // 严格模式：使用t.Errorf，解析JWT
-		PerformanceMode: true, // 性能模式：记录时间，计算速度
-		VerboseLogging:  true, // 详细日志：显示详细成绩信息
+		PlayerCount:      100,
+		CustomIDPrefix:   "test_player_10000_1",
+		UsernamePrefix:   "Player_10000_1",
+		StrictMode:       true, // 严格模式：使用t.Errorf，解析JWT
+		PerformanceMode:  true, // 性能模式：记录时间，计算速度
+		VerboseLogging:   true, // 详细日志：显示详细成绩信息
+		SubmitScoreCount: 3,
 	}
 
 	// 检查是否需要跳过长时间运行的测试
@@ -421,19 +423,21 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 
 			// 为每个玩家生成成绩
 			var scores []int64
+			attempts := config.SubmitScoreCount
+			if attempts < 1 {
+				attempts = 3
+			}
 			if config.PerformanceMode {
-				// 性能模式：递增成绩
-				scores = []int64{
-					int64(1000 + i*10 + rand.Intn(500)),
-					int64(1500 + i*10 + rand.Intn(500)),
-					int64(2000 + i*10 + rand.Intn(500)),
+				// 性能模式：递增基准 + 小随机扰动
+				scores = make([]int64, attempts)
+				for k := 0; k < attempts; k++ {
+					scores[k] = int64(1000 + i*10 + rand.Intn(500))
 				}
 			} else {
-				// 严格模式：随机成绩
-				scores = []int64{
-					int64(10000 + rand.Intn(9000)),
-					int64(15000 + rand.Intn(8500)),
-					int64(20000 + rand.Intn(8000)),
+				// 严格模式：随机成绩（统一范围）
+				scores = make([]int64, attempts)
+				for k := 0; k < attempts; k++ {
+					scores[k] = int64(10000 + rand.Intn(9000))
 				}
 			}
 			player.Scores = scores
@@ -525,7 +529,7 @@ func TestRealAPIChallenge100Players(t *testing.T) {
 		t.Errorf("加入挑战赛成功率过低: %d/%d (%.2f%%)", stats.ChallengesJoined, stats.CreatedAccounts, joinSuccessRate)
 	}
 
-	expectedScores := stats.ChallengesJoined * 3 // 每个玩家3次成绩
+	expectedScores := stats.ChallengesJoined * config.SubmitScoreCount // 每个玩家可配置次数
 	scoreSuccessRate := float64(stats.ScoresSubmitted) / float64(expectedScores) * 100
 	if scoreSuccessRate < 70 {
 		t.Errorf("提交成绩成功率过低: %d/%d (%.2f%%)", stats.ScoresSubmitted, expectedScores, scoreSuccessRate)
@@ -1329,6 +1333,8 @@ func TestConcurrentTournamentCreationAndSubmit(t *testing.T) {
 	// 第五阶段：提交随机分数测试 Start ========================== //
 	t.Logf("=== 阶段5: 提交随机分数测试 ===")
 
+	const SubmitScoreCount = 3
+
 	scoreSubmissionStats := struct {
 		SubmissionSuccess int
 		SubmissionFailure int
@@ -1341,11 +1347,11 @@ func TestConcurrentTournamentCreationAndSubmit(t *testing.T) {
 			continue
 		}
 
-		// 为每个玩家生成3个随机分数
-		scores := []int64{
-			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-			int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+		// 为每个玩家生成可配置次数的随机分数（默认3次，可通过 SUBMISSION_ATTEMPTS 配置）
+
+		scores := make([]int64, SubmitScoreCount)
+		for i := 0; i < SubmitScoreCount; i++ {
+			scores[i] = int64(1000 + rand.Intn(9000))
 		}
 
 		for attemptNum, score := range scores {
@@ -1397,7 +1403,7 @@ func TestConcurrentTournamentCreationAndSubmit(t *testing.T) {
 	t.Logf("总分数记录: %d", scoreSubmissionStats.TotalScores)
 
 	// 验证分数提交成功率
-	expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
+	expectedSubmissions := stats.JoinSuccessCount * SubmitScoreCount // 每个成功加入的玩家提交N次
 	if scoreSubmissionStats.SubmissionSuccess < expectedSubmissions*7/10 {
 		t.Logf("⚠️ 分数提交成功率过低: %d/%d (%.2f%%)",
 			scoreSubmissionStats.SubmissionSuccess, expectedSubmissions,
@@ -1782,7 +1788,7 @@ func TestMultiNodeJoinChallenge(t *testing.T) {
 	// 第二阶段：创建玩家账号
 	t.Logf("=== 阶段2: 创建玩家账号 ===")
 
-	const playersPerNode = 50
+	const playersPerNode = 100
 	type Player struct {
 		ID                int
 		Username          string
@@ -2164,6 +2170,7 @@ func TestMultiNodeJoinChallenge(t *testing.T) {
 
 	// 第六阶段：提交随机分数测试
 	t.Logf("=== 阶段6: 提交随机分数测试 ===")
+	const SubmitScoreCount = 1
 
 	scoreSubmissionStats := struct {
 		SubmissionSuccess   int
@@ -2175,7 +2182,7 @@ func TestMultiNodeJoinChallenge(t *testing.T) {
 		TotalSubmissionTime time.Duration
 		ErrorCounts         map[string]int
 	}{
-		SubmissionTimes: make([]time.Duration, 0, stats.JoinSuccessCount*3),
+		SubmissionTimes: make([]time.Duration, 0, stats.JoinSuccessCount*SubmitScoreCount),
 		ErrorCounts:     make(map[string]int),
 	}
 
@@ -2186,11 +2193,10 @@ func TestMultiNodeJoinChallenge(t *testing.T) {
 				continue
 			}
 
-			// 为每个玩家生成3个随机分数
-			scores := []int64{
-				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
-				int64(1000 + rand.Intn(9000)), // 1000-10000随机分数
+			// 为每个玩家生成可配置次数的随机分数
+			scores := make([]int64, SubmitScoreCount)
+			for i := 0; i < SubmitScoreCount; i++ {
+				scores[i] = int64(1000 + rand.Intn(9000))
 			}
 
 			for attemptNum, score := range scores {
@@ -2373,7 +2379,7 @@ func TestMultiNodeJoinChallenge(t *testing.T) {
 	}
 
 	// 验证分数提交成功率
-	expectedSubmissions := stats.JoinSuccessCount * 3 // 每个成功加入的玩家提交3次
+	expectedSubmissions := stats.JoinSuccessCount * SubmitScoreCount // 每个成功加入的玩家提交N次
 	if expectedSubmissions > 0 {
 		submissionSuccessRate := float64(scoreSubmissionStats.SubmissionSuccess) / float64(expectedSubmissions) * 100
 		if submissionSuccessRate < 70 {

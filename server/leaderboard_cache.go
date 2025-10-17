@@ -827,6 +827,63 @@ func (l *LocalLeaderboardCache) InsertTournament(id string, authoritative bool, 
 	}
 }
 
+// 仅在本地节点填充锦标赛缓存，不进行集群广播。
+func (l *LocalLeaderboardCache) insertTournamentLocal(id string, authoritative bool, sortOrder, operator int, resetSchedule, metadata, title, description string, category, duration, maxSize, maxNumScore int, joinRequired bool, createTime, startTime, endTime int64, enableRanks bool) {
+	var expr *cronexpr.Expression
+	var err error
+	if resetSchedule != "" {
+		expr, err = cronexpr.Parse(resetSchedule)
+		if err != nil {
+			l.logger.Error("Error parsing tournament reset schedule for local insert", zap.Error(err))
+			return
+		}
+	}
+
+	leaderboard := &Leaderboard{
+		Id:               id,
+		Authoritative:    authoritative,
+		SortOrder:        sortOrder,
+		Operator:         operator,
+		ResetScheduleStr: resetSchedule,
+		ResetSchedule:    expr,
+		Metadata:         metadata,
+		CreateTime:       createTime,
+		Category:         category,
+		Description:      description,
+		Duration:         duration,
+		JoinRequired:     joinRequired,
+		MaxSize:          maxSize,
+		MaxNumScore:      maxNumScore,
+		Title:            title,
+		StartTime:        startTime,
+		EndTime:          endTime,
+		EnableRanks:      enableRanks,
+	}
+
+	l.Lock()
+	_, found := l.leaderboards[id]
+	l.leaderboards[id] = leaderboard
+	if found {
+		for idx, le := range l.allList {
+			if le.Id == id {
+				l.allList[idx] = leaderboard
+				break
+			}
+		}
+		for idx, le := range l.tournamentList {
+			if le.Id == id {
+				l.tournamentList[idx] = leaderboard
+				break
+			}
+		}
+	} else {
+		l.allList = append(l.allList, leaderboard)
+		l.tournamentList = append(l.tournamentList, leaderboard)
+		sort.Sort(OrderedTournaments(l.tournamentList))
+	}
+	l.Unlock()
+}
+
 func (l *LocalLeaderboardCache) ListTournaments(now int64, categoryStart, categoryEnd int, startTime, endTime int64, limit int, cursor *TournamentListCursor) ([]*Leaderboard, *TournamentListCursor, error) {
 	list := make([]*Leaderboard, 0, limit)
 	var newCursor *TournamentListCursor

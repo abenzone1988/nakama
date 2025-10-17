@@ -338,7 +338,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 	// 获取或分配玩家的竞标赛ID
-	tournamentID, err := s.assignPlayerToChallengeTournament(ctx, userID, &tplChallenge, startTime, endTime)
+	tournamentID, err := s.assignPlayerToChallengeTournamentLock(ctx, userID, &tplChallenge, startTime, endTime)
 	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
@@ -831,7 +831,7 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 	return true, nil
 }
 
-// 执行竞标赛分配的核心逻辑
+// 执行竞标赛分配的核心逻辑并行
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
 	// 快路径：优先尝试直接加入已存在的可用竞标赛（无跨节点锁，靠 DB 原子判断 size < max_size）
 
@@ -912,6 +912,27 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 		zap.Int32("challenge_id", tplChallenge.ID))
 
 	return newTournamentID, nil
+}
+
+// 执行竞标赛分配的核心逻辑
+func (s *ApiServer) assignPlayerToChallengeTournamentLock(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+	// 单事务 + 顾问锁 串行化“查找/创建 + 加入”，不使用客户端重试
+	username := ctx.Value(ctxUsernameKey{}).(string)
+	tid, err := EnsureChallengeJoin(
+		ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache,
+		userID, username,
+		tplChallenge.ID, tplChallenge.Name,
+		startTime, endTime,
+		tplChallenge.MaxPart,
+	)
+	if err != nil {
+		s.logger.Warn("EnsureChallengeJoin 失败",
+			zap.String("user_id", userID.String()),
+			zap.Int32("challenge_id", tplChallenge.ID),
+			zap.Error(err))
+		return "", err
+	}
+	return tid, nil
 }
 
 // 初始化前三名统计数据，首次查询历史记录
