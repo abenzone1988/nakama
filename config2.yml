@@ -2,9 +2,11 @@ name: nakama-node-jp2
 
 database:
   address:
-    - "root@192.168.102.223:26257/test"
+    - "postgres://nakama:nakama@localhost:5432/nakama?sslmode=disable"
+  max_open_conns: 30
+  max_idle_conns: 10
 logger:
-  level: "debug"
+  level: "info"
 
 session:
   encryption_key: "defaultencryptionkey"
@@ -16,7 +18,7 @@ session:
 
 cluster:
   enabled: true
-  redis_address: "192.168.102.223:6379"
+  redis_address: "localhost:6379"
   redis_password: ""
 
 socket:

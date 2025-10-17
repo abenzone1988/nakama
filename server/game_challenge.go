@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -21,7 +21,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var challengeAssignLocks sync.RWMutex
+// 旧锁已移除：使用数据库事务与顾问锁保证多节点安全
+
+const maxJoinRetry = 3
 
 func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeResponse, error) {
 	// 获取用户ID
@@ -790,11 +792,9 @@ func (s *ApiServer) sendChallengeRewardNotification(ctx context.Context, userID 
 
 // 执行竞标赛分配的核心逻辑
 func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
-	// 查找并尝试加
-	challengeAssignLocks.Lock()
-	defer challengeAssignLocks.Unlock()
+	// 快路径：优先尝试直接加入已存在的可用竞标赛（无跨节点锁，靠 DB 原子判断 size < max_size）
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < maxJoinRetry; i++ {
 		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache, int(tplChallenge.ID))
 		if err != nil {
 			s.logger.Error("二次查找可用竞标赛失败",
@@ -817,16 +817,27 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 			return tournament.Id, nil
 		}
 
-		s.logger.Warn("加入可用竞标赛失败，锁内重试",
+		s.logger.Warn("加入可用竞标赛失败，重试",
 			zap.String("tournament_id", tournament.Id),
 			zap.String("user_id", userID.String()),
 			zap.Int("retry", i+1),
 			zap.Error(err))
+		// 抖动后重试
+		time.Sleep(time.Duration(10+rand.Intn(90)) * time.Millisecond)
 	}
 
-	// 创建新的竞标赛并加入
-	batchNumber := GetNextChallengeBatch(ctx, s.logger, s.db, tplChallenge.ID)
-	newTournamentID, err := CreateNewChallengeTournament(ctx, s.logger, s.leaderboardCache, s.leaderboardScheduler, tplChallenge, startTime, endTime, int(batchNumber))
+	// 慢路径：创建新竞标赛（跨节点串行化）封装到 core 层
+	newTournamentID, err := EnsureChallengeTournament(
+		ctx,
+		s.logger,
+		s.db,
+		s.leaderboardCache,
+		tplChallenge.ID,
+		tplChallenge.Name,
+		startTime,
+		endTime,
+		tplChallenge.MaxPart,
+	)
 	if err != nil {
 		s.logger.Warn("创建新竞标赛失败",
 			zap.String("user_id", userID.String()),
@@ -835,21 +846,31 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 		return "", fmt.Errorf("创建新竞标赛失败: %v", err)
 	}
 
+	// 若锁内发现已有可用竞标赛，则直接用该 ID；否则用新建的 ID
 	username := ctx.Value(ctxUsernameKey{}).(string)
-	err = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
-	if err != nil {
-		s.logger.Warn("加入新竞标赛失败",
+	// 加入动作增加小延迟重试，以等待广播同步缓存
+	const maxJoinRetry = 3
+	var joinErr error
+	for attempt := 0; attempt < maxJoinRetry; attempt++ {
+		joinErr = TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, newTournamentID)
+		if joinErr == nil {
+			break
+		}
+		delay := time.Duration(1+rand.Intn(100)) * time.Millisecond
+		time.Sleep(delay)
+	}
+	if joinErr != nil {
+		s.logger.Warn("加入竞标赛失败",
 			zap.String("user_id", userID.String()),
 			zap.String("tournament_id", newTournamentID),
-			zap.Error(err))
-		return "", fmt.Errorf("加入新竞标赛失败: %v", err)
+			zap.Error(joinErr))
+		return "", fmt.Errorf("加入新竞标赛失败: %v", joinErr)
 	}
 
-	s.logger.Info("玩家成功加入新创建的竞标赛",
+	s.logger.Info("玩家成功加入竞标赛",
 		zap.String("user_id", userID.String()),
 		zap.String("tournament_id", newTournamentID),
-		zap.Int32("challenge_id", tplChallenge.ID),
-		zap.Int32("batch_number", batchNumber))
+		zap.Int32("challenge_id", tplChallenge.ID))
 
 	return newTournamentID, nil
 }

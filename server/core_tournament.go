@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -927,8 +928,8 @@ WHERE duration > 0
 		now, // end_time > now
 	}
 
-	// 按创建时间排序，优先选择较老的tournament
-	query += " ORDER BY create_time ASC LIMIT 1"
+	// 优先选择更空的房间，其次按创建时间早的优先
+	query += " ORDER BY size ASC, create_time ASC LIMIT 1"
 
 	row := db.QueryRowContext(ctx, query, params...)
 	tournament, err := parseTournament(row, time.Now().UTC())
@@ -1006,4 +1007,145 @@ func GetNextChallengeBatch(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 		zap.Int32("challenge_id", challengeID),
 		zap.Int("max_retries", maxRetries))
 	return 1
+}
+
+// GetNextChallengeBatchTx 在事务内安全地为指定 challenge 递增并返回批次号。
+// 要求调用方在外部控制并发（推荐搭配 pg_advisory_xact_lock）。
+// 删除独立的 GetNextChallengeBatchTx，合并到 EnsureChallengeTournament 内部
+
+// EnsureChallengeTournament 在多节点下安全地为指定 challenge 查找一个可加入的 tournament；
+// 若不存在，则在事务内（持有事务级顾问锁）创建一个新的 tournament 并返回其 ID。
+// 仅在“创建路径”上串行化，避免影响“直接加入”的高并发性能。
+func EnsureChallengeTournament(
+	ctx context.Context,
+	logger *zap.Logger,
+	db *sql.DB,
+	cache LeaderboardCache,
+	challengeID int32,
+	challengeName string,
+	startTime, endTime time.Time,
+	maxParticipants int32,
+) (string, error) {
+	var tournamentID string
+	var created bool
+	// For cache insertion after commit (newly created)
+	var createdAuthoritative bool = false
+	var createdSortOrder int = LeaderboardSortOrderDescending
+	var createdOperator int = LeaderboardOperatorBest
+	var createdResetSchedule string = ""
+	var createdMetadata string = "{}"
+	var createdTitle string
+	var createdDescription string
+	var createdCategory int = int(challengeID)
+	var createdDuration int = int(endTime.Sub(startTime).Seconds())
+	var createdMaxSize int = int(maxParticipants)
+	var createdMaxNumScore int = 1000
+	var createdJoinRequired bool = true
+	var createdEnableRanks bool = true
+	var createdCreateTime pgtype.Timestamptz
+	var createdStartTime int64
+	var createdEndTime int64
+
+	err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
+		// 1) 事务级顾问锁，按 challengeID 串行化创建窗口
+		if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(challengeID)); err != nil {
+			return err
+		}
+
+		// 2) 锁内复查是否已有可加入的 tournament（避免重复创建）
+		row := tx.QueryRowContext(ctx, `
+            SELECT id
+            FROM leaderboard
+            WHERE duration > 0
+              AND category = $1
+              AND start_time <= NOW()
+              AND end_time > NOW()
+              AND size < max_size
+            ORDER BY create_time ASC
+            LIMIT 1
+        `, int(challengeID))
+		var existingID sql.NullString
+		_ = row.Scan(&existingID)
+		if existingID.Valid {
+			tournamentID = existingID.String
+			created = false
+			return nil
+		}
+
+		// 3) 获取下一个批次号（事务内原子递增）
+		var nextBatch int32
+		if err := tx.QueryRowContext(ctx, `
+            INSERT INTO challenge_batch (challenge_id, current_batch)
+            VALUES ($1, 1)
+            ON CONFLICT (challenge_id)
+            DO UPDATE SET
+                current_batch = challenge_batch.current_batch + 1,
+                updated_at = NOW()
+            RETURNING current_batch
+        `, challengeID).Scan(&nextBatch); err != nil {
+			logger.Error("获取事务内挑战赛批次号失败",
+				zap.Int32("challenge_id", challengeID),
+				zap.Error(err))
+			return err
+		}
+
+		// 4) 生成唯一 tournamentID
+		newID := fmt.Sprintf("challenge_%d_%d_%d", challengeID, startTime.Unix(), nextBatch)
+
+		// 5) 在事务内创建 Tournament 记录（与 CreateNewChallengeTournament 语义一致）
+		createdTitle = fmt.Sprintf("%s - 第%d轮", challengeName, nextBatch)
+		createdDescription = fmt.Sprintf("挑战赛 %s 的竞标赛，由服务器自动创建和管理", challengeName)
+		createdStartTime = startTime.UTC().Unix()
+		createdEndTime = endTime.UTC().Unix()
+
+		if err := tx.QueryRowContext(ctx, `
+            INSERT INTO leaderboard (
+                id, authoritative, sort_order, operator, metadata, category, description,
+                duration, end_time, title, start_time, max_size, max_num_score, join_required, enable_ranks
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7,
+                $8, $9, $10, $11, $12, $13, $14, $15
+            )
+            RETURNING create_time
+        `,
+			newID, createdAuthoritative, createdSortOrder, createdOperator, createdMetadata, createdCategory, createdDescription,
+			createdDuration, time.Unix(createdEndTime, 0).UTC(), createdTitle, time.Unix(createdStartTime, 0).UTC(), createdMaxSize, createdMaxNumScore, createdJoinRequired, createdEnableRanks,
+		).Scan(&createdCreateTime); err != nil {
+			return err
+		}
+
+		tournamentID = newID
+		created = true
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// 事务提交后，确保本节点缓存可见：
+	if created {
+		cache.InsertTournament(
+			tournamentID,
+			createdAuthoritative,
+			createdSortOrder,
+			createdOperator,
+			createdResetSchedule,
+			createdMetadata,
+			createdTitle,
+			createdDescription,
+			createdCategory,
+			createdDuration,
+			createdMaxSize,
+			createdMaxNumScore,
+			createdJoinRequired,
+			createdCreateTime.Time.Unix(),
+			createdStartTime,
+			createdEndTime,
+			createdEnableRanks,
+		)
+	} else {
+		// 非本节点新建：完全依赖创建节点广播同步缓存；不做本地填充
+	}
+
+	return tournamentID, nil
 }
