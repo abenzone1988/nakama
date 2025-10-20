@@ -23,27 +23,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// Session cache sync message types
-	SessionCacheMsgTypeRemove    = "remove"
-	SessionCacheMsgTypeRemoveAll = "remove_all"
-	SessionCacheMsgTypeBan       = "ban"
-)
-
-// sessionCacheSyncMsg 用于节点间同步的消息结构
-type sessionCacheSyncMsg struct {
-	Type           string   `json:"type"`
-	NodeID         string   `json:"node_id"`
-	UserID         string   `json:"user_id,omitempty"`
-	UserIDs        []string `json:"user_ids,omitempty"`
-	SessionExp     int64    `json:"session_exp,omitempty"`
-	SessionTokenID string   `json:"session_token_id,omitempty"`
-	RefreshExp     int64    `json:"refresh_exp,omitempty"`
-	RefreshTokenID string   `json:"refresh_token_id,omitempty"`
-	// 注意：不使用 Timestamp 字段来判断消息顺序
-	// 每个节点使用自己的本地时间更新 lastInvalidation
-}
-
 type SessionCache interface {
 	Stop()
 
@@ -111,7 +90,6 @@ func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, ref
 			case t := <-ticker.C:
 				ts := t.UTC().Unix()
 				s.Lock()
-				// 直接操作 map，不调用 Remove/RemoveAll 等方法，避免触发 Redis 同步
 				for userID, cache := range s.cache {
 					for token, exp := range cache.sessionTokens {
 						if exp <= ts {
@@ -188,15 +166,7 @@ func (s *LocalSessionCache) Add(userID uuid.UUID, sessionExp int64, tokenId stri
 }
 
 func (s *LocalSessionCache) Remove(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string) {
-	// 调用内部方法执行本地操作（本地实现不再发布跨节点消息）
-	s.removeInternal(userID, sessionExp, sessionTokenId, refreshExp, refreshTokenId)
-}
-
-// removeInternal 内部方法：只操作本地缓存，不发布消息
-func (s *LocalSessionCache) removeInternal(userID uuid.UUID, sessionExp int64, sessionTokenId string, refreshExp int64, refreshTokenId string) {
 	s.Lock()
-	defer s.Unlock()
-
 	cache, found := s.cache[userID]
 	if !found {
 		cache = &sessionCacheUser{
@@ -212,21 +182,13 @@ func (s *LocalSessionCache) removeInternal(userID uuid.UUID, sessionExp int64, s
 	if refreshTokenId != "" {
 		cache.refreshTokens[refreshTokenId] = refreshExp + 1
 	}
+	s.Unlock()
 }
 
 func (s *LocalSessionCache) RemoveAll(userID uuid.UUID) {
-	// 调用内部方法执行本地操作（本地实现不再发布跨节点消息）
-	s.removeAllInternal(userID)
-}
-
-// removeAllInternal 内部方法：只操作本地缓存，不发布消息
-func (s *LocalSessionCache) removeAllInternal(userID uuid.UUID) {
-	// 使用秒级时间戳，与 JWT exp 字段保持一致
 	ts := time.Now().UTC().Unix()
 
 	s.Lock()
-	defer s.Unlock()
-
 	cache, found := s.cache[userID]
 	if !found {
 		cache = &sessionCacheUser{
@@ -236,25 +198,18 @@ func (s *LocalSessionCache) removeAllInternal(userID uuid.UUID) {
 		}
 		s.cache[userID] = cache
 	}
-	// 直接更新，不比较时间戳
-	cache.lastInvalidation = ts
-	cache.sessionTokens = make(map[string]int64)
-	cache.refreshTokens = make(map[string]int64)
+	if ts > cache.lastInvalidation {
+		cache.lastInvalidation = ts
+		cache.sessionTokens = make(map[string]int64)
+		cache.refreshTokens = make(map[string]int64)
+	}
+	s.Unlock()
 }
 
 func (s *LocalSessionCache) Ban(userIDs []uuid.UUID) {
-	// 调用内部方法执行本地操作（本地实现不再发布跨节点消息）
-	s.banInternal(userIDs)
-}
-
-// banInternal 内部方法：只操作本地缓存，不发布消息
-func (s *LocalSessionCache) banInternal(userIDs []uuid.UUID) {
-	// 使用秒级时间戳，与 JWT exp 字段保持一致
 	ts := time.Now().UTC().Unix()
 
 	s.Lock()
-	defer s.Unlock()
-
 	for _, userID := range userIDs {
 		cache, found := s.cache[userID]
 		if !found {
@@ -265,14 +220,11 @@ func (s *LocalSessionCache) banInternal(userIDs []uuid.UUID) {
 			}
 			s.cache[userID] = cache
 		}
-		// 直接更新，不比较时间戳
-		cache.lastInvalidation = ts
+		if ts > cache.lastInvalidation {
+			cache.lastInvalidation = ts
+		}
 	}
+	s.Unlock()
 }
 
-func (s *LocalSessionCache) Unban(userIDs []uuid.UUID) {
-	// 本地不需要做任何操作（黑名单模式）
-}
-
-// subscribeRedisMessages 订阅并处理来自其他节点的同步消息
-// Local 实现不包含 Redis 订阅/发布逻辑，相关能力由 RedisSessionCache 包装器提供
+func (s *LocalSessionCache) Unban(userIDs []uuid.UUID) {}

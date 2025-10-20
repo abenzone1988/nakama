@@ -82,7 +82,7 @@ func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Lo
 		redisClient: redis.NewClient(&redis.Options{
 			Addr:            config.GetCluster().RedisAddress,
 			Password:        config.GetCluster().RedisPassword,
-			DB:              1,
+			DB:              config.GetCluster().RedisDB,
 			DialTimeout:     5 * time.Second,
 			ReadTimeout:     0,
 			WriteTimeout:    5 * time.Second,

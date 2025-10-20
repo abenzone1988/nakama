@@ -815,6 +815,7 @@ type ClusterConfig struct {
 	Enabled       bool   `yaml:"enabled" json:"enabled" usage:"Enable cluster mode. When enabled, shared Redis settings below will be used."`
 	RedisAddress  string `yaml:"redis_address" json:"redis_address" usage:"Redis server address for cluster middleware (session, leaderboard)."`
 	RedisPassword string `yaml:"redis_password" json:"redis_password" usage:"Redis password for cluster middleware."`
+	RedisDB       int    `yaml:"redis_db" json:"redis_db" usage:"Redis database for cluster middleware."`
 }
 
 func (c *ClusterConfig) Clone() *ClusterConfig {
@@ -830,6 +831,7 @@ func NewClusterConfig() *ClusterConfig {
 		Enabled:       false,
 		RedisAddress:  "localhost:6379",
 		RedisPassword: "",
+		RedisDB:       0,
 	}
 }
 

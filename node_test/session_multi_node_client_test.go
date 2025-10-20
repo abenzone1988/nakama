@@ -323,14 +323,6 @@ func TestConcurrentLogin(t *testing.T) {
 			continue
 		}
 
-		// 等待 1 秒以确保：
-		// 1. Redis pub/sub 消息传播到其他节点
-		// 2. 下一次登录的 tokenIssuedAt 在不同的秒（避免秒级时间戳冲突）
-		fmt.Printf("  等待 Redis 消息同步和时间戳差异...\n")
-		syncWaitStart := time.Now()
-		time.Sleep(1 * time.Second)
-		fmt.Printf("  等待完成，耗时: %v\n", time.Since(syncWaitStart))
-
 		// 验证当前客户端的session
 		if err := client.ValidateSession(); err != nil {
 			t.Logf("客户端 %d (节点%d) session验证失败: %v", i+1, client.nodePort, err)
@@ -355,4 +347,53 @@ func TestConcurrentLogin(t *testing.T) {
 	}
 
 	fmt.Println("同账号不同节点登录测试完成")
+}
+
+// single_session=false 场景：相同账号在不同节点登录后，所有会话都应保持有效
+func TestMultiNodeNonSingleSession(t *testing.T) {
+	fmt.Println("\n=== 多节点 Non-Single Session 测试 ===")
+
+	// 注意：请确保被测节点加载的配置中 session.single_session=false
+
+	clients := []*TestClient{
+		NewTestClient(7350, "nonsingle@example.com", "password123"),
+		NewTestClient(7450, "nonsingle@example.com", "password123"),
+		NewTestClient(7550, "nonsingle@example.com", "password123"),
+	}
+
+	// 逐个登录
+	for i, c := range clients {
+		fmt.Printf("步骤 %d: 在节点%d登录用户 %s\n", i+1, c.nodePort, c.username)
+		if err := c.Login(); err != nil {
+			t.Fatalf("节点%d 登录失败: %v", c.nodePort, err)
+		}
+		// 稍等以避开秒级 issuedAt 边界
+		time.Sleep(1 * time.Second)
+	}
+
+	// 所有客户端验证都应成功
+	for _, c := range clients {
+		if err := c.ValidateSession(); err != nil {
+			t.Fatalf("Non-single 模式下 session 不应失效, 节点%d: %v", c.nodePort, err)
+		}
+	}
+}
+
+// 简易性能测试：ValidateSession 延迟
+func TestValidateSessionPerf(t *testing.T) {
+	fmt.Println("\n=== ValidateSession 性能测试 ===")
+	c := NewTestClient(7350, "bench@example.com", "password123")
+	if err := c.Login(); err != nil {
+		t.Fatalf("登录失败: %v", err)
+	}
+	const N = 200
+	start := time.Now()
+	var fails int
+	for i := 0; i < N; i++ {
+		if err := c.ValidateSession(); err != nil {
+			fails++
+		}
+	}
+	dur := time.Since(start)
+	fmt.Printf("ValidateSession %d 次，总耗时 %v，均值 %v，失败 %d\n", N, dur, time.Duration(int64(dur)/N), fails)
 }

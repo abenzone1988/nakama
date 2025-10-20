@@ -15,11 +15,13 @@
 package server
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -234,6 +236,52 @@ func TestSessionCacheClusterSync(t *testing.T) {
 		assert.False(t, node3.IsValidSession(userID, sessionExp, "token_a"))
 		assert.False(t, node3.IsValidSession(userID, sessionExp, "token_b"))
 		assert.False(t, node3.IsValidSession(userID, sessionExp, "token_c"))
+	})
+
+	t.Run("TestShortLivedTokenTTL", func(t *testing.T) {
+		// 短 TTL 用例：验证黑名单键按期过期清理，并且过期后验证通过
+		logger := zap.NewNop()
+		cfg := NewConfig(logger)
+		cfg.GetCluster().Enabled = true
+		cfg.GetCluster().RedisAddress = "localhost:6379"
+		cfg.GetCluster().RedisPassword = ""
+		cfg.Name = "ttl-node"
+
+		tokenExpiry := int64(2)   // 2 秒
+		refreshExpiry := int64(2) // 2 秒
+
+		cache := NewRedisSessionCache(logger, cfg, tokenExpiry, refreshExpiry)
+		defer cache.Stop()
+
+		userID := uuid.Must(uuid.NewV4())
+		now := time.Now().UTC().Unix()
+		sessionTokenID := "ttl_session_token"
+		refreshTokenID := "ttl_refresh_token"
+		sessionExp := now + tokenExpiry
+		refreshExp := now + refreshExpiry
+
+		// 失效当前 token（写入黑名单，TTL=2s）
+		cache.Remove(userID, sessionExp, sessionTokenID, refreshExp, refreshTokenID)
+
+		// 立即检查 Redis 中键存在
+		rdb := redis.NewClient(&redis.Options{Addr: cfg.GetCluster().RedisAddress, Password: cfg.GetCluster().RedisPassword, DB: 0})
+		defer rdb.Close()
+		ctx := context.Background()
+		sKey := "nakama:session:black:s:" + sessionTokenID
+		rKey := "nakama:session:black:r:" + refreshTokenID
+		assert.Equal(t, int64(1), rdb.Exists(ctx, sKey).Val(), "session 黑名单键应写入")
+		assert.Equal(t, int64(1), rdb.Exists(ctx, rKey).Val(), "refresh 黑名单键应写入")
+
+		// 等待 TTL 过期
+		time.Sleep(3 * time.Second)
+
+		// 过期后键应被清除
+		assert.Equal(t, int64(0), rdb.Exists(ctx, sKey).Val(), "session 黑名单键应过期清除")
+		assert.Equal(t, int64(0), rdb.Exists(ctx, rKey).Val(), "refresh 黑名单键应过期清除")
+
+		// 此时再验证该 token（用未来的 exp），应视为有效
+		futureExp := time.Now().UTC().Unix() + 3600
+		assert.True(t, cache.IsValidSession(userID, futureExp, sessionTokenID), "过期后应恢复为有效")
 	})
 }
 
