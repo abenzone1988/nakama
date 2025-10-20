@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"time"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -48,9 +48,10 @@ type RedisLeaderboardCache struct {
 	logger       *zap.Logger
 	inner        LeaderboardCache
 	redisClient  *redis.Client
-	redisPubSub  *redis.PubSub
-	redisChannel string
 	nodeID       string
+	streamKey    string
+	groupName    string
+	consumerName string
 }
 
 // NewRedisLeaderboardCache 创建包装实现
@@ -74,8 +75,10 @@ func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Lo
 		ctx:          ctx,
 		logger:       logger,
 		inner:        inner,
-		nodeID:       uuid.Must(uuid.NewV4()).String(),
-		redisChannel: "nakama:leaderboard_cache:sync",
+		nodeID:       config.GetName(),
+		streamKey:    "nakama:leaderboard_cache:stream",
+		groupName:    "", // per-node group for fan-out
+		consumerName: "",
 		redisClient: redis.NewClient(&redis.Options{
 			Addr:            config.GetCluster().RedisAddress,
 			Password:        config.GetCluster().RedisPassword,
@@ -97,13 +100,24 @@ func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Lo
 		return c
 	}
 
-	c.redisPubSub = c.redisClient.Subscribe(ctx, c.redisChannel)
-	startupLogger.Info("Leaderboard cache cluster sync via Redis enabled",
+	// Initialize per-node consumer group to achieve broadcast (fan-out)
+	c.consumerName = c.nodeID
+	c.groupName = "nakama-leaderboard-sync:" + c.nodeID
+	// Ensure stream group exists
+	if err := c.redisClient.XGroupCreateMkStream(ctx, c.streamKey, c.groupName, "$").Err(); err != nil {
+		// If group already exists, ignore; otherwise warn
+		if !strings.Contains(err.Error(), "BUSYGROUP") {
+			startupLogger.Warn("Failed to create stream group (may already exist)", zap.Error(err), zap.String("stream", c.streamKey), zap.String("group", c.groupName))
+		}
+	}
+
+	startupLogger.Info("Leaderboard cache stream fan-out via Redis Streams enabled",
 		zap.String("node_id", c.nodeID),
 		zap.String("redis_address", config.GetCluster().RedisAddress),
-		zap.String("channel", c.redisChannel))
+		zap.String("stream", c.streamKey),
+		zap.String("group", c.groupName))
 
-	go c.subscribeRedisMessages()
+	go c.consumeStream()
 	go c.redisPingLoop()
 	return c
 }
@@ -215,9 +229,14 @@ func (c *RedisLeaderboardCache) Remove(id string) {
 }
 
 // 消息订阅与发布
-func (c *RedisLeaderboardCache) subscribeRedisMessages() {
+func (c *RedisLeaderboardCache) consumeStream() {
 	backoff := 500 * time.Millisecond
 	maxBackoff := 30 * time.Second
+	c.logger.Info("Leaderboard stream consumer started",
+		zap.String("node_id", c.nodeID),
+		zap.String("stream", c.streamKey),
+		zap.String("group", c.groupName),
+		zap.String("consumer", c.consumerName))
 	for {
 		if c.ctx != nil {
 			select {
@@ -227,49 +246,90 @@ func (c *RedisLeaderboardCache) subscribeRedisMessages() {
 			}
 		}
 
-		if c.redisPubSub == nil {
-			c.redisPubSub = c.redisClient.Subscribe(c.ctx, c.redisChannel)
-		}
-
-		for {
-			if c.ctx != nil {
-				select {
-				case <-c.ctx.Done():
-					return
-				default:
+		// Blocking read from stream group
+		res, err := c.redisClient.XReadGroup(c.ctx, &redis.XReadGroupArgs{
+			Group:    c.groupName,
+			Consumer: c.consumerName,
+			Streams:  []string{c.streamKey, ">"},
+			Count:    128,
+			Block:    5 * time.Second,
+			NoAck:    false,
+		}).Result()
+		if err != nil && err != redis.Nil {
+			// If NOGROUP, (re)create group and retry quickly
+			if strings.Contains(err.Error(), "NOGROUP") {
+				if e := c.redisClient.XGroupCreateMkStream(c.ctx, c.streamKey, c.groupName, "$").Err(); e != nil {
+					c.logger.Warn("Failed to create stream group on demand",
+						zap.Error(e),
+						zap.String("stream", c.streamKey),
+						zap.String("group", c.groupName))
+				} else {
+					c.logger.Info("Created stream group on demand",
+						zap.String("stream", c.streamKey),
+						zap.String("group", c.groupName))
+				}
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			c.logger.Warn("Redis stream read error", zap.Error(err), zap.String("stream", c.streamKey))
+			time.Sleep(backoff)
+			if backoff < maxBackoff {
+				backoff *= 2
+				if backoff > maxBackoff {
+					backoff = maxBackoff
 				}
 			}
-			msg, err := c.redisPubSub.ReceiveMessage(c.ctx)
-			if err != nil {
-				c.logger.Warn("Redis PubSub receive error, reconnecting",
-					zap.Error(err),
-					zap.String("channel", c.redisChannel))
-				break
-			}
-			var syncMsg leaderboardCacheSyncMsg
-			if err := json.Unmarshal([]byte(msg.Payload), &syncMsg); err != nil {
-				c.logger.Error("Failed to unmarshal leaderboard cache sync message",
-					zap.Error(err),
-					zap.String("payload", msg.Payload))
-				continue
-			}
-			if syncMsg.NodeID == c.nodeID {
-				continue
-			}
-			c.handleSyncMessage(&syncMsg)
+			continue
 		}
+		backoff = 500 * time.Millisecond
 
-		if c.redisPubSub != nil {
-			_ = c.redisPubSub.Close()
-			c.redisPubSub = nil
+		if len(res) == 0 {
+			continue
 		}
-		time.Sleep(backoff)
-		if backoff < maxBackoff {
-			backoff *= 2
-			if backoff > maxBackoff {
-				backoff = maxBackoff
+		total := 0
+		for _, stream := range res {
+			for _, m := range stream.Messages {
+				total++
+				// Extract payload
+				var syncMsg leaderboardCacheSyncMsg
+				if raw, ok := m.Values["payload"]; ok {
+					switch v := raw.(type) {
+					case string:
+						_ = json.Unmarshal([]byte(v), &syncMsg)
+					case []byte:
+						_ = json.Unmarshal(v, &syncMsg)
+					}
+				} else {
+					// Fallback: try assemble from fields
+					if t, ok := m.Values["type"].(string); ok {
+						syncMsg.Type = t
+					}
+					if nid, ok := m.Values["node_id"].(string); ok {
+						syncMsg.NodeID = nid
+					}
+					if id, ok := m.Values["id"].(string); ok {
+						syncMsg.ID = id
+					}
+				}
+
+				c.logger.Info("Consumed leaderboard stream message",
+					zap.String("msg_id", m.ID),
+					zap.String("type", syncMsg.Type),
+					zap.String("from_node", syncMsg.NodeID),
+					zap.String("local_node", c.nodeID))
+
+				if syncMsg.NodeID != c.nodeID {
+					c.handleSyncMessage(&syncMsg)
+				}
+
+				// Acknowledge
+				_ = c.redisClient.XAck(c.ctx, c.streamKey, c.groupName, m.ID).Err()
 			}
 		}
+		c.logger.Info("Leaderboard stream batch processed",
+			zap.Int("count", total),
+			zap.String("group", c.groupName),
+			zap.String("consumer", c.consumerName))
 	}
 }
 
@@ -285,10 +345,6 @@ func (c *RedisLeaderboardCache) redisPingLoop() {
 			}
 		} else {
 			<-t.C
-		}
-		if c.redisPubSub != nil {
-			_ = c.redisPubSub.Ping(c.ctx)
-			continue
 		}
 		if c.redisClient != nil {
 			_ = c.redisClient.Ping(c.ctx).Err()
@@ -310,8 +366,14 @@ func (c *RedisLeaderboardCache) publishSyncMessage(msg *leaderboardCacheSyncMsg)
 	}
 	maxRetries := 3
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		if err := c.redisClient.Publish(c.ctx, c.redisChannel, data).Err(); err != nil {
-			c.logger.Warn("Failed to publish leaderboard cache sync message",
+		if err := c.redisClient.XAdd(c.ctx, &redis.XAddArgs{
+			Stream: c.streamKey,
+			Values: map[string]any{
+				"type":    msg.Type,
+				"payload": string(data),
+			},
+		}).Err(); err != nil {
+			c.logger.Warn("Failed to XADD leaderboard cache sync message",
 				zap.Error(err),
 				zap.String("type", msg.Type),
 				zap.String("leaderboard_id", msg.ID),
