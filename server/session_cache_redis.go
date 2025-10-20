@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -23,7 +22,7 @@ type RedisSessionCache struct {
 	redisChannel string
 }
 
-func NewRedisSessionCache(logger *zap.Logger, config Config, tokenExpirySec, refreshTokenExpirySec int64, purpose string) SessionCache {
+func NewRedisSessionCache(logger *zap.Logger, config Config, tokenExpirySec, refreshTokenExpirySec int64) SessionCache {
 	inner := NewLocalSessionCache(logger, config, tokenExpirySec, refreshTokenExpirySec).(*LocalSessionCache)
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -43,11 +42,11 @@ func NewRedisSessionCache(logger *zap.Logger, config Config, tokenExpirySec, ref
 	addr := config.GetCluster().RedisAddress
 	pass := config.GetCluster().RedisPassword
 	if addr == "" {
-		logger.Warn("Cluster mode enabled but Redis address is empty", zap.String("purpose", purpose))
+		logger.Warn("Cluster mode enabled but Redis address is empty")
 		return c
 	}
 
-	c.redisChannel = fmt.Sprintf("nakama:session_cache:%s:sync", purpose)
+	c.redisChannel = "nakama:session_cache:sync"
 	c.redisClient = redis.NewClient(&redis.Options{
 		Addr:         addr,
 		Password:     pass,

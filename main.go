@@ -178,7 +178,7 @@ func main() {
 	sessionRegistry := server.NewLocalSessionRegistry(metrics)
 	var sessionCache server.SessionCache
 	if config.GetCluster().Enabled {
-		sessionCache = server.NewRedisSessionCache(logger, config, config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec, "user")
+		sessionCache = server.NewRedisSessionCache(logger, config, config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
 	} else {
 		sessionCache = server.NewLocalSessionCache(logger, config, config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
 	}
@@ -188,10 +188,12 @@ func main() {
 	tracker := server.StartLocalTracker(logger, config, sessionRegistry, statusRegistry, metrics, jsonpbMarshaler)
 	router := server.NewLocalMessageRouter(sessionRegistry, tracker, jsonpbMarshaler)
 	// 默认使用本地缓存，当启用集群时，用 Redis 包装同步
-	baseLeaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
-	var leaderboardCache server.LeaderboardCache = baseLeaderboardCache
+
+	var leaderboardCache server.LeaderboardCache
 	if config.GetCluster().Enabled {
-		leaderboardCache = server.NewRedisLeaderboardCache(ctx, logger, startupLogger, baseLeaderboardCache, config)
+		leaderboardCache = server.NewRedisLeaderboardCache(ctx, logger, startupLogger, db, config)
+	} else {
+		leaderboardCache = server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
 	}
 	leaderboardRankCache := server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
 	leaderboardScheduler := server.NewLocalLeaderboardScheduler(logger, db, config, leaderboardCache, leaderboardRankCache)

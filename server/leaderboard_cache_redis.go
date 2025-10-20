@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -53,37 +54,46 @@ type RedisLeaderboardCache struct {
 }
 
 // NewRedisLeaderboardCache 创建包装实现
-func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Logger, inner LeaderboardCache, config Config) LeaderboardCache {
+func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Logger, db *sql.DB, config Config) LeaderboardCache {
+	inner := &LocalLeaderboardCache{
+		ctx:          ctx,
+		logger:       logger,
+		db:           db,
+		leaderboards: make(map[string]*Leaderboard),
+
+		allList:         make([]*Leaderboard, 0),
+		leaderboardList: make([]*Leaderboard, 0),
+		tournamentList:  make([]*Leaderboard, 0),
+	}
+
+	if err := inner.RefreshAllLeaderboards(ctx); err != nil {
+		startupLogger.Fatal("Error loading leaderboard cache from database", zap.Error(err))
+	}
+
 	c := &RedisLeaderboardCache{
-		ctx:    ctx,
-		logger: logger,
-		inner:  inner,
+		ctx:          ctx,
+		logger:       logger,
+		inner:        inner,
+		nodeID:       uuid.Must(uuid.NewV4()).String(),
+		redisChannel: "nakama:leaderboard_cache:sync",
+		redisClient: redis.NewClient(&redis.Options{
+			Addr:            config.GetCluster().RedisAddress,
+			Password:        config.GetCluster().RedisPassword,
+			DB:              1,
+			DialTimeout:     5 * time.Second,
+			ReadTimeout:     0,
+			WriteTimeout:    5 * time.Second,
+			MaxRetries:      3,
+			MinRetryBackoff: 100 * time.Millisecond,
+			MaxRetryBackoff: 2 * time.Second,
+			PoolSize:        10,
+		}),
 	}
-
-	if !config.GetCluster().Enabled {
-		return c
-	}
-
-	c.nodeID = uuid.Must(uuid.NewV4()).String()
-	c.redisChannel = "nakama:leaderboard_cache:sync"
-	c.redisClient = redis.NewClient(&redis.Options{
-		Addr:            config.GetCluster().RedisAddress,
-		Password:        config.GetCluster().RedisPassword,
-		DB:              1,
-		DialTimeout:     5 * time.Second,
-		ReadTimeout:     0,
-		WriteTimeout:    5 * time.Second,
-		MaxRetries:      3,
-		MinRetryBackoff: 100 * time.Millisecond,
-		MaxRetryBackoff: 2 * time.Second,
-		PoolSize:        10,
-	})
 
 	if err := c.redisClient.Ping(ctx).Err(); err != nil {
 		startupLogger.Error("Failed to connect to Redis for leaderboard cache",
 			zap.Error(err),
 			zap.String("redis_address", config.GetCluster().RedisAddress))
-		// 返回包装器但不同步
 		return c
 	}
 

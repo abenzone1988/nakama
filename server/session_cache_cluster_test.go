@@ -57,18 +57,17 @@ func TestSessionCacheClusterSync(t *testing.T) {
 
 	// 创建三个节点的 session cache，根据配置决定是否启用集群
 	// 注意：所有节点使用相同的 purpose，这样它们会订阅同一个 Redis 频道
-	purpose := "test" // 所有测试节点使用相同的 purpose
 
 	t.Log("创建节点 1...")
-	node1 := NewRedisSessionCache(logger, config1, tokenExpiry, refreshExpiry, purpose)
+	node1 := NewRedisSessionCache(logger, config1, tokenExpiry, refreshExpiry)
 	defer node1.Stop()
 
 	t.Log("创建节点 2...")
-	node2 := NewRedisSessionCache(logger, config2, tokenExpiry, refreshExpiry, purpose)
+	node2 := NewRedisSessionCache(logger, config2, tokenExpiry, refreshExpiry)
 	defer node2.Stop()
 
 	t.Log("创建节点 3...")
-	node3 := NewRedisSessionCache(logger, config3, tokenExpiry, refreshExpiry, purpose)
+	node3 := NewRedisSessionCache(logger, config3, tokenExpiry, refreshExpiry)
 	defer node3.Stop()
 
 	// 等待 Redis 连接和订阅建立（增加等待时间）
@@ -252,7 +251,7 @@ func TestSessionCacheClusterFallback(t *testing.T) {
 	refreshExpiry := int64(7200)
 
 	// 创建 session cache，应该降级为单节点模式
-	cache := NewRedisSessionCache(logger, config, tokenExpiry, refreshExpiry, "test-fallback")
+	cache := NewRedisSessionCache(logger, config, tokenExpiry, refreshExpiry)
 	defer cache.Stop()
 
 	// 验证基本功能仍然工作（单节点模式）
@@ -277,7 +276,7 @@ func TestSessionCacheNoCluster(t *testing.T) {
 	tokenExpiry := int64(3600)
 	refreshExpiry := int64(7200)
 
-	cache := NewRedisSessionCache(logger, config, tokenExpiry, refreshExpiry, "test-standalone")
+	cache := NewRedisSessionCache(logger, config, tokenExpiry, refreshExpiry)
 	defer cache.Stop()
 
 	userID := uuid.Must(uuid.NewV4())
@@ -300,7 +299,7 @@ func BenchmarkSessionCacheValidation(b *testing.B) {
 	config.Name = "benchmark-node"
 
 	logger := zap.NewNop()
-	cache := NewRedisSessionCache(logger, config, 3600, 7200, "benchmark")
+	cache := NewRedisSessionCache(logger, config, 3600, 7200)
 	defer cache.Stop()
 
 	userID := uuid.Must(uuid.NewV4())
@@ -322,7 +321,7 @@ func BenchmarkSessionCacheRemove(b *testing.B) {
 	config.Name = "benchmark-node"
 
 	logger := zap.NewNop()
-	cache := NewRedisSessionCache(logger, config, 3600, 7200, "benchmark")
+	cache := NewRedisSessionCache(logger, config, 3600, 7200)
 	defer cache.Stop()
 
 	b.ResetTimer()
