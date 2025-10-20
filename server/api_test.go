@@ -223,7 +223,7 @@ func WaitForSocket(expected error, cfg *config) {
 func NewAPIServer(t *testing.T, runtime *Runtime) (*ApiServer, *Pipeline) {
 	db := NewDB(t)
 	router := &DummyMessageRouter{}
-	sessionCache := NewLocalSessionCache(logger, cfg, 3_600, 7_200, false, "test")
+	sessionCache := NewLocalSessionCache(logger, cfg, 3_600, 7_200)
 	sessionRegistry := NewLocalSessionRegistry(metrics)
 	tracker := &LocalTracker{sessionRegistry: sessionRegistry}
 	pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, sessionRegistry, nil, nil, nil, nil, tracker, router, runtime)

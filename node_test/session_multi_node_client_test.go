@@ -296,15 +296,13 @@ func TestConcurrentLogin(t *testing.T) {
 	fmt.Println("\n=== 同账号不同节点登录测试 ===")
 
 	// 创建多个客户端，都使用相同的用户账号
-	const testCount = 10
+	const testCount = 100
 	const sameUsername = "sameuser@example.com"
 	clients := make([]*TestClient, testCount)
 
+	ports := []int{7350, 7450, 7550}
 	for i := 0; i < testCount; i++ {
-		port := 7350
-		if i%2 == 1 {
-			port = 7450 // 交替使用不同节点
-		}
+		port := ports[i%len(ports)] // 在三个节点之间轮转
 		clients[i] = NewTestClient(port, sameUsername, "password123")
 	}
 
