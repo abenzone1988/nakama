@@ -22,8 +22,71 @@ import (
 )
 
 // 旧锁已移除：使用数据库事务与顾问锁保证多节点安全
-
 const MaxJoinRetry = 3
+
+// ChallengeStatus 挑战赛状态
+type ChallengeStatus struct {
+	ID              int32     `json:"id"`
+	TournamentID    string    `json:"tournament_id"`
+	ActivityID      string    `json:"activity_id"`
+	Joined          time.Time `json:"joined"`
+	RankReward      bool      `json:"rank_reward"`       // 排名奖励是否已领取
+	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
+	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取
+	HighScoreReward bool      `json:"high_score_reward"` // 高分奖励是否已领取
+}
+
+// ScoreRewardResult 积分奖励检查结果
+type ScoreRewardResult struct {
+	RewardIds    []string `json:"reward_ids"`
+	RewardTypes  []string `json:"reward_types"` // "low", "mid", "high"
+	HasNewReward bool     `json:"has_new_reward"`
+}
+type UserMatch struct {
+	Challenges   map[int32]*ChallengeStatus `json:"join_challenges"`
+	TopThreeData *TopThreeStats             `json:"top_three_data,omitempty"` // 前三名统计数据
+}
+
+func (f *UserMatch) GetCollection() string {
+	return "user_data"
+}
+
+func (f *UserMatch) GetKey() string {
+	return "match"
+}
+
+func (f *UserMatch) Init() {
+	f.Challenges = map[int32]*ChallengeStatus{}
+	f.TopThreeData = &TopThreeStats{
+		FirstPlaceTournaments:  make(map[string]bool),
+		SecondPlaceTournaments: make(map[string]bool),
+		ThirdPlaceTournaments:  make(map[string]bool),
+		LastUpdated:            0,
+	}
+}
+
+// TopThreeStats 前三名统计数据
+type TopThreeStats struct {
+	FirstPlaceTournaments  map[string]bool `json:"first_place_tournaments"`  // 获得第一名的竞标赛ID集合
+	SecondPlaceTournaments map[string]bool `json:"second_place_tournaments"` // 获得第二名的竞标赛ID集合
+	ThirdPlaceTournaments  map[string]bool `json:"third_place_tournaments"`  // 获得第三名的竞标赛ID集合
+	LastUpdated            int64           `json:"last_updated"`             // 最后更新时间戳，用于数据版本控制
+}
+
+// GetFirstPlaceCount 获取第一名次数
+func (t *TopThreeStats) GetFirstPlaceCount() int32 {
+	return int32(len(t.FirstPlaceTournaments))
+}
+
+// GetSecondPlaceCount 获取第二名次数
+func (t *TopThreeStats) GetSecondPlaceCount() int32 {
+	return int32(len(t.SecondPlaceTournaments))
+}
+
+// GetThirdPlaceCount 获取第三名次数
+func (t *TopThreeStats) GetThirdPlaceCount() int32 {
+	return int32(len(t.ThirdPlaceTournaments))
+}
 
 func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeResponse, error) {
 	// 获取用户ID
@@ -338,7 +401,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 	// 获取或分配玩家的竞标赛ID
-	tournamentID, err := s.assignPlayerToChallengeTournamentLock(ctx, userID, &tplChallenge, startTime, endTime)
+	tournamentID, err := s.matchPlayerToChallengeTournament(ctx, userID, &tplChallenge, startTime, endTime)
 	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
@@ -836,7 +899,7 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 	// 快路径：优先尝试直接加入已存在的可用竞标赛（无跨节点锁，靠 DB 原子判断 size < max_size）
 
 	for i := 0; i < MaxJoinRetry; i++ {
-		tournament, err := TournamentFindFirstAvailable(ctx, s.logger, s.db, s.leaderboardCache, int(tplChallenge.ID))
+		tournament, err := ChallengeFindAvailable(ctx, s.logger, s.db, s.leaderboardCache, int(tplChallenge.ID))
 		if err != nil {
 			s.logger.Error("二次查找可用竞标赛失败",
 				zap.String("user_id", userID.String()),
@@ -868,7 +931,7 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 	}
 
 	// 慢路径：创建新竞标赛（跨节点串行化）封装到 core 层
-	newTournamentID, err := EnsureChallengeTournament(
+	newTournamentID, err := ChallengeCreateAndJoin(
 		ctx,
 		s.logger,
 		s.db,
@@ -915,10 +978,10 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 }
 
 // 执行竞标赛分配的核心逻辑
-func (s *ApiServer) assignPlayerToChallengeTournamentLock(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
+func (s *ApiServer) matchPlayerToChallengeTournament(ctx context.Context, userID uuid.UUID, tplChallenge *template.TplChallenge, startTime, endTime time.Time) (string, error) {
 	// 单事务 + 顾问锁 串行化“查找/创建 + 加入”，不使用客户端重试
 	username := ctx.Value(ctxUsernameKey{}).(string)
-	tid, err := EnsureChallengeJoin(
+	tid, err := ChallengeJoin(
 		ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache,
 		userID, username,
 		tplChallenge.ID, tplChallenge.Name,
@@ -926,7 +989,7 @@ func (s *ApiServer) assignPlayerToChallengeTournamentLock(ctx context.Context, u
 		tplChallenge.MaxPart,
 	)
 	if err != nil {
-		s.logger.Warn("EnsureChallengeJoin 失败",
+		s.logger.Warn("ChallengeJoin 失败",
 			zap.String("user_id", userID.String()),
 			zap.Int32("challenge_id", tplChallenge.ID),
 			zap.Error(err))

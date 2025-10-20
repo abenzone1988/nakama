@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/heroiclabs/nakama/v3/internal/cronexpr"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -176,16 +175,9 @@ type LocalLeaderboardCache struct {
 	allList         []*Leaderboard
 	leaderboardList []*Leaderboard // Non-tournament only
 	tournamentList  []*Leaderboard
-
-	// Cluster mode fields
-	nodeID       string
-	redisClient  *redis.Client
-	redisPubSub  *redis.PubSub
-	redisChannel string
-	clusterMode  bool
 }
 
-func NewLocalLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Logger, db *sql.DB, enableCluster bool, config Config) LeaderboardCache {
+func NewLocalLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Logger, db *sql.DB) LeaderboardCache {
 	l := &LocalLeaderboardCache{
 		ctx:          ctx,
 		logger:       logger,
@@ -195,16 +187,10 @@ func NewLocalLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Lo
 		allList:         make([]*Leaderboard, 0),
 		leaderboardList: make([]*Leaderboard, 0),
 		tournamentList:  make([]*Leaderboard, 0),
-		clusterMode:     false,
 	}
 
 	if err := l.RefreshAllLeaderboards(ctx); err != nil {
 		startupLogger.Fatal("Error loading leaderboard cache from database", zap.Error(err))
-	}
-
-	// 初始化集群模式
-	if enableCluster {
-		l.initializeClusterMode(ctx, startupLogger, config)
 	}
 
 	return l
@@ -508,23 +494,6 @@ func (l *LocalLeaderboardCache) Insert(id string, authoritative bool, sortOrder,
 		l.leaderboardList = append(l.leaderboardList, leaderboard)
 	}
 	l.Unlock()
-
-	// 发送集群同步消息
-	if l.clusterMode {
-		msg := &leaderboardCacheSyncMsg{
-			Type:          LeaderboardCacheMsgTypeInsert,
-			NodeID:        l.nodeID,
-			ID:            id,
-			Authoritative: authoritative,
-			SortOrder:     sortOrder,
-			Operator:      operator,
-			ResetSchedule: resetSchedule,
-			Metadata:      metadata,
-			CreateTime:    createTime,
-			EnableRanks:   enableRanks,
-		}
-		l.publishSyncMessage(msg)
-	}
 }
 
 func (l *LocalLeaderboardCache) List(limit int, cursor *LeaderboardListCursor) ([]*Leaderboard, *LeaderboardListCursor, error) {
@@ -709,36 +678,6 @@ func (l *LocalLeaderboardCache) CreateTournament(ctx context.Context, id string,
 	sort.Sort(OrderedTournaments(l.tournamentList))
 	l.Unlock()
 
-	// 发送集群同步消息（创建/更新锦标赛）
-	if l.clusterMode {
-		var endTimeUnix int64
-		if dbEndTime.Valid {
-			endTimeUnix = dbEndTime.Time.Unix()
-		}
-		msg := &leaderboardCacheSyncMsg{
-			Type:          LeaderboardCacheMsgTypeInsertTournament,
-			NodeID:        l.nodeID,
-			ID:            id,
-			Authoritative: authoritative,
-			SortOrder:     sortOrder,
-			Operator:      operator,
-			ResetSchedule: resetSchedule,
-			Metadata:      dbMetadata,
-			CreateTime:    createTime.Time.Unix(),
-			EnableRanks:   enableRanks,
-			Category:      category,
-			Description:   description,
-			Duration:      duration,
-			EndTime:       endTimeUnix,
-			JoinRequired:  joinRequired,
-			MaxSize:       dbMaxSize,
-			MaxNumScore:   dbMaxNumScore,
-			Title:         title,
-			StartTime:     dbStartTime.Time.Unix(),
-		}
-		l.publishSyncMessage(msg)
-	}
-
 	return leaderboard, true, nil
 }
 
@@ -799,32 +738,6 @@ func (l *LocalLeaderboardCache) InsertTournament(id string, authoritative bool, 
 	}
 
 	l.Unlock()
-
-	// 发送集群同步消息
-	if l.clusterMode {
-		msg := &leaderboardCacheSyncMsg{
-			Type:          LeaderboardCacheMsgTypeInsertTournament,
-			NodeID:        l.nodeID,
-			ID:            id,
-			Authoritative: authoritative,
-			SortOrder:     sortOrder,
-			Operator:      operator,
-			ResetSchedule: resetSchedule,
-			Metadata:      metadata,
-			CreateTime:    createTime,
-			EnableRanks:   enableRanks,
-			Category:      category,
-			Description:   description,
-			Duration:      duration,
-			EndTime:       endTime,
-			JoinRequired:  joinRequired,
-			MaxSize:       maxSize,
-			MaxNumScore:   maxNumScore,
-			Title:         title,
-			StartTime:     startTime,
-		}
-		l.publishSyncMessage(msg)
-	}
 }
 
 // 仅在本地节点填充锦标赛缓存，不进行集群广播。
@@ -1035,16 +948,6 @@ func (l *LocalLeaderboardCache) Remove(id string) {
 		}
 	}
 	l.Unlock()
-
-	// 发送集群同步消息
-	if l.clusterMode {
-		msg := &leaderboardCacheSyncMsg{
-			Type:   LeaderboardCacheMsgTypeRemove,
-			NodeID: l.nodeID,
-			ID:     id,
-		}
-		l.publishSyncMessage(msg)
-	}
 }
 
 func checkTournamentConfig(resetSchedule string, startTime, endTime, duration, maxSize, maxNumScore int) (*cronexpr.Expression, error) {

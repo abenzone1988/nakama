@@ -12,12 +12,12 @@ import (
 
 // Leaderboard Cache 消息类型
 const (
-	LeaderboardCacheMsgTypeInsert           = "insert"
-	LeaderboardCacheMsgTypeRemove           = "remove"
-	LeaderboardCacheMsgTypeInsertTournament = "insert_tournament"
+	LeaderboardCacheMsgTypeCreate           = "create"
+	LeaderboardCacheMsgTypeDelete           = "delete"
+	LeaderboardCacheMsgTypeCreateTournament = "create_tournament"
 )
 
-// leaderboardCacheSyncMsg 排行榜缓存同步消息
+// leaderboardCacheSyncMsg 同步消息
 type leaderboardCacheSyncMsg struct {
 	Type          string `json:"type"`
 	NodeID        string `json:"node_id"`
@@ -41,24 +41,36 @@ type leaderboardCacheSyncMsg struct {
 	StartTime    int64  `json:"start_time,omitempty"`
 }
 
-// initializeClusterMode 初始化 Redis 集群模式
-func (l *LocalLeaderboardCache) initializeClusterMode(ctx context.Context, startupLogger *zap.Logger, config Config) {
-	if !config.GetCluster().Enabled {
-		startupLogger.Warn("Cluster mode requested for leaderboard cache but not enabled in config")
-		return
+// RedisLeaderboardCache 基于 Redis 同步的排行榜缓存实现（包装本地缓存）
+type RedisLeaderboardCache struct {
+	ctx          context.Context
+	logger       *zap.Logger
+	inner        LeaderboardCache
+	redisClient  *redis.Client
+	redisPubSub  *redis.PubSub
+	redisChannel string
+	nodeID       string
+}
+
+// NewRedisLeaderboardCache 创建包装实现
+func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Logger, inner LeaderboardCache, config Config) LeaderboardCache {
+	c := &RedisLeaderboardCache{
+		ctx:    ctx,
+		logger: logger,
+		inner:  inner,
 	}
 
-	l.nodeID = uuid.Must(uuid.NewV4()).String()
-	// 记录 ctx 以便后续重连/退出控制
-	l.ctx = ctx
-	l.redisChannel = "nakama:leaderboard_cache:sync"
-	// 创建 Redis 客户端（加入超时与重试配置，提高不稳定网络下的鲁棒性）
-	l.redisClient = redis.NewClient(&redis.Options{
-		Addr:        config.GetCluster().RedisAddress,
-		Password:    config.GetCluster().RedisPassword,
-		DB:          1,
-		DialTimeout: 5 * time.Second,
-		// PubSub 长连接建议 ReadTimeout=0，避免客户端超时导致 EOF
+	if !config.GetCluster().Enabled {
+		return c
+	}
+
+	c.nodeID = uuid.Must(uuid.NewV4()).String()
+	c.redisChannel = "nakama:leaderboard_cache:sync"
+	c.redisClient = redis.NewClient(&redis.Options{
+		Addr:            config.GetCluster().RedisAddress,
+		Password:        config.GetCluster().RedisPassword,
+		DB:              1,
+		DialTimeout:     5 * time.Second,
 		ReadTimeout:     0,
 		WriteTimeout:    5 * time.Second,
 		MaxRetries:      3,
@@ -67,81 +79,179 @@ func (l *LocalLeaderboardCache) initializeClusterMode(ctx context.Context, start
 		PoolSize:        10,
 	})
 
-	if err := l.redisClient.Ping(ctx).Err(); err != nil {
+	if err := c.redisClient.Ping(ctx).Err(); err != nil {
 		startupLogger.Error("Failed to connect to Redis for leaderboard cache",
 			zap.Error(err),
 			zap.String("redis_address", config.GetCluster().RedisAddress))
-		return
+		// 返回包装器但不同步
+		return c
 	}
-	// 订阅 Redis 频道
-	l.redisPubSub = l.redisClient.Subscribe(ctx, l.redisChannel)
-	l.clusterMode = true
 
-	startupLogger.Info("Leaderboard cache cluster mode enabled",
-		zap.String("node_id", l.nodeID),
+	c.redisPubSub = c.redisClient.Subscribe(ctx, c.redisChannel)
+	startupLogger.Info("Leaderboard cache cluster sync via Redis enabled",
+		zap.String("node_id", c.nodeID),
 		zap.String("redis_address", config.GetCluster().RedisAddress),
-		zap.String("channel", l.redisChannel))
+		zap.String("channel", c.redisChannel))
 
-	// 启动消息订阅 goroutine
-	go l.subscribeRedisMessages()
-	// 定期 PING 心跳，减少空闲断连
-	go l.redisPingLoop()
+	go c.subscribeRedisMessages()
+	go c.redisPingLoop()
+	return c
 }
 
-// subscribeRedisMessages 订阅 Redis Pub/Sub 消息
-func (l *LocalLeaderboardCache) subscribeRedisMessages() {
+// 接口实现（读操作转发）
+func (c *RedisLeaderboardCache) Get(id string) *Leaderboard { return c.inner.Get(id) }
+
+func (c *RedisLeaderboardCache) ListAll(limit int, reverse bool, cursor *LeaderboardAllCursor) ([]*Leaderboard, int, *LeaderboardAllCursor) {
+	return c.inner.ListAll(limit, reverse, cursor)
+}
+
+func (c *RedisLeaderboardCache) RefreshAllLeaderboards(ctx context.Context) error {
+	return c.inner.RefreshAllLeaderboards(ctx)
+}
+
+func (c *RedisLeaderboardCache) List(limit int, cursor *LeaderboardListCursor) ([]*Leaderboard, *LeaderboardListCursor, error) {
+	return c.inner.List(limit, cursor)
+}
+
+func (c *RedisLeaderboardCache) ListTournaments(now int64, categoryStart, categoryEnd int, startTime, endTime int64, limit int, cursor *TournamentListCursor) ([]*Leaderboard, *TournamentListCursor, error) {
+	return c.inner.ListTournaments(now, categoryStart, categoryEnd, startTime, endTime, limit, cursor)
+}
+
+// 接口实现（写操作：本地执行 + 发布同步）
+func (c *RedisLeaderboardCache) Create(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule, metadata string, enableRanks bool) (*Leaderboard, bool, error) {
+	lb, created, err := c.inner.Create(ctx, id, authoritative, sortOrder, operator, resetSchedule, metadata, enableRanks)
+	if err != nil {
+		return lb, created, err
+	}
+	if created {
+		msg := &leaderboardCacheSyncMsg{
+			Type:          LeaderboardCacheMsgTypeCreate,
+			NodeID:        c.nodeID,
+			ID:            id,
+			Authoritative: authoritative,
+			SortOrder:     sortOrder,
+			Operator:      operator,
+			ResetSchedule: resetSchedule,
+			Metadata:      metadata,
+			CreateTime:    lb.CreateTime,
+			EnableRanks:   enableRanks,
+		}
+		c.publishSyncMessage(msg)
+	}
+	return lb, created, nil
+}
+
+func (c *RedisLeaderboardCache) Insert(id string, authoritative bool, sortOrder, operator int, resetSchedule, metadata string, createTime int64, enableRanks bool) {
+	c.inner.Insert(id, authoritative, sortOrder, operator, resetSchedule, metadata, createTime, enableRanks)
+}
+
+func (c *RedisLeaderboardCache) CreateTournament(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule, metadata, title, description string, category, startTime, endTime, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) (*Leaderboard, bool, error) {
+	lb, created, err := c.inner.CreateTournament(ctx, id, authoritative, sortOrder, operator, resetSchedule, metadata, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired, enableRanks)
+	if err != nil {
+		return lb, created, err
+	}
+	if created {
+		msg := &leaderboardCacheSyncMsg{
+			Type:          LeaderboardCacheMsgTypeCreateTournament,
+			NodeID:        c.nodeID,
+			ID:            id,
+			Authoritative: authoritative,
+			SortOrder:     sortOrder,
+			Operator:      operator,
+			ResetSchedule: resetSchedule,
+			Metadata:      metadata,
+			CreateTime:    lb.CreateTime,
+			EnableRanks:   enableRanks,
+			Category:      lb.Category,
+			Description:   lb.Description,
+			Duration:      lb.Duration,
+			EndTime:       lb.EndTime,
+			JoinRequired:  lb.JoinRequired,
+			MaxSize:       lb.MaxSize,
+			MaxNumScore:   lb.MaxNumScore,
+			Title:         lb.Title,
+			StartTime:     lb.StartTime,
+		}
+		c.publishSyncMessage(msg)
+	}
+	return lb, created, nil
+}
+
+func (c *RedisLeaderboardCache) InsertTournament(id string, authoritative bool, sortOrder, operator int, resetSchedule, metadata, title, description string, category, duration, maxSize, maxNumScore int, joinRequired bool, createTime, startTime, endTime int64, enableRanks bool) {
+	c.inner.InsertTournament(id, authoritative, sortOrder, operator, resetSchedule, metadata, title, description, category, duration, maxSize, maxNumScore, joinRequired, createTime, startTime, endTime, enableRanks)
+}
+
+func (c *RedisLeaderboardCache) Delete(ctx context.Context, rankCache LeaderboardRankCache, scheduler LeaderboardScheduler, id string) (bool, error) {
+	changed, err := c.inner.Delete(ctx, rankCache, scheduler, id)
+	if err == nil && changed {
+		msg := &leaderboardCacheSyncMsg{
+			Type:   LeaderboardCacheMsgTypeDelete,
+			NodeID: c.nodeID,
+			ID:     id,
+		}
+		c.publishSyncMessage(msg)
+	}
+	return changed, err
+}
+
+func (c *RedisLeaderboardCache) Remove(id string) {
+	c.inner.Remove(id)
+	msg := &leaderboardCacheSyncMsg{
+		Type:   LeaderboardCacheMsgTypeDelete,
+		NodeID: c.nodeID,
+		ID:     id,
+	}
+	c.publishSyncMessage(msg)
+}
+
+// 消息订阅与发布
+func (c *RedisLeaderboardCache) subscribeRedisMessages() {
 	backoff := 500 * time.Millisecond
 	maxBackoff := 30 * time.Second
-
 	for {
-		// 退出判断
-		if l.ctx != nil {
+		if c.ctx != nil {
 			select {
-			case <-l.ctx.Done():
+			case <-c.ctx.Done():
 				return
 			default:
 			}
 		}
 
-		// 确保已订阅
-		if l.redisPubSub == nil {
-			l.redisPubSub = l.redisClient.Subscribe(l.ctx, l.redisChannel)
+		if c.redisPubSub == nil {
+			c.redisPubSub = c.redisClient.Subscribe(c.ctx, c.redisChannel)
 		}
 
-		// 使用 ReceiveMessage 主动读，遇到错误重连
 		for {
-			if l.ctx != nil {
+			if c.ctx != nil {
 				select {
-				case <-l.ctx.Done():
+				case <-c.ctx.Done():
 					return
 				default:
 				}
 			}
-
-			msg, err := l.redisPubSub.ReceiveMessage(l.ctx)
+			msg, err := c.redisPubSub.ReceiveMessage(c.ctx)
 			if err != nil {
-				l.logger.Warn("Redis PubSub receive error, reconnecting",
+				c.logger.Warn("Redis PubSub receive error, reconnecting",
 					zap.Error(err),
-					zap.String("channel", l.redisChannel))
+					zap.String("channel", c.redisChannel))
 				break
 			}
 			var syncMsg leaderboardCacheSyncMsg
 			if err := json.Unmarshal([]byte(msg.Payload), &syncMsg); err != nil {
-				l.logger.Error("Failed to unmarshal leaderboard cache sync message",
+				c.logger.Error("Failed to unmarshal leaderboard cache sync message",
 					zap.Error(err),
 					zap.String("payload", msg.Payload))
 				continue
 			}
-			if syncMsg.NodeID == l.nodeID {
+			if syncMsg.NodeID == c.nodeID {
 				continue
 			}
-			l.handleSyncMessage(&syncMsg)
+			c.handleSyncMessage(&syncMsg)
 		}
 
-		// 清理并退避重连
-		if l.redisPubSub != nil {
-			_ = l.redisPubSub.Close()
-			l.redisPubSub = nil
+		if c.redisPubSub != nil {
+			_ = c.redisPubSub.Close()
+			c.redisPubSub = nil
 		}
 		time.Sleep(backoff)
 		if backoff < maxBackoff {
@@ -153,45 +263,45 @@ func (l *LocalLeaderboardCache) subscribeRedisMessages() {
 	}
 }
 
-// redisPingLoop 定期向 PubSub/Client 发送 PING，减少空闲断连
-func (l *LocalLeaderboardCache) redisPingLoop() {
-	t := time.NewTicker(30 * time.Second)
+func (c *RedisLeaderboardCache) redisPingLoop() {
+	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	for {
-		if l.ctx != nil {
+		if c.ctx != nil {
 			select {
-			case <-l.ctx.Done():
+			case <-c.ctx.Done():
 				return
 			case <-t.C:
 			}
 		} else {
 			<-t.C
 		}
-		if l.redisPubSub != nil {
-			_ = l.redisPubSub.Ping(l.ctx)
+		if c.redisPubSub != nil {
+			_ = c.redisPubSub.Ping(c.ctx)
 			continue
 		}
-		if l.redisClient != nil {
-			_ = l.redisClient.Ping(l.ctx).Err()
+		if c.redisClient != nil {
+			_ = c.redisClient.Ping(c.ctx).Err()
 		}
 	}
 }
 
-// publishSyncMessage 发布同步消息到 Redis
-func (l *LocalLeaderboardCache) publishSyncMessage(msg *leaderboardCacheSyncMsg) {
+func (c *RedisLeaderboardCache) publishSyncMessage(msg *leaderboardCacheSyncMsg) {
+	if c.redisClient == nil {
+		return
+	}
 	data, err := json.Marshal(msg)
 	if err != nil {
-		l.logger.Error("Failed to marshal leaderboard cache sync message",
+		c.logger.Error("Failed to marshal leaderboard cache sync message",
 			zap.Error(err),
 			zap.String("type", msg.Type),
 			zap.String("leaderboard_id", msg.ID))
 		return
 	}
-	// 重试机制
 	maxRetries := 3
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		if err := l.redisClient.Publish(l.ctx, l.redisChannel, data).Err(); err != nil {
-			l.logger.Warn("Failed to publish leaderboard cache sync message",
+		if err := c.redisClient.Publish(c.ctx, c.redisChannel, data).Err(); err != nil {
+			c.logger.Warn("Failed to publish leaderboard cache sync message",
 				zap.Error(err),
 				zap.String("type", msg.Type),
 				zap.String("leaderboard_id", msg.ID),
@@ -206,61 +316,25 @@ func (l *LocalLeaderboardCache) publishSyncMessage(msg *leaderboardCacheSyncMsg)
 	}
 }
 
-// handleSyncMessage 处理收到的同步消息
-func (l *LocalLeaderboardCache) handleSyncMessage(msg *leaderboardCacheSyncMsg) {
+func (c *RedisLeaderboardCache) handleSyncMessage(msg *leaderboardCacheSyncMsg) {
+	c.logger.Info("Handling leaderboard cache sync message",
+		zap.String("type", msg.Type),
+		zap.String("from_node", msg.NodeID),
+		zap.String("leaderboard_id", msg.ID))
 	switch msg.Type {
-	case LeaderboardCacheMsgTypeInsert:
-		// 插入或更新排行榜配置
-		l.Insert(msg.ID, msg.Authoritative, msg.SortOrder, msg.Operator,
+	case LeaderboardCacheMsgTypeCreate:
+		c.Insert(msg.ID, msg.Authoritative, msg.SortOrder, msg.Operator,
 			msg.ResetSchedule, msg.Metadata, msg.CreateTime, msg.EnableRanks)
-	case LeaderboardCacheMsgTypeRemove:
-		// 删除排行榜配置（不发布消息，避免循环）
-		l.removeWithoutPublish(msg.ID)
-	case LeaderboardCacheMsgTypeInsertTournament:
-		// 插入或更新锦标赛配置
-		l.InsertTournament(msg.ID, msg.Authoritative, msg.SortOrder, msg.Operator,
+	case LeaderboardCacheMsgTypeDelete:
+		c.Remove(msg.ID)
+	case LeaderboardCacheMsgTypeCreateTournament:
+		c.InsertTournament(msg.ID, msg.Authoritative, msg.SortOrder, msg.Operator,
 			msg.ResetSchedule, msg.Metadata, msg.Title, msg.Description,
 			msg.Category, msg.Duration, msg.MaxSize, msg.MaxNumScore,
 			msg.JoinRequired, msg.CreateTime, msg.StartTime, msg.EndTime, msg.EnableRanks)
 	default:
-		l.logger.Warn("Unknown leaderboard cache sync message type",
+		c.logger.Warn("Unknown leaderboard cache sync message type",
 			zap.String("type", msg.Type),
 			zap.String("from_node", msg.NodeID))
 	}
-}
-
-// removeWithoutPublish 删除排行榜但不发布同步消息（避免循环）
-func (l *LocalLeaderboardCache) removeWithoutPublish(id string) {
-	l.Lock()
-	if leaderboard, ok := l.leaderboards[id]; ok {
-		delete(l.leaderboards, id)
-		for i, currentAll := range l.allList {
-			if currentAll.Id == id {
-				copy(l.allList[i:], l.allList[i+1:])
-				l.allList[len(l.allList)-1] = nil
-				l.allList = l.allList[:len(l.allList)-1]
-				break
-			}
-		}
-		if leaderboard.IsTournament() {
-			for i, currentLeaderboard := range l.tournamentList {
-				if currentLeaderboard.Id == id {
-					copy(l.tournamentList[i:], l.tournamentList[i+1:])
-					l.tournamentList[len(l.tournamentList)-1] = nil
-					l.tournamentList = l.tournamentList[:len(l.tournamentList)-1]
-					break
-				}
-			}
-		} else {
-			for i, currentLeaderboard := range l.leaderboardList {
-				if currentLeaderboard.Id == id {
-					copy(l.leaderboardList[i:], l.leaderboardList[i+1:])
-					l.leaderboardList[len(l.leaderboardList)-1] = nil
-					l.leaderboardList = l.leaderboardList[:len(l.leaderboardList)-1]
-					break
-				}
-			}
-		}
-	}
-	l.Unlock()
 }

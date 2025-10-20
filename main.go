@@ -182,7 +182,12 @@ func main() {
 	statusRegistry := server.NewLocalStatusRegistry(logger, config, sessionRegistry, jsonpbMarshaler)
 	tracker := server.StartLocalTracker(logger, config, sessionRegistry, statusRegistry, metrics, jsonpbMarshaler)
 	router := server.NewLocalMessageRouter(sessionRegistry, tracker, jsonpbMarshaler)
-	leaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db, config.GetCluster().Enabled, config)
+	// 默认使用本地缓存，当启用集群时，用 Redis 包装同步
+	baseLeaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
+	var leaderboardCache server.LeaderboardCache = baseLeaderboardCache
+	if config.GetCluster().Enabled {
+		leaderboardCache = server.NewRedisLeaderboardCache(ctx, logger, startupLogger, baseLeaderboardCache, config)
+	}
 	leaderboardRankCache := server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
 	leaderboardScheduler := server.NewLocalLeaderboardScheduler(logger, db, config, leaderboardCache, leaderboardRankCache)
 	googleRefundScheduler := server.NewGoogleRefundScheduler(logger, db, config)
