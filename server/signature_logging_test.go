@@ -17,11 +17,6 @@ func TestSignatureVerificationLogging(t *testing.T) {
 	observedZapCore, observedLogs := observer.New(zapcore.InfoLevel)
 	logger := zap.New(observedZapCore)
 
-	// 创建一个模拟的 ApiServer
-	server := &ApiServer{
-		logger: logger,
-	}
-
 	// 测试用户信息
 	userID := uuid.Must(uuid.NewV4())
 	username := "test_user"
@@ -44,10 +39,26 @@ func TestSignatureVerificationLogging(t *testing.T) {
 			},
 		}
 
-		// 调用函数（这会失败并记录日志）
-		_, err := server.WriteLeaderboardRecord(ctx, request)
+		// 直接测试签名验证函数，而不是通过ApiServer
+		verifiedMetadata, err := VerifyRecordSignature(&SignatureVerificationRequest{
+			RecordType: "leaderboard",
+			RecordID:   request.LeaderboardId,
+			Score:      request.Record.Score,
+			Subscore:   request.Record.Subscore,
+			Metadata:   request.Record.Metadata,
+			UserID:     userID.String(),
+			Username:   username,
+			Logger:     logger,
+		})
+
+		// 应该返回错误，因为签名无效
 		if err == nil {
 			t.Error("Expected error for invalid signature, but got none")
+		}
+
+		// 验证后的metadata应该为空（因为验证失败）
+		if verifiedMetadata != "" {
+			t.Error("Expected empty metadata after verification failure")
 		}
 
 		// 检查是否记录了相应的日志
@@ -110,10 +121,26 @@ func TestSignatureVerificationLogging(t *testing.T) {
 			},
 		}
 
-		// 调用函数（这会失败并记录日志）
-		_, err := server.WriteTournamentRecord(ctx, request)
+		// 直接测试签名验证函数，而不是通过ApiServer
+		verifiedMetadata, err := VerifyRecordSignature(&SignatureVerificationRequest{
+			RecordType: "tournament",
+			RecordID:   request.TournamentId,
+			Score:      request.Record.Score,
+			Subscore:   request.Record.Subscore,
+			Metadata:   request.Record.Metadata,
+			UserID:     userID.String(),
+			Username:   username,
+			Logger:     logger,
+		})
+
+		// 应该返回错误，因为签名无效
 		if err == nil {
 			t.Error("Expected error for invalid signature, but got none")
+		}
+
+		// 验证后的metadata应该为空（因为验证失败）
+		if verifiedMetadata != "" {
+			t.Error("Expected empty metadata after verification failure")
 		}
 
 		// 检查是否记录了相应的日志

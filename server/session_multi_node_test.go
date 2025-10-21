@@ -1,4 +1,4 @@
-package node_test
+package server_test
 
 import (
 	"bytes"
@@ -210,6 +210,25 @@ func (c *TestClient) RefreshToken() error {
 	return nil
 }
 
+// 简易性能测试：ValidateSession 延迟
+func TestValidateSessionPerf(t *testing.T) {
+	fmt.Println("\n=== ValidateSession 性能测试 ===")
+	c := NewTestClient(7350, "bench@example.com", "password123")
+	if err := c.Login(); err != nil {
+		t.Fatalf("登录失败: %v", err)
+	}
+	const N = 200
+	start := time.Now()
+	var fails int
+	for i := 0; i < N; i++ {
+		if err := c.ValidateSession(); err != nil {
+			fails++
+		}
+	}
+	dur := time.Since(start)
+	fmt.Printf("ValidateSession %d 次，总耗时 %v，均值 %v，失败 %d\n", N, dur, time.Duration(int64(dur)/N), fails)
+}
+
 // 测试多节点 single session 行为
 func TestMultiNodeSingleSession(t *testing.T) {
 	fmt.Println("=== 多节点 Single Session 测试 ===")
@@ -292,7 +311,7 @@ func TestMultiNodeSingleSession(t *testing.T) {
 }
 
 // 测试同账号不同节点登录，验证session失效
-func TestConcurrentLogin(t *testing.T) {
+func TestMultiNodeConcurrentLogin(t *testing.T) {
 	fmt.Println("\n=== 同账号不同节点登录测试 ===")
 
 	// 创建多个客户端，都使用相同的用户账号
@@ -377,23 +396,4 @@ func TestMultiNodeNonSingleSession(t *testing.T) {
 			t.Fatalf("Non-single 模式下 session 不应失效, 节点%d: %v", c.nodePort, err)
 		}
 	}
-}
-
-// 简易性能测试：ValidateSession 延迟
-func TestValidateSessionPerf(t *testing.T) {
-	fmt.Println("\n=== ValidateSession 性能测试 ===")
-	c := NewTestClient(7350, "bench@example.com", "password123")
-	if err := c.Login(); err != nil {
-		t.Fatalf("登录失败: %v", err)
-	}
-	const N = 200
-	start := time.Now()
-	var fails int
-	for i := 0; i < N; i++ {
-		if err := c.ValidateSession(); err != nil {
-			fails++
-		}
-	}
-	dur := time.Since(start)
-	fmt.Printf("ValidateSession %d 次，总耗时 %v，均值 %v，失败 %d\n", N, dur, time.Duration(int64(dur)/N), fails)
 }

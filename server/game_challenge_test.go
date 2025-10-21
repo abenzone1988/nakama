@@ -2395,8 +2395,8 @@ func TestMultiNodeJoinChallenge(t *testing.T) {
 	t.Logf("测试已正常结束")
 }
 
-// TestThreeNodeJoinChallenge 专门测试3个节点的并发加入挑战赛
-func TestThreeNodeJoinChallenge(t *testing.T) {
+// TestMultiNodeThreeNodeJoinChallenge 专门测试3个节点的并发加入挑战赛
+func TestMultiNodeThreeNodeJoinChallenge(t *testing.T) {
 	// 快速跳过策略：仅在显式要求时执行
 	if testing.Short() {
 		t.Log("-short 模式下仍执行三节点并发测试…")

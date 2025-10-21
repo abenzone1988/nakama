@@ -14,10 +14,6 @@ session:
   refresh_token_expiry_sec: 186400
   single_socket: true
   single_session: true
-  use_redis: true
-  redis_address: "redis:6379"
-  redis_password: "redis123"
-
 socket:
   server_key: "sparkgame"
   port: 7350

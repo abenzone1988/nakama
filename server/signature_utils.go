@@ -250,9 +250,11 @@ func GenerateWalletSignature(operationType string, coin, gem, ad int64, reason s
 
 // GenerateWalletSignatureV2 生成钱包操作签名
 func GenerateWalletSignatureV2(operationType string, coin, gem, ad int64, reason, userID, walletID string) (string, error) {
-	// 验证walletID是否为有效的UUID
-	if _, err := uuid.FromString(walletID); err != nil {
-		return "", fmt.Errorf("invalid walletID format: %v", err)
+	// 验证walletID是否为有效的UUID（如果提供了walletID）
+	if walletID != "" {
+		if _, err := uuid.FromString(walletID); err != nil {
+			return "", fmt.Errorf("invalid walletID format: %v", err)
+		}
 	}
 
 	data := map[string]interface{}{

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"sync"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -24,6 +25,7 @@ type TemplateManager interface {
 }
 
 type LocalTemplateManager struct {
+	sync.RWMutex
 	logger                 *zap.Logger
 	db                     *sql.DB
 	tableTplRedemption     *TableTplRedemption
@@ -53,34 +55,51 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 }
 
 func (t *LocalTemplateManager) GetTplStarterPack() *TableTplStarterPack {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplStarterPack
 }
 
 func (t *LocalTemplateManager) GetTplDailySignIn() *TableTplDailySignIn {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplDailySignIn
 }
 
 func (t *LocalTemplateManager) GetTplActivityInfo() *TableTplActivityInfo {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplActivityInfo
 }
 
 func (t *LocalTemplateManager) GetTplRedemption() *TableTplRedemption {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplRedemption
 }
 
 func (t *LocalTemplateManager) GetTplActivityReward() *TableTplActivityReward {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplActivityReward
 }
 
 func (t *LocalTemplateManager) GetTplReward() *TableTplReward {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplReward
 }
 
 func (t *LocalTemplateManager) GetTplChallenge() *TableTplChallenge {
+	t.RLock()
+	defer t.RUnlock()
 	return t.tableTplChallenge
 }
 
 func (t *LocalTemplateManager) LoadData() {
+	t.Lock()
+	defer t.Unlock()
+
 	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 	t.tableTplChallenge.LoadData(t.StorageReadTpl("TplChallenge"))

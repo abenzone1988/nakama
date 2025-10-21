@@ -148,37 +148,37 @@ export class ConfigComponent implements OnInit, OnDestroy {
     });
   }
 
-  public deleteData(): void {
-    this.deleteConfirmService.openDeleteConfirmModal(
-      () => {
-        this.deleteError = '';
-        this.deleting = true;
-        this.consoleService.deleteAllData('').pipe(delay(2000)).subscribe(
-          () => {
-            this.deleting = false;
-            this.deleteError = '';
-            this.deleteSuccess = true;
-          }, err => {
-            this.deleting = false;
-            this.deleteError = err;
-          },
-        );
-      },
-      this.confirmDeleteForm,
-      'Delete All Data' ,
-     'Are you sure you want to delete all the database data?'
-    );
-  }
+  // public deleteData(): void {
+  //   this.deleteConfirmService.openDeleteConfirmModal(
+  //     () => {
+  //       this.deleteError = '';
+  //       this.deleting = true;
+  //       this.consoleService.deleteAllData('').pipe(delay(2000)).subscribe(
+  //         () => {
+  //           this.deleting = false;
+  //           this.deleteError = '';
+  //           this.deleteSuccess = true;
+  //         }, err => {
+  //           this.deleting = false;
+  //           this.deleteError = err;
+  //         },
+  //       );
+  //     },
+  //     this.confirmDeleteForm,
+  //     'Delete All Data' ,
+  //    'Are you sure you want to delete all the database data?'
+  //   );
+  // }
 
 
-  public openDeleteDataModal(modal): void {
-    this.modalService.open(modal, {centered: true}).result.then(() => {
-      this.deleteData();
-      this.confirmDeleteForm.controls.delete.setValue( '');
-    }, () => {
-      this.confirmDeleteForm.controls.delete.setValue( '');
-    });
-  }
+  // public openDeleteDataModal(modal): void {
+  //   this.modalService.open(modal, {centered: true}).result.then(() => {
+  //     this.deleteData();
+  //     this.confirmDeleteForm.controls.delete.setValue( '');
+  //   }, () => {
+  //     this.confirmDeleteForm.controls.delete.setValue( '');
+  //   });
+  // }
 
   public openReloadTplModal(modal): void {
     this.modalService.open(modal, {centered: true}).result.then(() => {
