@@ -793,7 +793,6 @@ func (s *ApiServer) sendExpiredRankReward(ctx context.Context, userID uuid.UUID,
 	}
 
 	if rewardId == "" {
-		s.logger.Info("排名奖励不存在", zap.Int32("rank", int32(ownerRecord.Rank)), zap.String("activity_id", challenge.ActivityID))
 		return false, nil
 	}
 

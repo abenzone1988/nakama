@@ -458,11 +458,10 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 	}
 
 	if len(notices) == 0 {
-		logger.Info("没有查询到系统通知")
 		return nil
 	}
-	logger.Info("查询到的系统通知", zap.Any("notices", notices))
 
+	logger.Info("查询到的系统通知", zap.Any("notices", notices))
 	// 构建通知列表
 	notifications := make([]*api.Notification, 0, len(notices))
 	var latestSyncTime int64 = userMeta.LastSyncNotice

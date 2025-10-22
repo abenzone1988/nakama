@@ -450,6 +450,7 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 			}
 		}
 	}
+	//}
 
 	// 对于score和subscore都为0的记录，将rank设置为0
 	for _, record := range ownerRecords {

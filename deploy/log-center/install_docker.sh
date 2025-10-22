@@ -29,12 +29,12 @@ mkdir -p /etc/docker
 cat > /etc/docker/daemon.json <<EOF
 {
   "registry-mirrors": [
-    "https://registry.cn-hangzhou.aliyuncs.com",
-    "https://mirror.ccs.tencentyun.com",
-    "https://docker.mirrors.ustc.edu.cn",
-    "https://hub-mirror.c.163.com"
+    "https://docker.m.daocloud.io",
+    "https://dockerproxy.com",
+    "https://registry.cn-hangzhou.aliyuncs.com"
   ]
 }
+
 EOF
 
 systemctl daemon-reload
