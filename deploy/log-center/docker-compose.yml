@@ -1,0 +1,49 @@
+services:
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: loki
+    user: "10001:10001"
+    ports:
+      - "3100:3100"
+    volumes:
+      - /opt/log-center/loki-config.yml:/etc/loki/config.yml:ro,Z
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yml -validation.allow-structured-metadata=false
+    restart: always
+    networks: [monitoring]
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - /opt/log-center/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    restart: always
+    networks: [monitoring]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    ports: ["3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on: [loki, prometheus]
+    restart: always
+    networks: [monitoring]
+
+volumes:
+  loki-data: {}
+  prometheus-data: {}
+  grafana-data: {}
+networks:
+  monitoring:
+    driver: bridge

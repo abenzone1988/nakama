@@ -1,0 +1,26 @@
+name: dy-hjzx
+
+database:
+  address:
+    - "root:sparkinfi123!@192.168.0.111:5432?dbname=dy-hjzx"
+metrics:
+  prometheus_port: 9200
+
+cluster:
+  enabled: true
+  redis_address: "192.168.0.110:6379"
+  redis_password: ""
+  redis_db: 1
+
+session:
+  token_expiry_sec: 1209600
+  refresh_token_expiry_sec: 2592000
+  single_socket: true
+  single_session: true
+
+socket:
+  server_key: "sparkgame"
+
+console:
+  username: "sparkinfi"
+  password: "G7m$K9z!Q2v@B4t"

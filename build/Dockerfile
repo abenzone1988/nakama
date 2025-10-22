@@ -39,8 +39,8 @@ FROM debian:bookworm-slim
 
 ARG VERSION
 
-LABEL maintainer="Heroic Labs"
-LABEL contact="support@heroiclabs.com"
+LABEL maintainer="SparkInfi"
+LABEL contact="jiangpeng147@gmail.com"
 LABEL version=$VERSION
 LABEL variant=nakama
 LABEL description="Distributed server for social and realtime games and apps."
