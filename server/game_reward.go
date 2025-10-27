@@ -162,16 +162,16 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 	if in.GetCoin() < 0 || in.GetGem() < 0 || in.GetAd() < 0 {
 		s.logger.Warn("钱包操作参数非法", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
-		return &game.WalletResponse{Code: 2, Msg: "钱包操作参数非法"}, nil
+		return &game.WalletResponse{Code: 2, Msg: "负数-钱包操作参数非法"}, nil
 	}
 
 	if in.GetCoin() == 0 && in.GetGem() == 0 && in.GetAd() == 0 {
 		s.logger.Warn("钱包操作参数非法", zap.String("user_id", userID.String()), zap.Int32("coin", in.GetCoin()), zap.Int32("gem", in.GetGem()), zap.Int32("ad", in.GetAd()))
-		return &game.WalletResponse{Code: 2, Msg: "钱包操作参数非法"}, nil
+		return &game.WalletResponse{Code: 2, Msg: "全0-钱包操作参数非法"}, nil
 	}
 
 	if in.GetReason() == "战斗胜利" && in.GetAd() > 0 {
-		return &game.WalletResponse{Code: 2, Msg: "钱包操作参数非法"}, nil
+		return &game.WalletResponse{Code: 2, Msg: "战斗胜利-钱包操作参数非法"}, nil
 	}
 
 	// 可选：最大值校验，防止溢出 金币钻石 10w 广告券 10

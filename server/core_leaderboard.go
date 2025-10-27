@@ -393,9 +393,9 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 	// 场景2：无 OwnerIds 时，保持原有缓存逻辑（性能优先）。
 	var rankCount int64
 	if leaderboard.EnableRanks && len(ownerRecords) > 0 && len(ownerIds) != 0 {
-		logger.Info("OwnerIds查询：使用数据库计算排名（跳过本地缓存）",
-			zap.String("leaderboard_id", leaderboardId),
-			zap.Int("owner_records", len(ownerRecords)))
+		//logger.Info("OwnerIds查询：使用数据库计算排名（跳过本地缓存）",
+		//	zap.String("leaderboard_id", leaderboardId),
+		//	zap.Int("owner_records", len(ownerRecords)))
 		if err := fillRanksFromDatabase(ctx, logger, db, leaderboard, expiryTime, ownerRecords); err != nil {
 			logger.Warn("OwnerIds查询：数据库计算排名失败",
 				zap.String("leaderboard_id", leaderboardId),

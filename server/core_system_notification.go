@@ -461,13 +461,9 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 		return nil
 	}
 
-	logger.Info("查询到的系统通知", zap.Any("notices", notices))
 	// 构建通知列表
 	notifications := make([]*api.Notification, 0, len(notices))
 	var latestSyncTime int64 = userMeta.LastSyncNotice
-
-	logger.Info("上次同步的时间", zap.String("last_sync_time", time.Unix(latestSyncTime, 0).Format("2006-01-02 15:04:05")))
-	logger.Info("当前系统时间", zap.String("last_sync_time", time.Unix(serverNow, 0).Format("2006-01-02 15:04:05")))
 
 	// 加载用户挑战赛数据，用于检查比赛类型通知
 	var userMatch *UserMatch
@@ -487,9 +483,6 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 
 		// 使用 effective_time 作为同步时间戳，但确保只处理已生效的通知
 		effectiveTime := notice.GetEffectiveTime().AsTime().UTC().Unix()
-
-		// 只处理已生效的通知
-
 		// 根据通知类型进行不同处理
 		shouldAddNotification := false
 

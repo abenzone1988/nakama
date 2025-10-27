@@ -131,14 +131,6 @@ func (s *ApiServer) SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLeve
 		}, nil
 	}
 
-	s.logger.Info("关卡数据保存成功",
-		zap.String("user_id", userID.String()),
-		zap.String("level_id", levelID),
-		zap.String("max_level_id", homeLevelData.MaxLevelId),
-		zap.Bool("is_new_record", isNewRecord),
-		zap.Bool("is_passed", in.GetIsPassed()),
-	)
-
 	return &game.SaveHomeLevelDataResponse{
 		Code:        0,
 		Msg:         "保存成功",

@@ -606,12 +606,6 @@ func (s *ApiServer) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty)
 		}, nil
 	}
 
-	s.logger.Info("获取前三名统计数据",
-		zap.String("user_id", userID.String()),
-		zap.Int32("first_place", userMatch.TopThreeData.GetFirstPlaceCount()),
-		zap.Int32("second_place", userMatch.TopThreeData.GetSecondPlaceCount()),
-		zap.Int32("third_place", userMatch.TopThreeData.GetThirdPlaceCount()))
-
 	return &game.GetChallengeTopStatsResponse{
 		Code: 0,
 		Msg:  "获取成功",
@@ -728,7 +722,6 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 				// 获取用户在竞标赛中的记录
 				records, err := TournamentRecordsList(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, challenge.TournamentID, []string{userID.String()}, nil, "", 0)
 				if err != nil || len(records.OwnerRecords) == 0 {
-					s.logger.Info("没有提交成绩没有奖励", zap.String("user_id", userID.String()), zap.String("tournament_id", challenge.TournamentID))
 					continue
 				}
 				ownerRecord := records.OwnerRecords[0]
@@ -1013,8 +1006,6 @@ func (s *ApiServer) initializeTopThreeStats(ctx context.Context, userID uuid.UUI
 			LastUpdated:            0,
 		}
 	}
-
-	s.logger.Info("开始初始化用户前三名统计数据", zap.String("user_id", userID.String()))
 
 	// 通过循环查找 userMatch 中参加挑战赛的ID，查询用户的排名成绩
 	for challengeID, challenge := range userMatch.Challenges {
