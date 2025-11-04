@@ -88,11 +88,40 @@
   <h6 class="mr-2 d-inline font-weight-bold">All data successfully deleted.</h6>
 </ngb-alert>
 
-<div class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+<!-- <div class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
   <div>
     <img src="/static/svg/red-triangle.svg" alt="" width="16" height="">
     <small class="pl-2">Warning - this operation is not reversible!</small>
   </div>
   <button [disabled]="deleting" (click)="deleteData()" type="button" class="btn btn-danger">Delete all</button>
-</div>
+</div> -->
 
+<h5 class="section-divider d-flex mb-4">Template Manager</h5>
+
+<ngb-alert [dismissible]="false" type="danger" *ngIf="reloadError">
+  <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">Failed to reload template.</h6>
+  <p class="mb-0 pl-4">{{reloadError}}</p>
+</ngb-alert>
+
+<ngb-alert type="success" *ngIf="reloadSuccess" [dismissible]="true" (close)="reloadSuccess=false">
+  <img src="/static/svg/green-tick.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">Template reloaded successfully.</h6>
+</ngb-alert>
+
+<ng-template #confirmReload let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title">Reload Template</h5>
+    <button type="button" class="close" aria-describedby="modal-title" (click)="modal.dismiss()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <p>Are you sure you want to reload the template?</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="modal.close();">Reload</button>
+  </div>
+</ng-template>
+<button class="btn btn-primary" (click)="openReloadTplModal(confirmReload)">Reload Template</button>

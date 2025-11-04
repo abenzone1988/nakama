@@ -1,5 +1,12 @@
 <div class="container-fluid">
   <div class="row">
+    <!-- 语言切换按钮 -->
+    <div class="language-switcher position-fixed" style="top: 20px; right: 20px; z-index: 1000;">
+      <div class="btn-group" role="group" aria-label="Language">
+        <button type="button" class="btn btn-outline-secondary" [class.active]="currentLang === 'en'" (click)="switchLanguage('en')">EN</button>
+        <button type="button" class="btn btn-outline-secondary" [class.active]="currentLang === 'zh'" (click)="switchLanguage('zh')">中</button>
+      </div>
+    </div>
 
     <!-- sidebar -->
     <nav #sidenav="ngbNav" ngbNav (navChange)="onSidebarNavChange($event)"

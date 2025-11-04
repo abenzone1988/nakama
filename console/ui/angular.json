@@ -22,7 +22,11 @@
           "options": {
             "allowedCommonJsDependencies": [
               "file-saver",
-              "js-yaml"
+              "js-yaml",
+              "@segment/facade",
+              "@segment/analytics.js-video-plugins",
+              "rfdc",
+              "qrcode"
             ],
             "outputPath": "dist",
             "index": "src/index.html",
@@ -32,11 +36,13 @@
             "aot": true,
             "assets": [
               "src/favicon.ico",
-              "src/static"
+              "src/static",
+              "src/assets"
             ],
             "styles": [
               "src/bootstrap.min.css",
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/app/shared/styles/modal.scss"
             ],
             "scripts": [],
             "vendorChunk": true,

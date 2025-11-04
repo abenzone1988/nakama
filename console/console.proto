@@ -26,6 +26,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
+import "msg.proto";
 
 option go_package = "github.com/heroiclabs/nakama/v3/console";
 
@@ -185,6 +186,57 @@ service Console {
         delete: "/v2/console/storage/{collection}/{key}/{user_id}/{version}"
       }
     };
+  }
+
+  // Reload template data
+  rpc ReloadTemplate (google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http).post = "/v2/console/template";
+  }
+
+  // Get challenge template by ID
+  rpc GetChallengeTemplate (ChallengeTemplateRequest) returns (ChallengeTemplateResponse) {
+    option (google.api.http).get = "/v2/console/template/challenge/{id}";
+  }
+
+  // Get all challenge templates
+  rpc GetAllChallengeTemplates (google.protobuf.Empty) returns (GetAllChallengeTemplatesResponse) {
+    option (google.api.http).get = "/v2/console/template/challenges";
+  }
+
+  // Create Personal notification
+  rpc CreatePersonalNotification (CreatePersonalNotificationRequest) returns (PersonalNotice) {
+    option (google.api.http) = {
+      post: "/v2/console/personal_notification"
+      body: "*"
+    };
+  }
+
+  // Get personal notification logs
+  rpc ListPersonalNotificationLogs (ListPersonalNotificationLogRequest) returns (ListPersonalNotificationLogResponse) {
+    option (google.api.http).get = "/v2/console/personal-notification-logs";
+  }
+
+  // Add VIP account
+  rpc AddVipAccount (AddVipAccountRequest) returns (AddVipAccountResponse) {
+    option (google.api.http) = {
+      post: "/v2/console/vip/account",
+      body: "*"
+    };
+  }
+
+  // List VIP accounts
+  rpc ListVipAccounts (ListVipAccountsRequest) returns (VipAccountList) {
+    option (google.api.http).get = "/v2/console/vip/accounts";
+  }
+
+  // Remove VIP account (set as expired)
+  rpc RemoveVipAccount (VipAccountId) returns (google.protobuf.Empty) {
+    option (google.api.http).delete = "/v2/console/vip/account/{user_id}";
+  }
+
+  // Check if user is VIP
+  rpc CheckVipStatus (VipAccountId) returns (VipStatusResponse) {
+    option (google.api.http).get = "/v2/console/vip/status/{user_id}";
   }
 
   // Delete (non-recorded) all user accounts.
@@ -466,6 +518,87 @@ service Console {
       body: "*"
     };
   }
+  // Create announcement
+  rpc CreateAnnouncement (CreateAnnouncementRequest) returns (Announcement) {
+    option (google.api.http) = {
+      post: "/v2/console/announcement"
+      body: "*"
+    };
+  }
+
+  // Update announcement
+  rpc UpdateAnnouncement (UpdateAnnouncementRequest) returns (Announcement) {
+    option (google.api.http) = {
+      put: "/v2/console/announcement/{id}"
+      body: "*"
+    };
+  }
+
+  // Delete announcement
+  rpc DeleteAnnouncement (AnnouncementId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v2/console/announcement/{id}"
+    };
+  }
+
+  // List announcements
+  rpc ListAnnouncements (ListAnnouncementsRequest) returns (AnnouncementList) {
+    option (google.api.http) = {
+      get: "/v2/console/announcements"
+    };
+  }
+
+  // Get single announcement
+  rpc GetAnnouncement (AnnouncementId) returns (Announcement) {
+    option (google.api.http) = {
+      get: "/v2/console/announcement/{id}"
+    };
+  }
+
+  // Search announcements
+  rpc SearchAnnouncements (SearchAnnouncementsRequest) returns (AnnouncementList) {
+    option (google.api.http) = {
+      get: "/v2/console/announcements/search"
+    };
+  }
+
+  // List system notifications
+  rpc ListSystemNotifications (ListSystemNoticeRequest) returns (ListSystemNoticeResponse) {
+    option (google.api.http) = {
+      get: "/v2/console/system_notifications"
+    };
+  }
+
+  // Create system notification
+  rpc CreateSystemNotification (CreateSystemNotificationRequest) returns (SystemNotice) {
+    option (google.api.http) = {
+      post: "/v2/console/system_notification"
+      body: "*"
+    };
+  }
+
+  // Update system notification
+  rpc UpdateSystemNotification (SystemNotice) returns (SystemNotice) {
+    option (google.api.http) = {
+      put: "/v2/console/system_notification/{id}"
+      body: "*"
+    };
+  }
+
+  // Get single system notification
+  rpc GetSystemNotification (SystemNotificationId) returns (SystemNotice) {
+    option (google.api.http) = {
+      get: "/v2/console/system_notification/{id}"
+    };
+  }
+
+  // Delete system notification
+  rpc DeleteSystemNotification (SystemNotificationId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v2/console/system_notification/{id}"
+    };
+  }
+
 }
 
 // API Explorer List of Endpoints response message
@@ -954,6 +1087,10 @@ message Notification {
   bool persistent = 7;
   // User id.
   string user_id = 8;
+  // Status of notification 0 unread, 1 read. 2 attachment recived.
+  int32 status = 9;
+  // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was expired.
+  google.protobuf.Timestamp expiry_time = 10;
 }
 
 message NotificationList {
@@ -1227,4 +1364,332 @@ message StorageListObject {
   google.protobuf.Timestamp create_time = 7;
   // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the object was last updated.
   google.protobuf.Timestamp update_time = 8;
+}
+
+// Announcement message definition
+message Announcement {
+  // Announcement ID
+  string id = 1;
+  // Announcement title
+  string title = 2;
+  // Announcement content
+  string content = 3;
+  // Creation time
+  google.protobuf.Timestamp create_time = 4;
+  // Update time
+  google.protobuf.Timestamp update_time = 5;
+  // Image URL
+  string img = 6;
+  // Status 0:draft 1:published 2:offline
+  int32 status = 7;
+}
+
+message AnnouncementList {
+  // Announcement list
+  repeated Announcement announcements = 1;
+  // Total count
+  int32 total_count = 2;
+  // Next page cursor
+  string next_cursor = 3;
+}
+
+message CreateAnnouncementRequest {
+  // Announcement title
+  string title = 1;
+  // Announcement content
+  string content = 2;
+  // Image URL
+  string img = 3;
+  // Status 0:draft 1:published 2:offline
+  int32 status = 4;
+}
+
+message UpdateAnnouncementRequest {
+  // Announcement ID
+  string id = 1;
+  // Announcement title
+  string title = 2;
+  // Announcement content
+  string content = 3;
+  // Image URL
+  string img = 4;
+  // Status 0:draft 1:published 2:offline
+  int32 status = 5;
+}
+
+message ListAnnouncementsRequest {
+  // Status filter -1:all 0:draft 1:published 2:offline
+  int32 status = 1;
+  // Items per page
+  int32 limit = 2;
+  // Cursor
+  string cursor = 3;
+}
+
+message AnnouncementId {
+  string id = 1;
+}
+
+message SearchAnnouncementsRequest {
+  // Search keyword
+  string query = 1;
+  // Items per page
+  int32 limit = 2;
+  // Cursor
+  string cursor = 3;
+}
+
+// System notification message definition
+message SystemNotice {
+  // Notification ID
+  string id = 1;
+  // Notification subject
+  string subject = 2;
+  // Notification content
+  NoticeContent content = 3;
+  // Creation time
+  google.protobuf.Timestamp create_time = 4;
+  // Effective time
+  google.protobuf.Timestamp effective_time = 5;
+  // Expiry time
+  google.protobuf.Timestamp expiry_time = 6;
+  // Challenge ID
+  int32 challenge_id = 7;
+  // Notice Type
+  int32 notice_type = 8;
+}
+
+message NoticeContent {
+  // Notification description
+  string description = 1;
+  // Reward items
+  repeated game.Reward rewards = 2;
+}
+
+message SystemNotificationId {
+  // Notification ID
+  string id = 1;
+}
+
+message CreateSystemNotificationRequest {
+  // Type 0:all users 1:challenge 2:specific users
+  int32 type = 1;
+  // Target user ID list
+  repeated string target = 2;
+  // Notification content
+  SystemNotice notice = 3;
+}
+
+message CreatePersonalNotificationRequest {
+  // Type 0:all users 1:challenge 2:specific users
+  int32 type = 1;
+  // Target user ID list
+  repeated string target = 2;
+  // Notification content
+  PersonalNotice notice = 3;
+}
+
+message CreatePersonalNotificationResponse {
+  // Success message
+  string message = 1;
+  // Successfully sent user count
+  int32 success_count = 2;
+  // Failed user names
+  repeated string failed_users = 3;
+}
+
+message PersonalNotice {
+  // Notification subject
+  string subject = 1;
+  // Notification content
+  NoticeContent content = 2;
+}
+
+message UpdateSystemNotificationRequest {
+  // Notification ID
+  string id = 1;
+  // Notification content
+  SystemNotice notice = 2;
+}
+
+message ListSystemNoticeRequest {
+  // Filter condition
+  string filter = 1;
+  // Cursor
+  string cursor = 2;
+  // Items per page
+  int32 limit = 3;
+}
+
+message ListSystemNoticeResponse {
+  // Notification list
+  repeated SystemNotice notifications = 1;
+  // Next page cursor
+  string next_cursor = 2;
+  // Previous page cursor
+  string prev_cursor = 3;
+  // Total count
+  int32 total_count = 4;
+}
+
+message SearchSystemNotificationsRequest {
+  // Search keyword
+  string query = 1;
+  // Items per page
+  int32 limit = 2;
+  // Cursor
+  string cursor = 3;
+}
+
+message ChallengeTemplateRequest {
+  // Challenge template ID
+  int32 id = 1;
+}
+
+message ChallengeTemplateResponse {
+  // Challenge template data
+  ChallengeTemplate template = 1;
+}
+
+message ChallengeTemplate {
+  // Challenge ID
+  int32 id = 1;
+  // Challenge name
+  string name = 2;
+  // Activity ID
+  string activity_id = 3;
+  // Open time
+  string open_time = 4;
+  // Close time
+  string close_time = 5;
+  // End time
+  string end_time = 6;
+  // Max participants
+  int32 max_part = 7;
+  // Reward remains minutes
+  int32 reward_remains = 8;
+  // Status
+  int32 status = 9;
+}
+
+message GetAllChallengeTemplatesResponse {
+  // Challenge template list
+  repeated ChallengeTemplate templates = 1;
+}
+
+// Personal notification log message definition
+message PersonalNotificationLog {
+  // Log ID
+  string id = 1;
+  // Notification subject
+  string subject = 2;
+  // Notification content
+  NoticeContent content = 3;
+  // Target ids
+  string target_ids = 4;
+  // Sender Name
+  string sender = 5;
+  // Send time
+  google.protobuf.Timestamp send_time = 6;
+  // Notification count
+  int32 notification_count = 7;
+}
+
+message ListPersonalNotificationLogRequest {
+  // Filter condition
+  string filter = 1;
+  // Date from
+  string date_from = 2;
+  // Date to
+  string date_to = 3;
+  // Cursor
+  string cursor = 4;
+  // Items per page
+  int32 limit = 5;
+}
+
+message ListPersonalNotificationLogResponse {
+  // Log list
+  repeated PersonalNotificationLog logs = 1;
+  // Next page cursor
+  string next_cursor = 2;
+  // Previous page cursor
+  string prev_cursor = 3;
+  // Total count
+  int32 total_count = 4;
+}
+
+// VIP account message definition
+message VipAccount {
+  // VIP account ID
+  string id = 1;
+  // User ID
+  string user_id = 2;
+  // Username
+  string username = 3;
+  // Creation time
+  google.protobuf.Timestamp create_time = 4;
+  // Expiry time
+  google.protobuf.Timestamp expiry_time = 5;
+  // Is VIP active
+  bool is_active = 6;
+}
+
+message AddVipAccountRequest {
+  // Usernames to add VIP
+  repeated string usernames = 1;
+  // Custom expiry time (optional, if not provided, will be set to current time + 1 year)
+  google.protobuf.Timestamp expire_time = 2;
+}
+
+message AddVipAccountResponse {
+  // Successfully added VIP accounts
+  repeated VipAccount success_accounts = 1;
+  // Failed username mappings
+  repeated VipAccountError failed_accounts = 2;
+  // Summary
+  int32 total_count = 3;
+  int32 success_count = 4;
+  int32 failed_count = 5;
+}
+
+message VipAccountError {
+  // Username that failed
+  string username = 1;
+  // Error message
+  string error_message = 2;
+  // Error code
+  string error_code = 3;
+}
+
+message ListVipAccountsRequest {
+  // Filter condition
+  string filter = 1;
+  // Cursor
+  string cursor = 2;
+  // Items per page
+  int32 limit = 3;
+}
+
+message VipAccountList {
+  // VIP account list
+  repeated VipAccount accounts = 1;
+  // Next page cursor
+  string next_cursor = 2;
+  // Previous page cursor
+  string prev_cursor = 3;
+  // Total count
+  int32 total_count = 4;
+}
+
+message VipAccountId {
+  // User ID
+  string user_id = 1;
+}
+
+message VipStatusResponse {
+  // Is VIP active
+  bool is_vip = 1;
+  // VIP account info (if exists)
+  VipAccount vip_account = 2;
 }

@@ -38,6 +38,11 @@ export class NotificationsComponent implements OnInit, OnChanges {
   public prevCursor = '';
   public userId: string;
   public readonly limit = 100;
+  public readonly notificationStatus = {
+    0: '未读',
+    1: '已读',
+    2: '已接收附件'
+  };
 
   @Input('notification_id') notificationId: string;
 

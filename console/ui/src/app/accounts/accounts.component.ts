@@ -20,6 +20,7 @@ import {UntypedFormBuilder, UntypedFormGroup} from '@angular/forms';
 import {AuthenticationService} from '../authentication.service';
 import {DeleteConfirmService} from '../shared/delete-confirm.service';
 import {takeUntil} from 'rxjs/operators';
+import { TranslationService } from '../services/translation.service';
 
 @Component({
   templateUrl: './accounts.component.html',
@@ -43,6 +44,7 @@ export class AccountListComponent implements OnInit, OnDestroy {
     private readonly authService: AuthenticationService,
     private readonly formBuilder: UntypedFormBuilder,
     private readonly deleteConfirmService: DeleteConfirmService,
+    private readonly translationService: TranslationService,
   ) {}
 
   ngOnInit(): void {
@@ -53,9 +55,9 @@ export class AccountListComponent implements OnInit, OnDestroy {
     });
 
     const qp = this.route.snapshot.queryParamMap;
-    this.f.filter.setValue(qp.get('filter'));
-    this.f.filter_type.setValue(+qp.get('filter_type'));
-    this.nextCursor = qp.get('cursor');
+    this.f.filter.setValue(qp.get('filter') || '');
+    this.f.filter_type.setValue(+(qp.get('filter_type') || '0'));
+    this.nextCursor = qp.get('cursor') || '';
 
     if (this.nextCursor && this.nextCursor !== '') {
       this.search(1);
@@ -66,11 +68,12 @@ export class AccountListComponent implements OnInit, OnDestroy {
     this.route.data.subscribe(
       d => {
         this.accounts.length = 0;
-        if (d) {
-          this.accounts.push(...d[0].users);
-          this.accountsCount = d[0].total_count;
-          this.nextCursor = d[0].next_cursor;
-          this.prevCursor = d[0].prev_cursor;
+        if (d && d[0]) {
+          const users = d[0].users || [];
+          this.accounts.push(...users);
+          this.accountsCount = d[0].total_count || 0;
+          this.nextCursor = d[0].next_cursor || '';
+          this.prevCursor = d[0].prev_cursor || '';
         }
       },
       err => {
@@ -110,9 +113,9 @@ export class AccountListComponent implements OnInit, OnDestroy {
       this.error = '';
 
       this.accounts.length = 0;
-      this.accounts.push(...d.users);
-      this.accountsCount = d.total_count;
-      this.nextCursor = d.next_cursor;
+      this.accounts.push(...(d.users || []));
+      this.accountsCount = d.total_count || 0;
+      this.nextCursor = d.next_cursor || '';
 
       this.router.navigate([], {
         relativeTo: this.route,
@@ -141,7 +144,7 @@ export class AccountListComponent implements OnInit, OnDestroy {
         event.target.disabled = true;
         event.preventDefault();
         this.error = '';
-        this.consoleService.deleteAccount('', o.id, false).subscribe(() => {
+        this.consoleService.deleteAccount('', o.id || '', false).subscribe(() => {
           this.error = '';
           this.accounts.splice(i, 1);
           this.accountsCount--;
@@ -174,6 +177,6 @@ export class AccountSearchResolver implements Resolve<AccountList> {
     const filter = route.queryParamMap.get('filter');
     const tombstones = route.queryParamMap.get('tombstones');
 
-    return this.consoleService.listAccounts('', filter, tombstones === 'true', null);
+    return this.consoleService.listAccounts('', filter || undefined, tombstones === 'true', undefined);
   }
 }

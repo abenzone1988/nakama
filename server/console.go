@@ -141,6 +141,30 @@ var restrictedMethods = map[string]console.UserRole{
 	"/nakama.console.Console/ListUsers":      console.UserRole_USER_ROLE_ADMIN,
 	"/nakama.console.Console/ResetUserMfa":   console.UserRole_USER_ROLE_ADMIN,
 	"/nakama.console.Console/RequireUserMfa": console.UserRole_USER_ROLE_ADMIN,
+
+	// Announcement
+	"/nakama.console.Console/CreateAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/UpdateAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/DeleteAnnouncement": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/GetAnnouncement":    console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/ListAnnouncements":  console.UserRole_USER_ROLE_READONLY,
+
+	// System Notification
+	"/nakama.console.Console/CreateSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/UpdateSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/DeleteSystemNotification": console.UserRole_USER_ROLE_MAINTAINER,
+	"/nakama.console.Console/GetSystemNotification":    console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/ListSystemNotifications":  console.UserRole_USER_ROLE_READONLY,
+
+	// Personal Notification Logs
+	"/nakama.console.Console/ListPersonalNotificationLogs": console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/CreatePersonalNotification":   console.UserRole_USER_ROLE_READONLY,
+
+	// VIP Management
+	"/nakama.console.Console/AddVipAccount":    console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/ListVipAccounts":  console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/RemoveVipAccount": console.UserRole_USER_ROLE_READONLY,
+	"/nakama.console.Console/CheckVipStatus":   console.UserRole_USER_ROLE_READONLY,
 }
 
 type ctxConsoleIdKey struct{}

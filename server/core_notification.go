@@ -23,11 +23,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/heroiclabs/nakama-common/runtime"
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -38,6 +39,7 @@ import (
 )
 
 const (
+	NotificationSystemNotice         int32 = 0
 	NotificationCodeDmRequest        int32 = -1
 	NotificationCodeFriendRequest    int32 = -2
 	NotificationCodeFriendAccept     int32 = -3
@@ -232,7 +234,7 @@ func NotificationList(ctx context.Context, logger *zap.Logger, db *sql.DB, userI
 	}
 
 	query := `
-SELECT id, subject, content, code, sender_id, create_time
+SELECT id, subject, content, code, sender_id, status, create_time, expiry_time
 FROM notification
 WHERE user_id = $1` + cursorQuery + `
 ORDER BY create_time ASC, id ASC` + limitQuery
@@ -253,9 +255,10 @@ ORDER BY create_time ASC, id ASC` + limitQuery
 			hasNextPage = true
 			break
 		}
-		no := &api.Notification{Persistent: true, CreateTime: &timestamppb.Timestamp{}}
+		no := &api.Notification{Persistent: true, CreateTime: &timestamppb.Timestamp{}, ExpiryTime: &timestamppb.Timestamp{}}
 		var createTime pgtype.Timestamptz
-		if err := rows.Scan(&no.Id, &no.Subject, &no.Content, &no.Code, &no.SenderId, &createTime); err != nil {
+		var expiryTime pgtype.Timestamptz
+		if err := rows.Scan(&no.Id, &no.Subject, &no.Content, &no.Code, &no.SenderId, &no.Status, &createTime, &expiryTime); err != nil {
 			_ = rows.Close()
 			logger.Error("Could not scan notification from database.", zap.Error(err))
 			return nil, err
@@ -263,6 +266,9 @@ ORDER BY create_time ASC, id ASC` + limitQuery
 
 		lastCreateTime = createTime.Time.UnixNano()
 		no.CreateTime.Seconds = createTime.Time.Unix()
+		if expiryTime.Valid {
+			no.ExpiryTime.Seconds = expiryTime.Time.Unix()
+		}
 		if no.SenderId == uuid.Nil.String() {
 			no.SenderId = ""
 		}
@@ -472,4 +478,63 @@ func NotificationsUpdate(ctx context.Context, logger *zap.Logger, db *sql.DB, up
 	}
 
 	return nil
+}
+
+// NotificationMarkRead marks notifications as read for a user
+func NotificationMarkRead(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, notificationIDs []string) (int32, error) {
+	if len(notificationIDs) == 0 {
+		return 0, nil
+	}
+
+	query := "UPDATE notification SET status = 1 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status = 0"
+	result, err := db.ExecContext(ctx, query, userID, notificationIDs)
+	if err != nil {
+		logger.Error("Could not mark notifications as read.", zap.Error(err))
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		logger.Error("Could not get affected rows count.", zap.Error(err))
+		return 0, err
+	}
+
+	return int32(rowsAffected), nil
+}
+
+// NotificationClaimAttachments claims attachments from notifications for a user
+func NotificationClaimAttachments(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, notificationIDs []string) (int32, error) {
+	if len(notificationIDs) == 0 {
+		return 0, nil
+	}
+
+	// 首先检查是否有已领取状态的通知
+	query := "SELECT id FROM notification WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status = 2"
+	rows, err := db.QueryContext(ctx, query, userID, notificationIDs)
+	if err != nil {
+		logger.Error("Error checking notification status", zap.Error(err))
+		return 0, err
+	}
+	defer rows.Close()
+
+	// 如果有任何通知已经是领取状态,返回错误
+	if rows.Next() {
+		return 0, errors.New("some notifications are already claimed")
+	}
+
+	// 更新未读或已读状态的通知为已领取状态
+	query = "UPDATE notification SET status = 2 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status < 2"
+	result, err := db.ExecContext(ctx, query, userID, notificationIDs)
+	if err != nil {
+		logger.Error("Error claiming notification attachments", zap.Error(err))
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		logger.Error("Error getting affected rows count", zap.Error(err))
+		return 0, err
+	}
+
+	return int32(rowsAffected), nil
 }

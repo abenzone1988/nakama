@@ -130,6 +130,18 @@ const (
 	Nakama_ListInvitee_FullMethodName                       = "/nakama.api.Nakama/ListInvitee"
 	Nakama_ClaimInviteReward_FullMethodName                 = "/nakama.api.Nakama/ClaimInviteReward"
 	Nakama_GetGameTime_FullMethodName                       = "/nakama.api.Nakama/GetGameTime"
+	Nakama_ListPublishedAnnouncements_FullMethodName        = "/nakama.api.Nakama/ListPublishedAnnouncements"
+	Nakama_MarkNotificationsRead_FullMethodName             = "/nakama.api.Nakama/MarkNotificationsRead"
+	Nakama_ClaimNotificationAttachments_FullMethodName      = "/nakama.api.Nakama/ClaimNotificationAttachments"
+	Nakama_SaveHomeLevelData_FullMethodName                 = "/nakama.api.Nakama/SaveHomeLevelData"
+	Nakama_GetHomeLevelData_FullMethodName                  = "/nakama.api.Nakama/GetHomeLevelData"
+	Nakama_ResetHomeLevelData_FullMethodName                = "/nakama.api.Nakama/ResetHomeLevelData"
+	Nakama_OperateWallet_FullMethodName                     = "/nakama.api.Nakama/OperateWallet"
+	Nakama_GetChallenge_FullMethodName                      = "/nakama.api.Nakama/GetChallenge"
+	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
+	Nakama_GainChallengeReward_FullMethodName               = "/nakama.api.Nakama/GainChallengeReward"
+	Nakama_GetChallengeTopStats_FullMethodName              = "/nakama.api.Nakama/GetChallengeTopStats"
+	Nakama_CheckVipStatus_FullMethodName                    = "/nakama.api.Nakama/CheckVipStatus"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -318,6 +330,30 @@ type NakamaClient interface {
 	ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Get Server Time
 	GetGameTime(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetGameTimeResponse, error)
+	// List published announcements
+	ListPublishedAnnouncements(ctx context.Context, in *game.ListPublishedAnnouncementsRequest, opts ...grpc.CallOption) (*game.ListPublishedAnnouncementsResponse, error)
+	// Mark notifications as read
+	MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*api.MarkNotificationsReadResponse, error)
+	// Claim notification attachments
+	ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*api.ClaimNotificationAttachmentsResponse, error)
+	// Save home level data
+	SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLevelDataRequest, opts ...grpc.CallOption) (*game.SaveHomeLevelDataResponse, error)
+	// Get home level data
+	GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelDataRequest, opts ...grpc.CallOption) (*game.GetHomeLevelDataResponse, error)
+	// Reset home level data
+	ResetHomeLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// OperateWallet
+	OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error)
+	// Get Challenge
+	GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error)
+	// Join Challenge
+	JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest, opts ...grpc.CallOption) (*game.JoinChallengeResponse, error)
+	// Gain Challenge Reward
+	GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest, opts ...grpc.CallOption) (*game.GainChallengeRewardResponse, error)
+	// Get Top Three Stats
+	GetChallengeTopStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeTopStatsResponse, error)
+	// Check if current user is VIP
+	CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error)
 }
 
 type nakamaClient struct {
@@ -1147,6 +1183,114 @@ func (c *nakamaClient) GetGameTime(ctx context.Context, in *emptypb.Empty, opts 
 	return out, nil
 }
 
+func (c *nakamaClient) ListPublishedAnnouncements(ctx context.Context, in *game.ListPublishedAnnouncementsRequest, opts ...grpc.CallOption) (*game.ListPublishedAnnouncementsResponse, error) {
+	out := new(game.ListPublishedAnnouncementsResponse)
+	err := c.cc.Invoke(ctx, Nakama_ListPublishedAnnouncements_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*api.MarkNotificationsReadResponse, error) {
+	out := new(api.MarkNotificationsReadResponse)
+	err := c.cc.Invoke(ctx, Nakama_MarkNotificationsRead_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*api.ClaimNotificationAttachmentsResponse, error) {
+	out := new(api.ClaimNotificationAttachmentsResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimNotificationAttachments_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) SaveHomeLevelData(ctx context.Context, in *game.SaveHomeLevelDataRequest, opts ...grpc.CallOption) (*game.SaveHomeLevelDataResponse, error) {
+	out := new(game.SaveHomeLevelDataResponse)
+	err := c.cc.Invoke(ctx, Nakama_SaveHomeLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetHomeLevelData(ctx context.Context, in *game.GetHomeLevelDataRequest, opts ...grpc.CallOption) (*game.GetHomeLevelDataResponse, error) {
+	out := new(game.GetHomeLevelDataResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetHomeLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ResetHomeLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Nakama_ResetHomeLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.WalletResponse, error) {
+	out := new(game.WalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_OperateWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error) {
+	out := new(game.GetChallengeResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetChallenge_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest, opts ...grpc.CallOption) (*game.JoinChallengeResponse, error) {
+	out := new(game.JoinChallengeResponse)
+	err := c.cc.Invoke(ctx, Nakama_JoinChallenge_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest, opts ...grpc.CallOption) (*game.GainChallengeRewardResponse, error) {
+	out := new(game.GainChallengeRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_GainChallengeReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeTopStatsResponse, error) {
+	out := new(game.GetChallengeTopStatsResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetChallengeTopStats_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error) {
+	out := new(game.CheckVipStatusResponse)
+	err := c.cc.Invoke(ctx, Nakama_CheckVipStatus_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1333,6 +1477,30 @@ type NakamaServer interface {
 	ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*emptypb.Empty, error)
 	// Get Server Time
 	GetGameTime(context.Context, *emptypb.Empty) (*game.GetGameTimeResponse, error)
+	// List published announcements
+	ListPublishedAnnouncements(context.Context, *game.ListPublishedAnnouncementsRequest) (*game.ListPublishedAnnouncementsResponse, error)
+	// Mark notifications as read
+	MarkNotificationsRead(context.Context, *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error)
+	// Claim notification attachments
+	ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error)
+	// Save home level data
+	SaveHomeLevelData(context.Context, *game.SaveHomeLevelDataRequest) (*game.SaveHomeLevelDataResponse, error)
+	// Get home level data
+	GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error)
+	// Reset home level data
+	ResetHomeLevelData(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// OperateWallet
+	OperateWallet(context.Context, *game.OperateWalletRequest) (*game.WalletResponse, error)
+	// Get Challenge
+	GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error)
+	// Join Challenge
+	JoinChallenge(context.Context, *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error)
+	// Gain Challenge Reward
+	GainChallengeReward(context.Context, *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error)
+	// Get Top Three Stats
+	GetChallengeTopStats(context.Context, *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error)
+	// Check if current user is VIP
+	CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1612,6 +1780,42 @@ func (UnimplementedNakamaServer) ClaimInviteReward(context.Context, *game.ClaimI
 }
 func (UnimplementedNakamaServer) GetGameTime(context.Context, *emptypb.Empty) (*game.GetGameTimeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGameTime not implemented")
+}
+func (UnimplementedNakamaServer) ListPublishedAnnouncements(context.Context, *game.ListPublishedAnnouncementsRequest) (*game.ListPublishedAnnouncementsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPublishedAnnouncements not implemented")
+}
+func (UnimplementedNakamaServer) MarkNotificationsRead(context.Context, *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MarkNotificationsRead not implemented")
+}
+func (UnimplementedNakamaServer) ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimNotificationAttachments not implemented")
+}
+func (UnimplementedNakamaServer) SaveHomeLevelData(context.Context, *game.SaveHomeLevelDataRequest) (*game.SaveHomeLevelDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveHomeLevelData not implemented")
+}
+func (UnimplementedNakamaServer) GetHomeLevelData(context.Context, *game.GetHomeLevelDataRequest) (*game.GetHomeLevelDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHomeLevelData not implemented")
+}
+func (UnimplementedNakamaServer) ResetHomeLevelData(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetHomeLevelData not implemented")
+}
+func (UnimplementedNakamaServer) OperateWallet(context.Context, *game.OperateWalletRequest) (*game.WalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OperateWallet not implemented")
+}
+func (UnimplementedNakamaServer) GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallenge not implemented")
+}
+func (UnimplementedNakamaServer) JoinChallenge(context.Context, *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinChallenge not implemented")
+}
+func (UnimplementedNakamaServer) GainChallengeReward(context.Context, *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GainChallengeReward not implemented")
+}
+func (UnimplementedNakamaServer) GetChallengeTopStats(context.Context, *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallengeTopStats not implemented")
+}
+func (UnimplementedNakamaServer) CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckVipStatus not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3264,6 +3468,222 @@ func _Nakama_GetGameTime_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_ListPublishedAnnouncements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ListPublishedAnnouncementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ListPublishedAnnouncements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ListPublishedAnnouncements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ListPublishedAnnouncements(ctx, req.(*game.ListPublishedAnnouncementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_MarkNotificationsRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(api.MarkNotificationsReadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).MarkNotificationsRead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_MarkNotificationsRead_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).MarkNotificationsRead(ctx, req.(*api.MarkNotificationsReadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimNotificationAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(api.ClaimNotificationAttachmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimNotificationAttachments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimNotificationAttachments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimNotificationAttachments(ctx, req.(*api.ClaimNotificationAttachmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_SaveHomeLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.SaveHomeLevelDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).SaveHomeLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_SaveHomeLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).SaveHomeLevelData(ctx, req.(*game.SaveHomeLevelDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetHomeLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetHomeLevelDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetHomeLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetHomeLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetHomeLevelData(ctx, req.(*game.GetHomeLevelDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ResetHomeLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ResetHomeLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ResetHomeLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ResetHomeLevelData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_OperateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.OperateWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).OperateWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_OperateWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).OperateWallet(ctx, req.(*game.OperateWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChallenge(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_JoinChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.JoinChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).JoinChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_JoinChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).JoinChallenge(ctx, req.(*game.JoinChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GainChallengeReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GainChallengeRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GainChallengeReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GainChallengeReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GainChallengeReward(ctx, req.(*game.GainChallengeRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetChallengeTopStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChallengeTopStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChallengeTopStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChallengeTopStats(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_CheckVipStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).CheckVipStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_CheckVipStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).CheckVipStatus(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3634,6 +4054,54 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetGameTime",
 			Handler:    _Nakama_GetGameTime_Handler,
+		},
+		{
+			MethodName: "ListPublishedAnnouncements",
+			Handler:    _Nakama_ListPublishedAnnouncements_Handler,
+		},
+		{
+			MethodName: "MarkNotificationsRead",
+			Handler:    _Nakama_MarkNotificationsRead_Handler,
+		},
+		{
+			MethodName: "ClaimNotificationAttachments",
+			Handler:    _Nakama_ClaimNotificationAttachments_Handler,
+		},
+		{
+			MethodName: "SaveHomeLevelData",
+			Handler:    _Nakama_SaveHomeLevelData_Handler,
+		},
+		{
+			MethodName: "GetHomeLevelData",
+			Handler:    _Nakama_GetHomeLevelData_Handler,
+		},
+		{
+			MethodName: "ResetHomeLevelData",
+			Handler:    _Nakama_ResetHomeLevelData_Handler,
+		},
+		{
+			MethodName: "OperateWallet",
+			Handler:    _Nakama_OperateWallet_Handler,
+		},
+		{
+			MethodName: "GetChallenge",
+			Handler:    _Nakama_GetChallenge_Handler,
+		},
+		{
+			MethodName: "JoinChallenge",
+			Handler:    _Nakama_JoinChallenge_Handler,
+		},
+		{
+			MethodName: "GainChallengeReward",
+			Handler:    _Nakama_GainChallengeReward_Handler,
+		},
+		{
+			MethodName: "GetChallengeTopStats",
+			Handler:    _Nakama_GetChallengeTopStats_Handler,
+		},
+		{
+			MethodName: "CheckVipStatus",
+			Handler:    _Nakama_CheckVipStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

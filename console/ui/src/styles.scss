@@ -561,3 +561,14 @@ a {
   --jse-button-primary-background: #7668ED;
   --jse-message-success-background: #A69BFF;
 }
+
+// 全局模态框样式
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+

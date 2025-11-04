@@ -1,0 +1,173 @@
+<h2 class="pb-1">个人邮件发送</h2>
+<h6 class="pb-3">{{totalCount}} 条发送记录</h6>
+
+<div class="row no-gutters mb-4">
+  <div class="col d-flex justify-content-between no-gutters align-items-center">
+    <div class="col-md-9">
+    </div>
+    <div class="col-md-3 justify-content-end text-right">
+      <div class="btn-group page-btns" role="group">
+        <button type="button" class="btn btn-outline-secondary" (click)="onFirstPage()" [disabled]="!hasPreviousPage()">
+          <img src="/static/svg/page-first.svg" alt="" width="20" height="">
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="onPreviousPage()" [disabled]="!hasPreviousPage()">
+          <img src="/static/svg/page-prev.svg" alt="" width="20" height="">
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="onNextPage()" [disabled]="!hasNextPage()">
+          <img src="/static/svg/page-next.svg" alt="" width="20" height="">
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row no-gutters mb-4">
+  <div class="col d-flex justify-content-between no-gutters align-items-center">
+    <button type="button" class="btn btn-success radius" (click)="openModal(content)">发送个人邮件</button>
+  </div>
+</div>
+
+<ngb-alert [dismissible]="false" type="danger" class="mb-3" *ngIf="error">
+  <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">发送失败: {{error}}</h6>
+</ngb-alert>
+
+<ngb-alert [dismissible]="false" type="primary" class="mb-3" *ngIf="showSuccess">
+  <img src="/static/svg/mail.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">个人通知发送成功!</h6>
+</ngb-alert>
+
+<div class="row no-gutters">
+  <table class="table table-sm table-hover table-bordered">
+    <thead class="thead-light">
+      <tr>
+        <th style="width: 120px">标题</th>
+        <th style="width: 300px">内容</th>
+        <th style="width: 150px">发送时间</th>
+        <th style="width: 150px">目标用户</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngIf="logs.length === 0">
+        <td colSpan="5" class="text-muted">暂无个人通知发送记录</td>
+      </tr>
+      <tr *ngFor="let log of logs; index as i;">
+        <td>{{log.subject}}</td>
+        <td>
+          <div>{{log.content?.description}}</div>
+          <div *ngIf="getRewardItems(log).length > 0" class="mt-2">
+            <small class="text-muted font-weight-bold">奖励：</small>
+            <div class="d-flex flex-wrap mt-1">
+              <span *ngFor="let item of getRewardItems(log)" class="badge badge-info mr-1 mb-1 d-flex align-items-center">
+                <img [src]="getIconById(item.id!)"
+                     [alt]="getItemNameById(item.id!)"
+                     width="14"
+                     height="14"
+                     class="mr-1"
+                     style="object-fit: contain;"
+                     (error)="onImageError($event)">
+                <span>{{getItemNameById(item.id!)}} x{{item.num}}</span>
+              </span>
+            </div>
+          </div>
+          <div *ngIf="getRewardItems(log).length === 0" class="text-muted">
+            无附件
+          </div>
+        </td>
+        <td>{{log.send_time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+        <td>
+          <div class="d-flex flex-column">
+            <div *ngFor="let username of getTargetIds(log)" class="mb-1">
+              {{username}}
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title" id="modal-basic-title">发送个人通知</h4>
+    <button type="button" class="close" aria-describedby="modal-title" (click)="modal.dismiss()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <form [formGroup]="notificationForm">
+
+      <div class="mb-3 row align-items-center">
+        <label class="col-sm-2 col-form-label">标题</label>
+        <div class="col-sm-10">
+          <div class="input-group">
+            <input class="form-control" formControlName="subject" />
+            <div class="input-group-append offset-md-2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-3 row">
+        <label class="col-sm-2 col-form-label">详情</label>
+        <div class="col-sm-10">
+          <div class="input-group">
+            <textarea class="form-control" formControlName="desc"></textarea>
+            <div class="input-group-append offset-md-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label>目标用户</label>
+        <textarea class="form-control" formControlName="targetUsers" rows="3"
+                  placeholder="输入目标用户名，多个用户名用空格分隔"></textarea>
+        <small class="form-text text-muted">
+          请输入目标用户名，多个用户名之间用空格分隔。不存在的用户名将被忽略。
+        </small>
+      </div>
+
+      <div class="mb-3">
+        <label>附件</label>
+        <div formArrayName="items">
+          <div *ngFor="let item of getItemsControls(); let i = index" [formGroupName]="i" class="input-group mb-2">
+            <img *ngIf="item.value.id" class="item-icon form-spacing" [src]="getIconById(item.value.id)" alt="{{item.value.id}}" width="20" height="20" style="object-fit: contain;" (error)="onImageError($event)">
+            <select formControlName="id" class="form-control form-spacing">
+              <option value="">请选择道具</option>
+              <option *ngFor="let defaultItem of defaultItems" [value]="defaultItem.id">
+                {{ defaultItem.name }}
+              </option>
+            </select>
+            <input type="number" class="form-control form-spacing" formControlName="num">
+            <button type="button" class="btn btn-danger" (click)="removeItem(i)">Remove</button>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button type="button" class="btn btn-success" (click)="addItem()">添加道具</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-dark" (click)="onSubmit()">确认</button>
+    <button type="button" class="btn btn-secondary ml-2" (click)="modal.dismiss()">取消</button>
+  </div>
+</ng-template>
+
+<!-- 错误信息Modal -->
+<ng-template #errorModalTemplate let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title" id="error-modal-title">发送失败</h4>
+    <button type="button" class="close" aria-describedby="modal-title" (click)="modal.dismiss()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="alert alert-danger">
+      <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+      <span>{{currentErrorMessage}}</span>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">确定</button>
+  </div>
+</ng-template>

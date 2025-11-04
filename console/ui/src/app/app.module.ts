@@ -67,6 +67,9 @@ import {NotificationsComponent} from './account/notifications/notifications.comp
 import {NotificationsListComponent} from './notifications/notifications-list.component';
 import {MfaSetupComponent} from './mfa-setup/mfa-setup.component';
 import {QRCodeModule} from 'angularx-qrcode';
+import {AccountsModule} from './accounts/accounts.module';
+import {AnnouncementsComponent} from './announcements/announcements.component';
+import {TranslateModule} from './shared/translate.module';
 
 @NgModule({
   declarations: [
@@ -79,7 +82,6 @@ import {QRCodeModule} from 'angularx-qrcode';
     RuntimeComponent,
     StorageListComponent,
     StorageObjectComponent,
-    AccountListComponent,
     AccountComponent,
     ProfileComponent,
     AuthenticationComponent,
@@ -104,23 +106,26 @@ import {QRCodeModule} from 'angularx-qrcode';
     SubscriptionsListComponent,
     MfaSetupComponent,
     NotificationsComponent,
-    NotificationsListComponent
+    NotificationsListComponent,
+    AnnouncementsComponent
   ],
   imports: [
     NgxFileDropModule,
     AppRoutingModule,
     BaseModule,
+    AccountsModule,
     BrowserModule,
     BrowserAnimationsModule,
     HttpClientModule,
     NgbModule,
     NgxChartsModule,
-    SegmentModule.forRoot({ apiKey: environment.segment_write_key, debug: !environment.production, loadOnInitialization: !environment.nt }),
+    SegmentModule.forRoot({apiKey: environment.segment_write_key, debug: !environment.production, loadOnInitialization: false}),
     NoopAnimationsModule,
     ReactiveFormsModule,
     FormsModule,
     NgSelectModule,
     QRCodeModule,
+    TranslateModule
   ],
   providers: [
     WINDOW_PROVIDERS,

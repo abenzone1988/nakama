@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 监控 微信合金战线 Nakama
+  - job_name: 'wx'
+    metrics_path: /
+    static_configs:
+      - targets: 
+          - '192.168.0.3:9100'
+          - '192.168.0.120:9100'
+          - '192.168.0.121:9100'
+          
+  # 监控 抖音 合金战线 Nakama
+  - job_name: 'dy'
+    metrics_path: /
+    static_configs:
+      - targets: 
+          - '192.168.0.3:9200'
+          - '192.168.0.120:9200'
+          - '192.168.0.121:9200'
+

@@ -21,10 +21,12 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
-	"github.com/heroiclabs/nakama-common/runtime"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/heroiclabs/nakama-common/runtime"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -128,11 +130,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		return nil, ErrLeaderboardNotFound
 	}
 
-	expiryTime, recordsPossible := calculateExpiryOverride(overrideExpiry, leaderboard)
-	if !recordsPossible {
-		// If the expiry time is in the past, we won't have any records to return.
-		return &api.LeaderboardRecordList{}, nil
-	}
+	expiryTime, _ := calculateExpiryOverride(overrideExpiry, leaderboard)
+	//不做过期判断
+	//if !recordsPossible {
+	//	// If the expiry time is in the past, we won't have any records to return.
+	//	return &api.LeaderboardRecordList{}, nil
+	//}
 
 	records := make([]*api.LeaderboardRecord, 0)
 	ownerRecords := make([]*api.LeaderboardRecord, 0)
@@ -192,6 +195,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		var dbUpdateTime pgtype.Timestamptz
 		for rows.Next() {
 			if len(records) >= limitNumber {
+				// 如果score和subscore都为0，则rank也为0（用于cursor）
+				cursorRank := rank
+				if dbScore == 0 && dbSubscore == 0 {
+					cursorRank = 0
+				}
+
 				nextCursor = &leaderboardRecordListCursor{
 					IsNext:        true,
 					LeaderboardId: leaderboardId,
@@ -199,7 +208,7 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 					Score:         dbScore,
 					Subscore:      dbSubscore,
 					OwnerId:       dbOwnerID,
-					Rank:          rank,
+					Rank:          cursorRank,
 				}
 				break
 			}
@@ -217,6 +226,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 				rank++
 			}
 
+			// 如果score和subscore都为0，则rank也为0
+			finalRank := rank
+			if dbScore == 0 && dbSubscore == 0 {
+				finalRank = 0
+			}
+
 			record := &api.LeaderboardRecord{
 				LeaderboardId: leaderboardId,
 				OwnerId:       dbOwnerID,
@@ -227,7 +242,7 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 				Metadata:      dbMetadata,
 				CreateTime:    &timestamppb.Timestamp{Seconds: dbCreateTime.Time.Unix()},
 				UpdateTime:    &timestamppb.Timestamp{Seconds: dbUpdateTime.Time.Unix()},
-				Rank:          rank,
+				Rank:          finalRank,
 			}
 			if dbUsername.Valid {
 				record.Username = &wrapperspb.StringValue{Value: dbUsername.String}
@@ -240,6 +255,12 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 			// There can only be a previous page if this is a paginated listing.
 			if incomingCursor != nil && prevCursor == nil {
+				// 如果score和subscore都为0，则rank也为0（用于cursor）
+				cursorRank := rank
+				if dbScore == 0 && dbSubscore == 0 {
+					cursorRank = 0
+				}
+
 				prevCursor = &leaderboardRecordListCursor{
 					IsNext:        false,
 					LeaderboardId: leaderboardId,
@@ -247,7 +268,7 @@ func LeaderboardRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB,
 					Score:         dbScore,
 					Subscore:      dbSubscore,
 					OwnerId:       dbOwnerID,
-					Rank:          rank,
+					Rank:          cursorRank,
 				}
 			}
 		}
@@ -367,8 +388,76 @@ WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3)`
 
 	sort.Slice(ownerRecords, sortFn)
 
-	// Bulk fill in the ranks of any owner records requested.
-	rankCount := rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
+	// 计算 ownerRecords 的排名
+	// 场景1：当请求包含 OwnerIds（跨节点一致性关键路径），统一使用数据库窗口函数计算排名，避免节点间缓存不同步造成的不一致。
+	// 场景2：无 OwnerIds 时，保持原有缓存逻辑（性能优先）。
+	var rankCount int64
+	if leaderboard.EnableRanks && len(ownerRecords) > 0 && len(ownerIds) != 0 {
+		//logger.Info("OwnerIds查询：使用数据库计算排名（跳过本地缓存）",
+		//	zap.String("leaderboard_id", leaderboardId),
+		//	zap.Int("owner_records", len(ownerRecords)))
+		if err := fillRanksFromDatabase(ctx, logger, db, leaderboard, expiryTime, ownerRecords); err != nil {
+			logger.Warn("OwnerIds查询：数据库计算排名失败",
+				zap.String("leaderboard_id", leaderboardId),
+				zap.Error(err))
+		}
+	} else {
+		// Bulk fill in the ranks via cache for general listing paths.
+		rankCount = rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
+
+		// 如果排名缓存没有数据，尝试重建缓存
+		if rankCount == 0 && leaderboard.EnableRanks && len(ownerRecords) > 0 {
+			logger.Info("排名缓存为空，尝试重建缓存",
+				zap.String("leaderboard_id", leaderboardId),
+				zap.Int("owner_records_count", len(ownerRecords)))
+
+			// 手动重建排名缓存
+			err := rebuildRankCache(ctx, logger, db, rankCache, leaderboard, expiryTime)
+			if err != nil {
+				logger.Warn("重建排名缓存失败", zap.Error(err))
+			} else {
+				// 重新尝试填充排名
+				rankCount = rankCache.Fill(leaderboardId, expiryTime, ownerRecords, leaderboard.EnableRanks)
+				logger.Info("排名缓存重建完成",
+					zap.String("leaderboard_id", leaderboardId),
+					zap.Int64("rank_count", rankCount))
+			}
+		} else {
+			// 查询缓存成功
+			logger.Debug("查询缓存成功",
+				zap.String("leaderboard_id", leaderboardId),
+				zap.Int64("rank_count", rankCount))
+		}
+
+		// 若部分记录仍未填充排名（分数>0且rank==0），使用数据库兜底填充
+		if leaderboard.EnableRanks && len(ownerRecords) > 0 {
+			needBackfill := false
+			for _, r := range ownerRecords {
+				if r != nil && r.Rank == 0 && !(r.Score == 0 && r.Subscore == 0) {
+					needBackfill = true
+					break
+				}
+			}
+			if needBackfill {
+				logger.Info("排名兜底触发：使用数据库计算排名",
+					zap.String("leaderboard_id", leaderboardId),
+					zap.Int("owner_records", len(ownerRecords)))
+				if err := fillRanksFromDatabase(ctx, logger, db, leaderboard, expiryTime, ownerRecords); err != nil {
+					logger.Warn("使用数据库兜底填充排名失败",
+						zap.String("leaderboard_id", leaderboardId),
+						zap.Error(err))
+				}
+			}
+		}
+	}
+	//}
+
+	// 对于score和subscore都为0的记录，将rank设置为0
+	for _, record := range ownerRecords {
+		if record.Score == 0 && record.Subscore == 0 {
+			record.Rank = 0
+		}
+	}
 
 	return &api.LeaderboardRecordList{
 		Records:      records,
@@ -554,6 +643,11 @@ func LeaderboardRecordWrite(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	} else {
 		// Ensure we have the latest dbscore, dbsubscore if there was an update.
 		rank = rankCache.Insert(leaderboardId, leaderboard.SortOrder, dbScore, dbSubscore, dbNumScore, expiryTime, uuid.Must(uuid.FromString(ownerID)), leaderboard.EnableRanks)
+	}
+
+	// 如果score和subscore都为0，则rank也为0
+	if dbScore == 0 && dbSubscore == 0 {
+		rank = 0
 	}
 
 	record := &api.LeaderboardRecord{
@@ -864,6 +958,13 @@ func getLeaderboardRecordsHaystack(ctx context.Context, logger *zap.Logger, db *
 		}
 		rankCount := rankCache.Fill(leaderboardId, expiryTime.Unix(), records, l.EnableRanks)
 
+		// 对于score和subscore都为0的记录，将rank设置为0
+		for _, record := range records {
+			if record.Score == 0 && record.Subscore == 0 {
+				record.Rank = 0
+			}
+		}
+
 		var prevCursorStr string
 		if setPrevCursor {
 			record := records[0]
@@ -962,10 +1063,11 @@ func calculateExpiryOverride(overrideExpiry int64, leaderboard *Leaderboard) (in
 		if leaderboard.IsTournament() {
 			now := time.Now().UTC()
 			_, _, expiryTime := calculateTournamentDeadlines(leaderboard.StartTime, leaderboard.EndTime, int64(leaderboard.Duration), leaderboard.ResetSchedule, now)
-			if expiryTime != 0 && expiryTime <= now.Unix() {
-				// If the expiry time is in the past, we won't have any records to return.
-				return 0, false
-			}
+			// 注释掉时间限制检查，允许获取已结束锦标赛的记录
+			//if expiryTime != 0 && expiryTime <= now.Unix() {
+			//	// If the expiry time is in the past, we won't have any records to return.
+			//	return 0, false
+			//}
 			return expiryTime, true
 		} else if leaderboard.ResetSchedule != nil {
 			now := time.Now().UTC()
@@ -994,6 +1096,115 @@ func disableLeaderboardRanks(ctx context.Context, logger *zap.Logger, db *sql.DB
 	}
 
 	rankCache.DeleteLeaderboard(l.Id, expiryTime)
+
+	return nil
+}
+
+// rebuildRankCache 重建指定比赛的排名缓存
+func rebuildRankCache(ctx context.Context, logger *zap.Logger, db *sql.DB, rankCache LeaderboardRankCache, leaderboard *Leaderboard, expiryTime int64) error {
+	// 查询该比赛的所有记录
+	query := `SELECT owner_id, score, subscore, num_score
+FROM leaderboard_record
+WHERE leaderboard_id = $1 AND expiry_time = $2`
+
+	rows, err := db.QueryContext(ctx, query, leaderboard.Id, time.Unix(expiryTime, 0).UTC())
+	if err != nil {
+		logger.Error("查询比赛记录失败", zap.Error(err))
+		return err
+	}
+	defer rows.Close()
+
+	var insertCount int
+	for rows.Next() {
+		var ownerID string
+		var score, subscore int64
+		var numScore int32
+
+		err = rows.Scan(&ownerID, &score, &subscore, &numScore)
+		if err != nil {
+			logger.Error("扫描比赛记录失败", zap.Error(err))
+			continue
+		}
+
+		// 将记录插入排名缓存
+		ownerUUID, err := uuid.FromString(ownerID)
+		if err != nil {
+			logger.Warn("无效的用户ID", zap.String("owner_id", ownerID))
+			continue
+		}
+
+		rankCache.Insert(leaderboard.Id, leaderboard.SortOrder, score, subscore, numScore, expiryTime, ownerUUID, leaderboard.EnableRanks)
+		insertCount++
+	}
+
+	logger.Info("排名缓存重建完成",
+		zap.String("leaderboard_id", leaderboard.Id),
+		zap.Int("inserted_records", insertCount))
+
+	return nil
+}
+
+// fillRanksFromDatabase 使用数据库查询填充排名信息（兜底方案）
+func fillRanksFromDatabase(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboard *Leaderboard, expiryTime int64, ownerRecords []*api.LeaderboardRecord) error {
+	if len(ownerRecords) == 0 {
+		return nil
+	}
+
+	// 构建owner ID列表
+	ownerIDs := make([]string, len(ownerRecords))
+	for i, record := range ownerRecords {
+		ownerIDs[i] = record.OwnerId
+	}
+
+	// 构建排名查询SQL：分数→子分→创建时间（越早越靠前）→OwnerID（UUID字节序，最终兜底）
+	// 注意：owner_id 为 TEXT，这里显式转换为 UUID
+	var orderBy string
+	if leaderboard.SortOrder == LeaderboardSortOrderAscending {
+		orderBy = "ORDER BY score ASC, subscore ASC, create_time ASC, (owner_id::uuid) ASC"
+	} else {
+		// 降序下，同分同子分仍按最早提交优先
+		orderBy = "ORDER BY score DESC, subscore DESC, create_time ASC, (owner_id::uuid) ASC"
+	}
+
+	query := fmt.Sprintf(`
+WITH ranked_records AS (
+	SELECT owner_id,
+		   ROW_NUMBER() OVER (%s) as rank
+	FROM leaderboard_record
+	WHERE leaderboard_id = $1 AND expiry_time = $2
+)
+SELECT owner_id, rank
+FROM ranked_records
+WHERE owner_id = ANY($3)`, orderBy)
+
+	rows, err := db.QueryContext(ctx, query, leaderboard.Id, time.Unix(expiryTime, 0).UTC(), ownerIDs)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// 创建owner ID到排名的映射
+	rankMap := make(map[string]int64)
+	for rows.Next() {
+		var ownerID string
+		var rank int64
+		if err := rows.Scan(&ownerID, &rank); err != nil {
+			continue
+		}
+		rankMap[ownerID] = rank
+	}
+
+	// 应用排名到记录
+	for _, record := range ownerRecords {
+		if rank, ok := rankMap[record.OwnerId]; ok {
+			// 如果score和subscore都为0，则rank也为0
+			if record.Score == 0 && record.Subscore == 0 {
+				record.Rank = 0
+			} else {
+				record.Rank = rank
+			}
+		}
+	}
 
 	return nil
 }

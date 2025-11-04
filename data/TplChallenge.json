@@ -1,0 +1,13 @@
+{
+  "1": {
+    "activity_id": "test_challenge_001",
+    "close_time": "2025-12-31 23:59",
+    "end_time": "2025-12-31 23:59",
+    "id": 1,
+    "max_part": 4,
+    "name": "测试挑战赛",
+    "open_time": "2025-01-01 00:00",
+    "reward_remains": 60,
+    "status": 1
+  }
+}

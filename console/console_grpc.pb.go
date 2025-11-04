@@ -38,75 +38,95 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Console_Authenticate_FullMethodName              = "/nakama.console.Console/Authenticate"
-	Console_AuthenticateLogout_FullMethodName        = "/nakama.console.Console/AuthenticateLogout"
-	Console_AuthenticateMFASetup_FullMethodName      = "/nakama.console.Console/AuthenticateMFASetup"
-	Console_AddUser_FullMethodName                   = "/nakama.console.Console/AddUser"
-	Console_AddGroupUsers_FullMethodName             = "/nakama.console.Console/AddGroupUsers"
-	Console_BanAccount_FullMethodName                = "/nakama.console.Console/BanAccount"
-	Console_CallApiEndpoint_FullMethodName           = "/nakama.console.Console/CallApiEndpoint"
-	Console_CallRpcEndpoint_FullMethodName           = "/nakama.console.Console/CallRpcEndpoint"
-	Console_DeleteAllData_FullMethodName             = "/nakama.console.Console/DeleteAllData"
-	Console_DeleteAccount_FullMethodName             = "/nakama.console.Console/DeleteAccount"
-	Console_DeleteChannelMessages_FullMethodName     = "/nakama.console.Console/DeleteChannelMessages"
-	Console_DeleteFriend_FullMethodName              = "/nakama.console.Console/DeleteFriend"
-	Console_DeleteGroup_FullMethodName               = "/nakama.console.Console/DeleteGroup"
-	Console_DeleteGroupUser_FullMethodName           = "/nakama.console.Console/DeleteGroupUser"
-	Console_DeleteStorage_FullMethodName             = "/nakama.console.Console/DeleteStorage"
-	Console_DeleteStorageObject_FullMethodName       = "/nakama.console.Console/DeleteStorageObject"
-	Console_DeleteAccounts_FullMethodName            = "/nakama.console.Console/DeleteAccounts"
-	Console_DeleteLeaderboard_FullMethodName         = "/nakama.console.Console/DeleteLeaderboard"
-	Console_DeleteLeaderboardRecord_FullMethodName   = "/nakama.console.Console/DeleteLeaderboardRecord"
-	Console_DeleteNotification_FullMethodName        = "/nakama.console.Console/DeleteNotification"
-	Console_DeleteUser_FullMethodName                = "/nakama.console.Console/DeleteUser"
-	Console_DeleteWalletLedger_FullMethodName        = "/nakama.console.Console/DeleteWalletLedger"
-	Console_DemoteGroupMember_FullMethodName         = "/nakama.console.Console/DemoteGroupMember"
-	Console_ExportAccount_FullMethodName             = "/nakama.console.Console/ExportAccount"
-	Console_ExportGroup_FullMethodName               = "/nakama.console.Console/ExportGroup"
-	Console_GetAccount_FullMethodName                = "/nakama.console.Console/GetAccount"
-	Console_GetConfig_FullMethodName                 = "/nakama.console.Console/GetConfig"
-	Console_GetFriends_FullMethodName                = "/nakama.console.Console/GetFriends"
-	Console_GetGroup_FullMethodName                  = "/nakama.console.Console/GetGroup"
-	Console_GetMembers_FullMethodName                = "/nakama.console.Console/GetMembers"
-	Console_GetGroups_FullMethodName                 = "/nakama.console.Console/GetGroups"
-	Console_GetLeaderboard_FullMethodName            = "/nakama.console.Console/GetLeaderboard"
-	Console_GetMatchState_FullMethodName             = "/nakama.console.Console/GetMatchState"
-	Console_GetRuntime_FullMethodName                = "/nakama.console.Console/GetRuntime"
-	Console_GetStatus_FullMethodName                 = "/nakama.console.Console/GetStatus"
-	Console_GetStorage_FullMethodName                = "/nakama.console.Console/GetStorage"
-	Console_GetWalletLedger_FullMethodName           = "/nakama.console.Console/GetWalletLedger"
-	Console_GetNotification_FullMethodName           = "/nakama.console.Console/GetNotification"
-	Console_GetPurchase_FullMethodName               = "/nakama.console.Console/GetPurchase"
-	Console_GetSubscription_FullMethodName           = "/nakama.console.Console/GetSubscription"
-	Console_ListApiEndpoints_FullMethodName          = "/nakama.console.Console/ListApiEndpoints"
-	Console_ListLeaderboardRecords_FullMethodName    = "/nakama.console.Console/ListLeaderboardRecords"
-	Console_ListLeaderboards_FullMethodName          = "/nakama.console.Console/ListLeaderboards"
-	Console_ListStorage_FullMethodName               = "/nakama.console.Console/ListStorage"
-	Console_ListStorageCollections_FullMethodName    = "/nakama.console.Console/ListStorageCollections"
-	Console_ListAccounts_FullMethodName              = "/nakama.console.Console/ListAccounts"
-	Console_ListChannelMessages_FullMethodName       = "/nakama.console.Console/ListChannelMessages"
-	Console_ListGroups_FullMethodName                = "/nakama.console.Console/ListGroups"
-	Console_ListNotifications_FullMethodName         = "/nakama.console.Console/ListNotifications"
-	Console_ListMatches_FullMethodName               = "/nakama.console.Console/ListMatches"
-	Console_ListPurchases_FullMethodName             = "/nakama.console.Console/ListPurchases"
-	Console_ListSubscriptions_FullMethodName         = "/nakama.console.Console/ListSubscriptions"
-	Console_ListUsers_FullMethodName                 = "/nakama.console.Console/ListUsers"
-	Console_PromoteGroupMember_FullMethodName        = "/nakama.console.Console/PromoteGroupMember"
-	Console_RequireUserMfa_FullMethodName            = "/nakama.console.Console/RequireUserMfa"
-	Console_ResetUserMfa_FullMethodName              = "/nakama.console.Console/ResetUserMfa"
-	Console_UnbanAccount_FullMethodName              = "/nakama.console.Console/UnbanAccount"
-	Console_UnlinkCustom_FullMethodName              = "/nakama.console.Console/UnlinkCustom"
-	Console_UnlinkDevice_FullMethodName              = "/nakama.console.Console/UnlinkDevice"
-	Console_UnlinkEmail_FullMethodName               = "/nakama.console.Console/UnlinkEmail"
-	Console_UnlinkApple_FullMethodName               = "/nakama.console.Console/UnlinkApple"
-	Console_UnlinkFacebook_FullMethodName            = "/nakama.console.Console/UnlinkFacebook"
-	Console_UnlinkFacebookInstantGame_FullMethodName = "/nakama.console.Console/UnlinkFacebookInstantGame"
-	Console_UnlinkGameCenter_FullMethodName          = "/nakama.console.Console/UnlinkGameCenter"
-	Console_UnlinkGoogle_FullMethodName              = "/nakama.console.Console/UnlinkGoogle"
-	Console_UnlinkSteam_FullMethodName               = "/nakama.console.Console/UnlinkSteam"
-	Console_UpdateAccount_FullMethodName             = "/nakama.console.Console/UpdateAccount"
-	Console_UpdateGroup_FullMethodName               = "/nakama.console.Console/UpdateGroup"
-	Console_WriteStorageObject_FullMethodName        = "/nakama.console.Console/WriteStorageObject"
+	Console_Authenticate_FullMethodName                 = "/nakama.console.Console/Authenticate"
+	Console_AuthenticateLogout_FullMethodName           = "/nakama.console.Console/AuthenticateLogout"
+	Console_AuthenticateMFASetup_FullMethodName         = "/nakama.console.Console/AuthenticateMFASetup"
+	Console_AddUser_FullMethodName                      = "/nakama.console.Console/AddUser"
+	Console_AddGroupUsers_FullMethodName                = "/nakama.console.Console/AddGroupUsers"
+	Console_BanAccount_FullMethodName                   = "/nakama.console.Console/BanAccount"
+	Console_CallApiEndpoint_FullMethodName              = "/nakama.console.Console/CallApiEndpoint"
+	Console_CallRpcEndpoint_FullMethodName              = "/nakama.console.Console/CallRpcEndpoint"
+	Console_DeleteAllData_FullMethodName                = "/nakama.console.Console/DeleteAllData"
+	Console_DeleteAccount_FullMethodName                = "/nakama.console.Console/DeleteAccount"
+	Console_DeleteChannelMessages_FullMethodName        = "/nakama.console.Console/DeleteChannelMessages"
+	Console_DeleteFriend_FullMethodName                 = "/nakama.console.Console/DeleteFriend"
+	Console_DeleteGroup_FullMethodName                  = "/nakama.console.Console/DeleteGroup"
+	Console_DeleteGroupUser_FullMethodName              = "/nakama.console.Console/DeleteGroupUser"
+	Console_DeleteStorage_FullMethodName                = "/nakama.console.Console/DeleteStorage"
+	Console_DeleteStorageObject_FullMethodName          = "/nakama.console.Console/DeleteStorageObject"
+	Console_ReloadTemplate_FullMethodName               = "/nakama.console.Console/ReloadTemplate"
+	Console_GetChallengeTemplate_FullMethodName         = "/nakama.console.Console/GetChallengeTemplate"
+	Console_GetAllChallengeTemplates_FullMethodName     = "/nakama.console.Console/GetAllChallengeTemplates"
+	Console_CreatePersonalNotification_FullMethodName   = "/nakama.console.Console/CreatePersonalNotification"
+	Console_ListPersonalNotificationLogs_FullMethodName = "/nakama.console.Console/ListPersonalNotificationLogs"
+	Console_AddVipAccount_FullMethodName                = "/nakama.console.Console/AddVipAccount"
+	Console_ListVipAccounts_FullMethodName              = "/nakama.console.Console/ListVipAccounts"
+	Console_RemoveVipAccount_FullMethodName             = "/nakama.console.Console/RemoveVipAccount"
+	Console_CheckVipStatus_FullMethodName               = "/nakama.console.Console/CheckVipStatus"
+	Console_DeleteAccounts_FullMethodName               = "/nakama.console.Console/DeleteAccounts"
+	Console_DeleteLeaderboard_FullMethodName            = "/nakama.console.Console/DeleteLeaderboard"
+	Console_DeleteLeaderboardRecord_FullMethodName      = "/nakama.console.Console/DeleteLeaderboardRecord"
+	Console_DeleteNotification_FullMethodName           = "/nakama.console.Console/DeleteNotification"
+	Console_DeleteUser_FullMethodName                   = "/nakama.console.Console/DeleteUser"
+	Console_DeleteWalletLedger_FullMethodName           = "/nakama.console.Console/DeleteWalletLedger"
+	Console_DemoteGroupMember_FullMethodName            = "/nakama.console.Console/DemoteGroupMember"
+	Console_ExportAccount_FullMethodName                = "/nakama.console.Console/ExportAccount"
+	Console_ExportGroup_FullMethodName                  = "/nakama.console.Console/ExportGroup"
+	Console_GetAccount_FullMethodName                   = "/nakama.console.Console/GetAccount"
+	Console_GetConfig_FullMethodName                    = "/nakama.console.Console/GetConfig"
+	Console_GetFriends_FullMethodName                   = "/nakama.console.Console/GetFriends"
+	Console_GetGroup_FullMethodName                     = "/nakama.console.Console/GetGroup"
+	Console_GetMembers_FullMethodName                   = "/nakama.console.Console/GetMembers"
+	Console_GetGroups_FullMethodName                    = "/nakama.console.Console/GetGroups"
+	Console_GetLeaderboard_FullMethodName               = "/nakama.console.Console/GetLeaderboard"
+	Console_GetMatchState_FullMethodName                = "/nakama.console.Console/GetMatchState"
+	Console_GetRuntime_FullMethodName                   = "/nakama.console.Console/GetRuntime"
+	Console_GetStatus_FullMethodName                    = "/nakama.console.Console/GetStatus"
+	Console_GetStorage_FullMethodName                   = "/nakama.console.Console/GetStorage"
+	Console_GetWalletLedger_FullMethodName              = "/nakama.console.Console/GetWalletLedger"
+	Console_GetNotification_FullMethodName              = "/nakama.console.Console/GetNotification"
+	Console_GetPurchase_FullMethodName                  = "/nakama.console.Console/GetPurchase"
+	Console_GetSubscription_FullMethodName              = "/nakama.console.Console/GetSubscription"
+	Console_ListApiEndpoints_FullMethodName             = "/nakama.console.Console/ListApiEndpoints"
+	Console_ListLeaderboardRecords_FullMethodName       = "/nakama.console.Console/ListLeaderboardRecords"
+	Console_ListLeaderboards_FullMethodName             = "/nakama.console.Console/ListLeaderboards"
+	Console_ListStorage_FullMethodName                  = "/nakama.console.Console/ListStorage"
+	Console_ListStorageCollections_FullMethodName       = "/nakama.console.Console/ListStorageCollections"
+	Console_ListAccounts_FullMethodName                 = "/nakama.console.Console/ListAccounts"
+	Console_ListChannelMessages_FullMethodName          = "/nakama.console.Console/ListChannelMessages"
+	Console_ListGroups_FullMethodName                   = "/nakama.console.Console/ListGroups"
+	Console_ListNotifications_FullMethodName            = "/nakama.console.Console/ListNotifications"
+	Console_ListMatches_FullMethodName                  = "/nakama.console.Console/ListMatches"
+	Console_ListPurchases_FullMethodName                = "/nakama.console.Console/ListPurchases"
+	Console_ListSubscriptions_FullMethodName            = "/nakama.console.Console/ListSubscriptions"
+	Console_ListUsers_FullMethodName                    = "/nakama.console.Console/ListUsers"
+	Console_PromoteGroupMember_FullMethodName           = "/nakama.console.Console/PromoteGroupMember"
+	Console_RequireUserMfa_FullMethodName               = "/nakama.console.Console/RequireUserMfa"
+	Console_ResetUserMfa_FullMethodName                 = "/nakama.console.Console/ResetUserMfa"
+	Console_UnbanAccount_FullMethodName                 = "/nakama.console.Console/UnbanAccount"
+	Console_UnlinkCustom_FullMethodName                 = "/nakama.console.Console/UnlinkCustom"
+	Console_UnlinkDevice_FullMethodName                 = "/nakama.console.Console/UnlinkDevice"
+	Console_UnlinkEmail_FullMethodName                  = "/nakama.console.Console/UnlinkEmail"
+	Console_UnlinkApple_FullMethodName                  = "/nakama.console.Console/UnlinkApple"
+	Console_UnlinkFacebook_FullMethodName               = "/nakama.console.Console/UnlinkFacebook"
+	Console_UnlinkFacebookInstantGame_FullMethodName    = "/nakama.console.Console/UnlinkFacebookInstantGame"
+	Console_UnlinkGameCenter_FullMethodName             = "/nakama.console.Console/UnlinkGameCenter"
+	Console_UnlinkGoogle_FullMethodName                 = "/nakama.console.Console/UnlinkGoogle"
+	Console_UnlinkSteam_FullMethodName                  = "/nakama.console.Console/UnlinkSteam"
+	Console_UpdateAccount_FullMethodName                = "/nakama.console.Console/UpdateAccount"
+	Console_UpdateGroup_FullMethodName                  = "/nakama.console.Console/UpdateGroup"
+	Console_WriteStorageObject_FullMethodName           = "/nakama.console.Console/WriteStorageObject"
+	Console_CreateAnnouncement_FullMethodName           = "/nakama.console.Console/CreateAnnouncement"
+	Console_UpdateAnnouncement_FullMethodName           = "/nakama.console.Console/UpdateAnnouncement"
+	Console_DeleteAnnouncement_FullMethodName           = "/nakama.console.Console/DeleteAnnouncement"
+	Console_ListAnnouncements_FullMethodName            = "/nakama.console.Console/ListAnnouncements"
+	Console_GetAnnouncement_FullMethodName              = "/nakama.console.Console/GetAnnouncement"
+	Console_SearchAnnouncements_FullMethodName          = "/nakama.console.Console/SearchAnnouncements"
+	Console_ListSystemNotifications_FullMethodName      = "/nakama.console.Console/ListSystemNotifications"
+	Console_CreateSystemNotification_FullMethodName     = "/nakama.console.Console/CreateSystemNotification"
+	Console_UpdateSystemNotification_FullMethodName     = "/nakama.console.Console/UpdateSystemNotification"
+	Console_GetSystemNotification_FullMethodName        = "/nakama.console.Console/GetSystemNotification"
+	Console_DeleteSystemNotification_FullMethodName     = "/nakama.console.Console/DeleteSystemNotification"
 )
 
 // ConsoleClient is the client API for Console service.
@@ -145,6 +165,24 @@ type ConsoleClient interface {
 	DeleteStorage(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete a storage object.
 	DeleteStorageObject(ctx context.Context, in *DeleteStorageObjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Reload template data
+	ReloadTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Get challenge template by ID
+	GetChallengeTemplate(ctx context.Context, in *ChallengeTemplateRequest, opts ...grpc.CallOption) (*ChallengeTemplateResponse, error)
+	// Get all challenge templates
+	GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error)
+	// Create Personal notification
+	CreatePersonalNotification(ctx context.Context, in *CreatePersonalNotificationRequest, opts ...grpc.CallOption) (*PersonalNotice, error)
+	// Get personal notification logs
+	ListPersonalNotificationLogs(ctx context.Context, in *ListPersonalNotificationLogRequest, opts ...grpc.CallOption) (*ListPersonalNotificationLogResponse, error)
+	// Add VIP account
+	AddVipAccount(ctx context.Context, in *AddVipAccountRequest, opts ...grpc.CallOption) (*AddVipAccountResponse, error)
+	// List VIP accounts
+	ListVipAccounts(ctx context.Context, in *ListVipAccountsRequest, opts ...grpc.CallOption) (*VipAccountList, error)
+	// Remove VIP account (set as expired)
+	RemoveVipAccount(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Check if user is VIP
+	CheckVipStatus(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*VipStatusResponse, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -251,6 +289,28 @@ type ConsoleClient interface {
 	UpdateGroup(ctx context.Context, in *UpdateGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Write a new storage object or replace an existing one.
 	WriteStorageObject(ctx context.Context, in *WriteStorageObjectRequest, opts ...grpc.CallOption) (*api.StorageObjectAck, error)
+	// Create announcement
+	CreateAnnouncement(ctx context.Context, in *CreateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error)
+	// Update announcement
+	UpdateAnnouncement(ctx context.Context, in *UpdateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error)
+	// Delete announcement
+	DeleteAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// List announcements
+	ListAnnouncements(ctx context.Context, in *ListAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
+	// Get single announcement
+	GetAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*Announcement, error)
+	// Search announcements
+	SearchAnnouncements(ctx context.Context, in *SearchAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error)
+	// List system notifications
+	ListSystemNotifications(ctx context.Context, in *ListSystemNoticeRequest, opts ...grpc.CallOption) (*ListSystemNoticeResponse, error)
+	// Create system notification
+	CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*SystemNotice, error)
+	// Update system notification
+	UpdateSystemNotification(ctx context.Context, in *SystemNotice, opts ...grpc.CallOption) (*SystemNotice, error)
+	// Get single system notification
+	GetSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*SystemNotice, error)
+	// Delete system notification
+	DeleteSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type consoleClient struct {
@@ -399,6 +459,87 @@ func (c *consoleClient) DeleteStorage(ctx context.Context, in *emptypb.Empty, op
 func (c *consoleClient) DeleteStorageObject(ctx context.Context, in *DeleteStorageObjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Console_DeleteStorageObject_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ReloadTemplate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_ReloadTemplate_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetChallengeTemplate(ctx context.Context, in *ChallengeTemplateRequest, opts ...grpc.CallOption) (*ChallengeTemplateResponse, error) {
+	out := new(ChallengeTemplateResponse)
+	err := c.cc.Invoke(ctx, Console_GetChallengeTemplate_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetAllChallengeTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllChallengeTemplatesResponse, error) {
+	out := new(GetAllChallengeTemplatesResponse)
+	err := c.cc.Invoke(ctx, Console_GetAllChallengeTemplates_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) CreatePersonalNotification(ctx context.Context, in *CreatePersonalNotificationRequest, opts ...grpc.CallOption) (*PersonalNotice, error) {
+	out := new(PersonalNotice)
+	err := c.cc.Invoke(ctx, Console_CreatePersonalNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ListPersonalNotificationLogs(ctx context.Context, in *ListPersonalNotificationLogRequest, opts ...grpc.CallOption) (*ListPersonalNotificationLogResponse, error) {
+	out := new(ListPersonalNotificationLogResponse)
+	err := c.cc.Invoke(ctx, Console_ListPersonalNotificationLogs_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) AddVipAccount(ctx context.Context, in *AddVipAccountRequest, opts ...grpc.CallOption) (*AddVipAccountResponse, error) {
+	out := new(AddVipAccountResponse)
+	err := c.cc.Invoke(ctx, Console_AddVipAccount_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ListVipAccounts(ctx context.Context, in *ListVipAccountsRequest, opts ...grpc.CallOption) (*VipAccountList, error) {
+	out := new(VipAccountList)
+	err := c.cc.Invoke(ctx, Console_ListVipAccounts_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) RemoveVipAccount(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_RemoveVipAccount_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) CheckVipStatus(ctx context.Context, in *VipAccountId, opts ...grpc.CallOption) (*VipStatusResponse, error) {
+	out := new(VipStatusResponse)
+	err := c.cc.Invoke(ctx, Console_CheckVipStatus_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -882,6 +1023,105 @@ func (c *consoleClient) WriteStorageObject(ctx context.Context, in *WriteStorage
 	return out, nil
 }
 
+func (c *consoleClient) CreateAnnouncement(ctx context.Context, in *CreateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error) {
+	out := new(Announcement)
+	err := c.cc.Invoke(ctx, Console_CreateAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) UpdateAnnouncement(ctx context.Context, in *UpdateAnnouncementRequest, opts ...grpc.CallOption) (*Announcement, error) {
+	out := new(Announcement)
+	err := c.cc.Invoke(ctx, Console_UpdateAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) DeleteAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_DeleteAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ListAnnouncements(ctx context.Context, in *ListAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error) {
+	out := new(AnnouncementList)
+	err := c.cc.Invoke(ctx, Console_ListAnnouncements_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetAnnouncement(ctx context.Context, in *AnnouncementId, opts ...grpc.CallOption) (*Announcement, error) {
+	out := new(Announcement)
+	err := c.cc.Invoke(ctx, Console_GetAnnouncement_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) SearchAnnouncements(ctx context.Context, in *SearchAnnouncementsRequest, opts ...grpc.CallOption) (*AnnouncementList, error) {
+	out := new(AnnouncementList)
+	err := c.cc.Invoke(ctx, Console_SearchAnnouncements_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ListSystemNotifications(ctx context.Context, in *ListSystemNoticeRequest, opts ...grpc.CallOption) (*ListSystemNoticeResponse, error) {
+	out := new(ListSystemNoticeResponse)
+	err := c.cc.Invoke(ctx, Console_ListSystemNotifications_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) CreateSystemNotification(ctx context.Context, in *CreateSystemNotificationRequest, opts ...grpc.CallOption) (*SystemNotice, error) {
+	out := new(SystemNotice)
+	err := c.cc.Invoke(ctx, Console_CreateSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) UpdateSystemNotification(ctx context.Context, in *SystemNotice, opts ...grpc.CallOption) (*SystemNotice, error) {
+	out := new(SystemNotice)
+	err := c.cc.Invoke(ctx, Console_UpdateSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*SystemNotice, error) {
+	out := new(SystemNotice)
+	err := c.cc.Invoke(ctx, Console_GetSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) DeleteSystemNotification(ctx context.Context, in *SystemNotificationId, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_DeleteSystemNotification_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConsoleServer is the server API for Console service.
 // All implementations must embed UnimplementedConsoleServer
 // for forward compatibility
@@ -918,6 +1158,24 @@ type ConsoleServer interface {
 	DeleteStorage(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete a storage object.
 	DeleteStorageObject(context.Context, *DeleteStorageObjectRequest) (*emptypb.Empty, error)
+	// Reload template data
+	ReloadTemplate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Get challenge template by ID
+	GetChallengeTemplate(context.Context, *ChallengeTemplateRequest) (*ChallengeTemplateResponse, error)
+	// Get all challenge templates
+	GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error)
+	// Create Personal notification
+	CreatePersonalNotification(context.Context, *CreatePersonalNotificationRequest) (*PersonalNotice, error)
+	// Get personal notification logs
+	ListPersonalNotificationLogs(context.Context, *ListPersonalNotificationLogRequest) (*ListPersonalNotificationLogResponse, error)
+	// Add VIP account
+	AddVipAccount(context.Context, *AddVipAccountRequest) (*AddVipAccountResponse, error)
+	// List VIP accounts
+	ListVipAccounts(context.Context, *ListVipAccountsRequest) (*VipAccountList, error)
+	// Remove VIP account (set as expired)
+	RemoveVipAccount(context.Context, *VipAccountId) (*emptypb.Empty, error)
+	// Check if user is VIP
+	CheckVipStatus(context.Context, *VipAccountId) (*VipStatusResponse, error)
 	// Delete (non-recorded) all user accounts.
 	DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete leaderboard
@@ -1024,6 +1282,28 @@ type ConsoleServer interface {
 	UpdateGroup(context.Context, *UpdateGroupRequest) (*emptypb.Empty, error)
 	// Write a new storage object or replace an existing one.
 	WriteStorageObject(context.Context, *WriteStorageObjectRequest) (*api.StorageObjectAck, error)
+	// Create announcement
+	CreateAnnouncement(context.Context, *CreateAnnouncementRequest) (*Announcement, error)
+	// Update announcement
+	UpdateAnnouncement(context.Context, *UpdateAnnouncementRequest) (*Announcement, error)
+	// Delete announcement
+	DeleteAnnouncement(context.Context, *AnnouncementId) (*emptypb.Empty, error)
+	// List announcements
+	ListAnnouncements(context.Context, *ListAnnouncementsRequest) (*AnnouncementList, error)
+	// Get single announcement
+	GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error)
+	// Search announcements
+	SearchAnnouncements(context.Context, *SearchAnnouncementsRequest) (*AnnouncementList, error)
+	// List system notifications
+	ListSystemNotifications(context.Context, *ListSystemNoticeRequest) (*ListSystemNoticeResponse, error)
+	// Create system notification
+	CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*SystemNotice, error)
+	// Update system notification
+	UpdateSystemNotification(context.Context, *SystemNotice) (*SystemNotice, error)
+	// Get single system notification
+	GetSystemNotification(context.Context, *SystemNotificationId) (*SystemNotice, error)
+	// Delete system notification
+	DeleteSystemNotification(context.Context, *SystemNotificationId) (*emptypb.Empty, error)
 	mustEmbedUnimplementedConsoleServer()
 }
 
@@ -1078,6 +1358,33 @@ func (UnimplementedConsoleServer) DeleteStorage(context.Context, *emptypb.Empty)
 }
 func (UnimplementedConsoleServer) DeleteStorageObject(context.Context, *DeleteStorageObjectRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteStorageObject not implemented")
+}
+func (UnimplementedConsoleServer) ReloadTemplate(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReloadTemplate not implemented")
+}
+func (UnimplementedConsoleServer) GetChallengeTemplate(context.Context, *ChallengeTemplateRequest) (*ChallengeTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallengeTemplate not implemented")
+}
+func (UnimplementedConsoleServer) GetAllChallengeTemplates(context.Context, *emptypb.Empty) (*GetAllChallengeTemplatesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllChallengeTemplates not implemented")
+}
+func (UnimplementedConsoleServer) CreatePersonalNotification(context.Context, *CreatePersonalNotificationRequest) (*PersonalNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePersonalNotification not implemented")
+}
+func (UnimplementedConsoleServer) ListPersonalNotificationLogs(context.Context, *ListPersonalNotificationLogRequest) (*ListPersonalNotificationLogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPersonalNotificationLogs not implemented")
+}
+func (UnimplementedConsoleServer) AddVipAccount(context.Context, *AddVipAccountRequest) (*AddVipAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddVipAccount not implemented")
+}
+func (UnimplementedConsoleServer) ListVipAccounts(context.Context, *ListVipAccountsRequest) (*VipAccountList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListVipAccounts not implemented")
+}
+func (UnimplementedConsoleServer) RemoveVipAccount(context.Context, *VipAccountId) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveVipAccount not implemented")
+}
+func (UnimplementedConsoleServer) CheckVipStatus(context.Context, *VipAccountId) (*VipStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckVipStatus not implemented")
 }
 func (UnimplementedConsoleServer) DeleteAccounts(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccounts not implemented")
@@ -1237,6 +1544,39 @@ func (UnimplementedConsoleServer) UpdateGroup(context.Context, *UpdateGroupReque
 }
 func (UnimplementedConsoleServer) WriteStorageObject(context.Context, *WriteStorageObjectRequest) (*api.StorageObjectAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteStorageObject not implemented")
+}
+func (UnimplementedConsoleServer) CreateAnnouncement(context.Context, *CreateAnnouncementRequest) (*Announcement, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) UpdateAnnouncement(context.Context, *UpdateAnnouncementRequest) (*Announcement, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) DeleteAnnouncement(context.Context, *AnnouncementId) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) ListAnnouncements(context.Context, *ListAnnouncementsRequest) (*AnnouncementList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAnnouncements not implemented")
+}
+func (UnimplementedConsoleServer) GetAnnouncement(context.Context, *AnnouncementId) (*Announcement, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAnnouncement not implemented")
+}
+func (UnimplementedConsoleServer) SearchAnnouncements(context.Context, *SearchAnnouncementsRequest) (*AnnouncementList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchAnnouncements not implemented")
+}
+func (UnimplementedConsoleServer) ListSystemNotifications(context.Context, *ListSystemNoticeRequest) (*ListSystemNoticeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSystemNotifications not implemented")
+}
+func (UnimplementedConsoleServer) CreateSystemNotification(context.Context, *CreateSystemNotificationRequest) (*SystemNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSystemNotification not implemented")
+}
+func (UnimplementedConsoleServer) UpdateSystemNotification(context.Context, *SystemNotice) (*SystemNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSystemNotification not implemented")
+}
+func (UnimplementedConsoleServer) GetSystemNotification(context.Context, *SystemNotificationId) (*SystemNotice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSystemNotification not implemented")
+}
+func (UnimplementedConsoleServer) DeleteSystemNotification(context.Context, *SystemNotificationId) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSystemNotification not implemented")
 }
 func (UnimplementedConsoleServer) mustEmbedUnimplementedConsoleServer() {}
 
@@ -1535,6 +1875,168 @@ func _Console_DeleteStorageObject_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).DeleteStorageObject(ctx, req.(*DeleteStorageObjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ReloadTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ReloadTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ReloadTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ReloadTemplate(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetChallengeTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChallengeTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetChallengeTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetChallengeTemplate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetChallengeTemplate(ctx, req.(*ChallengeTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetAllChallengeTemplates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetAllChallengeTemplates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetAllChallengeTemplates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetAllChallengeTemplates(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_CreatePersonalNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePersonalNotificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CreatePersonalNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CreatePersonalNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CreatePersonalNotification(ctx, req.(*CreatePersonalNotificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ListPersonalNotificationLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPersonalNotificationLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListPersonalNotificationLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListPersonalNotificationLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListPersonalNotificationLogs(ctx, req.(*ListPersonalNotificationLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_AddVipAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddVipAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).AddVipAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_AddVipAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).AddVipAccount(ctx, req.(*AddVipAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ListVipAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVipAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListVipAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListVipAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListVipAccounts(ctx, req.(*ListVipAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_RemoveVipAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VipAccountId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).RemoveVipAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_RemoveVipAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).RemoveVipAccount(ctx, req.(*VipAccountId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_CheckVipStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VipAccountId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CheckVipStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CheckVipStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CheckVipStatus(ctx, req.(*VipAccountId))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2493,6 +2995,204 @@ func _Console_WriteStorageObject_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_CreateAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAnnouncementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CreateAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CreateAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CreateAnnouncement(ctx, req.(*CreateAnnouncementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_UpdateAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAnnouncementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).UpdateAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_UpdateAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).UpdateAnnouncement(ctx, req.(*UpdateAnnouncementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_DeleteAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnnouncementId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_DeleteAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteAnnouncement(ctx, req.(*AnnouncementId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ListAnnouncements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAnnouncementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListAnnouncements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListAnnouncements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListAnnouncements(ctx, req.(*ListAnnouncementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetAnnouncement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnnouncementId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetAnnouncement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetAnnouncement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetAnnouncement(ctx, req.(*AnnouncementId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_SearchAnnouncements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchAnnouncementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).SearchAnnouncements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_SearchAnnouncements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).SearchAnnouncements(ctx, req.(*SearchAnnouncementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ListSystemNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSystemNoticeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListSystemNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ListSystemNotifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListSystemNotifications(ctx, req.(*ListSystemNoticeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_CreateSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSystemNotificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).CreateSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_CreateSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).CreateSystemNotification(ctx, req.(*CreateSystemNotificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_UpdateSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemNotice)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).UpdateSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_UpdateSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).UpdateSystemNotification(ctx, req.(*SystemNotice))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemNotificationId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetSystemNotification(ctx, req.(*SystemNotificationId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_DeleteSystemNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemNotificationId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteSystemNotification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_DeleteSystemNotification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteSystemNotification(ctx, req.(*SystemNotificationId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Console_ServiceDesc is the grpc.ServiceDesc for Console service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2563,6 +3263,42 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteStorageObject",
 			Handler:    _Console_DeleteStorageObject_Handler,
+		},
+		{
+			MethodName: "ReloadTemplate",
+			Handler:    _Console_ReloadTemplate_Handler,
+		},
+		{
+			MethodName: "GetChallengeTemplate",
+			Handler:    _Console_GetChallengeTemplate_Handler,
+		},
+		{
+			MethodName: "GetAllChallengeTemplates",
+			Handler:    _Console_GetAllChallengeTemplates_Handler,
+		},
+		{
+			MethodName: "CreatePersonalNotification",
+			Handler:    _Console_CreatePersonalNotification_Handler,
+		},
+		{
+			MethodName: "ListPersonalNotificationLogs",
+			Handler:    _Console_ListPersonalNotificationLogs_Handler,
+		},
+		{
+			MethodName: "AddVipAccount",
+			Handler:    _Console_AddVipAccount_Handler,
+		},
+		{
+			MethodName: "ListVipAccounts",
+			Handler:    _Console_ListVipAccounts_Handler,
+		},
+		{
+			MethodName: "RemoveVipAccount",
+			Handler:    _Console_RemoveVipAccount_Handler,
+		},
+		{
+			MethodName: "CheckVipStatus",
+			Handler:    _Console_CheckVipStatus_Handler,
 		},
 		{
 			MethodName: "DeleteAccounts",
@@ -2775,6 +3511,50 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WriteStorageObject",
 			Handler:    _Console_WriteStorageObject_Handler,
+		},
+		{
+			MethodName: "CreateAnnouncement",
+			Handler:    _Console_CreateAnnouncement_Handler,
+		},
+		{
+			MethodName: "UpdateAnnouncement",
+			Handler:    _Console_UpdateAnnouncement_Handler,
+		},
+		{
+			MethodName: "DeleteAnnouncement",
+			Handler:    _Console_DeleteAnnouncement_Handler,
+		},
+		{
+			MethodName: "ListAnnouncements",
+			Handler:    _Console_ListAnnouncements_Handler,
+		},
+		{
+			MethodName: "GetAnnouncement",
+			Handler:    _Console_GetAnnouncement_Handler,
+		},
+		{
+			MethodName: "SearchAnnouncements",
+			Handler:    _Console_SearchAnnouncements_Handler,
+		},
+		{
+			MethodName: "ListSystemNotifications",
+			Handler:    _Console_ListSystemNotifications_Handler,
+		},
+		{
+			MethodName: "CreateSystemNotification",
+			Handler:    _Console_CreateSystemNotification_Handler,
+		},
+		{
+			MethodName: "UpdateSystemNotification",
+			Handler:    _Console_UpdateSystemNotification_Handler,
+		},
+		{
+			MethodName: "GetSystemNotification",
+			Handler:    _Console_GetSystemNotification_Handler,
+		},
+		{
+			MethodName: "DeleteSystemNotification",
+			Handler:    _Console_DeleteSystemNotification_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

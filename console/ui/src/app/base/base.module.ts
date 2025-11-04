@@ -4,6 +4,8 @@ import { RouterModule } from '@angular/router';
 import { NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
 import { BaseComponent } from './base.component';
 import { FilterByGroupPipe } from './filter-by-group.pipe';
+import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -13,7 +15,9 @@ import { FilterByGroupPipe } from './filter-by-group.pipe';
   imports: [
     CommonModule,
     RouterModule,
-    NgbNavModule
+    NgbNavModule,
+    FormsModule,
+    HttpClientModule
   ],
   exports: [
     BaseComponent

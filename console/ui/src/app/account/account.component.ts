@@ -29,6 +29,8 @@ import {DeleteConfirmService} from '../shared/delete-confirm.service';
 export class AccountComponent implements OnInit {
   public account: ApiAccount;
   public error = '';
+  public vipStatus: any = null;
+  public vipLoading = false;
 
   public views = [
     {label: 'Profile', path: 'profile'},
@@ -53,10 +55,38 @@ export class AccountComponent implements OnInit {
     this.route.data.subscribe(
       d => {
         this.account = d[0].account;
+        // 检查VIP状态
+        this.checkVipStatus();
       },
       err => {
         this.error = err;
       });
+  }
+
+  checkVipStatus(): void {
+    if (!this.account?.user?.id) return;
+    
+    this.vipLoading = true;
+    this.consoleService.checkVipStatus('', this.account.user.id).subscribe(
+      (status) => {
+        this.vipStatus = status;
+        this.vipLoading = false;
+      },
+      (err) => {
+        console.error('检查VIP状态失败:', err);
+        this.vipLoading = false;
+      }
+    );
+  }
+
+  isVipActive(): boolean {
+    return this.vipStatus?.is_vip || false;
+  }
+
+  getVipExpireTime(): string {
+    if (!this.vipStatus?.vip_account?.expire_time) return '';
+    const expireDate = new Date(this.vipStatus.vip_account.expire_time);
+    return expireDate.toLocaleString('zh-CN');
   }
 
   deleteAccount(event, recorded: boolean): void {

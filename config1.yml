@@ -1,8 +1,10 @@
-name: nakama-node-jp
+name: nakama-node-jp1
 
 database:
   address:
-    - "root@192.168.102.223:26257/test"
+    - "postgres://nakama:nakama@localhost:5432/nakama?sslmode=disable"
+  max_open_conns: 30
+  max_idle_conns: 10
 logger:
   level: "debug"
 
@@ -14,18 +16,15 @@ session:
   single_socket: true
   single_session: true
 
+#cluster:
+#  enabled: true
+#  redis_address: "localhost:6379"
+#  redis_password: ""
+#  redis_db: 0
+
 socket:
   server_key: "sparkgame"
   port: 7350
-
-
-social:
-  wechat:
-    app_id: "wx1861752aaba00455"
-    app_secret: "3d0490d1fb17f6905989cf2561c34a42"
-  tiktok:
-    app_id: "tte8269e9b77120eb407"
-    app_secret: "54a13ecae262f25237f57cfafb20a4a454087edd"
 
 console:
   port: 7351

@@ -189,11 +189,34 @@ func (s *ApiServer) WriteLeaderboardRecord(ctx context.Context, in *api.WriteLea
 		return nil, status.Error(codes.InvalidArgument, "Invalid leaderboard ID.")
 	} else if in.Record == nil {
 		return nil, status.Error(codes.InvalidArgument, "Invalid input, record score value is required.")
-	} else if in.Record.Metadata != "" {
-		if maybeJSON := []byte(in.Record.Metadata); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
-			return nil, status.Error(codes.InvalidArgument, "Metadata value must be JSON, if provided.")
-		}
 	}
+
+	// 统一的签名验证处理 - 强制要求签名
+	if in.Record.Metadata == "" {
+		return nil, status.Error(codes.InvalidArgument, "Signature is required. Please provide signature field.")
+	}
+
+	if maybeJSON := []byte(in.Record.Metadata); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
+		return nil, status.Error(codes.InvalidArgument, "Metadata value must be JSON, if provided.")
+	}
+
+	// 使用统一的签名验证函数
+	verifiedMetadata, err := VerifyRecordSignature(&SignatureVerificationRequest{
+		RecordType: "leaderboard",
+		RecordID:   in.LeaderboardId,
+		Score:      in.Record.Score,
+		Subscore:   in.Record.Subscore,
+		Metadata:   in.Record.Metadata,
+		UserID:     userID.String(),
+		Username:   username,
+		Logger:     s.logger,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新metadata为验证后的版本（移除了签名字段）
+	in.Record.Metadata = verifiedMetadata
 
 	record, err := LeaderboardRecordWrite(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, in.LeaderboardId, userID.String(), username, in.Record.Score, in.Record.Subscore, in.Record.Metadata, in.Record.Operator)
 	if err == ErrLeaderboardNotFound {

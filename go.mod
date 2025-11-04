@@ -6,6 +6,8 @@ require (
 	github.com/blugelabs/bluge v0.2.2
 	github.com/blugelabs/bluge_segment_api v0.2.0
 	github.com/blugelabs/query_string v0.3.0
+	github.com/bytedance/douyin-openapi-credential-go v0.0.0-20240627133153-7f4587ca06ce
+	github.com/bytedance/douyin-openapi-sdk-go v0.0.0-20240925072830-12f094544623
 	github.com/dgryski/dgoogauth v0.0.0-20190221195224-5a805980a5f3
 	github.com/dop251/goja v0.0.0-20241024094426-79f3a7efcdbd
 	github.com/gofrs/uuid/v5 v5.3.0
@@ -21,6 +23,7 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/stretchr/testify v1.10.0
 	github.com/uber-go/tally/v4 v4.1.16
 	go.uber.org/atomic v1.11.0
@@ -50,13 +53,12 @@ require (
 	github.com/blevesearch/vellum v1.0.10 // indirect
 	github.com/blugelabs/ice v1.0.0 // indirect
 	github.com/blugelabs/ice/v2 v2.0.1 // indirect
-	github.com/bytedance/douyin-openapi-credential-go v0.0.0-20240627133153-7f4587ca06ce // indirect
-	github.com/bytedance/douyin-openapi-sdk-go v0.0.0-20240925072830-12f094544623 // indirect
 	github.com/bytedance/douyin-openapi-util-go v0.0.0-20240627134255-db766d8741c8 // indirect
 	github.com/caio/go-tdigest v3.1.0+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-resty/resty/v2 v2.12.0 // indirect

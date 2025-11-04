@@ -14,16 +14,16 @@ import (
 
 const (
 	// 应用ID和密钥 - 这些应该从配置文件中读取
-	DefaultSiteID  = "cjyx_cn"
-	DefaultSiteKey = "11b18290a34e03da78900824fa59b140"
+	DefaultSiteID  = "xjsmdyapp_android"
+	DefaultSiteKey = "0c373fedcec01cff88aacdb8d2e28dc2"
 )
 
 // PurchaseNotifyRequest 支付通知请求结构
 type PurchaseNotifyRequest struct {
-	Site       string `json:"site"`        // 应用 ID
-	OrderID    string `json:"order_id"`    // 商户订单号
-	UID        string `json:"uid"`         // 用户ID
-	SID        string `json:"sid"`         // 服务器ID
+	Site       string `json:"site"`     // 应用 ID
+	OrderID    string `json:"order_id"` // 商户订单号
+	UID        string `json:"uid"`      // 用户ID
+	SID        string `json:"sid"`
 	CPOrderID  string `json:"cp_order_id"` // CP订单号
 	RoleID     string `json:"roleid"`      // 角色ID
 	RoleName   string `json:"rolename"`    // 角色名称
@@ -48,27 +48,11 @@ func (s *ApiServer) HandlePurchaseNotify(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 读取请求体
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		s.logger.Error("读取购买通知请求失败", zap.Error(err))
-		s.writePurchaseError(w, "READ_ERROR", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
 	// 解析请求参数
 	var req PurchaseNotifyRequest
 
-	// 尝试JSON格式解析
-	if err := json.Unmarshal(body, &req); err != nil {
-		// 如果JSON解析失败，尝试从POST表单解析
-		if parseErr := r.ParseForm(); parseErr != nil {
-			s.logger.Error("解析购买通知请求失败", zap.Error(err), zap.String("body", string(body)))
-			s.writePurchaseError(w, "PARSE_ERROR", http.StatusBadRequest)
-			return
-		}
-
+	// 先尝试解析表单数据
+	if err := r.ParseForm(); err == nil && len(r.Form) > 0 {
 		// 从表单获取参数
 		req = PurchaseNotifyRequest{
 			Site:       r.FormValue("site"),
@@ -82,6 +66,21 @@ func (s *ApiServer) HandlePurchaseNotify(w http.ResponseWriter, r *http.Request)
 			ProductID:  r.FormValue("productid"),
 			Time:       r.FormValue("time"),
 			Sign:       r.FormValue("sign"),
+		}
+	} else {
+		// 如果表单解析失败，尝试JSON格式
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			s.logger.Error("读取购买通知请求失败", zap.Error(err))
+			s.writePurchaseError(w, "READ_ERROR", http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		if err := json.Unmarshal(body, &req); err != nil {
+			s.logger.Error("解析购买通知请求失败", zap.Error(err), zap.String("body", string(body)))
+			s.writePurchaseError(w, "PARSE_ERROR", http.StatusBadRequest)
+			return
 		}
 	}
 

@@ -39,6 +39,7 @@ type LeaderboardRankCache interface {
 	Delete(leaderboardId string, expiryUnix int64, ownerID uuid.UUID) bool
 	DeleteLeaderboard(leaderboardId string, expiryUnix int64) bool
 	TrimExpired(nowUnix int64) bool
+	Stop()
 }
 
 type LeaderboardWithExpiry struct {
@@ -231,7 +232,22 @@ func (l *LocalLeaderboardRankCache) Get(leaderboardId string, expiryUnix int64, 
 		return 0
 	}
 	rank := rankCache.cache.GetRank(rankData.record)
+
+	// 检查score和subscore是否都为0
+	var score, subscore int64
+	switch r := rankData.record.(type) {
+	case RankAsc:
+		score, subscore = r.Score, r.Subscore
+	case RankDesc:
+		score, subscore = r.Score, r.Subscore
+	}
+
 	rankCache.RUnlock()
+
+	// 如果score和subscore都为0，则rank也为0
+	if score == 0 && subscore == 0 {
+		return 0
+	}
 
 	return int64(rank)
 }
@@ -316,6 +332,11 @@ func (l *LocalLeaderboardRankCache) Fill(leaderboardId string, expiryUnix int64,
 			continue
 		}
 		record.Rank = int64(rankCache.cache.GetRank(rankData.record))
+
+		// 如果score和subscore都为0，则rank也为0
+		if record.Score == 0 && record.Subscore == 0 {
+			record.Rank = 0
+		}
 	}
 	rankCache.RUnlock()
 
@@ -374,6 +395,11 @@ func (l *LocalLeaderboardRankCache) Insert(leaderboardId string, sortOrder int, 
 
 	rank := rankCache.cache.GetRank(rankData)
 	rankCache.Unlock()
+
+	// 如果score和subscore都为0，则rank也为0
+	if score == 0 && subscore == 0 {
+		return 0
+	}
 
 	return int64(rank)
 }
@@ -449,6 +475,10 @@ func (l *LocalLeaderboardRankCache) TrimExpired(nowUnix int64) bool {
 	return true
 }
 
+func (l *LocalLeaderboardRankCache) Stop() {
+	// Local cache doesn't need cleanup
+}
+
 func leaderboardCacheInitWorker(
 	ctx context.Context,
 	wg *sync.WaitGroup,
@@ -473,10 +503,6 @@ func leaderboardCacheInitWorker(
 		var generation int32
 		var ownerIDStr string
 
-		mu.Lock()
-		*cachedLeaderboards = append(*cachedLeaderboards, leaderboard.Id)
-		mu.Unlock()
-
 		// Current expiry for this leaderboard.
 		// This matches calculateTournamentDeadlines
 		var expiryUnix int64
@@ -493,6 +519,10 @@ func leaderboardCacheInitWorker(
 			// Last scores for this leaderboard have expired, do not cache them.
 			continue
 		}
+
+		mu.Lock()
+		*cachedLeaderboards = append(*cachedLeaderboards, leaderboard.Id)
+		mu.Unlock()
 
 		// Prepare structure to receive rank data.
 		key := LeaderboardWithExpiry{LeaderboardId: leaderboard.Id, Expiry: expiryUnix}

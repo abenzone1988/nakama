@@ -1,23 +1,23 @@
-<h2 class="pb-1">User Accounts</h2>
-<h6 class="pb-3">{{accountsCount}} accounts found.</h6>
+<h2 class="pb-1">{{'User Accounts' | translate}}</h2>
+<h6 class="pb-3">{{accountsCount}} {{'accounts found' | translate}}.</h6>
 
 <div class="row no-gutters mb-4">
   <div class="col d-flex justify-content-between no-gutters align-items-center">
     <div class="col-md-9">
       <form [formGroup]="searchForm" (ngSubmit)="search(0)">
         <div class="input-group">
-          <input type="text" class="form-control border-right-0" formControlName="filter" placeholder="Filter by user ID, email, social provider ID, device ID, or username (use '%' for prefix or suffix wildcard search)"/>
+          <input type="text" class="form-control border-right-0" formControlName="filter" [placeholder]="'Filter by user ID, email, social provider ID, device ID, or username (use \'%\' for prefix or suffix wildcard search)' | translate"/>
           <div class="input-group-append">
             <span class="input-group-text" (click)="f.filter.setValue(systemUserId);"><img class="mr-1" src="/static/svg/purple-cog-1.svg" alt="" width="20" height=""></span>
           </div>
 
           <div class="input-group-append">
             <div class="btn-group">
-              <button type="button" class="btn btn-primary dropdown-radius" (click)="f.filter_type.setValue(0); search(0)">Search</button>
+              <button type="button" class="btn btn-primary dropdown-radius" (click)="f.filter_type.setValue(0); search(0)">{{'Search' | translate}}</button>
               <div class="btn-group" ngbDropdown role="group" aria-label="Button group with nested dropdown">
                 <button type="button" [disabled]="!f.filter.value || f.filter.value === ''" class="btn btn-primary dropdown-toggle-split" ngbDropdownToggle></button>
                 <div class="dropdown-menu" ngbDropdownMenu>
-                  <button type="button" ngbDropdownItem (click)="f.filter_type.setValue(1); search(0)">Tombstones</button>
+                  <button type="button" ngbDropdownItem (click)="f.filter_type.setValue(1); search(0)">{{'Tombstones' | translate}}</button>
                 </div>
               </div>
             </div>
@@ -37,37 +37,37 @@
 
 <ngb-alert [dismissible]="false" type="danger" class="mb-3" *ngIf="error">
   <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
-  <h6 class="mr-2 d-inline font-weight-bold">Error when querying accounts: {{error}}</h6>
+  <h6 class="mr-2 d-inline font-weight-bold">{{'Error when querying accounts' | translate}}: {{error}}</h6>
 </ngb-alert>
 
 <ngb-alert [dismissible]="false" type="danger" class="mb-3" *ngIf="ongoingQuery">
   <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
-  <h6 class="mr-2 d-inline font-weight-bold">Query ongoing...</h6>
-  <button type="button" class="btn btn-danger" (click)="cancelQuery()">Cancel!</button>
+  <h6 class="mr-2 d-inline font-weight-bold">{{'Query ongoing' | translate}}...</h6>
+  <button type="button" class="btn btn-danger" (click)="cancelQuery()">{{'Cancel' | translate}}!</button>
 </ngb-alert>
 
 <div class="row no-gutters">
   <table class="table table-sm table-hover table-bordered">
     <thead class="thead-light">
       <tr>
-        <th style="width: 320px">User ID</th>
-        <th>Username</th>
-        <th>Display Name</th>
-        <th style="width: 180px">Last Update</th>
-        <th style="width: 90px" *ngIf="deleteAllowed()">Remove</th>
+        <th style="width: 320px">{{'User ID' | translate}}</th>
+        <th>{{'Username' | translate}}</th>
+        <th>{{'Display Name' | translate}}</th>
+        <th style="width: 180px">{{'Last Update' | translate}}</th>
+        <th style="width: 90px" *ngIf="deleteAllowed()">{{'Remove' | translate}}</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngIf="accounts.length === 0">
-        <td colSpan="5" class="text-muted">No users found - change the filter criteria or add new user accounts.</td>
+        <td colSpan="5" class="text-muted">{{'No users found - change the filter criteria or add new user accounts.' | translate}}</td>
       </tr>
       <tr *ngFor="let u of accounts; index as i;">
         <td (click)="viewAccount(u);">{{u.id}}</td>
         <td (click)="viewAccount(u);">{{u.username}}</td>
         <td (click)="viewAccount(u);">{{u.display_name}}</td>
-        <td (click)="viewAccount(u);">{{u.update_time}}</td>
+        <td (click)="viewAccount(u);">{{u.update_time  | date:'yyyy-MM-dd HH:mm:ss'}}</td>
         <td *ngIf="deleteAllowed() && u.id === systemUserId"></td>
-        <td *ngIf="deleteAllowed() && u.id !== systemUserId" class="text-center"><button type="button" class="btn btn-sm btn-danger" (click)="deleteAccount($event, i, u);">Delete</button></td>
+        <td *ngIf="deleteAllowed() && u.id !== systemUserId" class="text-center"><button type="button" class="btn btn-sm btn-danger" (click)="deleteAccount($event, i, u);">{{'Delete' | translate}}</button></td>
       </tr>
     </tbody>
   </table>

@@ -32,6 +32,7 @@ import {SegmentService} from 'ngx-segment-analytics';
 import {ConsoleService, UserRole} from '../console.service';
 import {Globals} from '../globals';
 import {environment} from '../../environments/environment';
+import { TranslationService } from '../services/translation.service';
 
 @Component({
   templateUrl: './base.component.html',
@@ -43,6 +44,7 @@ export class BaseComponent implements OnInit, OnDestroy {
   private segmentRouterSub: Subscription;
   public loading = true;
   public error = '';
+  public currentLang: string = 'en';
 
   public routes = [
     // 系统状态和配置组
@@ -50,19 +52,20 @@ export class BaseComponent implements OnInit, OnDestroy {
     {navItem: 'users', routerLink: ['/users'], label: 'User Management', minRole: UserRole.USER_ROLE_ADMIN, icon: 'user-management', group: 'system'},
     {navItem: 'config', routerLink: ['/config'], label: 'Configuration', minRole: UserRole.USER_ROLE_DEVELOPER, icon: 'configuration', group: 'system'},
     {navItem: 'modules', routerLink: ['/modules'], label: 'Runtime Modules', minRole: UserRole.USER_ROLE_DEVELOPER, icon: 'runtime-modules', group: 'system'},
-    
     // 用户和账户管理组
     {navItem: 'accounts', routerLink: ['/accounts'], label: 'Accounts', minRole: UserRole.USER_ROLE_READONLY, icon: 'accounts', group: 'accounts'},
-    {navItem: 'groups', routerLink: ['/groups'], label: 'Groups', minRole: UserRole.USER_ROLE_READONLY, icon: 'groups', group: 'accounts'},
+    {navItem: 'groups', routerLink: ['/groups'], label: 'Groups', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'groups', group: 'accounts'},
     {navItem: 'storage', routerLink: ['/storage'], label: 'Storage', minRole: UserRole.USER_ROLE_READONLY, icon: 'storage', group: 'accounts'},
     {navItem: 'leaderboards', routerLink: ['/leaderboards'], label: 'Leaderboards', minRole: UserRole.USER_ROLE_READONLY, icon: 'leaderboard', group: 'accounts'},
-    {navItem: 'chat', routerLink: ['/chat'], label: 'Chat Messages', minRole: UserRole.USER_ROLE_READONLY, icon: 'chat', group: 'accounts'},
+    {navItem: 'chat', routerLink: ['/chat'], label: 'Chat Messages', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'chat', group: 'accounts'},
     {navItem: 'notifications', routerLink: ['/notifications'], label: 'Notifications', minRole: UserRole.USER_ROLE_READONLY, icon: 'notification', group: 'accounts'},
-
-    {navItem: 'purchases', routerLink: ['/purchases'], label: 'Purchases', minRole: UserRole.USER_ROLE_READONLY, icon: 'purchases', group: 'accounts'},
-    {navItem: 'subscriptions', routerLink: ['/subscriptions'], label: 'Subscriptions', minRole: UserRole.USER_ROLE_READONLY, icon: 'subscriptions', group: 'accounts'},
-    {navItem: 'matches', routerLink: ['/matches'], label: 'Matches', minRole: UserRole.USER_ROLE_READONLY, icon: 'running-matches', group: 'accounts'},
-    
+    {navItem: 'announcements', routerLink: ['/announcements'], label: 'Announcements', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'announcement', group: 'accounts'},
+    {navItem: 'system-notifications', routerLink: ['/system-notifications'], label: 'SystemNotice', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'system-notifications', group: 'accounts'},
+    {navItem: 'personal-notifications', routerLink: ['/personal-notifications'], label: '奖励发放', minRole: UserRole.USER_ROLE_READONLY, icon: 'gift', group: 'accounts'},
+    {navItem: 'vip-accounts', routerLink: ['/vip-accounts'], label: 'VIP管理', minRole: UserRole.USER_ROLE_READONLY, icon: 'vip', group: 'accounts'},
+    {navItem: 'purchases', routerLink: ['/purchases'], label: 'Purchases', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'purchases', group: 'accounts'},
+    {navItem: 'subscriptions', routerLink: ['/subscriptions'], label: 'Subscriptions', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'subscriptions', group: 'accounts'},
+    {navItem: 'matches', routerLink: ['/matches'], label: 'Matches', minRole: UserRole.USER_ROLE_MAINTAINER, icon: 'running-matches', group: 'accounts'},
     // 开发工具组
     {navItem: 'apiexplorer', routerLink: ['/apiexplorer'], label: 'API Explorer', minRole: UserRole.USER_ROLE_DEVELOPER, icon: 'api-explorer', group: 'dev'},
   ];
@@ -72,6 +75,7 @@ export class BaseComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private segment: SegmentService,
     private readonly authService: AuthenticationService,
+    private readonly translationService: TranslationService,
   ) {
     this.loading = false;
     // Buffer router events every 2 seconds, to reduce loading screen jitter
@@ -103,9 +107,17 @@ export class BaseComponent implements OnInit, OnDestroy {
       }
       return true;
     })).subscribe((nav: NavigationEnd) => {
-      if (nav && !environment.nt) {
-        segment.page(nav.url);
+      if (nav && !environment.nt && environment.segment_write_key) {
+        try {
+          segment.page(nav.url);
+        } catch (e) {
+          console.error('Error tracking page view:', e);
+        }
       }
+    });
+
+    this.translationService.getCurrentLang().subscribe(lang => {
+      this.currentLang = lang;
     });
   }
 
@@ -139,6 +151,10 @@ export class BaseComponent implements OnInit, OnDestroy {
   }
 
   onSidebarNavChange(changeEvent: NgbNavChangeEvent): void {}
+
+  switchLanguage(lang: string): void {
+    this.translationService.setLanguage(lang);
+  }
 }
 
 @Injectable({providedIn: 'root'})

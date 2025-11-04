@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"go.uber.org/zap"
@@ -203,6 +202,19 @@ func (s *ApiServer) WriteStorageObjects(ctx context.Context, in *api.WriteStorag
 
 		if maybeJSON := []byte(object.GetValue()); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
 			return nil, status.Error(codes.InvalidArgument, "Value must be a JSON object.")
+		} // 检查value中是否包含signature字段
+		var valueData map[string]interface{}
+		if err := json.Unmarshal([]byte(object.GetValue()), &valueData); err != nil {
+			return nil, status.Error(codes.InvalidArgument, "Invalid value JSON format.")
+		}
+
+		if object.GetSignature() != "" {
+			if !VerifyStorageSignature(object.GetCollection(), object.GetKey(), object.GetValue(), userID, object.GetSignature()) {
+				return nil, status.Error(codes.InvalidArgument, "Signature is invalid.")
+			}
+		} else {
+			//正式上线需要必须签名
+			return nil, status.Error(codes.InvalidArgument, "Invalid value.")
 		}
 	}
 

@@ -115,7 +115,11 @@ export class {{(index .Tags 0).Name}}Service {
     {{- if and (eq $index 0) (eq $hasSecurity true) -}}{{- ", " -}}{{- else if ne $index 0 -}}{{- ", " -}}{{- end -}}
     {{- $parameter.Name }}{{- if not $parameter.Required }}?{{- end -}}{{": "}}
           {{- if eq $parameter.In "path" -}}
+            {{- if eq $parameter.Type "integer" -}}
+    number
+            {{- else -}}
     {{ $parameter.Type }}
+            {{- end -}}
           {{- else if eq $parameter.In "body" -}}
         {{- $body = true -}}
         {{- if eq $parameter.Schema.Type "string" -}}
@@ -146,7 +150,7 @@ export class {{(index .Tags 0).Name}}Service {
 
         {{- range $parameter := $operation.Parameters}}
       {{- if eq $parameter.In "path"}}
-    {{ $parameter.Name }} = encodeURIComponent(String({{- $parameter.Name}}))
+    const encoded{{ $parameter.Name | title }} = encodeURIComponent(String({{- $parameter.Name}}))
       {{- end}}
         {{- end}}
     const urlPath = {{ $url | convertPathToJs -}};
@@ -414,7 +418,7 @@ func convertType(prefixesToRemove []string, convertRefToClassName func(string) s
 }
 
 // Converts a path with params to a JS interpolated string
-// E.g.: "/v1/builder/{name}/user/{user_id}" becomes `/v1/builder/${name}/user/${user_id}`
+// E.g.: "/v1/builder/{name}/user/{user_id}" becomes `/v1/builder/${encodedName}/user/${encodedUser_id}`
 func convertPathToJs(path string) string {
 	// Regex to identify variables within brackets e.g.: {foo}/baz/{bar}
 	findBracketVarsReg := regexp.MustCompile("{(.+?)}")
@@ -422,7 +426,10 @@ func convertPathToJs(path string) string {
 	jsPath := fmt.Sprintf("`%s`", path)
 	if len(matches) > 0 {
 		for _, m := range matches {
-			jsPath = strings.Replace(jsPath, m[0], fmt.Sprintf("$%s", m[0]), 1)
+			// Convert {id} to ${encodedId}
+			varName := m[1]
+			encodedVarName := "encoded" + strings.Title(varName)
+			jsPath = strings.Replace(jsPath, m[0], fmt.Sprintf("${%s}", encodedVarName), 1)
 		}
 	}
 	return jsPath

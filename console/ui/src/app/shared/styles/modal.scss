@@ -1,0 +1,24 @@
+// 全局模态框基础样式
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+// 特定模态框样式
+@mixin modal-styles($name) {
+  .#{$name}-backdrop.modal-backdrop {
+    z-index: 1040 !important;
+  }
+  
+  .#{$name}-modal.modal {
+    z-index: 1050 !important;
+  }
+}
+
+// 应用样式到不同类型的模态框
+@include modal-styles('announcement');
+@include modal-styles('notification');
+@include modal-styles('dialog'); 

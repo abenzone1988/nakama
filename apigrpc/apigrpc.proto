@@ -825,4 +825,88 @@ service Nakama {
   rpc GetGameTime (google.protobuf.Empty) returns (game.GetGameTimeResponse) {
     option (google.api.http).get = "/v2/game/time";
   }
+
+  // List published announcements
+  rpc ListPublishedAnnouncements (game.ListPublishedAnnouncementsRequest) returns (game.ListPublishedAnnouncementsResponse) {
+    option (google.api.http).get = "/v2/game/announcements";
+  }
+
+  // Mark notifications as read
+  rpc MarkNotificationsRead(MarkNotificationsReadRequest) returns (MarkNotificationsReadResponse) {
+    option (google.api.http) = {
+      post: "/v2/notification/read"
+      body: "*"
+    };
+  }
+
+  // Claim notification attachments
+  rpc ClaimNotificationAttachments(ClaimNotificationAttachmentsRequest) returns (ClaimNotificationAttachmentsResponse) {
+    option (google.api.http) = {
+      post: "/v2/notification/claim"
+      body: "*"
+    };
+  }
+
+  // Save home level data
+  rpc SaveHomeLevelData(game.SaveHomeLevelDataRequest) returns (game.SaveHomeLevelDataResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/homelevel/save"
+      body: "*"
+    };
+  }
+
+  // Get home level data
+  rpc GetHomeLevelData(game.GetHomeLevelDataRequest) returns (game.GetHomeLevelDataResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/homelevel/get"
+      body: "*"
+    };
+  }
+
+  // Reset home level data
+  rpc ResetHomeLevelData(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      get: "/v2/game/homelevel/reset"
+    };
+  }
+
+  // OperateWallet
+  rpc OperateWallet(game.OperateWalletRequest) returns (game.WalletResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/wallet/operate"
+      body: "*"
+    };
+  }
+
+  // Get Challenge
+  rpc GetChallenge(google.protobuf.Empty) returns (game.GetChallengeResponse) {
+    option (google.api.http).get = "/v2/game/challenges";
+  }
+
+  // Join Challenge
+  rpc JoinChallenge(game.JoinChallengeRequest) returns (game.JoinChallengeResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/challenges/join"
+      body: "*"
+    };
+  }
+
+  // Gain Challenge Reward
+  rpc GainChallengeReward(game.GainChallengeRewardRequest) returns (game.GainChallengeRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/challenges/gain"
+      body: "*"
+    };
+  }
+
+  // Get Top Three Stats
+  rpc GetChallengeTopStats(google.protobuf.Empty) returns (game.GetChallengeTopStatsResponse) {
+    option (google.api.http).get = "/v2/game/challenges/top-three-stats";
+  }
+
+  // Check if current user is VIP
+  rpc CheckVipStatus(google.protobuf.Empty) returns (game.CheckVipStatusResponse) {
+    option (google.api.http).get = "/v2/game/activity/status";
+  }
 }
+

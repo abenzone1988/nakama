@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"go.uber.org/zap"
 )
 
 type SessionCache interface {
@@ -50,6 +51,7 @@ type sessionCacheUser struct {
 type LocalSessionCache struct {
 	sync.RWMutex
 
+	logger                *zap.Logger
 	tokenExpirySec        int64
 	refreshTokenExpirySec int64
 
@@ -59,19 +61,25 @@ type LocalSessionCache struct {
 	cache map[uuid.UUID]*sessionCacheUser
 }
 
-func NewLocalSessionCache(tokenExpirySec, refreshTokenExpirySec int64) SessionCache {
+func NewLocalSessionCache(logger *zap.Logger, config Config, tokenExpirySec, refreshTokenExpirySec int64) SessionCache {
 	ctx, ctxCancelFn := context.WithCancel(context.Background())
 
 	s := &LocalSessionCache{
-		ctx:         ctx,
-		ctxCancelFn: ctxCancelFn,
-
+		logger:                logger,
+		ctx:                   ctx,
+		ctxCancelFn:           ctxCancelFn,
 		tokenExpirySec:        tokenExpirySec,
 		refreshTokenExpirySec: refreshTokenExpirySec,
-
-		cache: make(map[uuid.UUID]*sessionCacheUser),
+		cache:                 make(map[uuid.UUID]*sessionCacheUser),
 	}
 
+	// 启动清理 goroutine
+	// 注意：清理操作是本地内存优化，不会触发 Redis 同步
+	// 原因：
+	// 1. 每个节点都会独立运行相同的清理逻辑
+	// 2. 过期时间是固定的，各节点会在相近时间自动清理
+	// 3. 清理不影响正确性（验证时会检查过期时间）
+	// 4. 避免产生大量不必要的网络流量
 	go func() {
 		ticker := time.NewTicker(2 * time.Duration(tokenExpirySec) * time.Second)
 		for {

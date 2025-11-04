@@ -1,0 +1,176 @@
+<h2 class="pb-1">VIP账户管理</h2>
+<h6 class="pb-3">共找到 {{vipAccountsCount}} 个VIP账户。</h6>
+
+<div class="row no-gutters mb-4">
+  <div class="col d-flex justify-content-between no-gutters align-items-center">
+    <div class="col-md-7">
+      <form [formGroup]="searchForm" (ngSubmit)="search(0)">
+        <div class="input-group">
+          <input type="text" class="form-control border-right-0" formControlName="filter" placeholder="按用户ID或用户名筛选"/>
+          <div class="input-group-append">
+            <button type="button" class="btn btn-primary" (click)="search(0)">搜索</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-md-3 text-center">
+      <button type="button" class="btn btn-success" (click)="openAddVipModal(addVipModalContent)">
+        <img src="/static/svg/green-plus.svg" alt="" width="20" height="" class="mr-1">
+        添加VIP
+      </button>
+    </div>
+    <div class="col-md-2 justify-content-end text-right">
+      <div class="btn-group page-btns" role="group" aria-label="Search">
+        <button type="button" class="btn btn-outline-secondary" (click)="search(0)" [disabled]="vipAccounts.length === 0">
+          <img src="/static/svg/page-first.svg" alt="" width="20" height="">
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="search(1)" [disabled]="nextCursor === ''">
+          <img src="/static/svg/page-next.svg" alt="" width="20" height="">
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ngb-alert [dismissible]="false" type="danger" class="mb-3" *ngIf="error">
+  <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">错误: {{error}}</h6>
+</ngb-alert>
+
+<ngb-alert [dismissible]="false" type="success" class="mb-3" *ngIf="success">
+  <img src="/static/svg/green-tick.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">{{success}}</h6>
+</ngb-alert>
+
+<ngb-alert [dismissible]="false" type="info" class="mb-3" *ngIf="ongoingQuery">
+  <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+  <h6 class="mr-2 d-inline font-weight-bold">查询进行中...</h6>
+  <button type="button" class="btn btn-danger" (click)="cancelQuery()">取消!</button>
+</ngb-alert>
+
+<div class="row no-gutters">
+  <table class="table table-sm table-hover table-bordered">
+    <thead>
+    <tr>
+      <th scope="col">用户ID</th>
+      <th scope="col">用户名</th>
+      <th scope="col">创建时间</th>
+      <th scope="col">到期时间</th>
+      <th scope="col">状态</th>
+      <th scope="col" class="text-center">操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let account of vipAccounts; let i = index" class="cursor-pointer">
+      <td (click)="viewAccount(account)" class="text-muted">
+        <small>{{account.user_id}}</small>
+      </td>
+      <td (click)="viewAccount(account)">
+        <span class="font-weight-bold">{{account.username}}</span>
+      </td>
+      <td (click)="viewAccount(account)" class="text-muted">
+        <small>{{formatDate(account.create_time)}}</small>
+      </td>
+      <td (click)="viewAccount(account)" class="text-muted">
+        <small>{{formatDate(account.expiry_time)}}</small>
+      </td>
+      <td (click)="viewAccount(account)">
+        <span class="badge" [class.badge-success]="isVipActive(account)" [class.badge-secondary]="!isVipActive(account)">
+          {{isVipActive(account) ? '有效' : '已过期'}}
+        </span>
+      </td>
+      <td class="text-center">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          (click)="removeVipAccount($event, i, account)"
+          *ngIf="isVipActive(account)"
+          title="移除VIP">
+          <img src="/static/svg/red-trash.svg" alt="" width="16" height="">
+        </button>
+      </td>
+    </tr>
+    <tr *ngIf="vipAccounts.length === 0">
+      <td colspan="6" class="text-center text-muted">
+        <em>没有找到VIP账户</em>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 添加VIP模态框 -->
+<ng-template #addVipModalContent let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title" id="modal-basic-title">添加VIP用户</h4>
+    <button type="button" class="btn-close" aria-label="关闭" (click)="modal.dismiss()" data-bs-dismiss="modal">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <form [formGroup]="addVipForm" (ngSubmit)="addVipAccount()" role="form">
+      <div class="form-group">
+        <label for="usernames">用户名 <span class="text-danger">*</span></label>
+        <textarea
+          class="form-control"
+          id="usernames"
+          formControlName="usernames"
+          rows="3"
+          placeholder="输入目标用户名，多个用户名用空格分隔"
+          aria-describedby="usernames-help"
+          aria-required="true"></textarea>
+        <small id="usernames-help" class="form-text text-muted">
+          请输入目标用户名，多个用户名之间用空格分隔。不存在的用户名将被忽略。
+        </small>
+        <div class="invalid-feedback" *ngIf="addVipFormControls.usernames.invalid && addVipFormControls.usernames.touched">
+          用户名是必填项
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="expire_time">到期时间（可选）</label>
+        <input
+          type="datetime-local"
+          class="form-control"
+          id="expire_time"
+          formControlName="expire_time">
+        <small class="form-text text-muted">如果不设置，默认为一年后到期</small>
+      </div>
+
+      <ngb-alert [dismissible]="false" type="danger" *ngIf="error">
+        <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+        <span>{{error}}</span>
+      </ngb-alert>
+
+      <ngb-alert [dismissible]="false" type="success" *ngIf="success">
+        <img src="/static/svg/green-tick.svg" alt="" width="16" height="" class="mr-2">
+        <span>{{success}}</span>
+      </ngb-alert>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">取消</button>
+    <button type="button" class="btn btn-primary" (click)="addVipAccount()" [disabled]="addVipForm.invalid">添加VIP</button>
+  </div>
+</ng-template>
+
+<!-- 错误信息Modal -->
+<ng-template #errorModalTemplate let-modal>
+  <div class="modal-header">
+    <h4 class="modal-title" id="error-modal-title">操作失败详情</h4>
+    <button type="button" class="btn-close" aria-label="关闭" (click)="modal.dismiss()" data-bs-dismiss="modal">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="alert alert-danger">
+      <img src="/static/svg/red-triangle.svg" alt="" width="16" height="" class="mr-2">
+      <div class="mt-2">
+        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit; background: transparent; border: none; padding: 0;">{{currentErrorMessage}}</pre>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">确定</button>
+  </div>
+</ng-template>

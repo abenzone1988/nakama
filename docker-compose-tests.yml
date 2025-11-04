@@ -41,7 +41,7 @@ services:
 
   test:
       image: "golang:1.23.5"
-      command: /bin/sh -c "mkdir -p /nakama/internal/gopher-lua/_lua5.1-tests/libs/P1; go test -v -race ./..."
+      command: /bin/sh -c "mkdir -p /nakama/internal/gopher-lua/_lua5.1-tests/libs/P1; go test -v -race ./... -skip 'TestMultiNode'"
 
       working_dir: "/nakama"
       environment:

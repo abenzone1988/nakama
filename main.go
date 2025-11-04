@@ -176,13 +176,25 @@ func main() {
 	// Start up server components.
 	metrics := server.NewLocalMetrics(logger, startupLogger, db, config)
 	sessionRegistry := server.NewLocalSessionRegistry(metrics)
-	sessionCache := server.NewLocalSessionCache(config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
-	consoleSessionCache := server.NewLocalSessionCache(config.GetConsole().TokenExpirySec, 0)
+	var sessionCache server.SessionCache
+	if config.GetCluster().Enabled {
+		sessionCache = server.NewRedisSessionCache(logger, config, config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
+	} else {
+		sessionCache = server.NewLocalSessionCache(logger, config, config.GetSession().TokenExpirySec, config.GetSession().RefreshTokenExpirySec)
+	}
+	consoleSessionCache := server.NewLocalSessionCache(logger, config, config.GetConsole().TokenExpirySec, 0)
 	loginAttemptCache := server.NewLocalLoginAttemptCache()
 	statusRegistry := server.NewLocalStatusRegistry(logger, config, sessionRegistry, jsonpbMarshaler)
 	tracker := server.StartLocalTracker(logger, config, sessionRegistry, statusRegistry, metrics, jsonpbMarshaler)
 	router := server.NewLocalMessageRouter(sessionRegistry, tracker, jsonpbMarshaler)
-	leaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
+	// 默认使用本地缓存，当启用集群时，用 Redis 包装同步
+
+	var leaderboardCache server.LeaderboardCache
+	if config.GetCluster().Enabled {
+		leaderboardCache = server.NewRedisLeaderboardCache(ctx, logger, startupLogger, db, config)
+	} else {
+		leaderboardCache = server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
+	}
 	leaderboardRankCache := server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
 	leaderboardScheduler := server.NewLocalLeaderboardScheduler(logger, db, config, leaderboardCache, leaderboardRankCache)
 	googleRefundScheduler := server.NewGoogleRefundScheduler(logger, db, config)
@@ -213,7 +225,7 @@ func main() {
 		}
 	}()
 
-	leaderboardScheduler.Start(runtime)
+	//leaderboardScheduler.Start(runtime)
 	googleRefundScheduler.Start(runtime)
 
 	pipeline := server.NewPipeline(logger, config, db, jsonpbMarshaler, jsonpbUnmarshaler, sessionRegistry, statusRegistry, matchRegistry, partyRegistry, matchmaker, tracker, router, runtime)
@@ -223,7 +235,7 @@ func main() {
 	console.UIFS.Nt = !telemetryEnabled
 	cookie := newOrLoadCookie(telemetryEnabled, config)
 
-	apiServer := server.StartApiServer(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, version, socialClient, storageIndex, leaderboardCache, leaderboardRankCache, sessionRegistry, sessionCache, statusRegistry, matchRegistry, matchmaker, tracker, router, streamManager, metrics, pipeline, runtime, templateManager)
+	apiServer := server.StartApiServer(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, version, socialClient, storageIndex, leaderboardCache, leaderboardRankCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, matchmaker, tracker, router, streamManager, metrics, pipeline, runtime, templateManager)
 	consoleServer := server.StartConsoleServer(logger, startupLogger, db, config, tracker, router, streamManager, metrics, sessionRegistry, sessionCache, consoleSessionCache, loginAttemptCache, statusRegistry, statusHandler, runtimeInfo, matchRegistry, configWarnings, semver, leaderboardCache, leaderboardRankCache, leaderboardScheduler, storageIndex, apiServer, runtime, cookie, templateManager)
 
 	if telemetryEnabled {
@@ -257,6 +269,7 @@ func main() {
 	tracker.Stop()
 	statusRegistry.Stop()
 	sessionCache.Stop()
+	leaderboardRankCache.Stop()
 	sessionRegistry.Stop()
 	metrics.Stop(logger)
 	loginAttemptCache.Stop()

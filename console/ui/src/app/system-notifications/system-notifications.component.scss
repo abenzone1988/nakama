@@ -1,0 +1,63 @@
+.dropdown-radius {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.input-group-text {
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.table-hover {
+  cursor: pointer;
+}
+
+.item-icon{
+  width: 48px;
+  height: 48px
+}
+
+.form-spacing {
+  margin-right: 15px;
+}
+
+// 隐藏 ngb-timepicker 的辅助功能标签
+::ng-deep .ngb-tp-input-wrapper .sr-only {
+  display: none !important;
+}
+
+// 或者更具体的选择器
+::ng-deep .ngb-tp-input-wrapper label[for*="hour"],
+::ng-deep .ngb-tp-input-wrapper label[for*="minute"] {
+  display: none !important;
+}
+
+// 隐藏整个辅助标签区域
+::ng-deep .ngb-tp-input-wrapper .sr-only,
+::ng-deep .ngb-tp-input-wrapper .visually-hidden {
+  display: none !important;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+// 针对您提供的具体HTML结构
+::ng-deep .ngb-tp-input-container .visually-hidden {
+  display: none !important;
+}
+
+// 更精确的选择器，针对按钮内的visually-hidden
+::ng-deep .ngb-tp-input-container button .visually-hidden {
+  display: none !important;
+}
+
+// 隐藏所有包含"visually-hidden"类的元素
+::ng-deep .visually-hidden {
+  display: none !important;
+}

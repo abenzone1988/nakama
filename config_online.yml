@@ -1,0 +1,39 @@
+name: nakama-node-jp
+
+database:
+  address:
+<<<<<<<< HEAD:config1.yml
+    - "root@192.168.102.223:26257/test"
+========
+    - "root:sparkinfi123!@118.145.138.115:5432?dbname=hjzx"
+>>>>>>>> 合金弹头-多节点:config_online.yml
+logger:
+  level: "info"
+
+
+session:
+  encryption_key: "defaultencryptionkey"
+  token_expiry_sec: 86400
+  refresh_encryption_key: "defaultrefreshencryptionkey"
+  refresh_token_expiry_sec: 186400
+  single_socket: true
+  single_session: true
+#  use_redis: true
+#  redis_address: "192.168.102.223:6379"
+#  redis_password: ""
+
+socket:
+  server_key: "sparkgame"
+  port: 7350
+
+
+
+console:
+  port: 7351
+  username: "admin"
+  password: "password"
+
+
+
+
+

@@ -223,11 +223,11 @@ func WaitForSocket(expected error, cfg *config) {
 func NewAPIServer(t *testing.T, runtime *Runtime) (*ApiServer, *Pipeline) {
 	db := NewDB(t)
 	router := &DummyMessageRouter{}
-	sessionCache := NewLocalSessionCache(3_600, 7_200)
+	sessionCache := NewLocalSessionCache(logger, cfg, 3_600, 7_200)
 	sessionRegistry := NewLocalSessionRegistry(metrics)
 	tracker := &LocalTracker{sessionRegistry: sessionRegistry}
 	pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, sessionRegistry, nil, nil, nil, nil, tracker, router, runtime)
-	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, "3.0.0", nil, storageIdx, nil, nil, sessionRegistry, sessionCache, nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime, nil)
+	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, "3.0.0", nil, storageIdx, nil, nil, nil, sessionRegistry, sessionCache, nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime, nil)
 
 	WaitForSocket(nil, cfg)
 	return apiServer, pipeline

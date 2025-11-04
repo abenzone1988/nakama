@@ -111,13 +111,13 @@ nk.leaderboard_create(%q, %t, %q, %q, reset, metadata, %t)
 		db := NewDB(t)
 		router := &DummyMessageRouter{}
 		tracker := &LocalTracker{}
-		sessionCache := NewLocalSessionCache(1_000, 3_600)
+		sessionCache := NewLocalSessionCache(logger, cfg, 1_000, 3_600)
 
 		pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, nil, nil, nil, nil, nil, tracker, router, runtime)
 
 		apiServer := StartApiServer(logger, logger, db, protojsonMarshaler,
 			protojsonUnmarshaler, cfg, "3.0.0", nil, nil, rtData.leaderboardCache,
-			rtData.leaderboardRankCache, nil, sessionCache,
+			rtData.leaderboardRankCache, nil, nil, sessionCache,
 			nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime, nil)
 
 		WaitForSocket(nil, cfg)

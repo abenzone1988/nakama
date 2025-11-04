@@ -62,7 +62,9 @@ SELECT
     content,
     code,
     sender_id,
-    create_time
+    create_time,
+    status,
+    expiry_time
 FROM
     notification
 `
@@ -128,6 +130,8 @@ LIMIT $4`
 		code       int32
 		senderId   string
 		createTime pgtype.Timestamptz
+		noStatus   int32
+		expiryTime pgtype.Timestamptz
 	)
 
 	for rows.Next() {
@@ -141,7 +145,7 @@ LIMIT $4`
 			break
 		}
 
-		if err := rows.Scan(&id, &userId, &subject, &content, &code, &senderId, &createTime); err != nil {
+		if err := rows.Scan(&id, &userId, &subject, &content, &code, &senderId, &createTime, &noStatus, &expiryTime); err != nil {
 			_ = rows.Close()
 			s.logger.Error("Could not scan notification from database.", zap.Error(err))
 			return nil, err
@@ -156,6 +160,8 @@ LIMIT $4`
 			SenderId:   senderId,
 			CreateTime: timestamppb.New(createTime.Time),
 			Persistent: true,
+			Status:     noStatus,
+			ExpiryTime: timestamppb.New(expiryTime.Time),
 		}
 
 		notifications = append(notifications, no)
@@ -229,7 +235,9 @@ SELECT
 	content,
 	code,
 	sender_id,
-	create_time
+	create_time,
+	status,
+	expiry_time
 FROM
 	notification
 WHERE
@@ -243,9 +251,11 @@ WHERE
 		code       int32
 		senderId   string
 		createTime pgtype.Timestamptz
+		noStatus   int32
+		expiryTime pgtype.Timestamptz
 	)
 
-	if err := s.db.QueryRowContext(ctx, query, in.Id).Scan(&id, &userId, &subject, &content, &code, &senderId, &createTime); err != nil {
+	if err := s.db.QueryRowContext(ctx, query, in.Id).Scan(&id, &userId, &subject, &content, &code, &senderId, &createTime, &noStatus, &expiryTime); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, status.Error(codes.NotFound, "Notification not found.")
 		}
@@ -262,6 +272,8 @@ WHERE
 		CreateTime: timestamppb.New(createTime.Time),
 		Persistent: true,
 		UserId:     userId.String(),
+		Status:     noStatus,
+		ExpiryTime: timestamppb.New(expiryTime.Time),
 	}, nil
 }
 

@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"go.uber.org/zap"
@@ -48,6 +49,11 @@ func (s *ApiServer) ListNotifications(ctx context.Context, in *api.ListNotificat
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	//同步系统通知
+	if err := SyncSystemNotifications(ctx, s.logger, s.db, s.statusRegistry, userID); err != nil {
+		s.logger.Error("Sync System Notice error ", zap.Error(err))
 	}
 
 	limit := 1
@@ -121,4 +127,33 @@ func (s *ApiServer) DeleteNotifications(ctx context.Context, in *api.DeleteNotif
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *ApiServer) MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	if len(in.GetIds()) == 0 {
+		return &api.MarkNotificationsReadResponse{Markedcount: 0}, nil
+	}
+
+	markedCount, err := NotificationMarkRead(ctx, s.logger, s.db, userID, in.GetIds())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Error while marking notifications as read.")
+	}
+
+	return &api.MarkNotificationsReadResponse{Markedcount: markedCount}, nil
+}
+
+func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	if len(in.GetIds()) == 0 {
+		return &api.ClaimNotificationAttachmentsResponse{Claimedcount: 0}, nil
+	}
+
+	claimedCount, err := NotificationClaimAttachments(ctx, s.logger, s.db, userID, in.GetIds())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
+	}
+
+	return &api.ClaimNotificationAttachmentsResponse{Claimedcount: claimedCount}, nil
 }

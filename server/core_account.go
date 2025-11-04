@@ -537,3 +537,18 @@ func FindUserByDeviceID(ctx context.Context, logger *zap.Logger, db *sql.DB, ope
 	}
 	return userID, nil
 }
+
+// UpdateAccountMetadata 更新用户metadata接口
+func UpdateAccountMetadata(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, metadata string) error {
+	// Update user account metadata
+	err := UpdateAccounts(ctx, logger, db, []*accountUpdate{{
+		userID: userID,
+		metadata: &wrapperspb.StringValue{
+			Value: string(metadata),
+		},
+	}})
+	if err != nil {
+		return status.Error(codes.Internal, "Error updating user account metadata:"+err.Error())
+	}
+	return nil
+}
