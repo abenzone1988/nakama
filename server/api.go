@@ -246,6 +246,9 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 	// 添加抖音直玩能力场景列表查询路由
 	grpcGatewayRouter.HandleFunc("/v2/tiktok/feed/scenes", s.HandleSceneList).Methods(http.MethodGet)
 
+	// 添加购买发货通知路由
+	grpcGatewayRouter.HandleFunc("/v2/tiktok/purchase/notify", s.HandlePurchaseNotify).Methods(http.MethodPost)
+
 	// Another nested router to hijack RPC requests bound for GRPC Gateway.
 	grpcGatewayMux := mux.NewRouter()
 	grpcGatewayMux.HandleFunc("/v2/rpc/{id:.*}", s.RpcFuncHttp).Methods(http.MethodGet, http.MethodPost)
