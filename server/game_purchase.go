@@ -12,16 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// 应用密钥 - 这些应该从配置文件中读取
-	DefaultSiteKey = "0c373fedcec01cff88aacdb8d2e28dc2"
-)
-
 var (
-	// 允许的应用ID列表 - 支持多个平台
-	AllowedSiteIDs = []string{
-		"xjsmdyapp_android",
-		"xjsmdyapp_ios",
+	// 应用ID和密钥的对应关系 - 支持多个平台
+	// 这些应该从配置文件中读取
+	SiteKeyMap = map[string]string{
+		"xjsmdyapp_android": "0c373fedcec01cff88aacdb8d2e28dc2",
+		"xjsmdyapp_ios":     "234c4ec9c31af40a9a0239b868f10dd8",
 	}
 )
 
@@ -139,21 +135,25 @@ func (s *ApiServer) HandlePurchaseNotify(w http.ResponseWriter, r *http.Request)
 
 // verifySiteID 验证应用ID
 func (s *ApiServer) verifySiteID(site string) bool {
-	// TODO: 从配置文件中读取site配置列表
+	// TODO: 从配置文件中读取site配置
 	// if s.config.GetSocial().Tiktok != nil {
-	//     allowedSites = s.config.GetSocial().Tiktok.SiteIDs
+	//     siteKeyMap = s.config.GetSocial().Tiktok.SiteKeyMap
 	// }
 
-	// 检查site是否在允许列表中
-	for _, allowedSite := range AllowedSiteIDs {
-		if site == allowedSite {
-			return true
-		}
+	// 检查site是否在map中
+	if _, exists := SiteKeyMap[site]; exists {
+		return true
+	}
+
+	// 获取所有允许的site列表用于日志
+	allowedSites := make([]string, 0, len(SiteKeyMap))
+	for site := range SiteKeyMap {
+		allowedSites = append(allowedSites, site)
 	}
 
 	s.logger.Warn("应用ID不在允许列表中",
 		zap.String("site", site),
-		zap.Strings("allowed_sites", AllowedSiteIDs))
+		zap.Strings("allowed_sites", allowedSites))
 
 	return false
 }
@@ -178,13 +178,18 @@ func (s *ApiServer) verifyOrderAmount(orderMoney, productID string) bool {
 
 // verifyPurchaseSignature 验证购买通知签名
 func (s *ApiServer) verifyPurchaseSignature(req PurchaseNotifyRequest) bool {
-	// 获取密钥（这里使用默认值，实际应该从配置文件读取）
-	key := DefaultSiteKey
-
 	// TODO: 从配置文件中读取key配置
 	// if s.config.GetSocial().Tiktok != nil {
-	//     key = s.config.GetSocial().Tiktok.SiteKey
+	//     siteKeyMap = s.config.GetSocial().Tiktok.SiteKeyMap
 	// }
+
+	// 根据site获取对应的密钥
+	key, exists := SiteKeyMap[req.Site]
+	if !exists {
+		s.logger.Warn("找不到对应的应用密钥",
+			zap.String("site", req.Site))
+		return false
+	}
 
 	// 按照API规范拼接字符串: site + time + key + uid + order_money + cp_order_id
 	signStr := fmt.Sprintf("%s%s%s%s%s%s",
@@ -201,6 +206,7 @@ func (s *ApiServer) verifyPurchaseSignature(req PurchaseNotifyRequest) bool {
 	calculatedSign := fmt.Sprintf("%x", hash.Sum(nil))
 
 	s.logger.Debug("验证签名",
+		zap.String("site", req.Site),
 		zap.String("sign_str", signStr),
 		zap.String("calculated_sign", calculatedSign),
 		zap.String("received_sign", req.Sign))
