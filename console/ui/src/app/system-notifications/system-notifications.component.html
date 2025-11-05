@@ -132,19 +132,6 @@
   <div class="modal-body">
     <form  [formGroup]="notificationForm">
       <div class="mb-3 row align-items-center">
-        <label class="col-sm-2 col-form-label">发送类型</label>
-        <div class="col-sm-10">
-          <select class="form-control" formControlName="type" [disabled]="!!editingNotification">
-            <option value=0>全体</option>
-            <option value=1>比赛</option>
-            <option value=2>个人</option>
-          </select>
-          <small class="form-text text-muted" *ngIf="editingNotification">
-            编辑时无法修改通知类型
-          </small>
-        </div>
-      </div>
-      <div class="mb-3 row align-items-center">
         <label class="col-sm-2 col-form-label">标题</label>
         <div class="col-sm-10">
           <div class="input-group">
@@ -165,59 +152,6 @@
           </div>
         </div>
       </div>
-      <div class="mb-3" *ngIf="n.type.value == 1">
-        <label>挑战赛选择</label>
-        <div class="input-group">
-          <select class="form-control" formControlName="challengeId" (change)="onChallengeChange($event)">
-            <option value="">请选择挑战赛</option>
-            <option *ngFor="let challenge of challenges" [value]="challenge.id">
-            {{challenge.id}}  {{ challenge.name }} ({{ challenge.open_time }})
-            </option>
-          </select>
-        </div>
-        <small class="form-text text-muted">选择挑战赛后，系统将根据挑战赛的开始时间设置生效时间</small>
-        <div *ngIf="selectedChallenge" class="mt-2 p-2 bg-light">
-          <small>
-            <strong>挑战赛信息：</strong><br>
-            比赛id:  {{selectedChallenge.id}}<br>
-            开始时间：{{selectedChallenge.open_time}}<br>
-            结束时间：{{selectedChallenge.close_time}}<br>
-            结算时间：{{selectedChallenge.end_time}}<br>
-            奖励剩余时间：{{selectedChallenge.reward_remains}} 分钟
-          </small>
-        </div>
-
-        <!-- 时间类型选择 -->
-        <div *ngIf="selectedChallenge && !n.immediateSend.value" class="mt-3">
-          <label>生效时间选择</label>
-          <div class="input-group">
-            <select class="form-control" formControlName="challengeTimeType" (change)="onChallengeTimeTypeChange($event)">
-              <option value="">请选择生效时间</option>
-              <option *ngFor="let timeOption of getChallengeTimeOptions()" [value]="timeOption.value">
-                {{timeOption.label}} - {{timeOption.time | date:'yyyy-MM-dd HH:mm:ss'}}
-              </option>
-            </select>
-          </div>
-          <small class="form-text text-muted">选择后将自动填充生效时间</small>
-        </div>
-      </div>
-
-      <div class="mb-3" *ngIf="n.type.value == 2">
-        <label>目标用户</label>
-        <div formArrayName="targetIds">
-          <div *ngFor="let targetId of n.targetIds.controls; let i = index" class="input-group mb-2">
-            <!-- 直接绑定到 FormControl -->
-            <input type="text" class="form-control" [formControlName]="i" placeholder="Enter Target ID">
-            <div class="input-group-append">
-              <button type="button" class="btn btn-outline-secondary btn-danger" (click)="removeTargetId(i)">Remove</button>
-            </div>
-          </div>
-        </div>
-        <div class="text-center mt-3">
-          <button class="btn btn-success" type="button" (click)="addTargetId()">添加用户Id</button>
-        </div>
-      </div>
-
       <div class="mb-3">
         <label>附件</label>
         <div formArrayName="items">

@@ -13,9 +13,16 @@ import (
 )
 
 const (
-	// 应用ID和密钥 - 这些应该从配置文件中读取
-	DefaultSiteID  = "xjsmdyapp_android"
+	// 应用密钥 - 这些应该从配置文件中读取
 	DefaultSiteKey = "0c373fedcec01cff88aacdb8d2e28dc2"
+)
+
+var (
+	// 允许的应用ID列表 - 支持多个平台
+	AllowedSiteIDs = []string{
+		"xjsmdyapp_android",
+		"xjsmdyapp_ios",
+	}
 )
 
 // PurchaseNotifyRequest 支付通知请求结构
@@ -132,15 +139,23 @@ func (s *ApiServer) HandlePurchaseNotify(w http.ResponseWriter, r *http.Request)
 
 // verifySiteID 验证应用ID
 func (s *ApiServer) verifySiteID(site string) bool {
-	// 从配置中获取应用ID（这里使用默认值，实际应该从配置文件读取）
-	expectedSite := DefaultSiteID
-
-	// TODO: 从配置文件中读取site配置
+	// TODO: 从配置文件中读取site配置列表
 	// if s.config.GetSocial().Tiktok != nil {
-	//     expectedSite = s.config.GetSocial().Tiktok.SiteID
+	//     allowedSites = s.config.GetSocial().Tiktok.SiteIDs
 	// }
 
-	return site == expectedSite
+	// 检查site是否在允许列表中
+	for _, allowedSite := range AllowedSiteIDs {
+		if site == allowedSite {
+			return true
+		}
+	}
+
+	s.logger.Warn("应用ID不在允许列表中",
+		zap.String("site", site),
+		zap.Strings("allowed_sites", AllowedSiteIDs))
+
+	return false
 }
 
 // verifyOrderAmount 验证订单金额

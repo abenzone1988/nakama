@@ -65,31 +65,12 @@ func (s *ConsoleServer) CreateSystemNotification(ctx context.Context, in *consol
 
 	// 计算生效时间
 	var effectiveTime *timestamppb.Timestamp
-	if in.Type == 1 { // 比赛类型
-		// 从通知对象中获取挑战赛ID
-		challengeID := notice.GetChallengeId()
-		if challengeID > 0 {
-			tplChallenge := s.template.GetTplChallenge()
-			_, found := tplChallenge.FindByKey(challengeID)
-			if !found {
-				s.logger.Warn("挑战赛模板不存在", zap.Int32("challenge_id", challengeID))
-				return nil, status.Error(codes.InvalidArgument, "挑战赛模板不存在")
-			}
-		} else {
-			s.logger.Error("比赛类型未指定挑战赛ID", zap.Int32("challenge_id", challengeID))
-			return nil, status.Error(codes.InvalidArgument, "比赛类型未指定挑战赛ID")
-		}
-	}
 
 	// 根据类型处理发送逻辑
 	switch in.Type {
 	case 0: // 全体
 		// 创建系统通知，不立即发送，等待生效时间
 		s.logger.Info("创建全体系统通知", zap.String("subject", notice.GetSubject()))
-	case 1: // 比赛
-		// 创建系统通知，不立即发送，等待生效时间
-		s.logger.Info("创建比赛系统通知", zap.String("subject", notice.GetSubject()))
-		//
 		// 验证生效时间不能小于当前时间
 		now := time.Now()
 		if effectiveTime.AsTime().Before(now) {

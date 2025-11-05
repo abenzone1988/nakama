@@ -98,28 +98,11 @@ export class SystemNotificationsComponent implements OnInit {
         // 立即生效时只禁用生效时间控件，过期时间保持独立
         this.notificationForm.get('effectiveDate')!.disable();
         this.notificationForm.get('effectiveTime')!.disable();
-
-        // 清除挑战赛时间类型选择
-        this.notificationForm.get('challengeTimeType')!.setValue('');
       } else {
         // 不立即生效时启用生效时间控件
           this.notificationForm.get('effectiveDate')!.enable();
           this.notificationForm.get('effectiveTime')!.enable();
         }
-    });
-
-    // 监听发送类型变化
-    this.notificationForm.get('type')!.valueChanges.subscribe(type => {
-      if (type != 1) { // 如果不是比赛类型
-        this.notificationForm.get('challengeId')!.setValue('');
-        this.notificationForm.get('challengeTimeType')!.setValue('');
-        this.selectedChallenge = null;
-      } else {
-        // 如果是比赛类型，默认不使用立即生效
-        this.notificationForm.patchValue({
-          immediateSend: false
-        });
-      }
     });
 
     // 触发初始状态设置
@@ -194,7 +177,6 @@ export class SystemNotificationsComponent implements OnInit {
     }
 
     this.loadNotifications();
-    this.loadChallenges();
   }
 
   loadNotifications(): void {
