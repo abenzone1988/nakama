@@ -29,6 +29,7 @@ import {AccountComponent, AccountResolver} from './account/account.component';
 import {ProfileComponent} from './account/profile/profile.component';
 import {AuthenticationComponent} from './account/authentication/authentication.component';
 import {WalletComponent, WalletLedgerResolver} from './account/wallet/wallet.component';
+import {InventoryComponent, InventoryLedgerResolver} from './account/inventory/inventory.component';
 import {FriendsComponent, FriendsResolver} from './account/friends/friends.component';
 import {GroupsComponent, GroupsResolver} from './account/groups/groups.component';
 import {GroupDetailsComponent} from './group/details/groupDetailsComponent';
@@ -93,6 +94,7 @@ const routes: Routes = [
           {path: 'profile', component: ProfileComponent, resolve: []},
           {path: 'authentication', component: AuthenticationComponent, resolve: []},
           {path: 'wallet', component: WalletComponent, resolve: [WalletLedgerResolver]},
+          {path: 'inventory', component: InventoryComponent, resolve: [InventoryLedgerResolver]},
           {path: 'friends', component: FriendsComponent, resolve: [FriendsResolver]},
           {path: 'groups', component: GroupsComponent, resolve: [GroupsResolver]},
           {path: 'notifications', component: NotificationsComponent, resolve: [NotificationsResolver]},

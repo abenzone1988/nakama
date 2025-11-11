@@ -139,6 +139,8 @@ export class InventoryComponent implements OnInit, AfterViewInit {
 
     const body: UpdateAccountRequest = {inventory};
     this.consoleService.updateAccount('', this.account.user.id, body).subscribe(d => {
+      // Update the local account object with the new inventory value
+      this.account.inventory = inventory;
       this.updated = true;
       this.updating = false;
     }, err => {

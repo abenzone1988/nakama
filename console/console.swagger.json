@@ -93,6 +93,52 @@
         ]
       }
     },
+    "/v2/console/account/{account_id}/inventory": {
+      "get": {
+        "operationId": "Console_GetInventoryLedger",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleInventoryLedgerList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account_id",
+            "description": "The unique identifier of the user account.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "Max number of results per page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "cursor",
+            "description": "Cursor to retrieve a page of records from",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/account/{account_id}/wallet": {
       "get": {
         "summary": "Get a list of the user's wallet transactions.",
@@ -292,6 +338,10 @@
                 "wallet": {
                   "type": "string",
                   "description": "Wallet."
+                },
+                "inventory": {
+                  "type": "string",
+                  "description": "Inventory."
                 }
               },
               "description": "Update user account information."
@@ -502,6 +552,46 @@
           {
             "name": "group_id",
             "description": "ID of the group to remove them from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/account/{id}/inventory/{inventory_id}": {
+      "delete": {
+        "summary": "Delete a inventory ledger item.",
+        "operationId": "Console_DeleteInventoryLedger",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "User ID to remove inventory ledger item from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "inventory_id",
+            "description": "ID of the inventory ledger item to remove.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3717,7 +3807,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "A list of messages."
@@ -3767,7 +3856,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The Friend objects."
@@ -3843,7 +3931,6 @@
         "group_users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "User-role pairs for a group."
@@ -3923,7 +4010,6 @@
         "records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of leaderboard records."
@@ -3931,7 +4017,6 @@
         "owner_records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of leaderboard records belonging to specified owners."
@@ -3958,7 +4043,6 @@
         "validated_purchases": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedPurchase"
           },
           "description": "Stored validated purchases."
@@ -4081,7 +4165,6 @@
         "validated_subscriptions": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedSubscription"
           },
           "description": "Stored validated subscriptions."
@@ -4103,7 +4186,6 @@
         "user_groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/UserGroupListUserGroup"
           },
           "description": "Group-role pairs for a user."
@@ -4241,7 +4323,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The user's storage."
@@ -4249,7 +4330,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The user's friends."
@@ -4257,7 +4337,6 @@
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "The user's groups."
@@ -4265,7 +4344,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "The user's chat messages."
@@ -4273,7 +4351,6 @@
         "leaderboard_records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "The user's leaderboard records."
@@ -4281,7 +4358,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaapiNotification"
           },
           "description": "The user's notifications."
@@ -4289,10 +4365,16 @@
         "wallet_ledgers": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "The user's wallet ledger items."
+        },
+        "inventory_ledgers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/consoleInventoryLedger"
+          },
+          "description": "The user's inventory ledger items."
         }
       },
       "description": "An export of all information stored for a user account."
@@ -4303,7 +4385,6 @@
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaapiUser"
           },
           "description": "A list of users."
@@ -4373,7 +4454,6 @@
         "success_accounts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleVipAccount"
           },
           "title": "Successfully added VIP accounts"
@@ -4381,7 +4461,6 @@
         "failed_accounts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleVipAccountError"
           },
           "title": "Failed username mappings"
@@ -4444,7 +4523,6 @@
         "announcements": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleAnnouncement"
           },
           "title": "Announcement list"
@@ -4478,14 +4556,12 @@
         "endpoints": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         },
         "rpc_endpoints": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         }
@@ -4623,7 +4699,6 @@
         "warnings": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/ConfigWarning"
           },
           "description": "Any warnings about the current config."
@@ -4729,7 +4804,6 @@
         "templates": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleChallengeTemplate"
           },
           "title": "Challenge template list"
@@ -4746,13 +4820,65 @@
         "members": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "The group's list of members."
         }
       },
       "description": "An export of all information stored for a group."
+    },
+    "consoleInventoryLedger": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The identifier of this inventory change."
+        },
+        "user_id": {
+          "type": "string",
+          "description": "The user ID this inventory ledger item belongs to."
+        },
+        "changeset": {
+          "type": "string",
+          "description": "The changeset."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Any associated metadata."
+        },
+        "create_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The UNIX time when the inventory ledger item was created."
+        },
+        "update_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The UNIX time when the inventory ledger item was updated."
+        }
+      },
+      "description": "An individual update to a user's inventory."
+    },
+    "consoleInventoryLedgerList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/consoleInventoryLedger"
+          },
+          "description": "A list of inventory ledger items."
+        },
+        "next_cursor": {
+          "type": "string",
+          "description": "The cursor to send when retrieving the next older page, if any."
+        },
+        "prev_cursor": {
+          "type": "string",
+          "description": "The cursor to send when retrieving the previous page newer, if any."
+        }
+      },
+      "description": "List of inventory ledger items for a particular user."
     },
     "consoleListChannelMessagesRequestType": {
       "type": "string",
@@ -4770,7 +4896,6 @@
         "logs": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consolePersonalNotificationLog"
           },
           "title": "Log list"
@@ -4796,7 +4921,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleSystemNotice"
           },
           "title": "Notification list"
@@ -4835,7 +4959,6 @@
         "presences": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/realtimeUserPresence"
           },
           "description": "Presence list."
@@ -4862,7 +4985,6 @@
         "rewards": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameReward"
           },
           "title": "Reward items"
@@ -4945,7 +5067,6 @@
         "go_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Go loaded modules"
@@ -4953,7 +5074,6 @@
         "lua_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Lua loaded modules"
@@ -4961,7 +5081,6 @@
         "js_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "JavaScript loaded modules"
@@ -4985,7 +5104,6 @@
         "nodes": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleStatusListStatus"
           },
           "description": "List of nodes and their stats."
@@ -5070,7 +5188,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleStorageListObject"
           },
           "description": "List of storage objects matching list/filter operation."
@@ -5178,7 +5295,6 @@
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleUserListUser"
           },
           "description": "A list of users."
@@ -5279,7 +5395,6 @@
         "accounts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleVipAccount"
           },
           "title": "VIP account list"
@@ -5350,7 +5465,6 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "A list of wallet ledger items."
@@ -5388,7 +5502,6 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         }
@@ -5426,7 +5539,6 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -5450,7 +5562,6 @@
         "devices": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiAccountDevice"
           },
           "description": "The devices which belong to the user's account."
@@ -5468,6 +5579,10 @@
           "type": "string",
           "format": "date-time",
           "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's account was disabled/banned."
+        },
+        "inventory": {
+          "type": "string",
+          "description": "The user's inventory data."
         }
       },
       "description": "A user with additional account details. Always the current user."
@@ -5652,7 +5767,6 @@
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "A list of groups."
@@ -5783,7 +5897,6 @@
         "leaderboards": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaconsoleLeaderboard"
           },
           "description": "The list of leaderboards returned."
@@ -5806,7 +5919,6 @@
         "matches": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleMatchListMatch"
           }
         }
@@ -5868,7 +5980,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaconsoleNotification"
           },
           "description": "List of notifications."

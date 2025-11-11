@@ -160,6 +160,25 @@ func (s *ConsoleServer) DeleteWalletLedger(ctx context.Context, in *console.Dele
 	return &emptypb.Empty{}, nil
 }
 
+func (s *ConsoleServer) DeleteInventoryLedger(ctx context.Context, in *console.DeleteInventoryLedgerRequest) (*emptypb.Empty, error) {
+	userID, err := uuid.FromString(in.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Requires a valid user ID.")
+	}
+	inventoryID, err := uuid.FromString(in.InventoryId)
+	if err != nil || inventoryID == uuid.Nil {
+		return nil, status.Error(codes.InvalidArgument, "Requires a valid inventory ledger item ID.")
+	}
+
+	_, err = s.db.ExecContext(ctx, "DELETE FROM inventory_ledger WHERE id = $1 AND user_id = $2", inventoryID, userID)
+	if err != nil {
+		s.logger.Error("Error deleting from inventory ledger.", zap.String("id", inventoryID.String()), zap.String("user_id", userID.String()), zap.Error(err))
+		return nil, status.Error(codes.Internal, "An error occurred while trying to remove the user's inventory ledger item.")
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func (s *ConsoleServer) ExportAccount(ctx context.Context, in *console.AccountId) (*console.AccountExport, error) {
 	userID, err := uuid.FromString(in.Id)
 	if err != nil {
@@ -268,6 +287,49 @@ func (s *ConsoleServer) GetWalletLedger(ctx context.Context, in *console.GetWall
 	}
 
 	return &console.WalletLedgerList{Items: consoleLedger, NextCursor: nextCursorStr, PrevCursor: prevCursorStr}, nil
+}
+
+func (s *ConsoleServer) GetInventoryLedger(ctx context.Context, in *console.GetInventoryLedgerRequest) (*console.InventoryLedgerList, error) {
+	userID, err := uuid.FromString(in.AccountId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Requires a valid user ID.")
+	}
+
+	limit := int(in.Limit)
+	if limit < 1 || limit > 100 {
+		return nil, status.Error(codes.InvalidArgument, "expects a limit value between 1 and 100")
+	}
+
+	ledger, nextCursorStr, prevCursorStr, err := ListInventoryLedger(ctx, s.logger, s.db, userID, &limit, in.Cursor)
+	if err != nil {
+		// Error already logged in function above.
+		return nil, status.Error(codes.Internal, "An error occurred while trying to list the user's inventory ledger.")
+	}
+
+	// Convert to console wire format.
+	consoleLedger := make([]*console.InventoryLedger, 0, len(ledger))
+	for _, ledgerItem := range ledger {
+		changeset, err := json.Marshal(ledgerItem.Changeset)
+		if err != nil {
+			s.logger.Error("Error encoding inventory ledger changeset.", zap.Error(err))
+			return nil, status.Error(codes.Internal, "An error occurred while trying to list the user's inventory ledger.")
+		}
+		metadata, err := json.Marshal(ledgerItem.Metadata)
+		if err != nil {
+			s.logger.Error("Error encoding inventory ledger metadata.", zap.Error(err))
+			return nil, status.Error(codes.Internal, "An error occurred while trying to list the user's inventory ledger.")
+		}
+		consoleLedger = append(consoleLedger, &console.InventoryLedger{
+			Id:         ledgerItem.ID,
+			UserId:     ledgerItem.UserID,
+			Changeset:  string(changeset),
+			Metadata:   string(metadata),
+			CreateTime: &timestamppb.Timestamp{Seconds: ledgerItem.CreateTime},
+			UpdateTime: &timestamppb.Timestamp{Seconds: ledgerItem.UpdateTime},
+		})
+	}
+
+	return &console.InventoryLedgerList{Items: consoleLedger, NextCursor: nextCursorStr, PrevCursor: prevCursorStr}, nil
 }
 
 func (s *ConsoleServer) ListAccounts(ctx context.Context, in *console.ListAccountsRequest) (*console.AccountList, error) {
@@ -667,6 +729,15 @@ func (s *ConsoleServer) UpdateAccount(ctx context.Context, in *console.UpdateAcc
 		}
 		params = append(params, v.Value)
 		statements = append(statements, "wallet = $"+strconv.Itoa(len(params)))
+	}
+
+	if v := in.Inventory; v != nil && v.Value != "" {
+		var inventoryMap map[string]interface{}
+		if err := json.Unmarshal([]byte(v.Value), &inventoryMap); err != nil {
+			return nil, status.Error(codes.InvalidArgument, "Inventory must be a valid JSON object.")
+		}
+		params = append(params, v.Value)
+		statements = append(statements, "inventory = $"+strconv.Itoa(len(params)))
 	}
 
 	for oldDeviceID, newDeviceID := range in.DeviceIds {

@@ -69,6 +69,7 @@ const (
 	Console_DeleteNotification_FullMethodName           = "/nakama.console.Console/DeleteNotification"
 	Console_DeleteUser_FullMethodName                   = "/nakama.console.Console/DeleteUser"
 	Console_DeleteWalletLedger_FullMethodName           = "/nakama.console.Console/DeleteWalletLedger"
+	Console_DeleteInventoryLedger_FullMethodName        = "/nakama.console.Console/DeleteInventoryLedger"
 	Console_DemoteGroupMember_FullMethodName            = "/nakama.console.Console/DemoteGroupMember"
 	Console_ExportAccount_FullMethodName                = "/nakama.console.Console/ExportAccount"
 	Console_ExportGroup_FullMethodName                  = "/nakama.console.Console/ExportGroup"
@@ -84,6 +85,7 @@ const (
 	Console_GetStatus_FullMethodName                    = "/nakama.console.Console/GetStatus"
 	Console_GetStorage_FullMethodName                   = "/nakama.console.Console/GetStorage"
 	Console_GetWalletLedger_FullMethodName              = "/nakama.console.Console/GetWalletLedger"
+	Console_GetInventoryLedger_FullMethodName           = "/nakama.console.Console/GetInventoryLedger"
 	Console_GetNotification_FullMethodName              = "/nakama.console.Console/GetNotification"
 	Console_GetPurchase_FullMethodName                  = "/nakama.console.Console/GetPurchase"
 	Console_GetSubscription_FullMethodName              = "/nakama.console.Console/GetSubscription"
@@ -195,6 +197,8 @@ type ConsoleClient interface {
 	DeleteUser(ctx context.Context, in *Username, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete a wallet ledger item.
 	DeleteWalletLedger(ctx context.Context, in *DeleteWalletLedgerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Delete a inventory ledger item.
+	DeleteInventoryLedger(ctx context.Context, in *DeleteInventoryLedgerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Demote a user from a group.
 	DemoteGroupMember(ctx context.Context, in *UpdateGroupUserStateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Export all information stored about a user account.
@@ -225,6 +229,7 @@ type ConsoleClient interface {
 	GetStorage(ctx context.Context, in *api.ReadStorageObjectId, opts ...grpc.CallOption) (*api.StorageObject, error)
 	// Get a list of the user's wallet transactions.
 	GetWalletLedger(ctx context.Context, in *GetWalletLedgerRequest, opts ...grpc.CallOption) (*WalletLedgerList, error)
+	GetInventoryLedger(ctx context.Context, in *GetInventoryLedgerRequest, opts ...grpc.CallOption) (*InventoryLedgerList, error)
 	// Get a notification by id.
 	GetNotification(ctx context.Context, in *GetNotificationRequest, opts ...grpc.CallOption) (*Notification, error)
 	// Get purchase by transaction_id
@@ -600,6 +605,15 @@ func (c *consoleClient) DeleteWalletLedger(ctx context.Context, in *DeleteWallet
 	return out, nil
 }
 
+func (c *consoleClient) DeleteInventoryLedger(ctx context.Context, in *DeleteInventoryLedgerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_DeleteInventoryLedger_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *consoleClient) DemoteGroupMember(ctx context.Context, in *UpdateGroupUserStateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Console_DemoteGroupMember_FullMethodName, in, out, opts...)
@@ -729,6 +743,15 @@ func (c *consoleClient) GetStorage(ctx context.Context, in *api.ReadStorageObjec
 func (c *consoleClient) GetWalletLedger(ctx context.Context, in *GetWalletLedgerRequest, opts ...grpc.CallOption) (*WalletLedgerList, error) {
 	out := new(WalletLedgerList)
 	err := c.cc.Invoke(ctx, Console_GetWalletLedger_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) GetInventoryLedger(ctx context.Context, in *GetInventoryLedgerRequest, opts ...grpc.CallOption) (*InventoryLedgerList, error) {
+	out := new(InventoryLedgerList)
+	err := c.cc.Invoke(ctx, Console_GetInventoryLedger_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1188,6 +1211,8 @@ type ConsoleServer interface {
 	DeleteUser(context.Context, *Username) (*emptypb.Empty, error)
 	// Delete a wallet ledger item.
 	DeleteWalletLedger(context.Context, *DeleteWalletLedgerRequest) (*emptypb.Empty, error)
+	// Delete a inventory ledger item.
+	DeleteInventoryLedger(context.Context, *DeleteInventoryLedgerRequest) (*emptypb.Empty, error)
 	// Demote a user from a group.
 	DemoteGroupMember(context.Context, *UpdateGroupUserStateRequest) (*emptypb.Empty, error)
 	// Export all information stored about a user account.
@@ -1218,6 +1243,7 @@ type ConsoleServer interface {
 	GetStorage(context.Context, *api.ReadStorageObjectId) (*api.StorageObject, error)
 	// Get a list of the user's wallet transactions.
 	GetWalletLedger(context.Context, *GetWalletLedgerRequest) (*WalletLedgerList, error)
+	GetInventoryLedger(context.Context, *GetInventoryLedgerRequest) (*InventoryLedgerList, error)
 	// Get a notification by id.
 	GetNotification(context.Context, *GetNotificationRequest) (*Notification, error)
 	// Get purchase by transaction_id
@@ -1404,6 +1430,9 @@ func (UnimplementedConsoleServer) DeleteUser(context.Context, *Username) (*empty
 func (UnimplementedConsoleServer) DeleteWalletLedger(context.Context, *DeleteWalletLedgerRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteWalletLedger not implemented")
 }
+func (UnimplementedConsoleServer) DeleteInventoryLedger(context.Context, *DeleteInventoryLedgerRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteInventoryLedger not implemented")
+}
 func (UnimplementedConsoleServer) DemoteGroupMember(context.Context, *UpdateGroupUserStateRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DemoteGroupMember not implemented")
 }
@@ -1448,6 +1477,9 @@ func (UnimplementedConsoleServer) GetStorage(context.Context, *api.ReadStorageOb
 }
 func (UnimplementedConsoleServer) GetWalletLedger(context.Context, *GetWalletLedgerRequest) (*WalletLedgerList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetWalletLedger not implemented")
+}
+func (UnimplementedConsoleServer) GetInventoryLedger(context.Context, *GetInventoryLedgerRequest) (*InventoryLedgerList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetInventoryLedger not implemented")
 }
 func (UnimplementedConsoleServer) GetNotification(context.Context, *GetNotificationRequest) (*Notification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotification not implemented")
@@ -2149,6 +2181,24 @@ func _Console_DeleteWalletLedger_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_DeleteInventoryLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteInventoryLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteInventoryLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_DeleteInventoryLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteInventoryLedger(ctx, req.(*DeleteInventoryLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Console_DemoteGroupMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateGroupUserStateRequest)
 	if err := dec(in); err != nil {
@@ -2415,6 +2465,24 @@ func _Console_GetWalletLedger_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).GetWalletLedger(ctx, req.(*GetWalletLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_GetInventoryLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInventoryLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).GetInventoryLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_GetInventoryLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).GetInventoryLedger(ctx, req.(*GetInventoryLedgerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3325,6 +3393,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Console_DeleteWalletLedger_Handler,
 		},
 		{
+			MethodName: "DeleteInventoryLedger",
+			Handler:    _Console_DeleteInventoryLedger_Handler,
+		},
+		{
 			MethodName: "DemoteGroupMember",
 			Handler:    _Console_DemoteGroupMember_Handler,
 		},
@@ -3383,6 +3455,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetWalletLedger",
 			Handler:    _Console_GetWalletLedger_Handler,
+		},
+		{
+			MethodName: "GetInventoryLedger",
+			Handler:    _Console_GetInventoryLedger_Handler,
 		},
 		{
 			MethodName: "GetNotification",

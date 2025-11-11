@@ -269,6 +269,11 @@ service Console {
     option (google.api.http).delete = "/v2/console/account/{id}/wallet/{wallet_id}";
   }
 
+  // Delete a inventory ledger item.
+  rpc DeleteInventoryLedger (DeleteInventoryLedgerRequest) returns (google.protobuf.Empty) {
+    option (google.api.http).delete = "/v2/console/account/{id}/inventory/{inventory_id}";
+  }
+
   // Demote a user from a group.
   rpc DemoteGroupMember (UpdateGroupUserStateRequest) returns (google.protobuf.Empty) {
     option (google.api.http).post = "/v2/console/group/{group_id}/account/{id}/demote";
@@ -342,6 +347,10 @@ service Console {
   // Get a list of the user's wallet transactions.
   rpc GetWalletLedger (GetWalletLedgerRequest) returns (WalletLedgerList) {
     option (google.api.http).get = "/v2/console/account/{account_id}/wallet";
+  }
+
+  rpc GetInventoryLedger (GetInventoryLedgerRequest) returns (InventoryLedgerList) {
+    option (google.api.http).get = "/v2/console/account/{account_id}/inventory";
   }
 
   // Get a notification by id.
@@ -641,6 +650,8 @@ message AccountExport {
   repeated api.Notification notifications = 7;
   // The user's wallet ledger items.
   repeated WalletLedger wallet_ledgers = 8;
+  // The user's inventory ledger items.
+  repeated InventoryLedger inventory_ledgers = 9;
 }
 
 // The identifier for a user account.
@@ -1158,6 +1169,8 @@ message UpdateAccountRequest {
   map<string, string> device_ids = 12;
   // Wallet.
   google.protobuf.StringValue wallet = 13;
+   // Inventory.
+  google.protobuf.StringValue inventory = 14;
 }
 
 // Update group information.
@@ -1692,4 +1705,47 @@ message VipStatusResponse {
   bool is_vip = 1;
   // VIP account info (if exists)
   VipAccount vip_account = 2;
+}
+
+// Delete a single inventory ledger item.
+message DeleteInventoryLedgerRequest {
+  // User ID to remove inventory ledger item from.
+  string id = 1;
+  // ID of the inventory ledger item to remove.
+  string inventory_id = 2;
+}
+
+// An individual update to a user's inventory.
+message InventoryLedger {
+  // The identifier of this inventory change.
+  string id = 1;
+  // The user ID this inventory ledger item belongs to.
+  string user_id = 2;
+  // The changeset.
+  string changeset = 3;
+  // Any associated metadata.
+  string metadata = 4;
+  // The UNIX time when the inventory ledger item was created.
+  google.protobuf.Timestamp create_time = 5;
+  // The UNIX time when the inventory ledger item was updated.
+  google.protobuf.Timestamp update_time = 6;
+}
+
+// List of inventory ledger items for a particular user.
+message InventoryLedgerList {
+  // A list of inventory ledger items.
+  repeated InventoryLedger items = 1;
+  // The cursor to send when retrieving the next older page, if any.
+  string next_cursor = 2;
+  // The cursor to send when retrieving the previous page newer, if any.
+  string prev_cursor = 3;
+}
+
+message GetInventoryLedgerRequest {
+  // The unique identifier of the user account.
+  string account_id = 1;
+  // Max number of results per page
+  uint32 limit = 2;
+  // Cursor to retrieve a page of records from
+  string cursor = 3;
 }

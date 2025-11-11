@@ -70,6 +70,7 @@ import {QRCodeModule} from 'angularx-qrcode';
 import {AccountsModule} from './accounts/accounts.module';
 import {AnnouncementsComponent} from './announcements/announcements.component';
 import {TranslateModule} from './shared/translate.module';
+import {InventoryComponent} from './account/inventory/inventory.component';
 
 @NgModule({
   declarations: [
@@ -86,6 +87,7 @@ import {TranslateModule} from './shared/translate.module';
     ProfileComponent,
     AuthenticationComponent,
     WalletComponent,
+    InventoryComponent,
     FriendsComponent,
     GroupsComponent,
     GroupComponent,

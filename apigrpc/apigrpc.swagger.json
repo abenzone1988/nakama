@@ -4417,7 +4417,6 @@
         "devices": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiAccountDevice"
           },
           "description": "The devices which belong to the user's account."
@@ -4435,6 +4434,10 @@
           "type": "string",
           "format": "date-time",
           "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's account was disabled/banned."
+        },
+        "inventory": {
+          "type": "string",
+          "description": "The user's inventory data."
         }
       },
       "description": "A user with additional account details. Always the current user."
@@ -4684,7 +4687,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "A list of messages."
@@ -4782,7 +4784,6 @@
         "objectIds": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiDeleteStorageObjectId"
           },
           "description": "Batch of storage objects."
@@ -4846,7 +4847,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The Friend objects."
@@ -4864,7 +4864,6 @@
         "friendsOfFriends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/FriendsOfFriendsListFriendOfFriend"
           },
           "description": "User friends of friends."
@@ -4940,7 +4939,6 @@
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "One or more groups."
@@ -4958,7 +4956,6 @@
         "groupUsers": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "User-role pairs for a group."
@@ -5038,7 +5035,6 @@
         "records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of leaderboard records."
@@ -5046,7 +5042,6 @@
         "ownerRecords": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of leaderboard records belonging to specified owners."
@@ -5157,7 +5152,6 @@
         "matches": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiMatch"
           },
           "description": "A number of matches corresponding to a list operation."
@@ -5193,7 +5187,6 @@
         "completions": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiMatchmakerCompletionStats"
           }
         }
@@ -5252,7 +5245,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiNotification"
           },
           "description": "Collection of notifications."
@@ -5300,7 +5292,6 @@
         "objectIds": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiReadStorageObjectId"
           },
           "description": "Batch of storage objects."
@@ -5459,7 +5450,6 @@
         "acks": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiStorageObjectAck"
           },
           "description": "Batch of storage write acknowledgements."
@@ -5473,7 +5463,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The list of storage objects."
@@ -5491,7 +5480,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The batch of storage objects."
@@ -5528,7 +5516,6 @@
         "validatedSubscriptions": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedSubscription"
           },
           "description": "Stored validated subscriptions."
@@ -5649,7 +5636,6 @@
         "tournaments": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiTournament"
           },
           "description": "The list of tournaments returned."
@@ -5667,7 +5653,6 @@
         "records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of tournament records."
@@ -5675,7 +5660,6 @@
         "ownerRecords": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of tournament records belonging to specified owners."
@@ -5813,7 +5797,6 @@
         "userGroups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/UserGroupListUserGroup"
           },
           "description": "Group-role pairs for a user."
@@ -5831,7 +5814,6 @@
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiUser"
           },
           "description": "The User objects."
@@ -5905,7 +5887,6 @@
         "validatedPurchases": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedPurchase"
           },
           "description": "Newly seen validated purchases."
@@ -6108,7 +6089,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiWriteStorageObject"
           },
           "description": "The objects to store on the server."
@@ -6253,7 +6233,6 @@
         "reward": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameReward"
           },
           "title": "奖励"
@@ -6266,14 +6245,12 @@
         "challenges": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameChallenge"
           }
         },
         "joined": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameJoinChallengeStatus"
           }
         },
@@ -6347,7 +6324,6 @@
         "levelData": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameHomeLevelData"
           },
           "title": "关卡数据列表"
@@ -6504,7 +6480,6 @@
         "announcements": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameAnnouncementInfo"
           },
           "title": "公告列表"
@@ -6580,7 +6555,6 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         }
@@ -6734,7 +6708,6 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }

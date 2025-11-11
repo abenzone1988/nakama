@@ -21,6 +21,8 @@ export interface AccountExport {
   friends?:Array<ApiFriend>
   // The user's groups.
   groups?:Array<ApiGroup>
+  // The user's inventory ledger items.
+  inventory_ledgers?:Array<InventoryLedger>
   // The user's leaderboard records.
   leaderboard_records?:Array<ApiLeaderboardRecord>
   // The user's chat messages.
@@ -281,6 +283,32 @@ export interface GroupUserListGroupUser {
   state?:number
   // User.
   user?:ApiUser
+}
+
+/** An individual update to a user's inventory. */
+export interface InventoryLedger {
+  // The changeset.
+  changeset?:string
+  // The UNIX time when the inventory ledger item was created.
+  create_time?:string
+  // The identifier of this inventory change.
+  id?:string
+  // Any associated metadata.
+  metadata?:string
+  // The UNIX time when the inventory ledger item was updated.
+  update_time?:string
+  // The user ID this inventory ledger item belongs to.
+  user_id?:string
+}
+
+/** List of inventory ledger items for a particular user. */
+export interface InventoryLedgerList {
+  // A list of inventory ledger items.
+  items?:Array<InventoryLedger>
+  // The cursor to send when retrieving the next older page, if any.
+  next_cursor?:string
+  // The cursor to send when retrieving the previous page newer, if any.
+  prev_cursor?:string
 }
 
 /** A leaderboard. */
@@ -590,6 +618,8 @@ export interface UpdateAccountRequest {
   display_name?:string
   // Email.
   email?:string
+  // Inventory.
+  inventory?:string
   // Langtag.
   lang_tag?:string
   // Location.
@@ -779,6 +809,8 @@ export interface ApiAccount {
   disable_time?:string
   // The email address of the user.
   email?:string
+  // The user's inventory data.
+  inventory?:string
   // The user object.
   user?:ApiUser
   // The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's email was verified.
@@ -1222,6 +1254,20 @@ export class ConsoleService {
     return this.httpClient.get<AccountList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
+  /**  */
+  getInventoryLedger(auth_token: string, account_id: string, limit?: number, cursor?: string): Observable<InventoryLedgerList> {
+    const encodedAccount_id = encodeURIComponent(String(account_id))
+    const urlPath = `/v2/console/account/${encodedAccount_id}/inventory`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    if (limit) {
+      params = params.set('limit', String(limit));
+    }
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+    return this.httpClient.get<InventoryLedgerList>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
   /** Get a list of the user's wallet transactions. */
   getWalletLedger(auth_token: string, account_id: string, limit?: number, cursor?: string): Observable<WalletLedgerList> {
     const encodedAccount_id = encodeURIComponent(String(account_id))
@@ -1309,6 +1355,15 @@ export class ConsoleService {
     const encodedId = encodeURIComponent(String(id))
     const encodedGroup_id = encodeURIComponent(String(group_id))
     const urlPath = `/v2/console/account/${encodedId}/group/${encodedGroup_id}`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
+  /** Delete a inventory ledger item. */
+  deleteInventoryLedger(auth_token: string, id: string, inventory_id: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(id))
+    const encodedInventory_id = encodeURIComponent(String(inventory_id))
+    const urlPath = `/v2/console/account/${encodedId}/inventory/${encodedInventory_id}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
     return this.httpClient.delete(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
