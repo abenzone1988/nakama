@@ -1843,118 +1843,6 @@
         ]
       }
     },
-    "/v2/game/challenges": {
-      "get": {
-        "summary": "Get Challenge",
-        "operationId": "Nakama_GetChallenge",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameGetChallengeResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/challenges/gain": {
-      "post": {
-        "summary": "Gain Challenge Reward",
-        "operationId": "Nakama_GainChallengeReward",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameGainChallengeRewardResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameGainChallengeRewardRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/challenges/join": {
-      "post": {
-        "summary": "Join Challenge",
-        "operationId": "Nakama_JoinChallenge",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameJoinChallengeResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameJoinChallengeRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/challenges/top-three-stats": {
-      "get": {
-        "summary": "Get Top Three Stats",
-        "operationId": "Nakama_GetChallengeTopStats",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameGetChallengeTopStatsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
     "/v2/game/feedback": {
       "post": {
         "summary": "User Feedback",
@@ -1981,96 +1869,6 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/gameFeedbackRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/homelevel/get": {
-      "post": {
-        "summary": "Get home level data",
-        "operationId": "Nakama_GetHomeLevelData",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameGetHomeLevelDataResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameGetHomeLevelDataRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/homelevel/reset": {
-      "get": {
-        "summary": "Reset home level data",
-        "operationId": "Nakama_ResetHomeLevelData",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/homelevel/save": {
-      "post": {
-        "summary": "Save home level data",
-        "operationId": "Nakama_SaveHomeLevelData",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameSaveHomeLevelDataResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameSaveHomeLevelDataRequest"
             }
           }
         ],
@@ -2112,6 +1910,29 @@
         ]
       }
     },
+    "/v2/game/stamina": {
+      "get": {
+        "summary": "Get current stamina",
+        "operationId": "Nakama_GetCurrentStamina",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameStaminaData"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/time": {
       "get": {
         "summary": "Get Server Time",
@@ -2130,39 +1951,6 @@
             }
           }
         },
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
-    "/v2/game/wallet/operate": {
-      "post": {
-        "summary": "OperateWallet",
-        "operationId": "Nakama_OperateWallet",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gameWalletResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gameOperateWalletRequest"
-            }
-          }
-        ],
         "tags": [
           "Nakama"
         ]
@@ -4328,14 +4116,6 @@
       },
       "description": "A single user-role pair."
     },
-    "OperateWalletRequestWalletOperationOption": {
-      "type": "string",
-      "enum": [
-        "GAIN",
-        "CONSUME"
-      ],
-      "default": "GAIN"
-    },
     "UserGroupListUserGroup": {
       "type": "object",
       "properties": {
@@ -6128,46 +5908,6 @@
       },
       "title": "公告信息"
     },
-    "gameChallenge": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "activityId": {
-          "type": "string"
-        },
-        "open": {
-          "type": "string",
-          "format": "date-time",
-          "title": "开始"
-        },
-        "close": {
-          "type": "string",
-          "format": "date-time",
-          "title": "关闭"
-        },
-        "end": {
-          "type": "string",
-          "format": "date-time",
-          "title": "结束提交分数"
-        },
-        "over": {
-          "type": "string",
-          "format": "date-time",
-          "title": "结束领取奖励"
-        },
-        "maxPart": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "tournamentId": {
-          "type": "string",
-          "title": "玩家当前参与的竞标赛ID，如果为空表示未参与"
-        }
-      }
-    },
     "gameCheckVipStatusResponse": {
       "type": "object",
       "properties": {
@@ -6181,7 +5921,7 @@
           "title": "Signature"
         }
       },
-      "title": "VIP status response"
+      "title": "VIP状态"
     },
     "gameClaimInviteRewardRequest": {
       "type": "object",
@@ -6206,258 +5946,10 @@
         }
       }
     },
-    "gameGainChallengeRewardRequest": {
-      "type": "object",
-      "properties": {
-        "challengeId": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "rankReward": {
-          "type": "boolean"
-        }
-      }
-    },
-    "gameGainChallengeRewardResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "reward": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameReward"
-          },
-          "title": "奖励"
-        }
-      }
-    },
-    "gameGetChallengeResponse": {
-      "type": "object",
-      "properties": {
-        "challenges": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameChallenge"
-          }
-        },
-        "joined": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameJoinChallengeStatus"
-          }
-        },
-        "getReward": {
-          "type": "boolean"
-        }
-      }
-    },
-    "gameGetChallengeTopStatsResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "stats": {
-          "$ref": "#/definitions/gameTopThreeStats",
-          "title": "前三名统计数据"
-        }
-      },
-      "title": "获取前三名统计响应"
-    },
     "gameGetGameTimeResponse": {
       "type": "object",
       "properties": {
         "gameTime": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "gameGetHomeLevelDataRequest": {
-      "type": "object",
-      "properties": {
-        "levelIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "title": "要获取的关卡ID列表（为空则获取全部）"
-        },
-        "limit": {
-          "type": "integer",
-          "format": "int32",
-          "title": "限制返回数量"
-        },
-        "cursor": {
-          "type": "string",
-          "title": "分页游标"
-        }
-      },
-      "title": "获取关卡数据请求"
-    },
-    "gameGetHomeLevelDataResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "levelData": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameHomeLevelData"
-          },
-          "title": "关卡数据列表"
-        },
-        "nextCursor": {
-          "type": "string",
-          "title": "下一页游标"
-        },
-        "totalCount": {
-          "type": "integer",
-          "format": "int32",
-          "title": "总数量"
-        },
-        "maxLevelId": {
-          "type": "string",
-          "title": "最大关卡"
-        }
-      },
-      "title": "获取关卡数据响应"
-    },
-    "gameHomeLevelData": {
-      "type": "object",
-      "properties": {
-        "levelId": {
-          "type": "string",
-          "title": "关卡ID"
-        },
-        "hasChallenged": {
-          "type": "boolean",
-          "title": "是否挑战过"
-        },
-        "isPassed": {
-          "type": "boolean",
-          "title": "是否通过"
-        },
-        "remainHp": {
-          "type": "number",
-          "format": "float",
-          "title": "通关后剩余血量"
-        },
-        "rewardGot": {
-          "type": "integer",
-          "format": "int32",
-          "title": "奖励领取状态（位）"
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time",
-          "title": "更新时间"
-        }
-      },
-      "title": "关卡数据结构"
-    },
-    "gameItem": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "num": {
-          "type": "integer",
-          "format": "int32"
-        }
-      },
-      "title": "Game Item"
-    },
-    "gameJoinChallengeRequest": {
-      "type": "object",
-      "properties": {
-        "challengeId": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
-    "gameJoinChallengeResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "challenge": {
-          "$ref": "#/definitions/gameChallenge"
-        }
-      }
-    },
-    "gameJoinChallengeStatus": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "tournamentId": {
-          "type": "string"
-        },
-        "activityId": {
-          "type": "string"
-        },
-        "joined": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "rankReward": {
-          "type": "boolean"
-        },
-        "lowScoreReward": {
-          "type": "boolean"
-        },
-        "midScoreReward": {
-          "type": "boolean"
-        },
-        "highScoreReward": {
-          "type": "boolean"
-        },
-        "over": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "open": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "close": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "end": {
           "type": "string",
           "format": "date-time"
         }
@@ -6496,36 +5988,6 @@
       },
       "title": "获取已发布公告响应"
     },
-    "gameOperateWalletRequest": {
-      "type": "object",
-      "properties": {
-        "option": {
-          "$ref": "#/definitions/OperateWalletRequestWalletOperationOption",
-          "title": "操作类型"
-        },
-        "coin": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "gem": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "ad": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "signature": {
-          "type": "string"
-        },
-        "walletId": {
-          "type": "string"
-        }
-      }
-    },
     "gameRedeemGiftRequest": {
       "type": "object",
       "properties": {
@@ -6546,143 +6008,25 @@
         }
       }
     },
-    "gameReward": {
+    "gameStaminaData": {
       "type": "object",
       "properties": {
-        "wallet": {
-          "$ref": "#/definitions/gameWallet"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameItem"
-          }
-        }
-      },
-      "title": "奖励数据"
-    },
-    "gameSaveHomeLevelDataRequest": {
-      "type": "object",
-      "properties": {
-        "levelId": {
-          "type": "string",
-          "title": "关卡ID"
-        },
-        "hasChallenged": {
-          "type": "boolean",
-          "title": "是否挑战过"
-        },
-        "isPassed": {
-          "type": "boolean",
-          "title": "是否通过"
-        },
-        "remainHp": {
-          "type": "number",
-          "format": "float",
-          "title": "通关后剩余血量"
-        },
-        "rewardGot": {
+        "stamina": {
           "type": "integer",
-          "format": "int32",
-          "title": "奖励领取状态（位）"
+          "format": "int32"
+        },
+        "lastRefreshTime": {
+          "type": "string",
+          "title": "ISO 8601 格式，例如 \"2024-05-18T12:34:56Z\""
         }
       },
-      "title": "保存关卡数据请求（单个关卡）"
-    },
-    "gameSaveHomeLevelDataResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "isNewRecord": {
-          "type": "boolean",
-          "title": "是否为新创建的关卡记录"
-        },
-        "maxLevelId": {
-          "type": "string",
-          "title": "最大关卡"
-        }
-      },
-      "title": "保存关卡数据响应"
+      "title": "体力数据"
     },
     "gameSubmitBeInvitedRequest": {
       "type": "object",
       "properties": {
         "inviterId": {
           "type": "string"
-        }
-      }
-    },
-    "gameTopThreeStats": {
-      "type": "object",
-      "properties": {
-        "firstPlace": {
-          "type": "integer",
-          "format": "int32",
-          "title": "第一名次数"
-        },
-        "secondPlace": {
-          "type": "integer",
-          "format": "int32",
-          "title": "第二名次数"
-        },
-        "thirdPlace": {
-          "type": "integer",
-          "format": "int32",
-          "title": "第三名次数"
-        },
-        "lastUpdated": {
-          "type": "string",
-          "format": "int64",
-          "title": "最后更新时间戳"
-        }
-      },
-      "title": "前三名统计数据"
-    },
-    "gameWallet": {
-      "type": "object",
-      "properties": {
-        "coin": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "gem": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "ad": {
-          "type": "integer",
-          "format": "int32"
-        }
-      },
-      "title": "钱包结构"
-    },
-    "gameWalletResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32",
-          "title": "状态码 (0: 成功, 其他: 错误码)"
-        },
-        "msg": {
-          "type": "string",
-          "title": "响应消息"
-        },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新后的钱包"
-        },
-        "walletPrevious": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "更新前的钱包"
         }
       }
     },

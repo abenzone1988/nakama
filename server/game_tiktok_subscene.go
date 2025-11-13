@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// 订阅场景变化
 const (
 	ErrNoSuccess         = 0        // 成功
 	ErrNoInvalidParam    = 28001007 // 参数错误

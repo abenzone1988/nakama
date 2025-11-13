@@ -16,6 +16,7 @@ message RedeemGiftRequest{
   string gift_code = 1;
 }
 
+
 message RedeemGiftResponse{
   int32 code = 1;
   string msg = 2;
@@ -74,9 +75,16 @@ message ListPublishedAnnouncementsResponse {
   string next_cursor = 3;  // 下一页游标
 }
 
+// 体力数据
+message StaminaData{
+  int32 stamina = 1;
+  string last_refresh_time = 2; // ISO 8601 格式，例如 "2024-05-18T12:34:56Z"
+}
+
 // 玩家元数据
 message UserMeta{
-  int64 last_sync_notice = 1;
+  int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
+  StaminaData stamina = 2;
 }
 
 // 钱包结构
@@ -86,7 +94,7 @@ message Wallet{
   int32 ad = 3;
 }
 
-// Game Item
+// 道具
 message Item {
   string id = 1;
   int32 num = 2;
@@ -98,214 +106,27 @@ message Reward{
   repeated Item items = 2;
 }
 
-// 关卡数据结构
-message HomeLevelData {
-  string level_id = 1;  // 关卡ID
-  bool has_challenged = 2;  // 是否挑战过
-  bool is_passed = 3;  // 是否通过
-  float remain_hp = 4;  // 通关后剩余血量
-  int32 reward_got = 5;  // 奖励领取状态（位）
-  google.protobuf.Timestamp update_time = 6;  // 更新时间
-}
-
-// 保存关卡数据请求（单个关卡）
-message SaveHomeLevelDataRequest {
-  string level_id = 1;  // 关卡ID
-  bool has_challenged = 2;  // 是否挑战过
-  bool is_passed = 3;  // 是否通过
-  float remain_hp = 4;  // 通关后剩余血量
-  int32 reward_got = 5;  // 奖励领取状态（位）
-}
-
-// 保存关卡数据响应
-message SaveHomeLevelDataResponse {
-  int32 code = 1;  // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;  // 响应消息
-  bool is_new_record = 3;  // 是否为新创建的关卡记录
-  string max_level_id = 4;// 最大关卡
-}
-
-// 获取关卡数据请求
-message GetHomeLevelDataRequest {
-  repeated string level_ids = 1;  // 要获取的关卡ID列表（为空则获取全部）
-  int32 limit = 2;  // 限制返回数量
-  string cursor = 3;  // 分页游标
-}
-
-// 获取关卡数据响应
-message GetHomeLevelDataResponse {
-  int32 code = 1;  // 状态码
-  string msg = 2;  // 响应消息
-  repeated HomeLevelData level_data = 3;  // 关卡数据列表
-  string next_cursor = 4;  // 下一页游标
-  int32 total_count = 5;  // 总数量
-  string max_level_id = 6;// 最大关卡
-}
-
-//获取奖励请求
-message GetRewardRequest{
-  string reward_id  = 1; //奖励id
-}
-
-//加钱包请求
-message AddWalletRequest{
-  int32 coin = 1;
-  int32 gem = 2;
-  int32 ad = 3;
-  string reason = 4;
-}
-
-//加钱包响应
-message AddWalletResponse{
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  Wallet wallet_updated = 3;     // 更新后的钱包
-  Wallet wallet_previous = 4;    // 更新前的钱包
-}
-
-//获取奖励响应
-message GetRewardResponse{
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  Wallet wallet_updated = 3;     // 更新后的钱包
-  Wallet wallet_previous = 4;    // 更新前的钱包
-}
-
-// 货币类型枚举
-enum CurrencyType {
-  CURRENCY_TYPE_UNSPECIFIED = 0; // 未指定
-  CURRENCY_TYPE_COIN = 1;        // 硬币
-  CURRENCY_TYPE_GEM = 2;         // 宝石
-  CURRENCY_TYPE_AD = 3;          // 广告币
-}
-
-// 使用钱包货币请求
-message UseWalletRequest {
-  CurrencyType currency_type = 1; // 货币类型
-  int32 amount = 2;              // 使用数量
-  string reason = 3;             // 使用原因
-}
-
-// 使用钱包货币响应
-message UseWalletResponse {
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  Wallet wallet_updated = 3;     // 更新后的钱包
-  Wallet wallet_previous = 4;    // 更新前的钱包
-}
-
-message GainWalletRequest{
-  int32 coin = 1;
-  int32 gem = 2;
-  int32 ad = 3;
-  string reason = 4;
-  string signature = 5;
-}
-
-message ConsumeWalletRequest{
-  int32 coin = 1;
-  int32 gem = 2;
-  int32 ad = 3;
-  string reason = 4;
-  string signature = 5;
-}
-
-message OperateWalletRequest{
-  enum WalletOperationOption {
-    GAIN = 0;
-    CONSUME = 1;
-  }
-  WalletOperationOption option = 1; // 操作类型
-  int32 coin = 2;
-  int32 gem = 3;
-  int32 ad = 4;
-  string reason = 5;
-  string signature = 6;
-  string wallet_id = 7;
-}
-
-message WalletResponse {
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  Wallet wallet_updated = 3;     // 更新后的钱包
-  Wallet wallet_previous = 4;    // 更新前的钱包
-}
-
-message Challenge{
-  int32 id = 1;
-  string activity_id = 2;
-  google.protobuf.Timestamp open = 3; //开始
-  google.protobuf.Timestamp close = 4; //关闭
-  google.protobuf.Timestamp end = 5; //结束提交分数
-  google.protobuf.Timestamp over = 6; //结束领取奖励
-  int32 max_part = 7;
-  string tournament_id = 8;      // 玩家当前参与的竞标赛ID，如果为空表示未参与
-
-}
-
-message JoinChallengeStatus{
-  int32 id = 1;
-  string tournament_id = 2;
-  string activity_id = 3;
-  google.protobuf.Timestamp joined = 4;
-  bool rank_reward = 5;
-  bool low_score_reward = 6;
-  bool mid_score_reward = 7;
-  bool high_score_reward = 8;
-  google.protobuf.Timestamp over = 9;
-  google.protobuf.Timestamp open = 10;
-  google.protobuf.Timestamp close = 11;
-  google.protobuf.Timestamp end = 12;
-}
-
-message GetChallengeResponse{
-  repeated Challenge challenges = 1;
-  repeated JoinChallengeStatus joined = 2;
-  bool get_reward = 3;
-}
-
-
-message JoinChallengeRequest{
-  int32 challenge_id = 1;
-}
-
-message JoinChallengeResponse{
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  Challenge challenge  = 3;
-}
-
-
-message GainChallengeRewardRequest{
-  int32 challenge_id = 1;
-  bool rank_reward = 2;
-}
-
-message GainChallengeRewardResponse{
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  repeated Reward reward = 3;     // 奖励
-}
-
-// 前三名统计数据
-message TopThreeStats {
-  int32 first_place = 1;         // 第一名次数
-  int32 second_place = 2;        // 第二名次数
-  int32 third_place = 3;         // 第三名次数
-  int64 last_updated = 4;        // 最后更新时间戳
-}
-
-// 获取前三名统计响应
-message GetChallengeTopStatsResponse {
-  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
-  string msg = 2;                // 响应消息
-  TopThreeStats stats = 3;       // 前三名统计数据
-}
-
-// VIP status response
+// VIP状态
 message CheckVipStatusResponse {
   // Expire time in seconds (int64 to avoid 2038 problem)
   int64 expire_time = 1;
   // Signature
   string signature = 2;
+}
+
+enum BattleType{
+  BATTLE_TYPE_NORMAL = 0;
+  BATTLE_TYPE_GOLDEN = 1;
+}
+
+//结束战斗
+message EndBattleRequest{
+  BattleType type = 1;
+  int32 progress = 2;
+}
+
+message EndBattleResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward data = 3; // 奖励数据
 }

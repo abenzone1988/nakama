@@ -129,19 +129,20 @@ func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.L
 					s.logger.Info("邀请人没注册", zap.String("share_id", v.Invitee))
 					continue
 				}
-				inviter := users.Users[0]
-				inviterID, _ := uuid.FromString(inviter.Id)
+				// todo 通关第一关的判断
+				//inviter := users.Users[0]
+				//inviterID, _ := uuid.FromString(inviter.Id)
 
 				// 加载关卡数据
-				homeLevelData := &HomeLevelData{}
-				err := LoadData(ctx, s.logger, s.db, inviterID, homeLevelData)
-				if err != nil {
-					s.logger.Info("邀请人HomeLevelData 加载失败", zap.String("share_id", inviter.Id))
-					continue
-				}
-				if homeLevelData.MaxLevelId >= "L10011" {
-					resp.InviteeIds = append(resp.InviteeIds, v.Invitee)
-				}
+				//homeLevelData := &HomeLevelData{}
+				//err := LoadData(ctx, s.logger, s.db, inviterID, homeLevelData)
+				//if err != nil {
+				//	s.logger.Info("邀请人HomeLevelData 加载失败", zap.String("share_id", inviter.Id))
+				//	continue
+				//}
+				//if homeLevelData.MaxLevelId >= "L10011" {
+				//	resp.InviteeIds = append(resp.InviteeIds, v.Invitee)
+				//}
 			}
 		}
 	}

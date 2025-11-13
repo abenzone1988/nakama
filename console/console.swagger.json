@@ -5491,7 +5491,7 @@
           "format": "int32"
         }
       },
-      "title": "Game Item"
+      "title": "道具"
     },
     "gameReward": {
       "type": "object",

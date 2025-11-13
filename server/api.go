@@ -139,6 +139,9 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 				return nil, err
 			}
 
+			// 为已认证的请求添加 UserMetaManager
+			ctx = WithUserMetaManager(ctx, logger, db, statusRegistry)
+
 			// 使用 defer 捕获 panic
 			defer func() {
 				if r := recover(); r != nil {
@@ -156,7 +159,24 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 					}
 				}
 			}()
-			return handler(ctx, req)
+
+			// 执行请求处理
+			resp, err := handler(ctx, req)
+
+			// 请求结束后自动保存 UserMeta（如果有修改）
+			if manager := GetUserMetaManager(ctx); manager != nil {
+				if saveErr := manager.Save(ctx); saveErr != nil {
+					logger.Error("Failed to auto-save UserMeta",
+						zap.Error(saveErr),
+						zap.String("method", info.FullMethod))
+					// 保存失败时返回错误，防止数据不一致
+					if err == nil {
+						err = saveErr
+					}
+				}
+			}
+
+			return resp, err
 		}),
 	}
 	if config.GetSocket().TLSCert != nil {
@@ -280,7 +300,6 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 	grpcGatewayRouter.HandleFunc("/v2/wechat/message/verify", s.HandleWechatVerify).Methods(http.MethodGet, http.MethodPost)
 	// 添加抖音直玩能力场景列表查询路由
 	grpcGatewayRouter.HandleFunc("/v2/tiktok/feed/scenes", s.HandleSceneList).Methods(http.MethodGet)
-
 	// 添加购买发货通知路由
 	grpcGatewayRouter.HandleFunc("/v2/tiktok/purchase/notify", s.HandlePurchaseNotify).Methods(http.MethodPost)
 

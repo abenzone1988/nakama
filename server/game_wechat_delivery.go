@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// 微信发货
 const (
 	push_token                  = "sparkinfi"
 	sub_err_code_user_not_found = 172935494

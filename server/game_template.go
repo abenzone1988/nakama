@@ -16,24 +16,59 @@ const tplCollection = "Tpl"
 type TemplateManager interface {
 	LoadData()
 	GetTplRedemption() *TableTplRedemption
+	GetTplLevelInfo() *TableTplLevelInfo
 }
 
 type LocalTemplateManager struct {
 	sync.RWMutex
-	logger             *zap.Logger
-	db                 *sql.DB
-	tableTplRedemption *TableTplRedemption
+	logger                    *zap.Logger
+	db                        *sql.DB
+	tableTplRedemption        *TableTplRedemption
+	tableTplLevelInfo         *TableTplLevelInfo
+	tableTplItem              *TableTplItem
+	tableTplReward            *TableTplReward
+	tableTplActivityLevelInfo *TableTplActivityLevelInfo
+	tableTplEquipmentDev      *TableTplEquipmentDev
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
 	jsonPath := config.GetDataDir()
 	t := LocalTemplateManager{
-		logger:             logger,
-		db:                 db,
-		tableTplRedemption: NewTableTplRedemption(logger, jsonPath),
+		logger:                    logger,
+		db:                        db,
+		tableTplRedemption:        NewTableTplRedemption(logger, jsonPath),
+		tableTplLevelInfo:         NewTableTplLevelInfo(logger, jsonPath),
+		tableTplItem:              NewTableTplItem(logger, jsonPath),
+		tableTplReward:            NewTableTplReward(logger, jsonPath),
+		tableTplActivityLevelInfo: NewTableTplActivityLevelInfo(logger, jsonPath),
+		tableTplEquipmentDev:      NewTableTplEquipmentDev(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
+}
+
+func (t *LocalTemplateManager) GetTplItem() *TableTplItem {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplItem
+}
+
+func (t *LocalTemplateManager) GetTplReward() *TableTplReward {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplReward
+}
+
+func (t *LocalTemplateManager) GetTplActivityLevelInfo() *TableTplActivityLevelInfo {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplActivityLevelInfo
+}
+
+func (t *LocalTemplateManager) GetTplEquipmentDev() *TableTplEquipmentDev {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplEquipmentDev
 }
 
 func (t *LocalTemplateManager) GetTplRedemption() *TableTplRedemption {
@@ -42,11 +77,22 @@ func (t *LocalTemplateManager) GetTplRedemption() *TableTplRedemption {
 	return t.tableTplRedemption
 }
 
+func (t *LocalTemplateManager) GetTplLevelInfo() *TableTplLevelInfo {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplLevelInfo
+}
+
 func (t *LocalTemplateManager) LoadData() {
 	t.Lock()
 	defer t.Unlock()
 
 	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
+	t.tableTplLevelInfo.LoadData(t.StorageReadTpl("TplLevelInfo"))
+	t.tableTplItem.LoadData(t.StorageReadTpl("TplItem"))
+	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
+	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
+	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
@@ -57,11 +103,11 @@ func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
 
 	readData, err := StorageReadObjects(context.Background(), t.logger, t.db, uuid.Nil, ids)
 	if err != nil {
-		t.logger.Error("Error reading storage object", zap.Error(err))
+		t.logger.Error("Error reading storage object", zap.Error(err), zap.String("key", key))
 		return nil
 	}
 	if readData == nil || readData.Objects == nil || len(readData.Objects) == 0 {
-		t.logger.Error("Error reading storage object", zap.Error(err))
+		t.logger.Error("Error reading storage object", zap.Error(err), zap.String("key", key))
 		return nil
 	}
 	return []byte(readData.Objects[0].Value)

@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,20 +9,44 @@ import (
 )
 
 type TplRedemption struct {
-	Coin   int32  `json:"coin"`
-	Coupon int32  `json:"coupon"`
-	Expire string `json:"expire"`
-	Gem    int32  `json:"gem"`
-	ID     string `json:"id"`
-	Items  string `json:"items"`
-	Name   string `json:"name"`
+	ID       string `json:"id"`
+	RewardID string `json:"rewardId"`
+}
+
+// ReadOnlyTplRedemptionSlice 只读TplRedemption切片接口
+type ReadOnlyTplRedemptionSlice interface {
+	Len() int
+	Get(index int) TplRedemption
+	ToSlice() []TplRedemption
+}
+
+// readOnlyTplRedemptionSlice 只读TplRedemption切片实现
+type readOnlyTplRedemptionSlice struct {
+	data []TplRedemption
+}
+
+func (r *readOnlyTplRedemptionSlice) Len() int {
+	return len(r.data)
+}
+
+func (r *readOnlyTplRedemptionSlice) Get(index int) TplRedemption {
+	if index < 0 || index >= len(r.data) {
+		return TplRedemption{} // 返回零值
+	}
+	return r.data[index]
+}
+
+func (r *readOnlyTplRedemptionSlice) ToSlice() []TplRedemption {
+	// 返回副本，确保外部无法修改原始数据
+	result := make([]TplRedemption, len(r.data))
+	copy(result, r.data)
+	return result
 }
 
 type TableTplRedemption struct {
 	logger    *zap.Logger
 	loadPath  string
 	tableData map[string]TplRedemption
-	result    []TplRedemption
 }
 
 func NewTableTplRedemption(logger *zap.Logger, loadPath string) *TableTplRedemption {
@@ -31,35 +54,33 @@ func NewTableTplRedemption(logger *zap.Logger, loadPath string) *TableTplRedempt
 		logger:    logger,
 		loadPath:  loadPath,
 		tableData: make(map[string]TplRedemption),
-		result:    make([]TplRedemption, 0),
 	}
 }
 
-func (t *TableTplRedemption) FindByKey(key interface{}) (TplRedemption, bool) {
-	// 添加安全检查，防止传入损坏的字符串
-	if key == nil {
-		return TplRedemption{}, false
-	}
-	val, ok := t.tableData[fmt.Sprintf("%v", key)]
+func (t *TableTplRedemption) FindByKey(key string) (TplRedemption, bool) {
+	val, ok := t.tableData[key]
 	return val, ok
 }
 
-func (t *TableTplRedemption) FindByFilter(f func(TplRedemption) bool) []TplRedemption {
-	t.result = make([]TplRedemption, 0)
+func (t *TableTplRedemption) FindByFilter(f func(TplRedemption) bool) ReadOnlyTplRedemptionSlice {
+	// 创建新的切片，避免共享字段竞争
+	result := make([]TplRedemption, 0)
 	for _, item := range t.tableData {
 		if f(item) {
-			t.result = append(t.result, item)
+			result = append(result, item)
 		}
 	}
-	return t.result
+	return &readOnlyTplRedemptionSlice{data: result}
 }
 
-func (t *TableTplRedemption) FindAll() []TplRedemption {
-	t.result = make([]TplRedemption, 0)
+func (t *TableTplRedemption) FindAll() ReadOnlyTplRedemptionSlice {
+	// 直接从 tableData 创建切片，避免共享字段竞争
+	// 返回只读切片，调用者无法修改原始数据
+	result := make([]TplRedemption, 0, len(t.tableData))
 	for _, item := range t.tableData {
-		t.result = append(t.result, item)
+		result = append(result, item)
 	}
-	return t.result
+	return &readOnlyTplRedemptionSlice{data: result}
 }
 
 func (t *TableTplRedemption) Release() {

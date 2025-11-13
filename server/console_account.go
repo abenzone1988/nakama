@@ -598,9 +598,9 @@ func (s *ConsoleServer) UpdateAccount(ctx context.Context, in *console.UpdateAcc
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Requires a valid user ID.")
 	}
-	if userID == uuid.Nil {
-		return nil, status.Error(codes.InvalidArgument, "Cannot update the system user.")
-	}
+	//if userID == uuid.Nil {
+	//	return nil, status.Error(codes.InvalidArgument, "Cannot update the system user.")
+	//}
 
 	statements := make([]string, 0)
 	params := []interface{}{userID}
