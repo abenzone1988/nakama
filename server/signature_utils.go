@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/heroiclabs/nakama/v3/game"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -230,6 +231,18 @@ func VerifyWalletSignatureV2(operationType string, coin, gem, ad int64, reason, 
 		"reason":         reason,
 		"user_id":        userID,
 		"wallet_id":      walletID,
+	}
+	return verifySignature(data, signature, DefaultSignatureConfig.SecretKey)
+
+}
+
+func VerifyInventorySignature(operationType string, items []*game.Item, reason, signature, userID, inventoryID string) bool {
+	data := map[string]interface{}{
+		"operation_type": operationType,
+		"items":          items,
+		"reason":         reason,
+		"user_id":        userID,
+		"inventory_id":   inventoryID,
 	}
 	return verifySignature(data, signature, DefaultSignatureConfig.SecretKey)
 

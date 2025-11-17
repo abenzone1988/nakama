@@ -1,0 +1,12 @@
+{
+"1":{"RequiredExp":0,"level":1,"Box1":"SB2001","id":"1"},
+"2":{"RequiredExp":1000,"level":2,"Box1":"SB2002","id":"2"},
+"3":{"RequiredExp":1500,"level":3,"Box1":"SB2003","id":"3"},
+"4":{"RequiredExp":2000,"level":4,"Box1":"SB2004","id":"4"},
+"5":{"RequiredExp":3000,"level":5,"Box1":"SB2005","id":"5"},
+"6":{"RequiredExp":4000,"level":6,"Box1":"SB2006","id":"6"},
+"7":{"RequiredExp":5500,"level":7,"Box1":"SB2007","id":"7"},
+"8":{"RequiredExp":7000,"level":8,"Box1":"SB2008","id":"8"},
+"9":{"RequiredExp":8500,"level":9,"Box1":"SB2009","id":"9"},
+"10":{"RequiredExp":10000,"level":10,"Box1":"SB2010","id":"10"}
+}

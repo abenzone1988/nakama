@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -105,4 +106,31 @@ func convertMapInt64ToInt32(m map[string]int64) map[string]int32 {
 		result[k] = int32(v)
 	}
 	return result
+}
+
+// convertMapInt64ToItems 将 map[string]int64 转换为 []*Item
+func convertMapInt64ToItems(m map[string]int64) []*game.Item {
+	if m == nil {
+		return nil
+	}
+	items := make([]*game.Item, 0, len(m))
+	for id, num := range m {
+		items = append(items, &game.Item{
+			Id:  id,
+			Num: int32(num),
+		})
+	}
+	return items
+}
+
+// convertMapInt64ToWallet 将 map[string]int64 转换为 *Wallet
+func convertMapInt64ToWallet(m map[string]int64) *game.Wallet {
+	if m == nil {
+		return nil
+	}
+	return &game.Wallet{
+		Coin: int32(m["coin"]),
+		Gem:  int32(m["gem"]),
+		Ad:   int32(m["ad"]),
+	}
 }

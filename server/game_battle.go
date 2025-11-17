@@ -70,19 +70,34 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		applyProgressToReward(reward, in.GetProgress())
 		var err error
 		walletUpdateResult, inventoryUpdateResult, err = grantReward(ctx, s.logger, s.db, reward, source)
+
 		if err != nil {
 			return &game.EndBattleResponse{
 				Code: -1,
 				Msg:  "奖励发放失败: " + err.Error(),
 			}, nil
 		}
+
 	}
+
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
 	return &game.EndBattleResponse{
-		Code:            0,
-		Msg:             "通过成功",
-		Reward:          reward,
-		WalletUpdate:    walletUpdateResult,
-		InventoryUpdate: inventoryUpdateResult,
+		Code:             0,
+		Msg:              "通过成功",
+		Reward:           reward,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
 	}, nil
 }
 
@@ -210,8 +225,8 @@ func grantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, reward *ga
 			}
 
 			walletUpdateResult = &game.WalletUpdateResult{
-				Previous: convertMapInt64ToInt32(results[0].Previous),
-				Updated:  convertMapInt64ToInt32(results[0].Updated),
+				Previous: convertMapInt64ToWallet(results[0].Previous),
+				Updated:  convertMapInt64ToWallet(results[0].Updated),
 			}
 		}
 	}
@@ -242,8 +257,8 @@ func grantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, reward *ga
 				return walletUpdateResult, nil, err
 			}
 			inventoryUpdateResult = &game.InventoryUpdateResult{
-				Previous: convertMapInt64ToInt32(results[0].Previous),
-				Updated:  convertMapInt64ToInt32(results[0].Updated),
+				Previous: convertMapInt64ToItems(results[0].Previous),
+				Updated:  convertMapInt64ToItems(results[0].Updated),
 			}
 		}
 	}

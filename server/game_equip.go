@@ -57,8 +57,8 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 	}
 
 	inventoryUpdateResult = &game.InventoryUpdateResult{
-		Previous: convertMapInt64ToInt32(results[0].Previous),
-		Updated:  convertMapInt64ToInt32(results[0].Updated),
+		Previous: convertMapInt64ToItems(results[0].Previous),
+		Updated:  convertMapInt64ToItems(results[0].Updated),
 	}
 
 	if nextEquip.Price > 0 {
@@ -87,8 +87,8 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 		}
 		if len(results1) > 0 && results1[0] != nil {
 			walletUpdateResult = &game.WalletUpdateResult{
-				Previous: convertMapInt64ToInt32(results1[0].Previous),
-				Updated:  convertMapInt64ToInt32(results1[0].Updated),
+				Previous: convertMapInt64ToWallet(results1[0].Previous),
+				Updated:  convertMapInt64ToWallet(results1[0].Updated),
 			}
 		}
 	}
@@ -101,12 +101,24 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 		return nil, err
 	}
 
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
 	return &game.UpdateEquipDataResponse{
-		Code:            0,
-		Msg:             "Success",
-		EquipData:       equipData,
-		InventoryUpdate: inventoryUpdateResult,
-		WalletUpdate:    walletUpdateResult,
+		Code:             0,
+		Msg:              "Success",
+		EquipData:        equipData,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
 	}, nil
 }
 

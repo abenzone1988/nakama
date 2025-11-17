@@ -23,6 +23,13 @@ type TemplateManager interface {
 	GetTplReward() *TableTplReward
 	GetTplEquipmentDev() *TableTplEquipmentDev
 	GetTplUnlock() *TableTplUnlock
+	GetTplShop() *TableTplShop
+	GetTplShopDailyItem() *TableTplShopDailyItem
+	GetTplShopPermanentItem() *TableTplShopPermanentItem
+	GetTplBoxShop() *TableTplBoxShop
+	GetTplBoxShopItem() *TableTplBoxShopItem
+	GetTplShopChapterItem() *TableTplShopChapterItem
+	GetTplShopGemItem() *TableTplShopGemItem
 }
 
 type LocalTemplateManager struct {
@@ -36,11 +43,13 @@ type LocalTemplateManager struct {
 	tableTplActivityLevelInfo *TableTplActivityLevelInfo
 	tableTplEquipmentDev      *TableTplEquipmentDev
 	tableTplUnlock            *TableTplUnlock
-}
-
-func (t *LocalTemplateManager) GetTplRedemptionInfo() *TableTplRedemption {
-	//TODO implement me
-	panic("implement me")
+	tableTplShop              *TableTplShop
+	tableTplShopDailyItem     *TableTplShopDailyItem
+	tableTplShopPermanentItem *TableTplShopPermanentItem
+	tableTplBoxShop           *TableTplBoxShop
+	tableTplBoxShopItem       *TableTplBoxShopItem
+	tableTplShopChapterItem   *TableTplShopChapterItem
+	tableTplShopGemItem       *TableTplShopGemItem
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -55,9 +64,28 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplReward:            NewTableTplReward(logger, jsonPath),
 		tableTplActivityLevelInfo: NewTableTplActivityLevelInfo(logger, jsonPath),
 		tableTplEquipmentDev:      NewTableTplEquipmentDev(logger, jsonPath),
+		tableTplShop:              NewTableTplShop(logger, jsonPath),
+		tableTplShopDailyItem:     NewTableTplShopDailyItem(logger, jsonPath),
+		tableTplShopPermanentItem: NewTableTplShopPermanentItem(logger, jsonPath),
+		tableTplBoxShop:           NewTableTplBoxShop(logger, jsonPath),
+		tableTplBoxShopItem:       NewTableTplBoxShopItem(logger, jsonPath),
+		tableTplShopChapterItem:   NewTableTplShopChapterItem(logger, jsonPath),
+		tableTplShopGemItem:       NewTableTplShopGemItem(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
+}
+
+func (t *LocalTemplateManager) GetTplRedemptionInfo() *TableTplRedemption {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplRedemption
+}
+
+func (t *LocalTemplateManager) GetTplShop() *TableTplShop {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplShop
 }
 
 func (t *LocalTemplateManager) GetTplUnlock() *TableTplUnlock {
@@ -113,6 +141,49 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
 	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
 	t.tableTplUnlock.LoadData(t.StorageReadTpl("TplUnlock"))
+	t.tableTplShop.LoadData(t.StorageReadTpl("TplShop"))
+	t.tableTplShopDailyItem.LoadData(t.StorageReadTpl("TplShopDailyItem"))
+	t.tableTplShopPermanentItem.LoadData(t.StorageReadTpl("TplShopPermanentItem"))
+	t.tableTplBoxShop.LoadData(t.StorageReadTpl("TplBoxShop"))
+	t.tableTplBoxShopItem.LoadData(t.StorageReadTpl("TplBoxShopItem"))
+	t.tableTplShopChapterItem.LoadData(t.StorageReadTpl("TplShopChapterItem"))
+	t.tableTplShopGemItem.LoadData(t.StorageReadTpl("TplShopGemItem"))
+}
+
+func (t *LocalTemplateManager) GetTplShopDailyItem() *TableTplShopDailyItem {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplShopDailyItem
+}
+
+func (t *LocalTemplateManager) GetTplShopPermanentItem() *TableTplShopPermanentItem {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplShopPermanentItem
+}
+
+func (t *LocalTemplateManager) GetTplBoxShop() *TableTplBoxShop {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplBoxShop
+}
+
+func (t *LocalTemplateManager) GetTplBoxShopItem() *TableTplBoxShopItem {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplBoxShopItem
+}
+
+func (t *LocalTemplateManager) GetTplShopChapterItem() *TableTplShopChapterItem {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplShopChapterItem
+}
+
+func (t *LocalTemplateManager) GetTplShopGemItem() *TableTplShopGemItem {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplShopGemItem
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {

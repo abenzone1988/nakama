@@ -1843,6 +1843,29 @@
         ]
       }
     },
+    "/v2/game/equip": {
+      "get": {
+        "summary": "Get equip data",
+        "operationId": "Nakama_GetEquipData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameEquipData"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/feedback": {
       "post": {
         "summary": "User Feedback",
@@ -1877,6 +1900,39 @@
         ]
       }
     },
+    "/v2/game/inventory/operate": {
+      "post": {
+        "summary": "Operate Inventory",
+        "operationId": "Nakama_OperateInventory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameOperateInventoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameOperateInventoryRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/redeem_gift": {
       "post": {
         "summary": "Redeem a Gift by code",
@@ -1902,6 +1958,62 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/gameRedeemGiftRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/shop": {
+      "get": {
+        "summary": "Get shop data",
+        "operationId": "Nakama_GetShopData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameShopData"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/shop/buy": {
+      "post": {
+        "summary": "Buy shop item",
+        "operationId": "Nakama_BuyShopItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameBuyShopItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameBuyShopItemRequest"
             }
           }
         ],
@@ -1951,6 +2063,39 @@
             }
           }
         },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/wallet/operate": {
+      "post": {
+        "summary": "Operate Wallet",
+        "operationId": "Nakama_OperateWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameOperateWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameOperateWalletRequest"
+            }
+          }
+        ],
         "tags": [
           "Nakama"
         ]
@@ -5908,6 +6053,130 @@
       },
       "title": "公告信息"
     },
+    "gameBoxShopData": {
+      "type": "object",
+      "properties": {
+        "boxShopLevel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "boxShopExp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "box1Item": {
+          "$ref": "#/definitions/gameBoxShopItem"
+        }
+      },
+      "title": "宝箱商店数据"
+    },
+    "gameBoxShopItem": {
+      "type": "object",
+      "properties": {
+        "canSeeAd": {
+          "type": "boolean"
+        },
+        "nextRefreshTime": {
+          "type": "string"
+        },
+        "shopItemId": {
+          "type": "string",
+          "title": "配置表ID（唯一标识）"
+        },
+        "payType": {
+          "$ref": "#/definitions/gameMoneyType"
+        },
+        "retailPrice": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "wholesalePrice": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "refreshTime": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "宝箱商店商品（只有一个宝箱，不需要索引）"
+    },
+    "gameBuyShopItemRequest": {
+      "type": "object",
+      "properties": {
+        "shopType": {
+          "$ref": "#/definitions/gameShopType",
+          "title": "商店类型"
+        },
+        "itemId": {
+          "type": "string",
+          "title": "商品ID（对于每日商店是索引，其他是配置ID）"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "购买数量（默认1，宝箱可能多个）"
+        },
+        "useAd": {
+          "type": "boolean",
+          "title": "是否使用广告"
+        },
+        "adWatched": {
+          "type": "boolean",
+          "title": "客户端是否已看完广告（true=免费，false=扣广告券）"
+        }
+      },
+      "title": "购买商店商品请求"
+    },
+    "gameBuyShopItemResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "获得的奖励"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "更新后的钱包"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "更新后的背包"
+        },
+        "shopData": {
+          "$ref": "#/definitions/gameShopData",
+          "title": "更新后的商店数据"
+        },
+        "boxLevelUp": {
+          "type": "boolean",
+          "title": "宝箱是否升级"
+        }
+      },
+      "title": "购买商店商品响应"
+    },
+    "gameChapterShopData": {
+      "type": "object",
+      "properties": {
+        "chapterDataMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "title": "章节商店数据"
+    },
     "gameCheckVipStatusResponse": {
       "type": "object",
       "properties": {
@@ -5934,6 +6203,101 @@
         }
       }
     },
+    "gameCoinBagShopData": {
+      "type": "object",
+      "properties": {
+        "permanentItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gamePermanentShopItem"
+          }
+        }
+      },
+      "title": "金币袋商店数据"
+    },
+    "gameDailyShopData": {
+      "type": "object",
+      "properties": {
+        "autoRefreshTime": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "handleRefreshTimes": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "permanentItem": {
+          "$ref": "#/definitions/gamePermanentShopItem"
+        },
+        "dailyItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameDailyShopItem"
+          }
+        }
+      },
+      "title": "每日商店数据"
+    },
+    "gameDailyShopItem": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "format": "int32",
+          "title": "商品在列表中的索引"
+        },
+        "shopItemId": {
+          "type": "string",
+          "title": "配置表ID"
+        },
+        "itemId": {
+          "type": "string",
+          "title": "物品ID"
+        },
+        "payType": {
+          "$ref": "#/definitions/gameMoneyType"
+        },
+        "price": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "discount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limitCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "每日商店商品"
+    },
+    "gameEquipData": {
+      "type": "object",
+      "properties": {
+        "battleEquips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unlockEquips": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "crystalTechTreeIndex": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "gameFeedbackRequest": {
       "type": "object",
       "properties": {
@@ -5946,6 +6310,19 @@
         }
       }
     },
+    "gameGemShopData": {
+      "type": "object",
+      "properties": {
+        "gemDataMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "title": "钻石商店数据"
+    },
     "gameGetGameTimeResponse": {
       "type": "object",
       "properties": {
@@ -5954,6 +6331,19 @@
           "format": "date-time"
         }
       }
+    },
+    "gameItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "num": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "道具"
     },
     "gameListInviteeResponse": {
       "type": "object",
@@ -5988,6 +6378,176 @@
       },
       "title": "获取已发布公告响应"
     },
+    "gameMoneyType": {
+      "type": "string",
+      "enum": [
+        "MONEY_TYPE_NULL",
+        "MONEY_TYPE_COIN",
+        "MONEY_TYPE_GEM",
+        "MONEY_TYPE_AD",
+        "MONEY_TYPE_SILVER_COIN"
+      ],
+      "default": "MONEY_TYPE_NULL",
+      "description": "- MONEY_TYPE_NULL: 免费\n - MONEY_TYPE_COIN: 金币\n - MONEY_TYPE_GEM: 钻石\n - MONEY_TYPE_AD: 广告\n - MONEY_TYPE_SILVER_COIN: 银币",
+      "title": "商店相关消息定义"
+    },
+    "gameOperateInventoryRequest": {
+      "type": "object",
+      "properties": {
+        "option": {
+          "$ref": "#/definitions/gameOperateInventoryRequestOption",
+          "title": "操作类型"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "gameOperateInventoryRequestOption": {
+      "type": "string",
+      "enum": [
+        "ADD",
+        "SUBTRACT"
+      ],
+      "default": "ADD"
+    },
+    "gameOperateInventoryResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      }
+    },
+    "gameOperateWalletRequest": {
+      "type": "object",
+      "properties": {
+        "option": {
+          "$ref": "#/definitions/gameOperateWalletRequestOption",
+          "title": "操作类型"
+        },
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "gameOperateWalletRequestOption": {
+      "type": "string",
+      "enum": [
+        "GAIN",
+        "CONSUME"
+      ],
+      "default": "GAIN"
+    },
+    "gameOperateWalletResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        }
+      }
+    },
+    "gamePayInfo": {
+      "type": "object",
+      "properties": {
+        "payType": {
+          "$ref": "#/definitions/gameMoneyType"
+        },
+        "price": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limitCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "支付信息"
+    },
+    "gamePermanentShopItem": {
+      "type": "object",
+      "properties": {
+        "shopItemId": {
+          "type": "string",
+          "title": "配置表ID（唯一标识）"
+        },
+        "itemId": {
+          "type": "string",
+          "title": "物品ID"
+        },
+        "payType": {
+          "$ref": "#/definitions/gameMoneyType"
+        },
+        "price": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limitCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "payInfos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gamePayInfo"
+          }
+        }
+      },
+      "title": "固定商店商品（不需要索引，直接用shop_item_id定位）"
+    },
     "gameRedeemGiftRequest": {
       "type": "object",
       "properties": {
@@ -6008,6 +6568,63 @@
         }
       }
     },
+    "gameReward": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/gameWallet"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
+        }
+      },
+      "title": "奖励数据"
+    },
+    "gameShopData": {
+      "type": "object",
+      "properties": {
+        "dateTime": {
+          "type": "string"
+        },
+        "dailyShop": {
+          "$ref": "#/definitions/gameDailyShopData"
+        },
+        "coinBagShop": {
+          "$ref": "#/definitions/gameCoinBagShopData"
+        },
+        "strengthShop": {
+          "$ref": "#/definitions/gameStrengthShopData"
+        },
+        "boxShop": {
+          "$ref": "#/definitions/gameBoxShopData"
+        },
+        "chapterShop": {
+          "$ref": "#/definitions/gameChapterShopData"
+        },
+        "gemShop": {
+          "$ref": "#/definitions/gameGemShopData"
+        }
+      },
+      "title": "完整商店数据"
+    },
+    "gameShopType": {
+      "type": "string",
+      "enum": [
+        "SHOP_TYPE_DAILY",
+        "SHOP_TYPE_DAILY_PERMANENT",
+        "SHOP_TYPE_COIN_BAG",
+        "SHOP_TYPE_STRENGTH",
+        "SHOP_TYPE_BOX",
+        "SHOP_TYPE_CHAPTER",
+        "SHOP_TYPE_GEM"
+      ],
+      "default": "SHOP_TYPE_DAILY",
+      "description": "- SHOP_TYPE_DAILY: 每日商店（随机商品）\n - SHOP_TYPE_DAILY_PERMANENT: 每日商店（固定商品）\n - SHOP_TYPE_COIN_BAG: 金币袋商店\n - SHOP_TYPE_STRENGTH: 体力商店\n - SHOP_TYPE_BOX: 宝箱商店\n - SHOP_TYPE_CHAPTER: 章节商店\n - SHOP_TYPE_GEM: 钻石商店",
+      "title": "商店类型枚举"
+    },
     "gameStaminaData": {
       "type": "object",
       "properties": {
@@ -6022,6 +6639,18 @@
       },
       "title": "体力数据"
     },
+    "gameStrengthShopData": {
+      "type": "object",
+      "properties": {
+        "permanentItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gamePermanentShopItem"
+          }
+        }
+      },
+      "title": "体力商店数据"
+    },
     "gameSubmitBeInvitedRequest": {
       "type": "object",
       "properties": {
@@ -6029,6 +6658,24 @@
           "type": "string"
         }
       }
+    },
+    "gameWallet": {
+      "type": "object",
+      "properties": {
+        "coin": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "gem": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ad": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "钱包结构"
     },
     "protobufAny": {
       "type": "object",

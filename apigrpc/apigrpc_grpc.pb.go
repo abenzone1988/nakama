@@ -135,6 +135,11 @@ const (
 	Nakama_ClaimNotificationAttachments_FullMethodName      = "/nakama.api.Nakama/ClaimNotificationAttachments"
 	Nakama_CheckVipStatus_FullMethodName                    = "/nakama.api.Nakama/CheckVipStatus"
 	Nakama_GetCurrentStamina_FullMethodName                 = "/nakama.api.Nakama/GetCurrentStamina"
+	Nakama_GetEquipData_FullMethodName                      = "/nakama.api.Nakama/GetEquipData"
+	Nakama_OperateWallet_FullMethodName                     = "/nakama.api.Nakama/OperateWallet"
+	Nakama_OperateInventory_FullMethodName                  = "/nakama.api.Nakama/OperateInventory"
+	Nakama_GetShopData_FullMethodName                       = "/nakama.api.Nakama/GetShopData"
+	Nakama_BuyShopItem_FullMethodName                       = "/nakama.api.Nakama/BuyShopItem"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -333,6 +338,16 @@ type NakamaClient interface {
 	CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error)
 	// Get current stamina
 	GetCurrentStamina(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.StaminaData, error)
+	// Get equip data
+	GetEquipData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.EquipData, error)
+	// Operate Wallet
+	OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.OperateWalletResponse, error)
+	// Operate Inventory
+	OperateInventory(ctx context.Context, in *game.OperateInventoryRequest, opts ...grpc.CallOption) (*game.OperateInventoryResponse, error)
+	// Get shop data
+	GetShopData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ShopData, error)
+	// Buy shop item
+	BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest, opts ...grpc.CallOption) (*game.BuyShopItemResponse, error)
 }
 
 type nakamaClient struct {
@@ -1207,6 +1222,51 @@ func (c *nakamaClient) GetCurrentStamina(ctx context.Context, in *emptypb.Empty,
 	return out, nil
 }
 
+func (c *nakamaClient) GetEquipData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.EquipData, error) {
+	out := new(game.EquipData)
+	err := c.cc.Invoke(ctx, Nakama_GetEquipData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.OperateWalletResponse, error) {
+	out := new(game.OperateWalletResponse)
+	err := c.cc.Invoke(ctx, Nakama_OperateWallet_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) OperateInventory(ctx context.Context, in *game.OperateInventoryRequest, opts ...grpc.CallOption) (*game.OperateInventoryResponse, error) {
+	out := new(game.OperateInventoryResponse)
+	err := c.cc.Invoke(ctx, Nakama_OperateInventory_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetShopData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ShopData, error) {
+	out := new(game.ShopData)
+	err := c.cc.Invoke(ctx, Nakama_GetShopData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest, opts ...grpc.CallOption) (*game.BuyShopItemResponse, error) {
+	out := new(game.BuyShopItemResponse)
+	err := c.cc.Invoke(ctx, Nakama_BuyShopItem_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1403,6 +1463,16 @@ type NakamaServer interface {
 	CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error)
 	// Get current stamina
 	GetCurrentStamina(context.Context, *emptypb.Empty) (*game.StaminaData, error)
+	// Get equip data
+	GetEquipData(context.Context, *emptypb.Empty) (*game.EquipData, error)
+	// Operate Wallet
+	OperateWallet(context.Context, *game.OperateWalletRequest) (*game.OperateWalletResponse, error)
+	// Operate Inventory
+	OperateInventory(context.Context, *game.OperateInventoryRequest) (*game.OperateInventoryResponse, error)
+	// Get shop data
+	GetShopData(context.Context, *emptypb.Empty) (*game.ShopData, error)
+	// Buy shop item
+	BuyShopItem(context.Context, *game.BuyShopItemRequest) (*game.BuyShopItemResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1697,6 +1767,21 @@ func (UnimplementedNakamaServer) CheckVipStatus(context.Context, *emptypb.Empty)
 }
 func (UnimplementedNakamaServer) GetCurrentStamina(context.Context, *emptypb.Empty) (*game.StaminaData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentStamina not implemented")
+}
+func (UnimplementedNakamaServer) GetEquipData(context.Context, *emptypb.Empty) (*game.EquipData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEquipData not implemented")
+}
+func (UnimplementedNakamaServer) OperateWallet(context.Context, *game.OperateWalletRequest) (*game.OperateWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OperateWallet not implemented")
+}
+func (UnimplementedNakamaServer) OperateInventory(context.Context, *game.OperateInventoryRequest) (*game.OperateInventoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OperateInventory not implemented")
+}
+func (UnimplementedNakamaServer) GetShopData(context.Context, *emptypb.Empty) (*game.ShopData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetShopData not implemented")
+}
+func (UnimplementedNakamaServer) BuyShopItem(context.Context, *game.BuyShopItemRequest) (*game.BuyShopItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuyShopItem not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3439,6 +3524,96 @@ func _Nakama_GetCurrentStamina_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetEquipData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetEquipData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetEquipData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetEquipData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_OperateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.OperateWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).OperateWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_OperateWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).OperateWallet(ctx, req.(*game.OperateWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_OperateInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.OperateInventoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).OperateInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_OperateInventory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).OperateInventory(ctx, req.(*game.OperateInventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetShopData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetShopData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetShopData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetShopData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_BuyShopItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.BuyShopItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).BuyShopItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_BuyShopItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).BuyShopItem(ctx, req.(*game.BuyShopItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3829,6 +4004,26 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCurrentStamina",
 			Handler:    _Nakama_GetCurrentStamina_Handler,
+		},
+		{
+			MethodName: "GetEquipData",
+			Handler:    _Nakama_GetEquipData_Handler,
+		},
+		{
+			MethodName: "OperateWallet",
+			Handler:    _Nakama_OperateWallet_Handler,
+		},
+		{
+			MethodName: "OperateInventory",
+			Handler:    _Nakama_OperateInventory_Handler,
+		},
+		{
+			MethodName: "GetShopData",
+			Handler:    _Nakama_GetShopData_Handler,
+		},
+		{
+			MethodName: "BuyShopItem",
+			Handler:    _Nakama_BuyShopItem_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

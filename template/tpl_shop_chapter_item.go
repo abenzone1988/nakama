@@ -10,10 +10,11 @@ import (
 
 type TplShopChapterItem struct {
 	Brief   string `json:"brief"`
-	Chapter int32  `json:"chapter"`
-	Count   string `json:"count"`
+	Count   int32  `json:"count"`
 	ID      string `json:"id"`
+	LevelID string `json:"levelId"`
 	Name    string `json:"name"`
+	Price   int32  `json:"price"`
 	Reward  string `json:"reward"`
 }
 
