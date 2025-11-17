@@ -95,3 +95,14 @@ func parseTime(timeStr string) (time.Time, error) {
 	// UTC格式解析失败，尝试解析自定义格式
 	return time.Parse("2006:01:02:15:04:05", timeStr)
 }
+
+func convertMapInt64ToInt32(m map[string]int64) map[string]int32 {
+	if m == nil {
+		return nil
+	}
+	result := make(map[string]int32, len(m))
+	for k, v := range m {
+		result[k] = int32(v)
+	}
+	return result
+}

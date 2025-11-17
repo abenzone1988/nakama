@@ -9,15 +9,24 @@ import (
 )
 
 type TplEquipmentDev struct {
-	CostDebris  int32  `json:"costDebris"`
-	CostItemID  int32  `json:"costItemID"`
-	CostItemNum int32  `json:"costItemNum"`
-	CostPayType int32  `json:"costPayType"`
-	EquipID     string `json:"equipId"`
-	ID          string `json:"id"`
-	Level       int32  `json:"level"`
-	Price       int32  `json:"price"`
-	RogueID     string `json:"rogueId"`
+	CostDebris  int32   `json:"costDebris"`
+	CostItemID  string  `json:"costItemID"`
+	CostItemNum int32   `json:"costItemNum"`
+	CostPayType int32   `json:"costPayType"`
+	EquipID     string  `json:"equipId"`
+	ID          string  `json:"id"`
+	Level       int32   `json:"level"`
+	Price       int32   `json:"price"`
+	PtType1     string  `json:"pt_type1"`
+	PtType2     string  `json:"pt_type2"`
+	PtType3     string  `json:"pt_type3"`
+	PtType4     string  `json:"pt_type4"`
+	PtValue1    int32   `json:"pt_value1"`
+	PtValue2    int32   `json:"pt_value2"`
+	PtValue3    float64 `json:"pt_value3"`
+	PtValue4    int32   `json:"pt_value4"`
+	RogueID     string  `json:"rogueId"`
+	RougeDesc   string  `json:"rougeDesc"`
 }
 
 // ReadOnlyTplEquipmentDevSlice 只读TplEquipmentDev切片接口

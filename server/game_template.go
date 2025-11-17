@@ -17,6 +17,12 @@ type TemplateManager interface {
 	LoadData()
 	GetTplRedemption() *TableTplRedemption
 	GetTplLevelInfo() *TableTplLevelInfo
+	GetTplActivityLevelInfo() *TableTplActivityLevelInfo
+	GetTplRedemptionInfo() *TableTplRedemption
+	GetTplItem() *TableTplItem
+	GetTplReward() *TableTplReward
+	GetTplEquipmentDev() *TableTplEquipmentDev
+	GetTplUnlock() *TableTplUnlock
 }
 
 type LocalTemplateManager struct {
@@ -29,6 +35,12 @@ type LocalTemplateManager struct {
 	tableTplReward            *TableTplReward
 	tableTplActivityLevelInfo *TableTplActivityLevelInfo
 	tableTplEquipmentDev      *TableTplEquipmentDev
+	tableTplUnlock            *TableTplUnlock
+}
+
+func (t *LocalTemplateManager) GetTplRedemptionInfo() *TableTplRedemption {
+	//TODO implement me
+	panic("implement me")
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -39,12 +51,19 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplRedemption:        NewTableTplRedemption(logger, jsonPath),
 		tableTplLevelInfo:         NewTableTplLevelInfo(logger, jsonPath),
 		tableTplItem:              NewTableTplItem(logger, jsonPath),
+		tableTplUnlock:            NewTableTplUnlock(logger, jsonPath),
 		tableTplReward:            NewTableTplReward(logger, jsonPath),
 		tableTplActivityLevelInfo: NewTableTplActivityLevelInfo(logger, jsonPath),
 		tableTplEquipmentDev:      NewTableTplEquipmentDev(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
+}
+
+func (t *LocalTemplateManager) GetTplUnlock() *TableTplUnlock {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplUnlock
 }
 
 func (t *LocalTemplateManager) GetTplItem() *TableTplItem {
@@ -93,6 +112,7 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
 	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
+	t.tableTplUnlock.LoadData(t.StorageReadTpl("TplUnlock"))
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {

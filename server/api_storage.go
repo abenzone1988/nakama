@@ -209,14 +209,14 @@ func (s *ApiServer) WriteStorageObjects(ctx context.Context, in *api.WriteStorag
 			return nil, status.Error(codes.InvalidArgument, "Invalid value JSON format.")
 		}
 
-		//if object.GetSignature() != "" {
-		//	if !VerifyStorageSignature(object.GetCollection(), object.GetKey(), object.GetValue(), userID, object.GetSignature()) {
-		//		return nil, status.Error(codes.InvalidArgument, "Signature is invalid.")
-		//	}
-		//} else {
-		//	//正式上线需要必须签名
-		//	return nil, status.Error(codes.InvalidArgument, "Invalid value.")
-		//}
+		if object.GetSignature() != "" {
+			if !VerifyStorageSignature(object.GetCollection(), object.GetKey(), object.GetValue(), userID, object.GetSignature()) {
+				return nil, status.Error(codes.InvalidArgument, "Signature is invalid.")
+			}
+		} else {
+			//正式上线需要必须签名
+			return nil, status.Error(codes.InvalidArgument, "Invalid value.")
+		}
 	}
 
 	ops := make(StorageOpWrites, 0, len(in.GetObjects()))
