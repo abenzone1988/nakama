@@ -7,7 +7,7 @@
 "6":{"parameter":"6","conditionType":1,"id":"6","type":1,"title":"挂机收益","content":"离线挂机轻松得奖励！","conditionParameter":"L1001"},
 "7":{"parameter":"7","conditionType":1,"id":"7","type":1,"title":"每日签到","content":"每日签到轻松得奖励！","conditionParameter":"L1001"},
 "8":{"parameter":"8","conditionType":1,"id":"8","type":1,"title":"首次充值","content":"首充即送.战略核打击","conditionParameter":"L1002"},
-"9":{"parameter":"9","conditionType":1,"id":"9","type":1,"title":"七日祈愿","content":"七日祈愿","conditionParameter":"L1003"},
+"9":{"parameter":"9","conditionType":1,"id":"9","type":1,"title":"七日祈愿","content":"七日祈愿,每日畅享10连抽！","conditionParameter":"L1003"},
 "10":{"parameter":"EQ1999","conditionType":1,"id":"10","type":2,"title":"水晶","content":"水晶基地，为其他炮台供能，同时使用射线对敌人造成能量伤害。","conditionParameter":"L1000"},
 "11":{"parameter":"EQ1100","conditionType":1,"id":"11","type":2,"title":"机枪塔","content":"快速连续单体射击，对敌人造成物理伤害。","conditionParameter":"L1000"},
 "12":{"parameter":"EQ1101","conditionType":1,"id":"12","type":2,"title":"火焰塔","content":"持续喷射中等距离的火焰，对敌人造成火焰伤害。","conditionParameter":"L1000"},

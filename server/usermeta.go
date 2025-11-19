@@ -243,3 +243,35 @@ func SaveUserMeta(ctx context.Context) error {
 	}
 	return manager.Save(ctx)
 }
+
+// InitializeNewUserMeta 初始化新用户的 UserMeta（在用户注册时调用）
+// 这个函数不依赖 context 中的 UserMetaManager，直接操作数据库
+func InitializeNewUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, templateMgr TemplateManager) error {
+	// 创建新的 UserMeta
+	userMeta := &game.UserMeta{}
+
+	// 初始化装备数据
+	initializeEquipData(userMeta, templateMgr)
+
+	// TODO: 在这里添加其他模块的初始化（如商店、任务等）
+
+	// 序列化并保存到数据库
+	metadataJSON, err := json.Marshal(userMeta)
+	if err != nil {
+		logger.Error("序列化 UserMeta 失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return err
+	}
+
+	if err := UpdateAccountMetadata(ctx, logger, db, userID, string(metadataJSON)); err != nil {
+		logger.Error("保存新用户 UserMeta 失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()),
+			zap.String("metadata", string(metadataJSON)))
+		return err
+	}
+
+	logger.Info("成功初始化新用户 UserMeta",
+		zap.String("user_id", userID.String()),
+		zap.String("metadata", string(metadataJSON)))
+	return nil
+}

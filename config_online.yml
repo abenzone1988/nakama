@@ -5,7 +5,7 @@ database:
     - "root@192.168.102.223:26257/test"
 
 logger:
-  level: "info"
+  level: "debug"
 
 
 session:

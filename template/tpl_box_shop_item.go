@@ -9,17 +9,16 @@ import (
 )
 
 type TplBoxShopItem struct {
-	BoxExp          int32  `json:"boxExp"`
-	ID              string `json:"id"`
-	Level           int32  `json:"level"`
-	PayType         string `json:"payType"`
-	RefreshTime     int32  `json:"refreshTime"`
-	Res             string `json:"res"`
-	RetailPrice     int32  `json:"retailPrice"`
-	RewardInfo      string `json:"rewardInfo"`
-	ShopItemName    string `json:"shopItemName"`
-	UnlockEquipInfo string `json:"unlockEquipInfo"`
-	WholesalePrice  int32  `json:"wholesalePrice"`
+	BoxExp         int32  `json:"boxExp"`
+	ID             string `json:"id"`
+	Level          int32  `json:"level"`
+	PayType        string `json:"payType"`
+	RefreshTime    int32  `json:"refreshTime"`
+	Res            string `json:"res"`
+	RetailPrice    int32  `json:"retailPrice"`
+	RewardInfo     string `json:"rewardInfo"`
+	ShopItemName   string `json:"shopItemName"`
+	WholesalePrice int32  `json:"wholesalePrice"`
 }
 
 // ReadOnlyTplBoxShopItemSlice 只读TplBoxShopItem切片接口

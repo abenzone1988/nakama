@@ -192,11 +192,14 @@ func updateInventories(ctx context.Context, logger *zap.Logger, tx pgx.Tx, updat
 			continue
 		}
 
-		// Deep copy the previous state of the inventory.
-		previousMap := make(map[string]int64, len(inventoryMap))
-		for k, v := range inventoryMap {
-			previousMap[k] = v
+		// 只记录有变化的物品的旧值
+		previousMap := make(map[string]int64, len(update.Changeset))
+		updatedMap := make(map[string]int64, len(update.Changeset))
+
+		for itemID := range update.Changeset {
+			previousMap[itemID] = inventoryMap[itemID]
 		}
+
 		result := &runtime.WalletUpdateResult{UserID: userID, Previous: previousMap}
 
 		for itemID, v := range update.Changeset {
@@ -212,9 +215,10 @@ func updateInventories(ctx context.Context, logger *zap.Logger, tx pgx.Tx, updat
 				}
 			}
 			inventoryMap[itemID] = newValue
+			updatedMap[itemID] = newValue
 		}
 
-		result.Updated = inventoryMap
+		result.Updated = updatedMap
 		results = append(results, result)
 
 		inventoryData, err := json.Marshal(inventoryMap)

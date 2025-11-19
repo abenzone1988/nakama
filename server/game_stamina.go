@@ -30,7 +30,7 @@ func GetCurrentStamina(ctx context.Context, logger *zap.Logger) (*game.StaminaDa
 
 	// 首次访问：初始化为满体力
 	if userMeta.Stamina == nil {
-		initializeStamina(ctx, userMeta)
+		initializeStamina(userMeta)
 		_ = UpdateUserMeta(ctx, func(meta *game.UserMeta) error { return nil })
 		logger.Info("Stamina initialized", zap.Int32("stamina", MaxStamina))
 		return userMeta.Stamina, nil
@@ -60,17 +60,37 @@ func ConsumeStamina(ctx context.Context, logger *zap.Logger, amount int32) error
 		return errors.New("invalid stamina amount")
 	}
 
-	currentStamina, err := GetCurrentStamina(ctx, logger)
+	// 先检查体力是否已初始化
+	userMeta, _, err := GetUserMeta(ctx)
 	if err != nil {
 		return err
 	}
 
+	// 体力未初始化，先初始化但不扣除本次消耗
+	if userMeta.Stamina == nil {
+		return UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
+			initializeStamina(meta)
+			logger.Info("体力首次初始化，本次不扣除",
+				zap.Int32("stamina", MaxStamina),
+				zap.Int32("skip_amount", amount))
+			return nil
+		})
+	}
+
+	// 计算自然恢复后的体力
+	currentStamina := calculateRecoveredStamina(userMeta.Stamina)
+
+	// 检查体力是否足够
 	if currentStamina.Stamina < amount {
 		logger.Warn("Insufficient stamina", zap.Int32("required", amount), zap.Int32("current", currentStamina.Stamina))
 		return errors.New("insufficient stamina")
 	}
 
+	// 扣除体力
 	return UpdateUserMeta(ctx, func(userMeta *game.UserMeta) error {
+		// 先应用自然恢复
+		userMeta.Stamina = currentStamina
+		// 再扣除体力
 		userMeta.Stamina.Stamina -= amount
 		logger.Info("Stamina consumed", zap.Int32("amount", amount), zap.Int32("remaining", userMeta.Stamina.Stamina))
 		return nil
@@ -85,11 +105,10 @@ func RefillStamina(ctx context.Context, logger *zap.Logger, amount int32) error 
 
 	return UpdateUserMeta(ctx, func(userMeta *game.UserMeta) error {
 		if userMeta.Stamina == nil {
-			initializeStamina(ctx, userMeta)
+			initializeStamina(userMeta)
 		}
 		oldStamina := userMeta.Stamina.Stamina
 		userMeta.Stamina.Stamina = min(userMeta.Stamina.Stamina+amount, MaxStamina)
-		userMeta.Stamina.LastRefreshTime = time.Now().Format(time.RFC3339)
 		logger.Info("Stamina refilled", zap.Int32("amount", amount), zap.Int32("old", oldStamina), zap.Int32("new", userMeta.Stamina.Stamina))
 		return nil
 	})
@@ -118,7 +137,7 @@ func GetTimeToFullStamina(ctx context.Context, logger *zap.Logger) (time.Duratio
 }
 
 // initializeStamina 初始化体力数据
-func initializeStamina(ctx context.Context, userMeta *game.UserMeta) {
+func initializeStamina(userMeta *game.UserMeta) {
 	userMeta.Stamina = &game.StaminaData{
 		Stamina:         MaxStamina,
 		LastRefreshTime: time.Now().Format(time.RFC3339),

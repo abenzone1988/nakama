@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -191,9 +192,19 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 					randomCrystal := crystalIds[rand.Intn(len(crystalIds))]
 					inventoryChangeset[randomCrystal]++
 				}
+			case "50000": // 随机炮台（转为碎片）
+				// 随机选择一个炮台，给10个碎片
+				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num, true)
+				if err != nil {
+					logger.Error("分配随机炮台碎片失败", zap.Error(err))
+				} else {
+					for debrisId, count := range distributedDebris {
+						inventoryChangeset[debrisId] += count
+					}
+				}
 			case "90000": // 炮台碎片
-				// 根据炮台等级概率分配
-				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num)
+				// 根据炮台等级概率分配，每个碎片单独随机
+				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num, false)
 				if err != nil {
 					logger.Error("分配炮台碎片失败", zap.Error(err))
 				} else {
@@ -202,8 +213,36 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 					}
 				}
 			default:
-				// 普通道具直接进背包
-				inventoryChangeset[item.Id] += int64(item.Num)
+				// 检查是否是炮台装备（以EQ开头）
+				if strings.HasPrefix(item.Id, "EQ") {
+					// 炮台装备特殊处理
+					alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, item.Id)
+					if err != nil {
+						logger.Error("解锁炮台失败",
+							zap.Error(err),
+							zap.String("equip_id", item.Id))
+						// 解锁失败，仍然尝试发放原物品
+						inventoryChangeset[item.Id] += int64(item.Num)
+					} else if alreadyUnlocked {
+						// 炮台已解锁，转换为碎片（10个 × 数量）
+						debrisId := strings.TrimPrefix(item.Id, "EQ")
+						debrisCount := item.Num * 10 // 每个炮台转换为10个碎片
+						inventoryChangeset[debrisId] += int64(debrisCount)
+
+						logger.Info("炮台已解锁，转换为碎片",
+							zap.String("equip_id", item.Id),
+							zap.String("debris_id", debrisId),
+							zap.Int32("debris_count", debrisCount))
+					} else {
+						// 炮台首次解锁成功，也发放炮台到背包
+						inventoryChangeset[item.Id] += int64(item.Num)
+						logger.Info("成功解锁新炮台",
+							zap.String("equip_id", item.Id))
+					}
+				} else {
+					// 普通道具直接进背包
+					inventoryChangeset[item.Id] += int64(item.Num)
+				}
 			}
 		}
 	}
@@ -265,13 +304,54 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 	return walletUpdateResult, inventoryUpdateResult, nil
 }
 
+// tryUnlockEquipment 尝试解锁炮台装备
+// 返回值：alreadyUnlocked（是否已解锁）, error（错误）
+func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, equipID string) (bool, error) {
+	// 检查是否已解锁
+	alreadyUnlocked := false
+
+	// 更新玩家装备数据
+	err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
+		// 初始化装备数据（如果不存在）
+		if meta.Equip == nil {
+			return fmt.Errorf("装备数据为空")
+		}
+
+		// 检查是否已解锁
+		if _, exists := meta.Equip.UnlockEquips[equipID]; exists {
+			alreadyUnlocked = true
+			logger.Debug("炮台已解锁",
+				zap.String("equip_id", equipID))
+			return nil
+		}
+
+		// 解锁炮台，初始等级为1
+		meta.Equip.UnlockEquips[equipID] = 1
+
+		logger.Info("解锁新炮台",
+			zap.String("equip_id", equipID))
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Error("更新玩家装备数据失败",
+			zap.Error(err),
+			zap.String("equip_id", equipID))
+		return false, fmt.Errorf("更新玩家装备数据失败")
+	}
+	return alreadyUnlocked, nil
+}
+
 // distributeTurretDebris 根据炮台等级概率分配炮台碎片
-func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, totalDebrisCount int32) (map[string]int64, error) {
+// singleTurret: true=只随机一个炮台给全部碎片(50000), false=每个碎片单独随机(90000)
+func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, totalDebrisCount int32, singleTurret bool) (map[string]int64, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	logger.Debug("开始分配炮台碎片",
 		zap.String("user_id", userID.String()),
-		zap.Int32("total_debris_count", totalDebrisCount))
+		zap.Int32("total_debris_count", totalDebrisCount),
+		zap.Bool("single_turret", singleTurret))
 
 	// 获取玩家装备数据
 	equipData, err := GetEquipData(ctx, logger, templateMgr)
@@ -360,41 +440,72 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		zap.Int("turret_count", len(turrets)),
 		zap.Int32("total_weight", totalWeight))
 
-	// 按权重随机分配碎片
 	result := make(map[string]int64)
-	for i := int32(0); i < totalDebrisCount; i++ {
-		// 随机选择一个炮台
+
+	if singleTurret {
+		// 50000 模式：只随机选择一个炮台，给全部碎片
 		randomValue := rand.Int31n(totalWeight)
 		currentWeight := int32(0)
 
-		selectedEquipID := ""
 		for _, t := range turrets {
 			currentWeight += t.DebrisWeight
 			if randomValue < currentWeight {
 				debrisId := strings.TrimPrefix(t.EquipID, "EQ")
-				result[debrisId]++
-				selectedEquipID = t.EquipID
+				result[debrisId] = int64(totalDebrisCount)
 
-				logger.Debug("随机抽取炮台碎片",
-					zap.Int32("round", i+1),
-					zap.Int32("random_value", randomValue),
-					zap.String("selected_equip_id", selectedEquipID),
+				logger.Info("随机选择炮台（50000模式）",
+					zap.String("user_id", userID.String()),
+					zap.String("selected_equip_id", t.EquipID),
 					zap.String("debris_id", debrisId),
-					zap.Int32("current_total", int32(result[debrisId])))
+					zap.Int32("debris_count", totalDebrisCount),
+					zap.Int32("random_value", randomValue),
+					zap.Int32("weight", t.DebrisWeight))
 				break
 			}
 		}
 
-		if selectedEquipID == "" {
-			logger.Error("随机抽取失败：未找到匹配炮台",
-				zap.Int32("round", i+1),
+		if len(result) == 0 {
+			logger.Error("随机抽取炮台失败：未找到匹配项",
 				zap.Int32("random_value", randomValue),
 				zap.Int32("total_weight", totalWeight))
+		}
+	} else {
+		// 90000 模式：每个碎片单独随机分配
+		for i := int32(0); i < totalDebrisCount; i++ {
+			// 随机选择一个炮台
+			randomValue := rand.Int31n(totalWeight)
+			currentWeight := int32(0)
+
+			selectedEquipID := ""
+			for _, t := range turrets {
+				currentWeight += t.DebrisWeight
+				if randomValue < currentWeight {
+					debrisId := strings.TrimPrefix(t.EquipID, "EQ")
+					result[debrisId]++
+					selectedEquipID = t.EquipID
+
+					logger.Debug("随机抽取炮台碎片",
+						zap.Int32("round", i+1),
+						zap.Int32("random_value", randomValue),
+						zap.String("selected_equip_id", selectedEquipID),
+						zap.String("debris_id", debrisId),
+						zap.Int32("current_total", int32(result[debrisId])))
+					break
+				}
+			}
+
+			if selectedEquipID == "" {
+				logger.Error("随机抽取失败：未找到匹配炮台",
+					zap.Int32("round", i+1),
+					zap.Int32("random_value", randomValue),
+					zap.Int32("total_weight", totalWeight))
+			}
 		}
 	}
 
 	logger.Debug("炮台碎片分配结果",
 		zap.String("user_id", userID.String()),
+		zap.Bool("single_turret", singleTurret),
 		zap.Any("result", result))
 
 	return result, nil

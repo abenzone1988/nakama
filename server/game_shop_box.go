@@ -345,75 +345,11 @@ func (s *ApiServer) rollBoxReward(ctx context.Context, userID uuid.UUID, tplBoxI
 		s.logger.Error("宝箱奖励抽取失败", zap.String("user_id", userID.String()), zap.String("reward_info", rewardInfo))
 		return nil
 	}
-
-	// 检查是否是随机炮台（itemID = 50000）
-	if selectedOption.ItemID == "50000" {
-		itemID, itemCount, err := s.rollRandomTurret(ctx, userID, tplBoxItem.UnlockEquipInfo, selectedOption.Count)
-		if err != nil {
-			s.logger.Error("抽取随机炮台失败",
-				zap.Error(err),
-				zap.String("user_id", userID.String()),
-				zap.String("unlock_equip_info", tplBoxItem.UnlockEquipInfo))
-			return nil // 抽取失败，返回空奖励
-		}
-
-		// 检查是否是炮台（非碎片），并尝试解锁
-		alreadyUnlocked, err := s.tryUnlockTurret(ctx, userID, itemID)
-		if err != nil {
-			// 非炮台类型（如碎片），直接返回
-			s.logger.Debug("物品非炮台，直接发放",
-				zap.String("item_id", itemID),
-				zap.Int32("count", itemCount))
-		} else if alreadyUnlocked {
-			// 炮台已解锁，转换为碎片（10个）
-			debrisID := strings.TrimPrefix(itemID, "EQ")
-			s.logger.Info("炮台已解锁，转换为碎片",
-				zap.String("user_id", userID.String()),
-				zap.String("turret_id", itemID),
-				zap.String("debris_id", debrisID),
-				zap.Int32("count", 10))
-			return &game.Reward{
-				Items: []*game.Item{{
-					Id:  debrisID,
-					Num: 10,
-				}},
-			}
-		}
-
-		return &game.Reward{
-			Items: []*game.Item{{
-				Id:  itemID,
-				Num: itemCount,
-			}},
-		}
-	}
-
-	// 检查普通奖励是否是炮台（itemType = 8）
-	finalItemID := selectedOption.ItemID
-	finalItemCount := selectedOption.Count
-
-	alreadyUnlocked, err := s.tryUnlockTurret(ctx, userID, selectedOption.ItemID)
-	if err != nil {
-		s.logger.Debug("物品非炮台或解锁失败",
-			zap.String("item_id", selectedOption.ItemID),
-			zap.Error(err))
-	} else if alreadyUnlocked {
-		// 炮台已解锁，转换为碎片（10个）
-		debrisID := strings.TrimPrefix(selectedOption.ItemID, "EQ")
-		s.logger.Info("炮台已解锁，转换为碎片",
-			zap.String("user_id", userID.String()),
-			zap.String("turret_id", selectedOption.ItemID),
-			zap.String("debris_id", debrisID),
-			zap.Int32("count", 10))
-		finalItemID = debrisID
-		finalItemCount = 10
-	}
-
 	// 返回奖励
 	return &game.Reward{
 		Items: []*game.Item{{
-			Id:  finalItemID,
-			Num: finalItemCount,
+			Id:  selectedOption.ItemID,
+			Num: selectedOption.Count,
 		}},
 	}
 }

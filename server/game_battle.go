@@ -11,7 +11,7 @@ import (
 )
 
 func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*game.EndBattleResponse, error) {
-	if in.GetProgress() > 100 || in.GetProgress() < 0 {
+	if in.GetProgress() > 100 || in.GetProgress() <= 0 {
 		return &game.EndBattleResponse{
 			Code: 1,
 			Msg:  "进度错误",
