@@ -64,15 +64,24 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		return &game.BuyBoxItemResponse{Code: 2, Msg: "宝箱商店未初始化"}, nil
 	}
 
-	// 处理宝箱购买逻辑
-	cost, rewards, boxLevelUp, err := s.processBuyBoxItemStandalone(ctx, userID, boxShopData, in.UseKey, in.Count)
+	// 处理宝箱购买逻辑（包含钥匙扣除）
+	cost, rewards, boxLevelUp, keyInventoryResult, err := s.processBuyBoxItemStandalone(ctx, userID, boxShopData, in.UseKey, in.Count)
 	if err != nil {
 		return &game.BuyBoxItemResponse{Code: 4, Msg: err.Error()}, nil
 	}
 
-	// 扣除货币/钥匙并发放奖励
+	// 扣除货币并发放奖励
 	var walletUpdateResult *game.WalletUpdateResult
-	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	// 收集所有背包更新（从扣除钥匙开始）
+	allInventoryUpdates := make(map[string]int64)
+
+	// 如果使用钥匙，先记录钥匙扣除的更新
+	if keyInventoryResult != nil && keyInventoryResult.Updated != nil {
+		for _, item := range keyInventoryResult.Updated {
+			allInventoryUpdates[item.Id] = int64(item.Num)
+		}
+	}
 
 	if cost != nil && (cost.Coin > 0 || cost.Gem > 0 || cost.Ad > 0) {
 		// 扣除货币
@@ -107,13 +116,16 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		}
 	}
 
-	// 发放所有奖励
+	// 发放所有奖励并累加背包更新
 	for _, reward := range rewards {
 		_, invResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "box_shop")
 		if err != nil {
 			s.logger.Error("发放宝箱奖励失败", zap.Error(err))
-		} else if invResult != nil {
-			inventoryUpdateResult = invResult
+		} else if invResult != nil && invResult.Updated != nil {
+			// 累加每次奖励的背包更新
+			for _, item := range invResult.Updated {
+				allInventoryUpdates[item.Id] = int64(item.Num)
+			}
 		}
 	}
 
@@ -149,8 +161,9 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		response.WalletUpdated = walletUpdateResult.Updated
 	}
 
-	if inventoryUpdateResult != nil {
-		response.InventoryUpdated = inventoryUpdateResult.Updated
+	// 返回合并后的背包更新（包含钥匙扣除和奖励）
+	if len(allInventoryUpdates) > 0 {
+		response.InventoryUpdated = convertMapInt64ToItems(allInventoryUpdates)
 	}
 
 	return response, nil
@@ -179,29 +192,49 @@ func (s *ApiServer) GetBoxShop(ctx context.Context, in *emptypb.Empty) (*game.Bo
 }
 
 // 处理宝箱购买（独立版本）
-func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid.UUID, boxShopData *BoxShopData, useKey bool, count int32) (*game.Wallet, []*game.Reward, bool, error) {
+func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid.UUID, boxShopData *BoxShopData, useKey bool, count int32) (*game.Wallet, []*game.Reward, bool, *game.InventoryUpdateResult, error) {
 	var cost *game.Wallet
 	boxLevelUp := false
+	var keyInventoryResult *game.InventoryUpdateResult
 
 	tplBoxItem, ok := s.template.GetTplBoxShopItem().FindByKey(boxShopData.BoxItemID)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("未找到宝箱配置")
+		return nil, nil, false, nil, fmt.Errorf("未找到宝箱配置")
 	}
 
 	if useKey {
 		// 使用宝箱钥匙（itemId: 20001）
-		// 检查背包中的钥匙数量
+		// 检查并扣除背包中的钥匙
 		inventory, err := GetInventory(ctx, s.logger, s.db, userID)
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("加载玩家背包失败")
+			return nil, nil, false, nil, fmt.Errorf("加载玩家背包失败")
 		}
 
 		keyCount := inventory["20001"]
 		if keyCount < int64(count) {
-			return nil, nil, false, fmt.Errorf("宝箱钥匙不足")
+			return nil, nil, false, nil, fmt.Errorf("宝箱钥匙不足")
 		}
 
-		// 扣除钥匙的逻辑会在后面的 GrantReward 中通过负数处理
+		// 直接扣除钥匙并保存更新结果
+		results, err := UpdateInventories(ctx, s.logger, s.db, []*inventoryUpdate{
+			{
+				UserID:    userID,
+				Changeset: map[string]int64{"20001": -int64(count)},
+				Metadata:  `{"reason": "box_shop_use_key"}`,
+			},
+		}, true)
+		if err != nil {
+			return nil, nil, false, nil, fmt.Errorf("扣除宝箱钥匙失败")
+		}
+
+		// 保存钥匙扣除的背包更新结果
+		if len(results) > 0 {
+			keyInventoryResult = &game.InventoryUpdateResult{
+				Previous: convertMapInt64ToItems(results[0].Previous),
+				Updated:  convertMapInt64ToItems(results[0].Updated),
+			}
+		}
+
 		cost = &game.Wallet{} // 使用钥匙不扣除货币
 	} else {
 		// 使用货币购买
@@ -248,18 +281,7 @@ func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid
 		}
 	}
 
-	// 如果使用钥匙，添加扣除钥匙的奖励项
-	if useKey {
-		keyReward := &game.Reward{
-			Items: []*game.Item{{
-				Id:  "20001",
-				Num: -count, // 负数表示扣除
-			}},
-		}
-		rewards = append(rewards, keyReward)
-	}
-
-	return cost, rewards, boxLevelUp, nil
+	return cost, rewards, boxLevelUp, keyInventoryResult, nil
 }
 
 // 初始化宝箱商店（独立）
@@ -352,170 +374,4 @@ func (s *ApiServer) rollBoxReward(ctx context.Context, userID uuid.UUID, tplBoxI
 			Num: selectedOption.Count,
 		}},
 	}
-}
-
-// 随机抽取炮台
-// 返回值：itemID（炮台ID或碎片ID）, count（数量）, error
-func (s *ApiServer) rollRandomTurret(ctx context.Context, userID uuid.UUID, unlockEquipInfo string, defaultCount int32) (string, int32, error) {
-	if unlockEquipInfo == "" {
-		s.logger.Error("宝箱奖励炮台配置为空", zap.String("user_id", userID.String()))
-		return "", 0, fmt.Errorf("宝箱奖励炮台配置为空")
-	}
-
-	// 解析 unlockEquipInfo 格式：id_weight
-	items := strings.Split(unlockEquipInfo, ",")
-	type TurretOption struct {
-		TurretID string
-		Weight   float32
-	}
-
-	options := make([]TurretOption, 0)
-	totalWeight := float32(0)
-
-	for _, item := range items {
-		parts := strings.Split(strings.TrimSpace(item), "_")
-		if len(parts) != 2 {
-			continue
-		}
-
-		turretID := parts[0]
-		weight, _ := strconv.ParseFloat(parts[1], 32)
-
-		options = append(options, TurretOption{
-			TurretID: turretID,
-			Weight:   float32(weight),
-		})
-		totalWeight += float32(weight)
-	}
-
-	if len(options) == 0 {
-		s.logger.Error("炮台配置解析失败",
-			zap.String("user_id", userID.String()),
-			zap.String("unlock_equip_info", unlockEquipInfo))
-		return "", 0, fmt.Errorf("炮台配置解析失败")
-	}
-
-	// 根据权重随机抽取
-	roll := rand.Float32() * totalWeight
-	currentWeight := float32(0)
-
-	for _, option := range options {
-		currentWeight += option.Weight
-		if roll < currentWeight {
-			// 如果抽到的还是 50000，则从已经拥有的炮台中随机选择一个，兑换成10个碎片
-			if option.TurretID == "50000" {
-				ownedTurret := s.getRandomOwnedTurret(ctx, userID)
-				if ownedTurret == "" {
-					s.logger.Error("玩家没有已解锁的炮台，无法兑换碎片",
-						zap.String("user_id", userID.String()),
-						zap.String("抽取结果", "50000"))
-					return "", 0, fmt.Errorf("玩家没有已解锁的炮台")
-				}
-				// 返回碎片ID，去掉炮台ID前缀"EQ"，数量固定为10
-				debrisID := strings.TrimPrefix(ownedTurret, "EQ")
-				s.logger.Debug("抽到50000，兑换炮台碎片",
-					zap.String("user_id", userID.String()),
-					zap.String("owned_turret", ownedTurret),
-					zap.String("debris_id", debrisID),
-					zap.Int32("count", 10))
-				return debrisID, 10, nil
-			}
-			// 正常炮台，使用默认数量
-			return option.TurretID, defaultCount, nil
-		}
-	}
-
-	// 理论上不应该到达这里
-	s.logger.Error("炮台随机抽取失败：未找到匹配项",
-		zap.String("user_id", userID.String()),
-		zap.Float32("roll", roll),
-		zap.Float32("total_weight", totalWeight))
-	return "", 0, fmt.Errorf("炮台随机抽取失败")
-}
-
-// 获取玩家拥有的随机炮台
-func (s *ApiServer) getRandomOwnedTurret(ctx context.Context, userID uuid.UUID) string {
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		s.logger.Error("获取玩家元数据失败", zap.Error(err))
-		return ""
-	}
-
-	if userMeta.Equip == nil {
-		return ""
-	}
-
-	// 找到所有已解锁的炮台（以 EQ 开头）
-	ownedTurrets := make([]string, 0)
-	for turretID := range userMeta.Equip.UnlockEquips {
-		if strings.HasPrefix(turretID, "EQ") {
-			ownedTurrets = append(ownedTurrets, turretID)
-		}
-	}
-
-	if len(ownedTurrets) == 0 {
-		return ""
-	}
-
-	// 随机选择一个
-	idx := rand.Intn(len(ownedTurrets))
-	return ownedTurrets[idx]
-}
-
-// tryUnlockTurret 尝试解锁炮台（如果物品是炮台类型）
-// 返回值：alreadyUnlocked（是否已解锁）, error（错误，如果物品不是炮台）
-func (s *ApiServer) tryUnlockTurret(ctx context.Context, userID uuid.UUID, itemID string) (bool, error) {
-	// 检查物品是否存在于配置表中
-	tplItem, ok := s.template.GetTplItem().FindByKey(itemID)
-	if !ok {
-		// 物品不存在，可能是碎片等非配置表物品
-		return false, fmt.Errorf("物品未在配置表中: %s", itemID)
-	}
-
-	// 检查是否是炮台类型（itemType = 8）
-	if tplItem.ItemType != 8 {
-		return false, fmt.Errorf("物品不是炮台类型: %s (itemType=%d)", itemID, tplItem.ItemType)
-	}
-
-	// 检查是否已解锁
-	alreadyUnlocked := false
-
-	// 更新玩家装备数据，解锁炮台
-	err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.Equip == nil {
-			meta.Equip = &game.EquipData{
-				BattleEquips: []string{},
-				UnlockEquips: make(map[string]int32),
-			}
-		}
-
-		// 检查是否已解锁
-		if _, exists := meta.Equip.UnlockEquips[itemID]; exists {
-			alreadyUnlocked = true
-			s.logger.Debug("炮台已解锁",
-				zap.String("user_id", userID.String()),
-				zap.String("item_id", itemID))
-			return nil
-		}
-
-		// 解锁炮台，初始等级为1
-		meta.Equip.UnlockEquips[itemID] = 1
-
-		s.logger.Info("成功解锁新炮台",
-			zap.String("user_id", userID.String()),
-			zap.String("item_id", itemID),
-			zap.String("item_name", tplItem.Name))
-
-		return nil
-	})
-
-	if err != nil {
-		s.logger.Error("更新玩家装备数据失败",
-			zap.Error(err),
-			zap.String("user_id", userID.String()),
-			zap.String("item_id", itemID))
-		return false, err
-	}
-
-	return alreadyUnlocked, nil
 }

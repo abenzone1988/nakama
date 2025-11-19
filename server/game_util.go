@@ -186,8 +186,8 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 			case "20000": // 广告券
 				walletChangeset["ad"] += int64(item.Num)
 			case "60000": // 随机水晶
-				// 等概率转换为4种水晶 (30001-30005，排除30004)
-				crystalIds := []string{"30001", "30002", "30003", "30005"}
+				// 等概率转换为4种水晶 (30001-30004)
+				crystalIds := []string{"30001", "30002", "30003", "30004"}
 				for i := int32(0); i < item.Num; i++ {
 					randomCrystal := crystalIds[rand.Intn(len(crystalIds))]
 					inventoryChangeset[randomCrystal]++
@@ -344,7 +344,6 @@ func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, equipID string)
 }
 
 // distributeTurretDebris 根据炮台等级概率分配炮台碎片
-// singleTurret: true=只随机一个炮台给全部碎片(50000), false=每个碎片单独随机(90000)
 func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, totalDebrisCount int32, singleTurret bool) (map[string]int64, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
@@ -382,6 +381,13 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 	// 遍历所有已解锁的炮台
 	for equipID, level := range equipData.UnlockEquips {
+		// 跳过 EQ1999（水晶），它有独立的升级逻辑
+		if equipID == "EQ1999" {
+			logger.Debug("跳过水晶装备，不参与碎片随机分配",
+				zap.String("equip_id", equipID))
+			continue
+		}
+
 		debrisId := strings.TrimPrefix(equipID, "EQ") // EQ1999 -> 1999
 
 		// 计算已消耗的碎片数量（从等级1升到当前等级）

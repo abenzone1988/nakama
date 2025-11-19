@@ -457,31 +457,28 @@ func ListInventoryLedger(ctx context.Context, logger *zap.Logger, db *sql.DB, us
 
 // GetInventory 获取玩家背包数据
 func GetInventory(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) (map[string]int64, error) {
-	query := `
-		SELECT metadata
-		FROM wallet_ledger
-		WHERE user_id = $1
-		AND metadata->>'type' = 'inventory'
-		ORDER BY update_time DESC
-		LIMIT 1
-	`
+	query := `SELECT inventory FROM users WHERE id = $1`
 
-	var metadataJSON string
-	err := db.QueryRowContext(ctx, query, userID.String()).Scan(&metadataJSON)
+	var inventoryJSON sql.NullString
+	err := db.QueryRowContext(ctx, query, userID.String()).Scan(&inventoryJSON)
 	if err == sql.ErrNoRows {
 		return make(map[string]int64), nil
 	}
 	if err != nil {
+		logger.Error("Error retrieving user inventory.", zap.String("user_id", userID.String()), zap.Error(err))
 		return nil, err
 	}
 
-	var metadata struct {
-		Items map[string]int64 `json:"items"`
+	// 如果 inventory 为空或 NULL，返回空 map
+	if !inventoryJSON.Valid || inventoryJSON.String == "" || inventoryJSON.String == "{}" {
+		return make(map[string]int64), nil
 	}
 
-	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+	var inventoryMap map[string]int64
+	if err := json.Unmarshal([]byte(inventoryJSON.String), &inventoryMap); err != nil {
+		logger.Error("Error converting user inventory.", zap.String("user_id", userID.String()), zap.Error(err))
 		return nil, err
 	}
 
-	return metadata.Items, nil
+	return inventoryMap, nil
 }
