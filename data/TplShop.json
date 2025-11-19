@@ -1,5 +1,5 @@
 {
-"Daily":{"coinProductDiscountRate":"8_50,10_50","moneyProductCount":3,"freeProductCount":0,"handleRefreshTimes":3,"permanentProduct":"SP1004","gemProductCount":3,"name":"每日商店","coinProductCount":3,"id":"Daily","adProductCount":1,"gemProductDiscountRate":"6_10,8_30,10_60"},
+"Daily":{"coinProductDiscountRate":"8_50,10_50","moneyProductCount":3,"freeProductCount":0,"handleRefreshTimes":3,"permanentProduct":"SP1004","gemProductCount":4,"name":"每日商店","coinProductCount":3,"id":"Daily","adProductCount":0,"gemProductDiscountRate":"6_10,8_30,10_60"},
 "Coin":{"coinProductDiscountRate":"","moneyProductCount":0,"freeProductCount":0,"handleRefreshTimes":0,"permanentProduct":"SP1001,SP1002,SP1003","gemProductCount":0,"name":"金币商店","coinProductCount":0,"id":"Coin","adProductCount":0,"gemProductDiscountRate":""},
 "Strength":{"coinProductDiscountRate":"","moneyProductCount":0,"freeProductCount":0,"handleRefreshTimes":0,"permanentProduct":"SP1005,SP1006","gemProductCount":0,"name":"体力商店","coinProductCount":0,"id":"Strength","adProductCount":0,"gemProductDiscountRate":""}
 }

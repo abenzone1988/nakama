@@ -450,3 +450,34 @@ func ListInventoryLedger(ctx context.Context, logger *zap.Logger, db *sql.DB, us
 
 	return results, nextCursorStr, prevCursorStr, nil
 }
+
+// GetInventory 获取玩家背包数据
+func GetInventory(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) (map[string]int64, error) {
+	query := `
+		SELECT metadata
+		FROM wallet_ledger
+		WHERE user_id = $1
+		AND metadata->>'type' = 'inventory'
+		ORDER BY update_time DESC
+		LIMIT 1
+	`
+
+	var metadataJSON string
+	err := db.QueryRowContext(ctx, query, userID.String()).Scan(&metadataJSON)
+	if err == sql.ErrNoRows {
+		return make(map[string]int64), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata struct {
+		Items map[string]int64 `json:"items"`
+	}
+
+	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+		return nil, err
+	}
+
+	return metadata.Items, nil
+}

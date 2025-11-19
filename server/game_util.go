@@ -4,11 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/game"
+	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -133,4 +136,266 @@ func convertMapInt64ToWallet(m map[string]int64) *game.Wallet {
 		Gem:  int32(m["gem"]),
 		Ad:   int32(m["ad"]),
 	}
+}
+
+// GrantReward 统一的奖励发放函数（处理特殊道具逻辑）
+// 用于商店购买、战斗结算、礼包兑换等所有奖励发放场景
+func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template TemplateManager, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+	if reward == nil {
+		return nil, nil, nil
+	}
+
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 1. 处理道具奖励，转换特殊道具
+	walletChangeset := make(map[string]int64)
+	inventoryChangeset := make(map[string]int64)
+
+	// 初始化钱包奖励
+	if reward.Wallet != nil {
+		if reward.Wallet.Coin > 0 {
+			walletChangeset["coin"] = int64(reward.Wallet.Coin)
+		}
+		if reward.Wallet.Gem > 0 {
+			walletChangeset["gem"] = int64(reward.Wallet.Gem)
+		}
+		if reward.Wallet.Ad > 0 {
+			walletChangeset["ad"] = int64(reward.Wallet.Ad)
+		}
+	}
+
+	// 处理道具奖励（包含特殊道具转换）
+	if len(reward.Items) > 0 {
+		for _, item := range reward.Items {
+			if item == nil || item.Num <= 0 {
+				continue
+			}
+
+			// 处理特殊道具
+			switch item.Id {
+			case "10000": // 金币
+				walletChangeset["coin"] += int64(item.Num)
+			case "10001": // 钻石
+				walletChangeset["gem"] += int64(item.Num)
+			case "10002": // 体力
+				// 体力需要特殊处理，使用RefillStamina函数
+				if err := RefillStamina(ctx, logger, item.Num); err != nil {
+					logger.Error("添加体力失败", zap.Error(err))
+				}
+			case "20000": // 广告券
+				walletChangeset["ad"] += int64(item.Num)
+			case "60000": // 随机水晶
+				// 等概率转换为4种水晶 (30001-30005，排除30004)
+				crystalIds := []string{"30001", "30002", "30003", "30005"}
+				for i := int32(0); i < item.Num; i++ {
+					randomCrystal := crystalIds[rand.Intn(len(crystalIds))]
+					inventoryChangeset[randomCrystal]++
+				}
+			case "90000": // 炮台碎片
+				// 根据炮台等级概率分配
+				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num)
+				if err != nil {
+					logger.Error("分配炮台碎片失败", zap.Error(err))
+				} else {
+					for debrisId, count := range distributedDebris {
+						inventoryChangeset[debrisId] += count
+					}
+				}
+			default:
+				// 普通道具直接进背包
+				inventoryChangeset[item.Id] += int64(item.Num)
+			}
+		}
+	}
+
+	// 2. 发放钱包奖励
+	var walletUpdateResult *game.WalletUpdateResult
+	if len(walletChangeset) > 0 {
+		metadata, _ := json.Marshal(map[string]interface{}{
+			"source": source,
+		})
+
+		walletUpdates := []*walletUpdate{{
+			UserID:    userID,
+			Changeset: walletChangeset,
+			Metadata:  string(metadata),
+		}}
+
+		results, err := UpdateWallets(ctx, logger, db, walletUpdates, true)
+		if err != nil {
+			logger.Error("发放钱包奖励失败", zap.Error(err))
+			return nil, nil, err
+		}
+
+		if len(results) > 0 {
+			walletUpdateResult = &game.WalletUpdateResult{
+				Previous: convertMapInt64ToWallet(results[0].Previous),
+				Updated:  convertMapInt64ToWallet(results[0].Updated),
+			}
+		}
+	}
+
+	// 3. 发放道具奖励
+	var inventoryUpdateResult *game.InventoryUpdateResult
+	if len(inventoryChangeset) > 0 {
+		metadata, _ := json.Marshal(map[string]interface{}{
+			"source": source,
+		})
+
+		inventoryUpdates := []*inventoryUpdate{{
+			UserID:    userID,
+			Changeset: inventoryChangeset,
+			Metadata:  string(metadata),
+		}}
+
+		results, err := UpdateInventories(ctx, logger, db, inventoryUpdates, true)
+		if err != nil {
+			logger.Error("发放道具奖励失败", zap.Error(err))
+			return nil, nil, err
+		}
+
+		if len(results) > 0 {
+			inventoryUpdateResult = &game.InventoryUpdateResult{
+				Previous: convertMapInt64ToItems(results[0].Previous),
+				Updated:  convertMapInt64ToItems(results[0].Updated),
+			}
+		}
+	}
+
+	return walletUpdateResult, inventoryUpdateResult, nil
+}
+
+// distributeTurretDebris 根据炮台等级概率分配炮台碎片
+func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, totalDebrisCount int32) (map[string]int64, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	logger.Debug("开始分配炮台碎片",
+		zap.String("user_id", userID.String()),
+		zap.Int32("total_debris_count", totalDebrisCount))
+
+	// 获取玩家装备数据
+	equipData, err := GetEquipData(ctx, logger, templateMgr)
+	if err != nil {
+		logger.Error("获取装备数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	logger.Debug("玩家已解锁炮台数量",
+		zap.Int("unlocked_count", len(equipData.UnlockEquips)))
+
+	// 获取玩家背包数据（碎片数量）
+	inventory, err := GetInventory(ctx, logger, db, userID)
+	if err != nil {
+		logger.Error("获取背包数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	// 计算每个炮台的总碎片数（已升级消耗 + 背包持有）
+	type TurretInfo struct {
+		EquipID      string
+		Level        int32
+		TotalDebris  int32 // 已消耗 + 背包持有的总碎片数
+		DebrisWeight int32 // 权重（碎片数越少权重越高）
+	}
+
+	turrets := make([]TurretInfo, 0)
+
+	// 遍历所有已解锁的炮台
+	for equipID, level := range equipData.UnlockEquips {
+		debrisId := strings.TrimPrefix(equipID, "EQ") // EQ1999 -> 1999
+
+		// 计算已消耗的碎片数量（从等级1升到当前等级）
+		consumedDebris := int32(0)
+		for lv := int32(1); lv < level; lv++ {
+			equipDevs := templateMgr.GetTplEquipmentDev().FindByFilter(func(equip template.TplEquipmentDev) bool {
+				return equip.EquipID == equipID && equip.Level == lv+1
+			})
+			if equipDevs.Len() > 0 {
+				consumedDebris += equipDevs.Get(0).CostDebris
+			}
+		}
+
+		// 背包中持有的碎片数量
+		inventoryDebris := int32(0)
+		if count, ok := inventory[debrisId]; ok {
+			inventoryDebris = int32(count)
+		}
+
+		// 总碎片数 = 已消耗 + 背包持有
+		totalDebris := consumedDebris + inventoryDebris
+
+		// 权重计算：碎片越少权重越高（使用反比例）
+		// 基础权重 = 10000，权重 = 基础权重 / (totalDebris + 1)
+		weight := int32(10000) / (totalDebris + 1)
+
+		logger.Debug("炮台碎片计算详情",
+			zap.String("equip_id", equipID),
+			zap.String("debris_id", debrisId),
+			zap.Int32("level", level),
+			zap.Int32("consumed_debris", consumedDebris),
+			zap.Int32("inventory_debris", inventoryDebris),
+			zap.Int32("total_debris", totalDebris),
+			zap.Int32("weight", weight))
+
+		turrets = append(turrets, TurretInfo{
+			EquipID:      equipID,
+			Level:        level,
+			TotalDebris:  totalDebris,
+			DebrisWeight: weight,
+		})
+	}
+
+	if len(turrets) == 0 {
+		logger.Warn("没有已解锁的炮台，无法分配碎片", zap.String("user_id", userID.String()))
+		return make(map[string]int64), nil
+	}
+
+	// 计算总权重
+	totalWeight := int32(0)
+	for _, t := range turrets {
+		totalWeight += t.DebrisWeight
+	}
+
+	logger.Debug("炮台权重汇总",
+		zap.Int("turret_count", len(turrets)),
+		zap.Int32("total_weight", totalWeight))
+
+	// 按权重随机分配碎片
+	result := make(map[string]int64)
+	for i := int32(0); i < totalDebrisCount; i++ {
+		// 随机选择一个炮台
+		randomValue := rand.Int31n(totalWeight)
+		currentWeight := int32(0)
+
+		selectedEquipID := ""
+		for _, t := range turrets {
+			currentWeight += t.DebrisWeight
+			if randomValue < currentWeight {
+				debrisId := strings.TrimPrefix(t.EquipID, "EQ")
+				result[debrisId]++
+				selectedEquipID = t.EquipID
+
+				logger.Debug("随机抽取炮台碎片",
+					zap.Int32("round", i+1),
+					zap.Int32("random_value", randomValue),
+					zap.String("selected_equip_id", selectedEquipID),
+					zap.String("debris_id", debrisId),
+					zap.Int32("current_total", int32(result[debrisId])))
+				break
+			}
+		}
+
+		if selectedEquipID == "" {
+			logger.Error("随机抽取失败：未找到匹配炮台",
+				zap.Int32("round", i+1),
+				zap.Int32("random_value", randomValue),
+				zap.Int32("total_weight", totalWeight))
+		}
+	}
+
+	logger.Debug("炮台碎片分配结果",
+		zap.String("user_id", userID.String()),
+		zap.Any("result", result))
+
+	return result, nil
 }

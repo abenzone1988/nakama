@@ -2,12 +2,9 @@ package server
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"strconv"
 	"strings"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
@@ -57,27 +54,28 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	}
 
 	//扣除体力值
-	if err := ConsumeStamina(ctx, s.logger, 5); err != nil {
+	if err := ConsumeStamina(ctx, s.logger, BattleCostStamina); err != nil {
 		return &game.EndBattleResponse{
-			Code: -1,
+			Code: 3,
 			Msg:  "体力扣除失败: " + err.Error(),
 		}, nil
 	}
 
 	reward := GetReward(rewardId, s.template.GetTplReward(), s.logger)
 	if reward != nil {
-		// 发放奖励到钱包和背包
+		// 应用进度折扣
 		applyProgressToReward(reward, in.GetProgress())
+
+		// 使用统一的奖励发放函数（支持特殊道具处理）
 		var err error
-		walletUpdateResult, inventoryUpdateResult, err = grantReward(ctx, s.logger, s.db, reward, source)
+		walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, reward, source)
 
 		if err != nil {
 			return &game.EndBattleResponse{
-				Code: -1,
+				Code: 4,
 				Msg:  "奖励发放失败: " + err.Error(),
 			}, nil
 		}
-
 	}
 
 	// 提取更新后的数据
@@ -182,86 +180,4 @@ func applyProgressToReward(reward *game.Reward, progress int32) {
 			}
 		}
 	}
-}
-
-func grantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
-	if reward == nil {
-		return nil, nil, nil
-	}
-
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	var walletUpdateResult *game.WalletUpdateResult
-	var inventoryUpdateResult *game.InventoryUpdateResult
-
-	// 处理钱包奖励
-	if reward.Wallet != nil {
-		walletChangeset := make(map[string]int64)
-		if reward.Wallet.Coin > 0 {
-			walletChangeset["coin"] = int64(reward.Wallet.Coin)
-		}
-		if reward.Wallet.Gem > 0 {
-			walletChangeset["gem"] = int64(reward.Wallet.Gem)
-		}
-		if reward.Wallet.Ad > 0 {
-			walletChangeset["ad"] = int64(reward.Wallet.Ad)
-		}
-
-		if len(walletChangeset) > 0 {
-			metadata, _ := json.Marshal(map[string]interface{}{
-				"source": source,
-			})
-			walletUpdates := []*walletUpdate{
-				{
-					UserID:    userID,
-					Changeset: walletChangeset,
-					Metadata:  string(metadata),
-				},
-			}
-			results, err := UpdateWallets(ctx, logger, db, walletUpdates, true)
-			if err != nil {
-				logger.Error("发放钱包奖励失败", zap.Error(err))
-				return nil, nil, err
-			}
-
-			walletUpdateResult = &game.WalletUpdateResult{
-				Previous: convertMapInt64ToWallet(results[0].Previous),
-				Updated:  convertMapInt64ToWallet(results[0].Updated),
-			}
-		}
-	}
-
-	// 处理道具奖励
-	if reward.Items != nil && len(reward.Items) > 0 {
-		inventoryChangeset := make(map[string]int64)
-		for _, item := range reward.Items {
-			if item != nil && item.Num > 0 {
-				inventoryChangeset[item.Id] = int64(item.Num)
-			}
-		}
-
-		if len(inventoryChangeset) > 0 {
-			metadata, _ := json.Marshal(map[string]interface{}{
-				"source": source,
-			})
-			inventoryUpdates := []*inventoryUpdate{
-				{
-					UserID:    userID,
-					Changeset: inventoryChangeset,
-					Metadata:  string(metadata),
-				},
-			}
-			results, err := UpdateInventories(ctx, logger, db, inventoryUpdates, true)
-			if err != nil {
-				logger.Error("发放道具奖励失败", zap.Error(err))
-				return walletUpdateResult, nil, err
-			}
-			inventoryUpdateResult = &game.InventoryUpdateResult{
-				Previous: convertMapInt64ToItems(results[0].Previous),
-				Updated:  convertMapInt64ToItems(results[0].Updated),
-			}
-		}
-	}
-
-	return walletUpdateResult, inventoryUpdateResult, nil
 }

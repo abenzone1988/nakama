@@ -140,6 +140,13 @@ const (
 	Nakama_OperateInventory_FullMethodName                  = "/nakama.api.Nakama/OperateInventory"
 	Nakama_GetShopData_FullMethodName                       = "/nakama.api.Nakama/GetShopData"
 	Nakama_BuyShopItem_FullMethodName                       = "/nakama.api.Nakama/BuyShopItem"
+	Nakama_RefreshShop_FullMethodName                       = "/nakama.api.Nakama/RefreshShop"
+	Nakama_GetBoxShop_FullMethodName                        = "/nakama.api.Nakama/GetBoxShop"
+	Nakama_BuyBoxItem_FullMethodName                        = "/nakama.api.Nakama/BuyBoxItem"
+	Nakama_GetChapterShop_FullMethodName                    = "/nakama.api.Nakama/GetChapterShop"
+	Nakama_BuyChapterItem_FullMethodName                    = "/nakama.api.Nakama/BuyChapterItem"
+	Nakama_GetGemShop_FullMethodName                        = "/nakama.api.Nakama/GetGemShop"
+	Nakama_BuyGemItem_FullMethodName                        = "/nakama.api.Nakama/BuyGemItem"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -344,10 +351,27 @@ type NakamaClient interface {
 	OperateWallet(ctx context.Context, in *game.OperateWalletRequest, opts ...grpc.CallOption) (*game.OperateWalletResponse, error)
 	// Operate Inventory
 	OperateInventory(ctx context.Context, in *game.OperateInventoryRequest, opts ...grpc.CallOption) (*game.OperateInventoryResponse, error)
-	// Get shop data
+	// Get common shop data (only TplShop based: daily, coin, strength)
 	GetShopData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ShopData, error)
-	// Buy shop item
+	// Buy item from common shop (daily, coin, strength)
 	BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest, opts ...grpc.CallOption) (*game.BuyShopItemResponse, error)
+	// Manually refresh shop (for shops that support manual refresh like daily shop)
+	RefreshShop(ctx context.Context, in *game.RefreshShopRequest, opts ...grpc.CallOption) (*game.RefreshShopResponse, error)
+	// ==================== Box Shop (独立) ====================
+	// Get box shop data
+	GetBoxShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.BoxShopData, error)
+	// Buy item from box shop
+	BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest, opts ...grpc.CallOption) (*game.BuyBoxItemResponse, error)
+	// ==================== Chapter Shop (独立, IAP) ====================
+	// Get chapter shop data
+	GetChapterShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ChapterShopData, error)
+	// Buy item from chapter shop
+	BuyChapterItem(ctx context.Context, in *game.BuyChapterItemRequest, opts ...grpc.CallOption) (*game.BuyChapterItemResponse, error)
+	// ==================== Gem Shop (独立, IAP) ====================
+	// Get gem shop data
+	GetGemShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GemShopData, error)
+	// Buy item from gem shop
+	BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest, opts ...grpc.CallOption) (*game.BuyGemItemResponse, error)
 }
 
 type nakamaClient struct {
@@ -1267,6 +1291,69 @@ func (c *nakamaClient) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequ
 	return out, nil
 }
 
+func (c *nakamaClient) RefreshShop(ctx context.Context, in *game.RefreshShopRequest, opts ...grpc.CallOption) (*game.RefreshShopResponse, error) {
+	out := new(game.RefreshShopResponse)
+	err := c.cc.Invoke(ctx, Nakama_RefreshShop_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetBoxShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.BoxShopData, error) {
+	out := new(game.BoxShopData)
+	err := c.cc.Invoke(ctx, Nakama_GetBoxShop_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest, opts ...grpc.CallOption) (*game.BuyBoxItemResponse, error) {
+	out := new(game.BuyBoxItemResponse)
+	err := c.cc.Invoke(ctx, Nakama_BuyBoxItem_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetChapterShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ChapterShopData, error) {
+	out := new(game.ChapterShopData)
+	err := c.cc.Invoke(ctx, Nakama_GetChapterShop_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) BuyChapterItem(ctx context.Context, in *game.BuyChapterItemRequest, opts ...grpc.CallOption) (*game.BuyChapterItemResponse, error) {
+	out := new(game.BuyChapterItemResponse)
+	err := c.cc.Invoke(ctx, Nakama_BuyChapterItem_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetGemShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GemShopData, error) {
+	out := new(game.GemShopData)
+	err := c.cc.Invoke(ctx, Nakama_GetGemShop_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest, opts ...grpc.CallOption) (*game.BuyGemItemResponse, error) {
+	out := new(game.BuyGemItemResponse)
+	err := c.cc.Invoke(ctx, Nakama_BuyGemItem_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1469,10 +1556,27 @@ type NakamaServer interface {
 	OperateWallet(context.Context, *game.OperateWalletRequest) (*game.OperateWalletResponse, error)
 	// Operate Inventory
 	OperateInventory(context.Context, *game.OperateInventoryRequest) (*game.OperateInventoryResponse, error)
-	// Get shop data
+	// Get common shop data (only TplShop based: daily, coin, strength)
 	GetShopData(context.Context, *emptypb.Empty) (*game.ShopData, error)
-	// Buy shop item
+	// Buy item from common shop (daily, coin, strength)
 	BuyShopItem(context.Context, *game.BuyShopItemRequest) (*game.BuyShopItemResponse, error)
+	// Manually refresh shop (for shops that support manual refresh like daily shop)
+	RefreshShop(context.Context, *game.RefreshShopRequest) (*game.RefreshShopResponse, error)
+	// ==================== Box Shop (独立) ====================
+	// Get box shop data
+	GetBoxShop(context.Context, *emptypb.Empty) (*game.BoxShopData, error)
+	// Buy item from box shop
+	BuyBoxItem(context.Context, *game.BuyBoxItemRequest) (*game.BuyBoxItemResponse, error)
+	// ==================== Chapter Shop (独立, IAP) ====================
+	// Get chapter shop data
+	GetChapterShop(context.Context, *emptypb.Empty) (*game.ChapterShopData, error)
+	// Buy item from chapter shop
+	BuyChapterItem(context.Context, *game.BuyChapterItemRequest) (*game.BuyChapterItemResponse, error)
+	// ==================== Gem Shop (独立, IAP) ====================
+	// Get gem shop data
+	GetGemShop(context.Context, *emptypb.Empty) (*game.GemShopData, error)
+	// Buy item from gem shop
+	BuyGemItem(context.Context, *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1782,6 +1886,27 @@ func (UnimplementedNakamaServer) GetShopData(context.Context, *emptypb.Empty) (*
 }
 func (UnimplementedNakamaServer) BuyShopItem(context.Context, *game.BuyShopItemRequest) (*game.BuyShopItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BuyShopItem not implemented")
+}
+func (UnimplementedNakamaServer) RefreshShop(context.Context, *game.RefreshShopRequest) (*game.RefreshShopResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RefreshShop not implemented")
+}
+func (UnimplementedNakamaServer) GetBoxShop(context.Context, *emptypb.Empty) (*game.BoxShopData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBoxShop not implemented")
+}
+func (UnimplementedNakamaServer) BuyBoxItem(context.Context, *game.BuyBoxItemRequest) (*game.BuyBoxItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuyBoxItem not implemented")
+}
+func (UnimplementedNakamaServer) GetChapterShop(context.Context, *emptypb.Empty) (*game.ChapterShopData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChapterShop not implemented")
+}
+func (UnimplementedNakamaServer) BuyChapterItem(context.Context, *game.BuyChapterItemRequest) (*game.BuyChapterItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuyChapterItem not implemented")
+}
+func (UnimplementedNakamaServer) GetGemShop(context.Context, *emptypb.Empty) (*game.GemShopData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGemShop not implemented")
+}
+func (UnimplementedNakamaServer) BuyGemItem(context.Context, *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuyGemItem not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3614,6 +3739,132 @@ func _Nakama_BuyShopItem_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_RefreshShop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.RefreshShopRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).RefreshShop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_RefreshShop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).RefreshShop(ctx, req.(*game.RefreshShopRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetBoxShop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetBoxShop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetBoxShop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetBoxShop(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_BuyBoxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.BuyBoxItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).BuyBoxItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_BuyBoxItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).BuyBoxItem(ctx, req.(*game.BuyBoxItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetChapterShop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChapterShop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChapterShop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChapterShop(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_BuyChapterItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.BuyChapterItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).BuyChapterItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_BuyChapterItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).BuyChapterItem(ctx, req.(*game.BuyChapterItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetGemShop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetGemShop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetGemShop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetGemShop(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_BuyGemItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.BuyGemItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).BuyGemItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_BuyGemItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).BuyGemItem(ctx, req.(*game.BuyGemItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4024,6 +4275,34 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BuyShopItem",
 			Handler:    _Nakama_BuyShopItem_Handler,
+		},
+		{
+			MethodName: "RefreshShop",
+			Handler:    _Nakama_RefreshShop_Handler,
+		},
+		{
+			MethodName: "GetBoxShop",
+			Handler:    _Nakama_GetBoxShop_Handler,
+		},
+		{
+			MethodName: "BuyBoxItem",
+			Handler:    _Nakama_BuyBoxItem_Handler,
+		},
+		{
+			MethodName: "GetChapterShop",
+			Handler:    _Nakama_GetChapterShop_Handler,
+		},
+		{
+			MethodName: "BuyChapterItem",
+			Handler:    _Nakama_BuyChapterItem_Handler,
+		},
+		{
+			MethodName: "GetGemShop",
+			Handler:    _Nakama_GetGemShop_Handler,
+		},
+		{
+			MethodName: "BuyGemItem",
+			Handler:    _Nakama_BuyGemItem_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

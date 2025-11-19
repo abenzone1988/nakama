@@ -205,119 +205,55 @@ message UpdateEquipDataResponse{
 }
 
 // 商店相关消息定义
-enum MoneyType {
-  MONEY_TYPE_NULL = 0;    // 免费
-  MONEY_TYPE_COIN = 1;    // 金币
-  MONEY_TYPE_GEM = 2;     // 钻石
-  MONEY_TYPE_AD = 3;      // 广告
-  MONEY_TYPE_SILVER_COIN = 4; // 银币
+enum PayType {
+  FREE = 0;    // 免费
+  COIN = 1;    // 金币
+  GEM = 2;     // 钻石
+  AD = 3;      // 广告
+  IAP = 4; // IAP 直购
 }
 
-// 支付信息
-message PayInfo {
-  MoneyType pay_type = 1;
-  int32 price = 2;
-  int32 limit_count = 3;
+// 商店商品（普通商店）
+message ShopItem {
+  int32 index = 1;                // 商品在列表中的索引
+  string shop_item_id = 2;        // 配置表ID
+  string item_id = 3;             // 物品ID
+  PayType pay_type = 4;           // 货币类型
+  int32 price = 5;                // 当前价格
+  int32 discount = 6;             // 折扣（0-10，0表示无折扣）
+  int32 item_count = 7;           // 商品数量
+  int32 max_buy_count = 8;        // 最大购买次数（0表示无限制）
+  int32 bought_count = 9;         // 已购买次数
 }
 
-// 每日商店商品
-message DailyShopItem {
-  int32 index = 1;              // 商品在列表中的索引
-  string shop_item_id = 2;      // 配置表ID
-  string item_id = 3;           // 物品ID
-  MoneyType pay_type = 4;
-  int32 price = 5;
-  int32 discount = 6;
-  int32 count = 7;
-  int32 limit_count = 8;
-}
-
-// 固定商店商品（不需要索引，直接用shop_item_id定位）
-message PermanentShopItem {
-  string shop_item_id = 1;      // 配置表ID（唯一标识）
-  string item_id = 2;           // 物品ID
-  MoneyType pay_type = 3;
-  int32 price = 4;
-  int32 count = 5;
-  int32 limit_count = 6;
-  repeated PayInfo pay_infos = 7;
-}
-
-// 宝箱商店商品（只有一个宝箱，不需要索引）
-message BoxShopItem {
-  bool can_see_ad = 1;
-  string next_refresh_time = 2;
-  string shop_item_id = 3;      // 配置表ID（唯一标识）
-  MoneyType pay_type = 4;
-  int32 retail_price = 5;
-  int32 wholesale_price = 6;
-  int32 refresh_time = 7;
-}
-
-// 每日商店数据
-message DailyShopData {
-  int32 auto_refresh_time = 1;
-  int32 handle_refresh_times = 2;
-  PermanentShopItem permanent_item = 3;
-  repeated DailyShopItem daily_items = 4;
-}
-
-// 金币袋商店数据
-message CoinBagShopData {
-  repeated PermanentShopItem permanent_items = 1;
-}
-
-// 体力商店数据
-message StrengthShopData {
-  repeated PermanentShopItem permanent_items = 1;
-}
-
-// 宝箱商店数据
-message BoxShopData {
-  int32 box_shop_level = 1;
-  int32 box_shop_exp = 2;
-  BoxShopItem box1_item = 3;
-}
-
-// 章节商店数据
-message ChapterShopData {
-  map<string, int32> chapter_data_map = 1;
-}
-
-// 钻石商店数据
-message GemShopData {
-  map<string, int32> gem_data_map = 1;
+// 单个商店数据（普通商店）
+message SingleShopData {
+  ShopType shop_type = 1;         // 商店类型
+  repeated ShopItem items = 2;    // 商品列表
+  bool can_refresh = 3;           // 是否可手动刷新
+  int32 refresh_count = 4;        // 已手动刷新次数
+  string next_refresh_time = 5;   // 下次自动刷新时间
 }
 
 // 完整商店数据
 message ShopData {
   string date_time = 1;
-  DailyShopData daily_shop = 2;
-  CoinBagShopData coin_bag_shop = 3;
-  StrengthShopData strength_shop = 4;
-  BoxShopData box_shop = 5;
-  ChapterShopData chapter_shop = 6;
-  GemShopData gem_shop = 7;
+  repeated SingleShopData shops = 2;  // 所有商店列表
 }
 
-// 商店类型枚举
+// 商店类型枚举（只包含基于TplShop配置的常规商店）
 enum ShopType {
-  SHOP_TYPE_DAILY = 0;           // 每日商店（随机商品）
-  SHOP_TYPE_DAILY_PERMANENT = 1; // 每日商店（固定商品）
-  SHOP_TYPE_COIN_BAG = 2;        // 金币袋商店
-  SHOP_TYPE_STRENGTH = 3;        // 体力商店
-  SHOP_TYPE_BOX = 4;             // 宝箱商店
-  SHOP_TYPE_CHAPTER = 5;         // 章节商店
-  SHOP_TYPE_GEM = 6;             // 钻石商店
+  SHOP_DAILY = 0;      // 每日商店
+  SHOP_COIN = 1;       // 金币商店
+  SHOP_STRENGTH = 2;   // 体力商店
 }
 
 // 购买商店商品请求
 message BuyShopItemRequest {
   ShopType shop_type = 1;     // 商店类型
-  string item_id = 2;         // 商品ID（对于每日商店是索引，其他是配置ID）
+  int32 index = 2;            // 商品索引
   int32 count = 3;            // 购买数量（默认1，宝箱可能多个）
-  bool use_ad = 4;            // 是否使用广告
-  bool ad_watched = 5;        // 客户端是否已看完广告（true=免费，false=扣广告券）
+  bool use_ad = 4;            // 是否使用广告券（true=扣广告券，false=已看完广告免费）
 }
 
 // 购买商店商品响应
@@ -329,4 +265,80 @@ message BuyShopItemResponse {
   repeated Item inventory_updated = 5;   // 更新后的背包
   ShopData shop_data = 6;               // 更新后的商店数据
   bool box_level_up = 7;                // 宝箱是否升级
+}
+
+// 手动刷新商店请求
+message RefreshShopRequest {
+  ShopType shop_type = 1;     // 商店类型
+}
+
+// 手动刷新商店响应
+message RefreshShopResponse {
+  int32 code = 1;
+  string msg = 2;
+  SingleShopData shop_data = 3;  // 刷新后的商店数据
+  Wallet wallet_updated = 4;      // 更新后的钱包（扣除刷新费用）
+}
+
+// ==================== 宝箱商店（独立） ====================
+// 宝箱商店数据
+message BoxShopData {
+  string box_item_id = 1;         // 当前宝箱商品ID（对应TplBoxShopItem的ID）
+  int32 box_level = 2;            // 宝箱等级
+  int32 box_exp = 3;              // 宝箱经验
+}
+
+// 购买宝箱请求
+message BuyBoxItemRequest {
+  int32 count = 1;      // 开启数量（1或10）
+  bool use_key = 2;     // 是否使用宝箱钥匙（itemId: 20001）
+}
+
+// 购买宝箱响应
+message BuyBoxItemResponse {
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;
+  Wallet wallet_updated = 4;
+  repeated Item inventory_updated = 5;
+  BoxShopData box_shop_data = 6;  // 更新后的宝箱商店
+  bool box_level_up = 7;          // 是否升级
+}
+
+// ==================== 章节商店（独立，IAP） ====================
+message ChapterShopData {
+  repeated ShopItem items = 1;    // 章节商品列表
+}
+
+// 购买章节商品请求
+message BuyChapterItemRequest {
+  int32 index = 1;      // 商品索引
+}
+
+// 购买章节商品响应
+message BuyChapterItemResponse {
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;
+  repeated Item inventory_updated = 4;
+  ChapterShopData chapter_shop_data = 5;  // 更新后的章节商店
+}
+
+// ==================== 钻石商店（独立，IAP） ====================
+message GemShopData {
+  repeated ShopItem items = 1;    // 钻石商品列表
+}
+
+// 购买钻石商品请求
+message BuyGemItemRequest {
+  int32 index = 1;      // 商品索引
+}
+
+// 购买钻石商品响应
+message BuyGemItemResponse {
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;
+  Wallet wallet_updated = 4;
+  GemShopData gem_shop_data = 5;  // 更新后的钻石商店
 }

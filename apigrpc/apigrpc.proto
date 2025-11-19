@@ -879,15 +879,65 @@ service Nakama {
     };
   }
 
-  //Get shop data
+  // Get common shop data (only TplShop based: daily, coin, strength)
   rpc GetShopData(google.protobuf.Empty) returns (game.ShopData) {
     option (google.api.http).get = "/v2/game/shop";
   }
 
-  //Buy shop item
+  // Buy item from common shop (daily, coin, strength)
   rpc BuyShopItem(game.BuyShopItemRequest) returns (game.BuyShopItemResponse) {
     option (google.api.http) = {
       post: "/v2/game/shop/buy"
+      body: "*"
+    };
+  }
+
+  // Manually refresh shop (for shops that support manual refresh like daily shop)
+  rpc RefreshShop(game.RefreshShopRequest) returns (game.RefreshShopResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/shop/refresh"
+      body: "*"
+    };
+  }
+
+  // ==================== Box Shop (独立) ====================
+  // Get box shop data
+  rpc GetBoxShop(google.protobuf.Empty) returns (game.BoxShopData) {
+    option (google.api.http).get = "/v2/game/shop/box";
+  }
+
+  // Buy item from box shop
+  rpc BuyBoxItem(game.BuyBoxItemRequest) returns (game.BuyBoxItemResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/shop/box/buy"
+      body: "*"
+    };
+  }
+
+  // ==================== Chapter Shop (独立, IAP) ====================
+  // Get chapter shop data
+  rpc GetChapterShop(google.protobuf.Empty) returns (game.ChapterShopData) {
+    option (google.api.http).get = "/v2/game/shop/chapter";
+  }
+
+  // Buy item from chapter shop
+  rpc BuyChapterItem(game.BuyChapterItemRequest) returns (game.BuyChapterItemResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/shop/chapter/buy"
+      body: "*"
+    };
+  }
+
+  // ==================== Gem Shop (独立, IAP) ====================
+  // Get gem shop data
+  rpc GetGemShop(google.protobuf.Empty) returns (game.GemShopData) {
+    option (google.api.http).get = "/v2/game/shop/gem";
+  }
+
+  // Buy item from gem shop
+  rpc BuyGemItem(game.BuyGemItemRequest) returns (game.BuyGemItemResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/shop/gem/buy"
       body: "*"
     };
   }

@@ -9,11 +9,12 @@ import (
 )
 
 type TplShopGemItem struct {
+	ExtraNum int32  `json:"extraNum"`
 	ID       string `json:"id"`
 	Name     string `json:"name"`
-	Num      int32  `json:"num"`      // 基础钻石数量
-	ExtraNum int32  `json:"extraNum"` // 首次购买额外赠送
-	Brief    string `json:"brief"`
+	Num      int32  `json:"num"`
+	Price    int32  `json:"price"`
+	Res      string `json:"res"`
 }
 
 // ReadOnlyTplShopGemItemSlice 只读TplShopGemItem切片接口
