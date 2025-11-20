@@ -217,7 +217,7 @@ func (x OperateWalletRequest_Option) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OperateWalletRequest_Option.Descriptor instead.
 func (OperateWalletRequest_Option) EnumDescriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{30, 0}
+	return file_msg_proto_rawDescGZIP(), []int{36, 0}
 }
 
 type OperateInventoryRequest_Option int32
@@ -263,7 +263,7 @@ func (x OperateInventoryRequest_Option) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OperateInventoryRequest_Option.Descriptor instead.
 func (OperateInventoryRequest_Option) EnumDescriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{32, 0}
+	return file_msg_proto_rawDescGZIP(), []int{38, 0}
 }
 
 type RedeemGiftRequest struct {
@@ -2014,6 +2014,372 @@ func (x *ClaimLevelBoxResponse) GetInventoryUpdated() []*Item {
 	return nil
 }
 
+// 获取任务状态请求
+type GetTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskRequest) Reset() {
+	*x = GetTaskRequest{}
+	mi := &file_msg_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskRequest) ProtoMessage() {}
+
+func (x *GetTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskRequest.ProtoReflect.Descriptor instead.
+func (*GetTaskRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{30}
+}
+
+// 获取任务状态响应
+type GetTaskResponse struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Code                   int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Msg                    string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	CurrentLiveness        int32                  `protobuf:"varint,3,opt,name=current_liveness,json=currentLiveness,proto3" json:"current_liveness,omitempty"`                       // 当前活跃度
+	ClaimedTasks           []string               `protobuf:"bytes,4,rep,name=claimed_tasks,json=claimedTasks,proto3" json:"claimed_tasks,omitempty"`                                 // 已领取的任务ID列表
+	ClaimedLivenessRewards []string               `protobuf:"bytes,5,rep,name=claimed_liveness_rewards,json=claimedLivenessRewards,proto3" json:"claimed_liveness_rewards,omitempty"` // 已领取的活跃度奖励ID列表
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *GetTaskResponse) Reset() {
+	*x = GetTaskResponse{}
+	mi := &file_msg_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskResponse) ProtoMessage() {}
+
+func (x *GetTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskResponse.ProtoReflect.Descriptor instead.
+func (*GetTaskResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetTaskResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *GetTaskResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *GetTaskResponse) GetCurrentLiveness() int32 {
+	if x != nil {
+		return x.CurrentLiveness
+	}
+	return 0
+}
+
+func (x *GetTaskResponse) GetClaimedTasks() []string {
+	if x != nil {
+		return x.ClaimedTasks
+	}
+	return nil
+}
+
+func (x *GetTaskResponse) GetClaimedLivenessRewards() []string {
+	if x != nil {
+		return x.ClaimedLivenessRewards
+	}
+	return nil
+}
+
+// 领取任务奖励请求
+type ClaimTaskRewardRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"` // 任务ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimTaskRewardRequest) Reset() {
+	*x = ClaimTaskRewardRequest{}
+	mi := &file_msg_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimTaskRewardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimTaskRewardRequest) ProtoMessage() {}
+
+func (x *ClaimTaskRewardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimTaskRewardRequest.ProtoReflect.Descriptor instead.
+func (*ClaimTaskRewardRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ClaimTaskRewardRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+// 领取任务奖励响应
+type ClaimTaskRewardResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Code             int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Msg              string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Liveness         int32                  `protobuf:"varint,3,opt,name=liveness,proto3" json:"liveness,omitempty"`                                        // 获得的活跃度
+	Reward           *Reward                `protobuf:"bytes,4,opt,name=reward,proto3" json:"reward,omitempty"`                                             // 任务奖励
+	WalletUpdated    *Wallet                `protobuf:"bytes,5,opt,name=wallet_updated,json=walletUpdated,proto3" json:"wallet_updated,omitempty"`          // 钱包更新结果
+	InventoryUpdated []*Item                `protobuf:"bytes,6,rep,name=inventory_updated,json=inventoryUpdated,proto3" json:"inventory_updated,omitempty"` // 背包更新结果
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ClaimTaskRewardResponse) Reset() {
+	*x = ClaimTaskRewardResponse{}
+	mi := &file_msg_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimTaskRewardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimTaskRewardResponse) ProtoMessage() {}
+
+func (x *ClaimTaskRewardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimTaskRewardResponse.ProtoReflect.Descriptor instead.
+func (*ClaimTaskRewardResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ClaimTaskRewardResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *ClaimTaskRewardResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *ClaimTaskRewardResponse) GetLiveness() int32 {
+	if x != nil {
+		return x.Liveness
+	}
+	return 0
+}
+
+func (x *ClaimTaskRewardResponse) GetReward() *Reward {
+	if x != nil {
+		return x.Reward
+	}
+	return nil
+}
+
+func (x *ClaimTaskRewardResponse) GetWalletUpdated() *Wallet {
+	if x != nil {
+		return x.WalletUpdated
+	}
+	return nil
+}
+
+func (x *ClaimTaskRewardResponse) GetInventoryUpdated() []*Item {
+	if x != nil {
+		return x.InventoryUpdated
+	}
+	return nil
+}
+
+// 领取活跃度奖励请求
+type ClaimLivenessRewardRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RewardId      string                 `protobuf:"bytes,1,opt,name=reward_id,json=rewardId,proto3" json:"reward_id,omitempty"` // 活跃度奖励ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimLivenessRewardRequest) Reset() {
+	*x = ClaimLivenessRewardRequest{}
+	mi := &file_msg_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimLivenessRewardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimLivenessRewardRequest) ProtoMessage() {}
+
+func (x *ClaimLivenessRewardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimLivenessRewardRequest.ProtoReflect.Descriptor instead.
+func (*ClaimLivenessRewardRequest) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ClaimLivenessRewardRequest) GetRewardId() string {
+	if x != nil {
+		return x.RewardId
+	}
+	return ""
+}
+
+// 领取活跃度奖励响应
+type ClaimLivenessRewardResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Code             int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Msg              string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Reward           *Reward                `protobuf:"bytes,3,opt,name=reward,proto3" json:"reward,omitempty"`                                             // 奖励数据
+	WalletUpdated    *Wallet                `protobuf:"bytes,4,opt,name=wallet_updated,json=walletUpdated,proto3" json:"wallet_updated,omitempty"`          // 钱包更新结果
+	InventoryUpdated []*Item                `protobuf:"bytes,5,rep,name=inventory_updated,json=inventoryUpdated,proto3" json:"inventory_updated,omitempty"` // 背包更新结果
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ClaimLivenessRewardResponse) Reset() {
+	*x = ClaimLivenessRewardResponse{}
+	mi := &file_msg_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimLivenessRewardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimLivenessRewardResponse) ProtoMessage() {}
+
+func (x *ClaimLivenessRewardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_msg_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimLivenessRewardResponse.ProtoReflect.Descriptor instead.
+func (*ClaimLivenessRewardResponse) Descriptor() ([]byte, []int) {
+	return file_msg_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ClaimLivenessRewardResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *ClaimLivenessRewardResponse) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *ClaimLivenessRewardResponse) GetReward() *Reward {
+	if x != nil {
+		return x.Reward
+	}
+	return nil
+}
+
+func (x *ClaimLivenessRewardResponse) GetWalletUpdated() *Wallet {
+	if x != nil {
+		return x.WalletUpdated
+	}
+	return nil
+}
+
+func (x *ClaimLivenessRewardResponse) GetInventoryUpdated() []*Item {
+	if x != nil {
+		return x.InventoryUpdated
+	}
+	return nil
+}
+
 type OperateWalletRequest struct {
 	state         protoimpl.MessageState      `protogen:"open.v1"`
 	Option        OperateWalletRequest_Option `protobuf:"varint,1,opt,name=option,proto3,enum=game.OperateWalletRequest_Option" json:"option,omitempty"` // 操作类型
@@ -2029,7 +2395,7 @@ type OperateWalletRequest struct {
 
 func (x *OperateWalletRequest) Reset() {
 	*x = OperateWalletRequest{}
-	mi := &file_msg_proto_msgTypes[30]
+	mi := &file_msg_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2041,7 +2407,7 @@ func (x *OperateWalletRequest) String() string {
 func (*OperateWalletRequest) ProtoMessage() {}
 
 func (x *OperateWalletRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[30]
+	mi := &file_msg_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2054,7 +2420,7 @@ func (x *OperateWalletRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperateWalletRequest.ProtoReflect.Descriptor instead.
 func (*OperateWalletRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{30}
+	return file_msg_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *OperateWalletRequest) GetOption() OperateWalletRequest_Option {
@@ -2117,7 +2483,7 @@ type OperateWalletResponse struct {
 
 func (x *OperateWalletResponse) Reset() {
 	*x = OperateWalletResponse{}
-	mi := &file_msg_proto_msgTypes[31]
+	mi := &file_msg_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2129,7 +2495,7 @@ func (x *OperateWalletResponse) String() string {
 func (*OperateWalletResponse) ProtoMessage() {}
 
 func (x *OperateWalletResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[31]
+	mi := &file_msg_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2142,7 +2508,7 @@ func (x *OperateWalletResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperateWalletResponse.ProtoReflect.Descriptor instead.
 func (*OperateWalletResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{31}
+	return file_msg_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *OperateWalletResponse) GetCode() int32 {
@@ -2179,7 +2545,7 @@ type OperateInventoryRequest struct {
 
 func (x *OperateInventoryRequest) Reset() {
 	*x = OperateInventoryRequest{}
-	mi := &file_msg_proto_msgTypes[32]
+	mi := &file_msg_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2191,7 +2557,7 @@ func (x *OperateInventoryRequest) String() string {
 func (*OperateInventoryRequest) ProtoMessage() {}
 
 func (x *OperateInventoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[32]
+	mi := &file_msg_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2204,7 +2570,7 @@ func (x *OperateInventoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperateInventoryRequest.ProtoReflect.Descriptor instead.
 func (*OperateInventoryRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{32}
+	return file_msg_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *OperateInventoryRequest) GetOption() OperateInventoryRequest_Option {
@@ -2253,7 +2619,7 @@ type OperateInventoryResponse struct {
 
 func (x *OperateInventoryResponse) Reset() {
 	*x = OperateInventoryResponse{}
-	mi := &file_msg_proto_msgTypes[33]
+	mi := &file_msg_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2265,7 +2631,7 @@ func (x *OperateInventoryResponse) String() string {
 func (*OperateInventoryResponse) ProtoMessage() {}
 
 func (x *OperateInventoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[33]
+	mi := &file_msg_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2278,7 +2644,7 @@ func (x *OperateInventoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperateInventoryResponse.ProtoReflect.Descriptor instead.
 func (*OperateInventoryResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{33}
+	return file_msg_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *OperateInventoryResponse) GetCode() int32 {
@@ -2311,7 +2677,7 @@ type UpdateEquipDataRequest struct {
 
 func (x *UpdateEquipDataRequest) Reset() {
 	*x = UpdateEquipDataRequest{}
-	mi := &file_msg_proto_msgTypes[34]
+	mi := &file_msg_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2323,7 +2689,7 @@ func (x *UpdateEquipDataRequest) String() string {
 func (*UpdateEquipDataRequest) ProtoMessage() {}
 
 func (x *UpdateEquipDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[34]
+	mi := &file_msg_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2336,7 +2702,7 @@ func (x *UpdateEquipDataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEquipDataRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEquipDataRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{34}
+	return file_msg_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *UpdateEquipDataRequest) GetEquipId() string {
@@ -2359,7 +2725,7 @@ type UpdateEquipDataResponse struct {
 
 func (x *UpdateEquipDataResponse) Reset() {
 	*x = UpdateEquipDataResponse{}
-	mi := &file_msg_proto_msgTypes[35]
+	mi := &file_msg_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2371,7 +2737,7 @@ func (x *UpdateEquipDataResponse) String() string {
 func (*UpdateEquipDataResponse) ProtoMessage() {}
 
 func (x *UpdateEquipDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[35]
+	mi := &file_msg_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2384,7 +2750,7 @@ func (x *UpdateEquipDataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEquipDataResponse.ProtoReflect.Descriptor instead.
 func (*UpdateEquipDataResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{35}
+	return file_msg_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *UpdateEquipDataResponse) GetCode() int32 {
@@ -2440,7 +2806,7 @@ type ShopItem struct {
 
 func (x *ShopItem) Reset() {
 	*x = ShopItem{}
-	mi := &file_msg_proto_msgTypes[36]
+	mi := &file_msg_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2452,7 +2818,7 @@ func (x *ShopItem) String() string {
 func (*ShopItem) ProtoMessage() {}
 
 func (x *ShopItem) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[36]
+	mi := &file_msg_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2465,7 +2831,7 @@ func (x *ShopItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShopItem.ProtoReflect.Descriptor instead.
 func (*ShopItem) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{36}
+	return file_msg_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ShopItem) GetIndex() int32 {
@@ -2545,7 +2911,7 @@ type SingleShopData struct {
 
 func (x *SingleShopData) Reset() {
 	*x = SingleShopData{}
-	mi := &file_msg_proto_msgTypes[37]
+	mi := &file_msg_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2557,7 +2923,7 @@ func (x *SingleShopData) String() string {
 func (*SingleShopData) ProtoMessage() {}
 
 func (x *SingleShopData) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[37]
+	mi := &file_msg_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2570,7 +2936,7 @@ func (x *SingleShopData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SingleShopData.ProtoReflect.Descriptor instead.
 func (*SingleShopData) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{37}
+	return file_msg_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *SingleShopData) GetShopType() ShopType {
@@ -2619,7 +2985,7 @@ type ShopData struct {
 
 func (x *ShopData) Reset() {
 	*x = ShopData{}
-	mi := &file_msg_proto_msgTypes[38]
+	mi := &file_msg_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2631,7 +2997,7 @@ func (x *ShopData) String() string {
 func (*ShopData) ProtoMessage() {}
 
 func (x *ShopData) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[38]
+	mi := &file_msg_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2644,7 +3010,7 @@ func (x *ShopData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShopData.ProtoReflect.Descriptor instead.
 func (*ShopData) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{38}
+	return file_msg_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ShopData) GetDateTime() string {
@@ -2674,7 +3040,7 @@ type BuyShopItemRequest struct {
 
 func (x *BuyShopItemRequest) Reset() {
 	*x = BuyShopItemRequest{}
-	mi := &file_msg_proto_msgTypes[39]
+	mi := &file_msg_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2686,7 +3052,7 @@ func (x *BuyShopItemRequest) String() string {
 func (*BuyShopItemRequest) ProtoMessage() {}
 
 func (x *BuyShopItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[39]
+	mi := &file_msg_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2699,7 +3065,7 @@ func (x *BuyShopItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyShopItemRequest.ProtoReflect.Descriptor instead.
 func (*BuyShopItemRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{39}
+	return file_msg_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *BuyShopItemRequest) GetShopType() ShopType {
@@ -2746,7 +3112,7 @@ type BuyShopItemResponse struct {
 
 func (x *BuyShopItemResponse) Reset() {
 	*x = BuyShopItemResponse{}
-	mi := &file_msg_proto_msgTypes[40]
+	mi := &file_msg_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2758,7 +3124,7 @@ func (x *BuyShopItemResponse) String() string {
 func (*BuyShopItemResponse) ProtoMessage() {}
 
 func (x *BuyShopItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[40]
+	mi := &file_msg_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2771,7 +3137,7 @@ func (x *BuyShopItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyShopItemResponse.ProtoReflect.Descriptor instead.
 func (*BuyShopItemResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{40}
+	return file_msg_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *BuyShopItemResponse) GetCode() int32 {
@@ -2833,7 +3199,7 @@ type RefreshShopRequest struct {
 
 func (x *RefreshShopRequest) Reset() {
 	*x = RefreshShopRequest{}
-	mi := &file_msg_proto_msgTypes[41]
+	mi := &file_msg_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2845,7 +3211,7 @@ func (x *RefreshShopRequest) String() string {
 func (*RefreshShopRequest) ProtoMessage() {}
 
 func (x *RefreshShopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[41]
+	mi := &file_msg_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2858,7 +3224,7 @@ func (x *RefreshShopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshShopRequest.ProtoReflect.Descriptor instead.
 func (*RefreshShopRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{41}
+	return file_msg_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *RefreshShopRequest) GetShopType() ShopType {
@@ -2881,7 +3247,7 @@ type RefreshShopResponse struct {
 
 func (x *RefreshShopResponse) Reset() {
 	*x = RefreshShopResponse{}
-	mi := &file_msg_proto_msgTypes[42]
+	mi := &file_msg_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2893,7 +3259,7 @@ func (x *RefreshShopResponse) String() string {
 func (*RefreshShopResponse) ProtoMessage() {}
 
 func (x *RefreshShopResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[42]
+	mi := &file_msg_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2906,7 +3272,7 @@ func (x *RefreshShopResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshShopResponse.ProtoReflect.Descriptor instead.
 func (*RefreshShopResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{42}
+	return file_msg_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *RefreshShopResponse) GetCode() int32 {
@@ -2950,7 +3316,7 @@ type BoxShopData struct {
 
 func (x *BoxShopData) Reset() {
 	*x = BoxShopData{}
-	mi := &file_msg_proto_msgTypes[43]
+	mi := &file_msg_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2962,7 +3328,7 @@ func (x *BoxShopData) String() string {
 func (*BoxShopData) ProtoMessage() {}
 
 func (x *BoxShopData) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[43]
+	mi := &file_msg_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2975,7 +3341,7 @@ func (x *BoxShopData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BoxShopData.ProtoReflect.Descriptor instead.
 func (*BoxShopData) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{43}
+	return file_msg_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *BoxShopData) GetBoxItemId() string {
@@ -3010,7 +3376,7 @@ type BuyBoxItemRequest struct {
 
 func (x *BuyBoxItemRequest) Reset() {
 	*x = BuyBoxItemRequest{}
-	mi := &file_msg_proto_msgTypes[44]
+	mi := &file_msg_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3022,7 +3388,7 @@ func (x *BuyBoxItemRequest) String() string {
 func (*BuyBoxItemRequest) ProtoMessage() {}
 
 func (x *BuyBoxItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[44]
+	mi := &file_msg_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3035,7 +3401,7 @@ func (x *BuyBoxItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyBoxItemRequest.ProtoReflect.Descriptor instead.
 func (*BuyBoxItemRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{44}
+	return file_msg_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *BuyBoxItemRequest) GetCount() int32 {
@@ -3068,7 +3434,7 @@ type BuyBoxItemResponse struct {
 
 func (x *BuyBoxItemResponse) Reset() {
 	*x = BuyBoxItemResponse{}
-	mi := &file_msg_proto_msgTypes[45]
+	mi := &file_msg_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3080,7 +3446,7 @@ func (x *BuyBoxItemResponse) String() string {
 func (*BuyBoxItemResponse) ProtoMessage() {}
 
 func (x *BuyBoxItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[45]
+	mi := &file_msg_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3093,7 +3459,7 @@ func (x *BuyBoxItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyBoxItemResponse.ProtoReflect.Descriptor instead.
 func (*BuyBoxItemResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{45}
+	return file_msg_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *BuyBoxItemResponse) GetCode() int32 {
@@ -3155,7 +3521,7 @@ type ChapterShopData struct {
 
 func (x *ChapterShopData) Reset() {
 	*x = ChapterShopData{}
-	mi := &file_msg_proto_msgTypes[46]
+	mi := &file_msg_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3167,7 +3533,7 @@ func (x *ChapterShopData) String() string {
 func (*ChapterShopData) ProtoMessage() {}
 
 func (x *ChapterShopData) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[46]
+	mi := &file_msg_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3180,7 +3546,7 @@ func (x *ChapterShopData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChapterShopData.ProtoReflect.Descriptor instead.
 func (*ChapterShopData) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{46}
+	return file_msg_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ChapterShopData) GetItems() []*ShopItem {
@@ -3200,7 +3566,7 @@ type BuyChapterItemRequest struct {
 
 func (x *BuyChapterItemRequest) Reset() {
 	*x = BuyChapterItemRequest{}
-	mi := &file_msg_proto_msgTypes[47]
+	mi := &file_msg_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3212,7 +3578,7 @@ func (x *BuyChapterItemRequest) String() string {
 func (*BuyChapterItemRequest) ProtoMessage() {}
 
 func (x *BuyChapterItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[47]
+	mi := &file_msg_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3225,7 +3591,7 @@ func (x *BuyChapterItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyChapterItemRequest.ProtoReflect.Descriptor instead.
 func (*BuyChapterItemRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{47}
+	return file_msg_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *BuyChapterItemRequest) GetIndex() int32 {
@@ -3249,7 +3615,7 @@ type BuyChapterItemResponse struct {
 
 func (x *BuyChapterItemResponse) Reset() {
 	*x = BuyChapterItemResponse{}
-	mi := &file_msg_proto_msgTypes[48]
+	mi := &file_msg_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3261,7 +3627,7 @@ func (x *BuyChapterItemResponse) String() string {
 func (*BuyChapterItemResponse) ProtoMessage() {}
 
 func (x *BuyChapterItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[48]
+	mi := &file_msg_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3274,7 +3640,7 @@ func (x *BuyChapterItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyChapterItemResponse.ProtoReflect.Descriptor instead.
 func (*BuyChapterItemResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{48}
+	return file_msg_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *BuyChapterItemResponse) GetCode() int32 {
@@ -3322,7 +3688,7 @@ type GemShopData struct {
 
 func (x *GemShopData) Reset() {
 	*x = GemShopData{}
-	mi := &file_msg_proto_msgTypes[49]
+	mi := &file_msg_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3334,7 +3700,7 @@ func (x *GemShopData) String() string {
 func (*GemShopData) ProtoMessage() {}
 
 func (x *GemShopData) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[49]
+	mi := &file_msg_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3347,7 +3713,7 @@ func (x *GemShopData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GemShopData.ProtoReflect.Descriptor instead.
 func (*GemShopData) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{49}
+	return file_msg_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *GemShopData) GetItems() []*ShopItem {
@@ -3367,7 +3733,7 @@ type BuyGemItemRequest struct {
 
 func (x *BuyGemItemRequest) Reset() {
 	*x = BuyGemItemRequest{}
-	mi := &file_msg_proto_msgTypes[50]
+	mi := &file_msg_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3379,7 +3745,7 @@ func (x *BuyGemItemRequest) String() string {
 func (*BuyGemItemRequest) ProtoMessage() {}
 
 func (x *BuyGemItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[50]
+	mi := &file_msg_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3392,7 +3758,7 @@ func (x *BuyGemItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyGemItemRequest.ProtoReflect.Descriptor instead.
 func (*BuyGemItemRequest) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{50}
+	return file_msg_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *BuyGemItemRequest) GetIndex() int32 {
@@ -3416,7 +3782,7 @@ type BuyGemItemResponse struct {
 
 func (x *BuyGemItemResponse) Reset() {
 	*x = BuyGemItemResponse{}
-	mi := &file_msg_proto_msgTypes[51]
+	mi := &file_msg_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3428,7 +3794,7 @@ func (x *BuyGemItemResponse) String() string {
 func (*BuyGemItemResponse) ProtoMessage() {}
 
 func (x *BuyGemItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_msg_proto_msgTypes[51]
+	mi := &file_msg_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3441,7 +3807,7 @@ func (x *BuyGemItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BuyGemItemResponse.ProtoReflect.Descriptor instead.
 func (*BuyGemItemResponse) Descriptor() ([]byte, []int) {
-	return file_msg_proto_rawDescGZIP(), []int{51}
+	return file_msg_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *BuyGemItemResponse) GetCode() int32 {
@@ -3711,6 +4077,55 @@ var file_msg_proto_rawDesc = string([]byte{
 	0x11, 0x69, 0x6e, 0x76, 0x65, 0x6e, 0x74, 0x6f, 0x72, 0x79, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74,
 	0x65, 0x64, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e,
 	0x49, 0x74, 0x65, 0x6d, 0x52, 0x10, 0x69, 0x6e, 0x76, 0x65, 0x6e, 0x74, 0x6f, 0x72, 0x79, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x22, 0x10, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x54, 0x61, 0x73,
+	0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0xc1, 0x01, 0x0a, 0x0f, 0x47, 0x65, 0x74,
+	0x54, 0x61, 0x73, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04,
+	0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65,
+	0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6d,
+	0x73, 0x67, 0x12, 0x29, 0x0a, 0x10, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x6c, 0x69,
+	0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0f, 0x63, 0x75,
+	0x72, 0x72, 0x65, 0x6e, 0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x12, 0x23, 0x0a,
+	0x0d, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x65, 0x64, 0x5f, 0x74, 0x61, 0x73, 0x6b, 0x73, 0x18, 0x04,
+	0x20, 0x03, 0x28, 0x09, 0x52, 0x0c, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x65, 0x64, 0x54, 0x61, 0x73,
+	0x6b, 0x73, 0x12, 0x38, 0x0a, 0x18, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x65, 0x64, 0x5f, 0x6c, 0x69,
+	0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x5f, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73, 0x18, 0x05,
+	0x20, 0x03, 0x28, 0x09, 0x52, 0x16, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x65, 0x64, 0x4c, 0x69, 0x76,
+	0x65, 0x6e, 0x65, 0x73, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73, 0x22, 0x31, 0x0a, 0x16,
+	0x43, 0x6c, 0x61, 0x69, 0x6d, 0x54, 0x61, 0x73, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x17, 0x0a, 0x07, 0x74, 0x61, 0x73, 0x6b, 0x5f, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x74, 0x61, 0x73, 0x6b, 0x49, 0x64, 0x22,
+	0xef, 0x01, 0x0a, 0x17, 0x43, 0x6c, 0x61, 0x69, 0x6d, 0x54, 0x61, 0x73, 0x6b, 0x52, 0x65, 0x77,
+	0x61, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x63,
+	0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12,
+	0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73,
+	0x67, 0x12, 0x1a, 0x0a, 0x08, 0x6c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x05, 0x52, 0x08, 0x6c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x12, 0x24, 0x0a,
+	0x06, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e,
+	0x67, 0x61, 0x6d, 0x65, 0x2e, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x06, 0x72, 0x65, 0x77,
+	0x61, 0x72, 0x64, 0x12, 0x33, 0x0a, 0x0e, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x75, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61,
+	0x6d, 0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x0d, 0x77, 0x61, 0x6c, 0x6c, 0x65,
+	0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x12, 0x37, 0x0a, 0x11, 0x69, 0x6e, 0x76, 0x65,
+	0x6e, 0x74, 0x6f, 0x72, 0x79, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x18, 0x06, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x49, 0x74, 0x65, 0x6d, 0x52,
+	0x10, 0x69, 0x6e, 0x76, 0x65, 0x6e, 0x74, 0x6f, 0x72, 0x79, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
+	0x64, 0x22, 0x39, 0x0a, 0x1a, 0x43, 0x6c, 0x61, 0x69, 0x6d, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65,
+	0x73, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x1b, 0x0a, 0x09, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x49, 0x64, 0x22, 0xd7, 0x01, 0x0a,
+	0x1b, 0x43, 0x6c, 0x61, 0x69, 0x6d, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x52, 0x65,
+	0x77, 0x61, 0x72, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04,
+	0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65,
+	0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6d,
+	0x73, 0x67, 0x12, 0x24, 0x0a, 0x06, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64,
+	0x52, 0x06, 0x72, 0x65, 0x77, 0x61, 0x72, 0x64, 0x12, 0x33, 0x0a, 0x0e, 0x77, 0x61, 0x6c, 0x6c,
+	0x65, 0x74, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0c, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x0d,
+	0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x12, 0x37, 0x0a,
+	0x11, 0x69, 0x6e, 0x76, 0x65, 0x6e, 0x74, 0x6f, 0x72, 0x79, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x64, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x67, 0x61, 0x6d, 0x65, 0x2e,
+	0x49, 0x74, 0x65, 0x6d, 0x52, 0x10, 0x69, 0x6e, 0x76, 0x65, 0x6e, 0x74, 0x6f, 0x72, 0x79, 0x55,
 	0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x22, 0xee, 0x01, 0x0a, 0x14, 0x4f, 0x70, 0x65, 0x72, 0x61,
 	0x74, 0x65, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
 	0x39, 0x0a, 0x06, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32,
@@ -3952,7 +4367,7 @@ func file_msg_proto_rawDescGZIP() []byte {
 }
 
 var file_msg_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
+var file_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_msg_proto_goTypes = []any{
 	(BattleType)(0),                            // 0: game.BattleType
 	(PayType)(0),                               // 1: game.PayType
@@ -3989,37 +4404,43 @@ var file_msg_proto_goTypes = []any{
 	(*ClaimOnHookRewardResponse)(nil),          // 32: game.ClaimOnHookRewardResponse
 	(*ClaimLevelBoxRequest)(nil),               // 33: game.ClaimLevelBoxRequest
 	(*ClaimLevelBoxResponse)(nil),              // 34: game.ClaimLevelBoxResponse
-	(*OperateWalletRequest)(nil),               // 35: game.OperateWalletRequest
-	(*OperateWalletResponse)(nil),              // 36: game.OperateWalletResponse
-	(*OperateInventoryRequest)(nil),            // 37: game.OperateInventoryRequest
-	(*OperateInventoryResponse)(nil),           // 38: game.OperateInventoryResponse
-	(*UpdateEquipDataRequest)(nil),             // 39: game.UpdateEquipDataRequest
-	(*UpdateEquipDataResponse)(nil),            // 40: game.UpdateEquipDataResponse
-	(*ShopItem)(nil),                           // 41: game.ShopItem
-	(*SingleShopData)(nil),                     // 42: game.SingleShopData
-	(*ShopData)(nil),                           // 43: game.ShopData
-	(*BuyShopItemRequest)(nil),                 // 44: game.BuyShopItemRequest
-	(*BuyShopItemResponse)(nil),                // 45: game.BuyShopItemResponse
-	(*RefreshShopRequest)(nil),                 // 46: game.RefreshShopRequest
-	(*RefreshShopResponse)(nil),                // 47: game.RefreshShopResponse
-	(*BoxShopData)(nil),                        // 48: game.BoxShopData
-	(*BuyBoxItemRequest)(nil),                  // 49: game.BuyBoxItemRequest
-	(*BuyBoxItemResponse)(nil),                 // 50: game.BuyBoxItemResponse
-	(*ChapterShopData)(nil),                    // 51: game.ChapterShopData
-	(*BuyChapterItemRequest)(nil),              // 52: game.BuyChapterItemRequest
-	(*BuyChapterItemResponse)(nil),             // 53: game.BuyChapterItemResponse
-	(*GemShopData)(nil),                        // 54: game.GemShopData
-	(*BuyGemItemRequest)(nil),                  // 55: game.BuyGemItemRequest
-	(*BuyGemItemResponse)(nil),                 // 56: game.BuyGemItemResponse
-	nil,                                        // 57: game.EquipData.UnlockEquipsEntry
-	(*timestamppb.Timestamp)(nil),              // 58: google.protobuf.Timestamp
+	(*GetTaskRequest)(nil),                     // 35: game.GetTaskRequest
+	(*GetTaskResponse)(nil),                    // 36: game.GetTaskResponse
+	(*ClaimTaskRewardRequest)(nil),             // 37: game.ClaimTaskRewardRequest
+	(*ClaimTaskRewardResponse)(nil),            // 38: game.ClaimTaskRewardResponse
+	(*ClaimLivenessRewardRequest)(nil),         // 39: game.ClaimLivenessRewardRequest
+	(*ClaimLivenessRewardResponse)(nil),        // 40: game.ClaimLivenessRewardResponse
+	(*OperateWalletRequest)(nil),               // 41: game.OperateWalletRequest
+	(*OperateWalletResponse)(nil),              // 42: game.OperateWalletResponse
+	(*OperateInventoryRequest)(nil),            // 43: game.OperateInventoryRequest
+	(*OperateInventoryResponse)(nil),           // 44: game.OperateInventoryResponse
+	(*UpdateEquipDataRequest)(nil),             // 45: game.UpdateEquipDataRequest
+	(*UpdateEquipDataResponse)(nil),            // 46: game.UpdateEquipDataResponse
+	(*ShopItem)(nil),                           // 47: game.ShopItem
+	(*SingleShopData)(nil),                     // 48: game.SingleShopData
+	(*ShopData)(nil),                           // 49: game.ShopData
+	(*BuyShopItemRequest)(nil),                 // 50: game.BuyShopItemRequest
+	(*BuyShopItemResponse)(nil),                // 51: game.BuyShopItemResponse
+	(*RefreshShopRequest)(nil),                 // 52: game.RefreshShopRequest
+	(*RefreshShopResponse)(nil),                // 53: game.RefreshShopResponse
+	(*BoxShopData)(nil),                        // 54: game.BoxShopData
+	(*BuyBoxItemRequest)(nil),                  // 55: game.BuyBoxItemRequest
+	(*BuyBoxItemResponse)(nil),                 // 56: game.BuyBoxItemResponse
+	(*ChapterShopData)(nil),                    // 57: game.ChapterShopData
+	(*BuyChapterItemRequest)(nil),              // 58: game.BuyChapterItemRequest
+	(*BuyChapterItemResponse)(nil),             // 59: game.BuyChapterItemResponse
+	(*GemShopData)(nil),                        // 60: game.GemShopData
+	(*BuyGemItemRequest)(nil),                  // 61: game.BuyGemItemRequest
+	(*BuyGemItemResponse)(nil),                 // 62: game.BuyGemItemResponse
+	nil,                                        // 63: game.EquipData.UnlockEquipsEntry
+	(*timestamppb.Timestamp)(nil),              // 64: google.protobuf.Timestamp
 }
 var file_msg_proto_depIdxs = []int32{
-	58, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
-	58, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
-	58, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
+	64, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
+	64, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
+	64, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
 	15, // 3: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
-	57, // 4: game.EquipData.unlock_equips:type_name -> game.EquipData.UnlockEquipsEntry
+	63, // 4: game.EquipData.unlock_equips:type_name -> game.EquipData.UnlockEquipsEntry
 	17, // 5: game.UserMeta.stamina:type_name -> game.StaminaData
 	18, // 6: game.UserMeta.equip:type_name -> game.EquipData
 	19, // 7: game.UserMeta.level:type_name -> game.LevelData
@@ -4042,43 +4463,49 @@ var file_msg_proto_depIdxs = []int32{
 	23, // 24: game.ClaimLevelBoxResponse.rewards:type_name -> game.Reward
 	21, // 25: game.ClaimLevelBoxResponse.wallet_updated:type_name -> game.Wallet
 	22, // 26: game.ClaimLevelBoxResponse.inventory_updated:type_name -> game.Item
-	3,  // 27: game.OperateWalletRequest.option:type_name -> game.OperateWalletRequest.Option
-	21, // 28: game.OperateWalletResponse.wallet_updated:type_name -> game.Wallet
-	4,  // 29: game.OperateInventoryRequest.option:type_name -> game.OperateInventoryRequest.Option
-	22, // 30: game.OperateInventoryRequest.items:type_name -> game.Item
-	22, // 31: game.OperateInventoryResponse.inventory_updated:type_name -> game.Item
-	18, // 32: game.UpdateEquipDataResponse.equip_data:type_name -> game.EquipData
-	21, // 33: game.UpdateEquipDataResponse.wallet_updated:type_name -> game.Wallet
-	22, // 34: game.UpdateEquipDataResponse.inventory_updated:type_name -> game.Item
-	1,  // 35: game.ShopItem.pay_type:type_name -> game.PayType
-	2,  // 36: game.SingleShopData.shop_type:type_name -> game.ShopType
-	41, // 37: game.SingleShopData.items:type_name -> game.ShopItem
-	42, // 38: game.ShopData.shops:type_name -> game.SingleShopData
-	2,  // 39: game.BuyShopItemRequest.shop_type:type_name -> game.ShopType
-	23, // 40: game.BuyShopItemResponse.reward:type_name -> game.Reward
-	21, // 41: game.BuyShopItemResponse.wallet_updated:type_name -> game.Wallet
-	22, // 42: game.BuyShopItemResponse.inventory_updated:type_name -> game.Item
-	43, // 43: game.BuyShopItemResponse.shop_data:type_name -> game.ShopData
-	2,  // 44: game.RefreshShopRequest.shop_type:type_name -> game.ShopType
-	42, // 45: game.RefreshShopResponse.shop_data:type_name -> game.SingleShopData
-	21, // 46: game.RefreshShopResponse.wallet_updated:type_name -> game.Wallet
-	23, // 47: game.BuyBoxItemResponse.reward:type_name -> game.Reward
-	21, // 48: game.BuyBoxItemResponse.wallet_updated:type_name -> game.Wallet
-	22, // 49: game.BuyBoxItemResponse.inventory_updated:type_name -> game.Item
-	48, // 50: game.BuyBoxItemResponse.box_shop_data:type_name -> game.BoxShopData
-	41, // 51: game.ChapterShopData.items:type_name -> game.ShopItem
-	23, // 52: game.BuyChapterItemResponse.reward:type_name -> game.Reward
-	22, // 53: game.BuyChapterItemResponse.inventory_updated:type_name -> game.Item
-	51, // 54: game.BuyChapterItemResponse.chapter_shop_data:type_name -> game.ChapterShopData
-	41, // 55: game.GemShopData.items:type_name -> game.ShopItem
-	23, // 56: game.BuyGemItemResponse.reward:type_name -> game.Reward
-	21, // 57: game.BuyGemItemResponse.wallet_updated:type_name -> game.Wallet
-	54, // 58: game.BuyGemItemResponse.gem_shop_data:type_name -> game.GemShopData
-	59, // [59:59] is the sub-list for method output_type
-	59, // [59:59] is the sub-list for method input_type
-	59, // [59:59] is the sub-list for extension type_name
-	59, // [59:59] is the sub-list for extension extendee
-	0,  // [0:59] is the sub-list for field type_name
+	23, // 27: game.ClaimTaskRewardResponse.reward:type_name -> game.Reward
+	21, // 28: game.ClaimTaskRewardResponse.wallet_updated:type_name -> game.Wallet
+	22, // 29: game.ClaimTaskRewardResponse.inventory_updated:type_name -> game.Item
+	23, // 30: game.ClaimLivenessRewardResponse.reward:type_name -> game.Reward
+	21, // 31: game.ClaimLivenessRewardResponse.wallet_updated:type_name -> game.Wallet
+	22, // 32: game.ClaimLivenessRewardResponse.inventory_updated:type_name -> game.Item
+	3,  // 33: game.OperateWalletRequest.option:type_name -> game.OperateWalletRequest.Option
+	21, // 34: game.OperateWalletResponse.wallet_updated:type_name -> game.Wallet
+	4,  // 35: game.OperateInventoryRequest.option:type_name -> game.OperateInventoryRequest.Option
+	22, // 36: game.OperateInventoryRequest.items:type_name -> game.Item
+	22, // 37: game.OperateInventoryResponse.inventory_updated:type_name -> game.Item
+	18, // 38: game.UpdateEquipDataResponse.equip_data:type_name -> game.EquipData
+	21, // 39: game.UpdateEquipDataResponse.wallet_updated:type_name -> game.Wallet
+	22, // 40: game.UpdateEquipDataResponse.inventory_updated:type_name -> game.Item
+	1,  // 41: game.ShopItem.pay_type:type_name -> game.PayType
+	2,  // 42: game.SingleShopData.shop_type:type_name -> game.ShopType
+	47, // 43: game.SingleShopData.items:type_name -> game.ShopItem
+	48, // 44: game.ShopData.shops:type_name -> game.SingleShopData
+	2,  // 45: game.BuyShopItemRequest.shop_type:type_name -> game.ShopType
+	23, // 46: game.BuyShopItemResponse.reward:type_name -> game.Reward
+	21, // 47: game.BuyShopItemResponse.wallet_updated:type_name -> game.Wallet
+	22, // 48: game.BuyShopItemResponse.inventory_updated:type_name -> game.Item
+	49, // 49: game.BuyShopItemResponse.shop_data:type_name -> game.ShopData
+	2,  // 50: game.RefreshShopRequest.shop_type:type_name -> game.ShopType
+	48, // 51: game.RefreshShopResponse.shop_data:type_name -> game.SingleShopData
+	21, // 52: game.RefreshShopResponse.wallet_updated:type_name -> game.Wallet
+	23, // 53: game.BuyBoxItemResponse.reward:type_name -> game.Reward
+	21, // 54: game.BuyBoxItemResponse.wallet_updated:type_name -> game.Wallet
+	22, // 55: game.BuyBoxItemResponse.inventory_updated:type_name -> game.Item
+	54, // 56: game.BuyBoxItemResponse.box_shop_data:type_name -> game.BoxShopData
+	47, // 57: game.ChapterShopData.items:type_name -> game.ShopItem
+	23, // 58: game.BuyChapterItemResponse.reward:type_name -> game.Reward
+	22, // 59: game.BuyChapterItemResponse.inventory_updated:type_name -> game.Item
+	57, // 60: game.BuyChapterItemResponse.chapter_shop_data:type_name -> game.ChapterShopData
+	47, // 61: game.GemShopData.items:type_name -> game.ShopItem
+	23, // 62: game.BuyGemItemResponse.reward:type_name -> game.Reward
+	21, // 63: game.BuyGemItemResponse.wallet_updated:type_name -> game.Wallet
+	60, // 64: game.BuyGemItemResponse.gem_shop_data:type_name -> game.GemShopData
+	65, // [65:65] is the sub-list for method output_type
+	65, // [65:65] is the sub-list for method input_type
+	65, // [65:65] is the sub-list for extension type_name
+	65, // [65:65] is the sub-list for extension extendee
+	0,  // [0:65] is the sub-list for field type_name
 }
 
 func init() { file_msg_proto_init() }
@@ -4092,7 +4519,7 @@ func file_msg_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_msg_proto_rawDesc), len(file_msg_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   53,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

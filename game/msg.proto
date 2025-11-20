@@ -209,6 +209,48 @@ message ClaimLevelBoxResponse{
   repeated Item inventory_updated = 5; // 背包更新结果
 }
 
+// 获取任务状态请求
+message GetTaskRequest{
+}
+
+// 获取任务状态响应
+message GetTaskResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 current_liveness = 3;              // 当前活跃度
+  repeated string claimed_tasks = 4;       // 已领取的任务ID列表
+  repeated string claimed_liveness_rewards = 5; // 已领取的活跃度奖励ID列表
+}
+
+// 领取任务奖励请求
+message ClaimTaskRewardRequest{
+  string task_id = 1; // 任务ID
+}
+
+// 领取任务奖励响应
+message ClaimTaskRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 liveness = 3;                  // 获得的活跃度
+  Reward reward = 4;                   // 任务奖励
+  Wallet wallet_updated = 5;           // 钱包更新结果
+  repeated Item inventory_updated = 6; // 背包更新结果
+}
+
+// 领取活跃度奖励请求
+message ClaimLivenessRewardRequest{
+  string reward_id = 1; // 活跃度奖励ID
+}
+
+// 领取活跃度奖励响应
+message ClaimLivenessRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;                   // 奖励数据
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
 message OperateWalletRequest{
   enum Option {
     GAIN = 0;

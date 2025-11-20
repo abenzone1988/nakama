@@ -1,0 +1,10 @@
+{
+"20001":{"brief":"挑战{0}次主线关卡","reward":"Gem005","taskType":2,"TargetValue":1,"Liveness":20,"name":"挑战主线关卡","TargetType":"PlayMainLevel","id":"20001"},
+"20002":{"brief":"击杀{0}只怪物","reward":"Gem005","taskType":2,"TargetValue":10000,"Liveness":20,"name":"击杀怪物","TargetType":"Kill_Monster","id":"20002"},
+"20003":{"brief":"观看{0}个广告视频","reward":"Gem005","taskType":2,"TargetValue":5,"Liveness":20,"name":"观看广告","TargetType":"Watch_Advertisement","id":"20003"},
+"20004":{"brief":"消耗{0}点体力","reward":"Gem005","taskType":2,"TargetValue":30,"Liveness":20,"name":"消耗体力","TargetType":"Require_Stamina","id":"20004"},
+"20005":{"brief":"领取{0}次挂机收益","reward":"Gem005","taskType":2,"TargetValue":1,"Liveness":20,"name":"领取挂机收益","TargetType":"Profit_OnHook","id":"20005"},
+"20006":{"brief":"在挂机收益中快速开采{0}次","reward":"Gem005","taskType":2,"TargetValue":1,"Liveness":20,"name":"快速开采","TargetType":"Profit_MopUp","id":"20006"},
+"20007":{"brief":"在每日商店中购买{0}个道具","reward":"Gem005","taskType":2,"TargetValue":1,"Liveness":20,"name":"购买每日道具","TargetType":"Shopping_Dairy","id":"20007"},
+"20008":{"brief":"参与{0}次金币狂欢活动","reward":"Gem005","taskType":2,"TargetValue":1,"Liveness":20,"name":"参与活动：金币狂欢","TargetType":"PlayActivityLevel_Coin","id":"20008"}
+}

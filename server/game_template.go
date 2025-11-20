@@ -30,6 +30,8 @@ type TemplateManager interface {
 	GetTplBoxShopItem() *TableTplBoxShopItem
 	GetTplShopChapterItem() *TableTplShopChapterItem
 	GetTplShopGemItem() *TableTplShopGemItem
+	GetTplTasks() *TableTplTasks
+	GetTplProgressReward() *TableTplProgressReward
 }
 
 type LocalTemplateManager struct {
@@ -50,6 +52,8 @@ type LocalTemplateManager struct {
 	tableTplBoxShopItem       *TableTplBoxShopItem
 	tableTplShopChapterItem   *TableTplShopChapterItem
 	tableTplShopGemItem       *TableTplShopGemItem
+	tableTplTasks             *TableTplTasks
+	tableTplProgressReward    *TableTplProgressReward
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -71,6 +75,8 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplBoxShopItem:       NewTableTplBoxShopItem(logger, jsonPath),
 		tableTplShopChapterItem:   NewTableTplShopChapterItem(logger, jsonPath),
 		tableTplShopGemItem:       NewTableTplShopGemItem(logger, jsonPath),
+		tableTplTasks:             NewTableTplTasks(logger, jsonPath),
+		tableTplProgressReward:    NewTableTplProgressReward(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -148,6 +154,8 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplBoxShopItem.LoadData(t.StorageReadTpl("TplBoxShopItem"))
 	t.tableTplShopChapterItem.LoadData(t.StorageReadTpl("TplShopChapterItem"))
 	t.tableTplShopGemItem.LoadData(t.StorageReadTpl("TplShopGemItem"))
+	t.tableTplTasks.LoadData(t.StorageReadTpl("TplTasks"))
+	t.tableTplProgressReward.LoadData(t.StorageReadTpl("TplProgressReward"))
 }
 
 func (t *LocalTemplateManager) GetTplShopDailyItem() *TableTplShopDailyItem {
@@ -184,6 +192,18 @@ func (t *LocalTemplateManager) GetTplShopGemItem() *TableTplShopGemItem {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplShopGemItem
+}
+
+func (t *LocalTemplateManager) GetTplTasks() *TableTplTasks {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplTasks
+}
+
+func (t *LocalTemplateManager) GetTplProgressReward() *TableTplProgressReward {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplProgressReward
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
