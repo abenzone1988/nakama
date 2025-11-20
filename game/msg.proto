@@ -194,6 +194,21 @@ message ClaimOnHookRewardResponse{
   repeated Item inventory_updated = 7; // 背包更新结果
 }
 
+// 领取关卡宝箱请求
+message ClaimLevelBoxRequest{
+  string level_id = 1;        // 关卡ID，如 "L1001"
+  repeated int32 box_ids = 2; // 宝箱ID列表，1-3
+}
+
+// 领取关卡宝箱响应
+message ClaimLevelBoxResponse{
+  int32 code = 1;
+  string msg = 2;
+  repeated Reward rewards = 3;         // 奖励列表
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
 message OperateWalletRequest{
   enum Option {
     GAIN = 0;
