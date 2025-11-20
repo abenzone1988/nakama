@@ -87,11 +87,21 @@ message EquipData{
   int32 crystal_tech_tree_index = 3;
 }
 
+message LevelData{
+  string cur_level_id = 1;
+  int32 best_progress = 2;
+  int32 has_mopping_times = 3; // 第一阶段已使用次数（扣体力）
+  int32 has_mopping_times_for_adv = 4; // 第二阶段已使用次数（扣体力+广告）
+  string last_mopping_timestamp = 5; // 最后一次扫荡时间，用于每日刷新，ISO 8601 格式
+  string last_get_on_hook_timestamp = 6; // 最后一次领取挂机奖励时间，ISO 8601 格式
+}
+
 // 玩家元数据
 message UserMeta{
   int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
   StaminaData stamina = 2;
   EquipData equip = 3;
+  LevelData level = 4;
 }
 
 // 钱包结构
@@ -151,6 +161,37 @@ message EndBattleResponse{
   Reward reward = 3; // 奖励数据
   Wallet wallet_updated = 4; // 钱包更新结果
   repeated Item inventory_updated = 5; // 背包更新结果
+}
+
+// 扫荡奖励请求
+message ClaimMoppingRewardRequest{
+  bool watched_ad = 1; // 是否观看了广告（第二阶段使用）
+}
+
+// 扫荡奖励响应
+message ClaimMoppingRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3; // 奖励数据
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+  int32 has_mopping_times = 6; // 第一阶段已使用次数
+  int32 has_mopping_times_for_adv = 7; // 第二阶段已使用次数
+}
+
+// 领取挂机奖励请求
+message ClaimOnHookRewardRequest{
+}
+
+// 领取挂机奖励响应
+message ClaimOnHookRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 hours = 3; // 领取的小时数
+  int32 coin = 4; // 金币奖励
+  Reward reward = 5; // 其他奖励数据
+  Wallet wallet_updated = 6; // 钱包更新结果
+  repeated Item inventory_updated = 7; // 背包更新结果
 }
 
 message OperateWalletRequest{

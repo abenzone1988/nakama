@@ -10,6 +10,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// compareLevelId 比较两个关卡 ID 的大小，返回 true 表示 id1 > id2
+func compareLevelId(id1, id2 string) bool {
+	// 解析两个 ID 的数字部分进行比较
+	num1, err1 := strconv.ParseInt(id1[1:], 10, 32)
+	num2, err2 := strconv.ParseInt(id2[1:], 10, 32)
+
+	if err1 != nil || err2 != nil {
+		// 如果解析失败，使用字符串比较
+		return id1 > id2
+	}
+
+	return num1 > num2
+}
+
 func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*game.EndBattleResponse, error) {
 	if in.GetProgress() > 100 || in.GetProgress() <= 0 {
 		return &game.EndBattleResponse{
@@ -75,6 +89,17 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 				Code: 4,
 				Msg:  "奖励发放失败: " + err.Error(),
 			}, nil
+		}
+	}
+
+	// 更新关卡进度（仅对普通关卡）
+	if in.GetType() == game.BattleType_BATTLE_TYPE_NORMAL {
+		if err := updateLevelProgress(ctx, s.logger, in.GetLevelId(), in.GetProgress()); err != nil {
+			s.logger.Error("更新关卡进度失败",
+				zap.Error(err),
+				zap.String("level_id", in.GetLevelId()),
+				zap.Int32("progress", in.GetProgress()))
+			// 不影响战斗结算，仅记录错误
 		}
 	}
 
@@ -180,4 +205,51 @@ func applyProgressToReward(reward *game.Reward, progress int32) {
 			}
 		}
 	}
+}
+
+// updateLevelProgress 更新关卡进度到 UserMeta
+func updateLevelProgress(ctx context.Context, logger *zap.Logger, levelId string, progress int32) error {
+	return UpdateUserMeta(ctx, func(userMeta *game.UserMeta) error {
+		// 初始化关卡数据
+		if userMeta.Level == nil {
+			userMeta.Level = &game.LevelData{
+				CurLevelId:   levelId,
+				BestProgress: progress,
+			}
+			logger.Info("初始化关卡进度",
+				zap.String("level_id", levelId),
+				zap.Int32("progress", progress))
+			return nil
+		}
+
+		// 更新最大关卡
+		needUpdate := false
+		if compareLevelId(levelId, userMeta.Level.CurLevelId) {
+			// 新关卡更大，更新关卡和进度
+			userMeta.Level.CurLevelId = levelId
+			userMeta.Level.BestProgress = progress
+			needUpdate = true
+			logger.Info("更新最大关卡",
+				zap.String("old_level_id", userMeta.Level.CurLevelId),
+				zap.String("new_level_id", levelId),
+				zap.Int32("progress", progress))
+		} else if levelId == userMeta.Level.CurLevelId && progress > userMeta.Level.BestProgress {
+			// 同一关卡，更新最好进度
+			oldProgress := userMeta.Level.BestProgress
+			userMeta.Level.BestProgress = progress
+			needUpdate = true
+			logger.Info("更新最好进度",
+				zap.String("level_id", levelId),
+				zap.Int32("old_progress", oldProgress),
+				zap.Int32("new_progress", progress))
+		}
+
+		if needUpdate {
+			logger.Info("关卡进度已更新",
+				zap.String("cur_level_id", userMeta.Level.CurLevelId),
+				zap.Int32("best_progress", userMeta.Level.BestProgress))
+		}
+
+		return nil
+	})
 }

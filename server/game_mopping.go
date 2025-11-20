@@ -1,0 +1,481 @@
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"time"
+
+	"github.com/gofrs/uuid/v5"
+	"github.com/heroiclabs/nakama/v3/game"
+	"go.uber.org/zap"
+)
+
+const (
+	MoppingStage1MaxTimes = 3 // 第一阶段最大次数（扣体力）
+	MoppingStage2MaxTimes = 5 // 第二阶段最大次数（扣体力+广告）
+	MoppingCostStamina    = 5 // 扫荡消耗的体力值
+	OnHookMaxHours        = 8 // 挂机最大领取小时数
+)
+
+// ClaimMoppingReward 领取扫荡奖励
+func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppingRewardRequest) (*game.ClaimMoppingRewardResponse, error) {
+	// 检查关卡 ID 是否有效
+
+	userMeta, _, err := GetUserMeta(ctx)
+	if err != nil {
+		return &game.ClaimMoppingRewardResponse{
+			Code: 3,
+			Msg:  "获取用户元数据失败",
+		}, nil
+	}
+
+	// 初始化关卡数据
+	if userMeta.Level == nil {
+		initializeLevelData(userMeta)
+	}
+
+	levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(userMeta.Level.CurLevelId)
+	if !exist {
+		return &game.ClaimMoppingRewardResponse{
+			Code: 1,
+			Msg:  "关卡不存在",
+		}, nil
+	}
+
+	// 检查扫荡奖励配置是否存在
+	if levelInfo.MoppingReward == "" {
+		return &game.ClaimMoppingRewardResponse{
+			Code: 2,
+			Msg:  "该关卡没有扫荡奖励",
+		}, nil
+	}
+
+	// 检查并刷新每日次数
+	needsReset, err := checkAndResetDailyMoppingTimes(userMeta.Level, s.logger)
+	if err != nil {
+		s.logger.Error("检查每日重置失败", zap.Error(err))
+		return &game.ClaimMoppingRewardResponse{
+			Code: 4,
+			Msg:  "检查每日重置失败: " + err.Error(),
+		}, nil
+	}
+
+	if needsReset {
+		err = UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
+			return nil
+		})
+		if err != nil {
+			return &game.ClaimMoppingRewardResponse{
+				Code: 5,
+				Msg:  "重置每日次数失败: " + err.Error(),
+			}, nil
+		}
+	}
+
+	// 判断当前处于哪个阶段
+	stage1Times := userMeta.Level.HasMoppingTimes
+	stage2Times := userMeta.Level.HasMoppingTimesForAdv
+
+	var isStage2 bool
+	var needsAd bool
+
+	if stage1Times < MoppingStage1MaxTimes {
+		// 第一阶段：只扣体力
+		isStage2 = false
+		needsAd = false
+	} else if stage2Times < MoppingStage2MaxTimes {
+		// 第二阶段：扣体力 + 广告
+		isStage2 = true
+		needsAd = !in.GetWatchedAd() // 如果没看广告，需要扣除 ad 值
+	} else {
+		// 已达到每日上限
+		return &game.ClaimMoppingRewardResponse{
+			Code: 6,
+			Msg:  "今日扫荡次数已用完",
+		}, nil
+	}
+
+	// 扣除体力
+	if err := ConsumeStamina(ctx, s.logger, MoppingCostStamina); err != nil {
+		return &game.ClaimMoppingRewardResponse{
+			Code: 7,
+			Msg:  "体力不足: " + err.Error(),
+		}, nil
+	}
+
+	// 第二阶段且未观看广告，需要扣除 ad 值
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	if needsAd {
+		// 扣除 1 个广告券
+		userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+		metadata, _ := json.Marshal(map[string]interface{}{"source": "mopping_ad_" + userMeta.Level.CurLevelId})
+
+		walletChangeset := make(map[string]int64)
+		walletChangeset["ad"] = -1
+
+		walletUpdates := []*walletUpdate{{
+			UserID:    userID,
+			Changeset: walletChangeset,
+			Metadata:  string(metadata),
+		}}
+
+		results, err := UpdateWallets(ctx, s.logger, s.db, walletUpdates, true)
+		if err != nil {
+			return &game.ClaimMoppingRewardResponse{
+				Code: 8,
+				Msg:  "广告券不足，请观看广告或购买广告券",
+			}, nil
+		}
+
+		if len(results) > 0 {
+			walletUpdateResult = &game.WalletUpdateResult{
+				Previous: convertMapInt64ToWallet(results[0].Previous),
+				Updated:  convertMapInt64ToWallet(results[0].Updated),
+			}
+		}
+	}
+
+	// 获取扫荡奖励
+	reward := GetReward(levelInfo.MoppingReward, s.template.GetTplReward(), s.logger)
+	if reward != nil {
+		// 发放奖励
+		var err error
+		source := "mopping_" + userMeta.Level.CurLevelId
+
+		// 如果之前扣除了 ad，需要合并钱包更新结果
+		if walletUpdateResult != nil {
+			// 先发放奖励
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			if err != nil {
+				return &game.ClaimMoppingRewardResponse{
+					Code: 9,
+					Msg:  "奖励发放失败: " + err.Error(),
+				}, nil
+			}
+			// 合并钱包更新结果（扣除的 ad 值已经在 walletUpdateResult 中）
+			if wResult != nil {
+				walletUpdateResult.Updated = wResult.Updated
+			}
+			inventoryUpdateResult = iResult
+		} else {
+			walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			if err != nil {
+				return &game.ClaimMoppingRewardResponse{
+					Code: 9,
+					Msg:  "奖励发放失败: " + err.Error(),
+				}, nil
+			}
+		}
+	}
+
+	// 更新扫荡次数
+	err = UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
+		if meta.Level == nil {
+			meta.Level = &game.LevelData{}
+		}
+		if isStage2 {
+			meta.Level.HasMoppingTimesForAdv++
+		} else {
+			meta.Level.HasMoppingTimes++
+		}
+		meta.Level.LastMoppingTimestamp = time.Now().Format(time.RFC3339)
+		return nil
+	})
+
+	if err != nil {
+		s.logger.Error("更新扫荡次数失败", zap.Error(err))
+		return &game.ClaimMoppingRewardResponse{
+			Code: 10,
+			Msg:  "更新扫荡次数失败: " + err.Error(),
+		}, nil
+	}
+
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
+	// 重新获取更新后的次数
+	userMeta, _, _ = GetUserMeta(ctx)
+
+	return &game.ClaimMoppingRewardResponse{
+		Code:                  0,
+		Msg:                   "扫荡成功",
+		Reward:                reward,
+		WalletUpdated:         walletUpdated,
+		InventoryUpdated:      inventoryUpdated,
+		HasMoppingTimes:       userMeta.Level.HasMoppingTimes,
+		HasMoppingTimesForAdv: userMeta.Level.HasMoppingTimesForAdv,
+	}, nil
+}
+
+// checkAndResetDailyMoppingTimes 检查并重置每日扫荡次数
+// 如果跨天了，返回 true 表示需要重置
+func checkAndResetDailyMoppingTimes(levelData *game.LevelData, logger *zap.Logger) (bool, error) {
+	if levelData == nil {
+		return false, errors.New("levelData is nil")
+	}
+
+	// 如果从未扫荡过，不需要重置
+	if levelData.LastMoppingTimestamp == "" {
+		return false, nil
+	}
+
+	// 解析最后扫荡时间
+	lastMoppingTime, err := time.Parse(time.RFC3339, levelData.LastMoppingTimestamp)
+	if err != nil {
+		logger.Warn("解析最后扫荡时间失败，将重置次数",
+			zap.Error(err),
+			zap.String("timestamp", levelData.LastMoppingTimestamp))
+		// 解析失败，重置次数
+		resetMoppingTimes(levelData)
+		return true, nil
+	}
+
+	// 检查是否跨天（使用本地时区）
+	now := time.Now()
+	lastDay := lastMoppingTime.Truncate(24 * time.Hour)
+	today := now.Truncate(24 * time.Hour)
+
+	if today.After(lastDay) {
+		// 跨天了，重置次数
+		logger.Info("检测到跨天，重置扫荡次数",
+			zap.Time("last_mopping_time", lastMoppingTime),
+			zap.Time("now", now))
+		resetMoppingTimes(levelData)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// resetMoppingTimes 重置扫荡次数
+func resetMoppingTimes(levelData *game.LevelData) {
+	levelData.HasMoppingTimes = 0
+	levelData.HasMoppingTimesForAdv = 0
+}
+
+// ClaimOnHookReward 领取挂机（巡逻）奖励
+func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error) {
+	// 获取用户元数据
+	userMeta, _, err := GetUserMeta(ctx)
+	if err != nil {
+		return &game.ClaimOnHookRewardResponse{
+			Code: 1,
+			Msg:  "获取用户元数据失败",
+		}, nil
+	}
+
+	// 初始化关卡数据
+	if userMeta.Level == nil {
+		initializeLevelData(userMeta)
+		// 首次初始化，没有挂机时间，不发放奖励
+		return &game.ClaimOnHookRewardResponse{
+			Code: 2,
+			Msg:  "暂无挂机奖励",
+		}, nil
+	}
+
+	// 获取当前关卡配置
+	levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(userMeta.Level.CurLevelId)
+	if !exist {
+		return &game.ClaimOnHookRewardResponse{
+			Code: 3,
+			Msg:  "关卡不存在",
+		}, nil
+	}
+
+	// 检查是否配置了挂机奖励
+	if levelInfo.OnHookRewardCoin == 0 && levelInfo.OnHookRewardGroupID == "" {
+		return &game.ClaimOnHookRewardResponse{
+			Code: 4,
+			Msg:  "当前关卡没有挂机奖励",
+		}, nil
+	}
+
+	// 解析上次领取时间
+	var hours int
+	var newLastGetTime time.Time
+	now := time.Now()
+
+	if userMeta.Level.LastGetOnHookTimestamp == "" {
+		// 首次领取，直接给予最大8小时奖励
+		hours = OnHookMaxHours
+		newLastGetTime = now
+		s.logger.Info("首次领取挂机奖励，发放最大时长奖励",
+			zap.Int("hours", OnHookMaxHours))
+	} else {
+		// 非首次领取，计算经过的时间
+		lastGetTime, err := time.Parse(time.RFC3339, userMeta.Level.LastGetOnHookTimestamp)
+		if err != nil {
+			s.logger.Error("解析上次领取时间失败", zap.Error(err), zap.String("timestamp", userMeta.Level.LastGetOnHookTimestamp))
+			return &game.ClaimOnHookRewardResponse{
+				Code: 7,
+				Msg:  "解析上次领取时间失败",
+			}, nil
+		}
+
+		// 计算经过的时间（小时数）
+		elapsed := now.Sub(lastGetTime)
+		totalMinutes := int(elapsed.Minutes())
+
+		// 计算完整的小时数
+		hours = totalMinutes / 60
+
+		// 不满1小时，无法领取
+		if hours < 1 {
+			remainingMinutes := 60 - (totalMinutes % 60)
+			return &game.ClaimOnHookRewardResponse{
+				Code: 8,
+				Msg:  "挂机时间不足1小时，还需" + strconv.Itoa(remainingMinutes) + "分钟",
+			}, nil
+		}
+
+		// 限制最大领取小时数
+		if hours > OnHookMaxHours {
+			hours = OnHookMaxHours
+			s.logger.Info("挂机时间超过上限，限制为最大值",
+				zap.Int("original_hours", totalMinutes/60),
+				zap.Int("limited_hours", OnHookMaxHours))
+		}
+
+		// 计算新的领取时间（只增加已领取的完整小时数，不满1小时的分钟累加到下次）
+		newLastGetTime = lastGetTime.Add(time.Duration(hours) * time.Hour)
+	}
+
+	// 计算金币奖励
+	totalCoin := levelInfo.OnHookRewardCoin * int32(hours)
+
+	// 获取道具奖励
+	var reward *game.Reward
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	if levelInfo.OnHookRewardGroupID != "" {
+		reward = GetReward(levelInfo.OnHookRewardGroupID, s.template.GetTplReward(), s.logger)
+		if reward != nil {
+			// 奖励乘以小时数
+			if reward.Wallet != nil {
+				reward.Wallet.Coin *= int32(hours)
+				reward.Wallet.Gem *= int32(hours)
+				reward.Wallet.Ad *= int32(hours)
+			}
+			if reward.Items != nil {
+				for _, item := range reward.Items {
+					if item != nil {
+						item.Num *= int32(hours)
+					}
+				}
+			}
+		}
+	}
+
+	// 发放金币奖励
+	if totalCoin > 0 {
+		userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+		metadata, _ := json.Marshal(map[string]interface{}{
+			"source": "onhook_" + userMeta.Level.CurLevelId,
+			"hours":  hours,
+		})
+
+		walletChangeset := make(map[string]int64)
+		walletChangeset["coin"] = int64(totalCoin)
+
+		walletUpdates := []*walletUpdate{{
+			UserID:    userID,
+			Changeset: walletChangeset,
+			Metadata:  string(metadata),
+		}}
+
+		results, err := UpdateWallets(ctx, s.logger, s.db, walletUpdates, true)
+		if err != nil {
+			s.logger.Error("发放金币失败", zap.Error(err))
+			return &game.ClaimOnHookRewardResponse{
+				Code: 9,
+				Msg:  "发放金币失败: " + err.Error(),
+			}, nil
+		}
+
+		if len(results) > 0 {
+			walletUpdateResult = &game.WalletUpdateResult{
+				Previous: convertMapInt64ToWallet(results[0].Previous),
+				Updated:  convertMapInt64ToWallet(results[0].Updated),
+			}
+		}
+	}
+
+	// 发放道具奖励
+	if reward != nil {
+		source := "onhook_" + userMeta.Level.CurLevelId
+		wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+		if err != nil {
+			s.logger.Error("发放道具奖励失败", zap.Error(err))
+			// 不返回错误，金币已经发放成功
+		} else {
+			// 合并钱包更新结果
+			if wResult != nil && walletUpdateResult != nil {
+				// 保留金币奖励的钱包状态，只更新道具奖励部分
+				walletUpdateResult.Updated = wResult.Updated
+			} else if wResult != nil {
+				walletUpdateResult = wResult
+			}
+			inventoryUpdateResult = iResult
+		}
+	}
+
+	// 更新上次领取时间（只增加完整小时数，不满1小时的分钟累加到下次）
+	err = UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
+		if meta.Level == nil {
+			meta.Level = &game.LevelData{}
+		}
+		meta.Level.LastGetOnHookTimestamp = newLastGetTime.Format(time.RFC3339)
+		return nil
+	})
+
+	if err != nil {
+		s.logger.Error("更新挂机时间失败", zap.Error(err))
+		return &game.ClaimOnHookRewardResponse{
+			Code: 10,
+			Msg:  "更新挂机时间失败: " + err.Error(),
+		}, nil
+	}
+
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
+	s.logger.Info("挂机奖励领取成功",
+		zap.String("level_id", userMeta.Level.CurLevelId),
+		zap.Int("hours", hours),
+		zap.Int32("coin", totalCoin),
+		zap.String("new_last_get_time", newLastGetTime.Format(time.RFC3339)))
+
+	return &game.ClaimOnHookRewardResponse{
+		Code:             0,
+		Msg:              "领取成功",
+		Hours:            int32(hours),
+		Coin:             totalCoin,
+		Reward:           reward,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
+	}, nil
+}

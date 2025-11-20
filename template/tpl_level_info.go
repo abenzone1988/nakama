@@ -9,25 +9,24 @@ import (
 )
 
 type TplLevelInfo struct {
-	LevelMonsterDev         string `json:"LevelMonsterDev"`
-	Condition01             int32  `json:"condition01"`
-	Condition02             int32  `json:"condition02"`
-	Condition03             int32  `json:"condition03"`
-	ConditionType01         int32  `json:"conditionType01"`
-	ConditionType02         int32  `json:"conditionType02"`
-	ConditionType03         int32  `json:"conditionType03"`
-	Cost                    int32  `json:"cost"`
-	ID                      string `json:"id"`
-	MonsterLevel            int32  `json:"monsterLevel"`
-	MonsterWaveGroupID      string `json:"monsterWaveGroupId"`
-	MoppingReward           string `json:"moppingReward"`
-	OnHookRewardCoin        int32  `json:"onHookRewardCoin"`
-	OnHookRewardDebrisCount int32  `json:"onHookRewardDebrisCount"`
-	OnHookRewardGroupID     string `json:"onHookRewardGroupId"`
-	Reward01                string `json:"reward01"`
-	Reward02                string `json:"reward02"`
-	Reward03                string `json:"reward03"`
-	WinRewards              string `json:"winRewards"`
+	LevelMonsterDev     string `json:"LevelMonsterDev"`
+	Condition01         int32  `json:"condition01"`
+	Condition02         int32  `json:"condition02"`
+	Condition03         int32  `json:"condition03"`
+	ConditionType01     int32  `json:"conditionType01"`
+	ConditionType02     int32  `json:"conditionType02"`
+	ConditionType03     int32  `json:"conditionType03"`
+	Cost                int32  `json:"cost"`
+	ID                  string `json:"id"`
+	MonsterLevel        int32  `json:"monsterLevel"`
+	MonsterWaveGroupID  string `json:"monsterWaveGroupId"`
+	MoppingReward       string `json:"moppingReward"`
+	OnHookRewardCoin    int32  `json:"onHookRewardCoin"`
+	OnHookRewardGroupID string `json:"onHookRewardGroupId"`
+	Reward01            string `json:"reward01"`
+	Reward02            string `json:"reward02"`
+	Reward03            string `json:"reward03"`
+	WinRewards          string `json:"winRewards"`
 }
 
 // ReadOnlyTplLevelInfoSlice 只读TplLevelInfo切片接口

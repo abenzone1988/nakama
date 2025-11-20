@@ -48,12 +48,6 @@ type SceneListResponse struct {
 	Data   DataStruct `json:"data"`    // 数据
 }
 
-// StaminaData 体力数据
-type StaminaData struct {
-	Stamina         int    `json:"stamina"`
-	UpdateTimestamp string `json:"updateTimestamp"`
-}
-
 type ByteDirectPlay struct {
 	SceneTimestamps map[int64]string `json:"scene_timestamps"` // 记录每个场景的最后返回时间
 }
@@ -70,19 +64,6 @@ func (f *ByteDirectPlay) Init() {
 	if f.SceneTimestamps == nil {
 		f.SceneTimestamps = make(map[int64]string)
 	}
-}
-
-func (s *StaminaData) GetCollection() string {
-	return "Home"
-}
-
-func (s *StaminaData) GetKey() string {
-	return "Stamina"
-}
-
-func (s *StaminaData) Init() {
-	s.Stamina = 0
-	s.UpdateTimestamp = time.Now().UTC().Format(time.RFC3339)
 }
 
 // NetReconnectData 重连数据

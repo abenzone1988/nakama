@@ -253,6 +253,9 @@ func InitializeNewUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 	// 初始化装备数据
 	initializeEquipData(userMeta, templateMgr)
 
+	// 初始化关卡数据
+	initializeLevelData(userMeta)
+
 	// TODO: 在这里添加其他模块的初始化（如商店、任务等）
 
 	// 序列化并保存到数据库
