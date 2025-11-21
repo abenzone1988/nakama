@@ -22,7 +22,7 @@ var SignatureFailBanThreshold = 5 // 阈值，5次失败才封禁
 var signatureFailCounter = make(map[string]int)
 
 // 作弊检测阈值
-const CheatDetectionThreshold = 300 // 广告券>=300视为作弊
+const CheatDetectionThreshold = 1000 // 广告券>=1000视为作弊
 
 func (s *ApiServer) updatePlayerWalletWithID(ctx context.Context, coinChange, gemChange, adChange int64, record string, externalID *uuid.UUID) ([]*runtime.WalletUpdateResult, error) {
 	// 如果没有任何货币变化，则不执行任何操作
@@ -42,6 +42,10 @@ func (s *ApiServer) updatePlayerWalletWithID(ctx context.Context, coinChange, ge
 		changeset["ad"] = adChange
 	}
 
+	// 判断是否需要记录到 ledger
+	// 只在以下情况下才记录：ad 增加 > 3 或 gem 增加 > 300 或 coin 增加 > 30000
+	updateLedger := (adChange > 3) || (gemChange > 300) || (coinChange > 30000)
+
 	// 构造更新对象
 	updates := []*walletUpdate{{
 		UserID:     userID,
@@ -51,7 +55,7 @@ func (s *ApiServer) updatePlayerWalletWithID(ctx context.Context, coinChange, ge
 	}}
 
 	// 调用更新钱包的函数
-	results, err := UpdateWallets(ctx, s.logger, s.db, updates, true)
+	results, err := UpdateWallets(ctx, s.logger, s.db, updates, updateLedger)
 	if err != nil {
 		// 直接返回错误，让调用者处理WalletNegativeError
 		return nil, err
@@ -259,12 +263,13 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 
 	result := results[0]
-	// 5. 作弊检测和处理
-	//finalWalletData, isCheatDetected, err := s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
-	//if err != nil {
-	//	s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(err))
-	//	// 不返回错误，继续正常流程
-	//}
+	//5. 作弊检测和处理
+	finalWalletData, isCheatDetected, err := s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
+	if err != nil {
+		s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(err))
+		// 不返回错误，继续正常流程
+		finalWalletData = result.Updated
+	}
 
 	previousWallet := &game.Wallet{
 		Coin: int32(result.Previous["coin"]),
@@ -274,29 +279,29 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 
 	// 使用最终的钱包数据（如果检测到作弊，使用清空后的数据）
 	updatedWallet := &game.Wallet{
-		Coin: int32(result.Updated["coin"]),
-		Gem:  int32(result.Updated["gem"]),
-		Ad:   int32(result.Updated["ad"]),
+		Coin: int32(finalWalletData["coin"]),
+		Gem:  int32(finalWalletData["gem"]),
+		Ad:   int32(finalWalletData["ad"]),
 	}
 
-	// 如果检测到作弊，记录日志
-	//if isCheatDetected {
-	//	s.logger.Warn("钱包操作成功（检测到作弊并已处理）",
-	//		zap.String("user_id", userID.String()),
-	//		zap.String("username", username),
-	//		zap.Int64("coin", coinChange),
-	//		zap.Int64("gem", gemChange),
-	//		zap.Int64("ad", adChange),
-	//		zap.String("reason", reason))
-	//} else {
-	//	s.logger.Info("钱包操作成功",
-	//		zap.String("user_id", userID.String()),
-	//		zap.String("username", username),
-	//		zap.Int64("coin", coinChange),
-	//		zap.Int64("gem", gemChange),
-	//		zap.Int64("ad", adChange),
-	//		zap.String("reason", reason))
-	//}
+	//如果检测到作弊，记录日志
+	if isCheatDetected {
+		s.logger.Warn("钱包操作成功（检测到作弊并已处理）",
+			zap.String("user_id", userID.String()),
+			zap.String("username", username),
+			zap.Int64("coin", coinChange),
+			zap.Int64("gem", gemChange),
+			zap.Int64("ad", adChange),
+			zap.String("reason", reason))
+	} else {
+		s.logger.Info("钱包操作成功",
+			zap.String("user_id", userID.String()),
+			zap.String("username", username),
+			zap.Int64("coin", coinChange),
+			zap.Int64("gem", gemChange),
+			zap.Int64("ad", adChange),
+			zap.String("reason", reason))
+	}
 
 	return &game.WalletResponse{
 		Code:           0,
