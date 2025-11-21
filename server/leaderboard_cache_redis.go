@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -46,6 +47,7 @@ type leaderboardCacheSyncMsg struct {
 type RedisLeaderboardCache struct {
 	ctx          context.Context
 	logger       *zap.Logger
+	db           *sql.DB
 	inner        LeaderboardCache
 	redisClient  *redis.Client
 	nodeID       string
@@ -74,6 +76,7 @@ func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Lo
 	c := &RedisLeaderboardCache{
 		ctx:          ctx,
 		logger:       logger,
+		db:           db,
 		inner:        inner,
 		nodeID:       config.GetName(),
 		streamKey:    "nakama:leaderboard_cache:stream",
@@ -122,8 +125,17 @@ func NewRedisLeaderboardCache(ctx context.Context, logger, startupLogger *zap.Lo
 	return c
 }
 
-// 接口实现（读操作转发）
-func (c *RedisLeaderboardCache) Get(id string) *Leaderboard { return c.inner.Get(id) }
+// 接口实现（读操作转发，带数据库兜底）
+func (c *RedisLeaderboardCache) Get(id string) *Leaderboard {
+	lb := c.inner.Get(id)
+	if lb != nil {
+		return lb
+	}
+
+	// 兜底：尝试从数据库加载（支持普通排行榜和锦标赛）
+	lb = c.loadFromDB(id)
+	return lb
+}
 
 func (c *RedisLeaderboardCache) ListAll(limit int, reverse bool, cursor *LeaderboardAllCursor) ([]*Leaderboard, int, *LeaderboardAllCursor) {
 	return c.inner.ListAll(limit, reverse, cursor)
@@ -409,4 +421,96 @@ func (c *RedisLeaderboardCache) handleSyncMessage(msg *leaderboardCacheSyncMsg) 
 			zap.String("type", msg.Type),
 			zap.String("from_node", msg.NodeID))
 	}
+}
+
+// loadFromDB 从数据库加载 leaderboard 并填充到本地缓存（支持普通排行榜和锦标赛）
+func (c *RedisLeaderboardCache) loadFromDB(id string) *Leaderboard {
+	if c.db == nil {
+		return nil
+	}
+
+	// 从数据库读取定义
+	var dbAuthoritative bool
+	var dbSortOrder int
+	var dbOperator int
+	var dbResetSchedule string
+	var dbMetadata string
+	var dbCreateTime time.Time
+	var dbCategory int
+	var dbDescription string
+	var dbDuration int
+	var dbEndTime sql.NullTime
+	var dbJoinRequired bool
+	var dbMaxSize int
+	var dbMaxNumScore int
+	var dbTitle string
+	var dbStartTime time.Time
+	var dbEnableRanks bool
+
+	err := c.db.QueryRowContext(c.ctx, `
+		SELECT authoritative, sort_order, operator, COALESCE(reset_schedule, ''), metadata, create_time,
+		       category, description, duration, end_time, join_required, max_size, max_num_score, title, start_time, enable_ranks
+		FROM leaderboard WHERE id = $1`, id).
+		Scan(&dbAuthoritative, &dbSortOrder, &dbOperator, &dbResetSchedule, &dbMetadata, &dbCreateTime,
+			&dbCategory, &dbDescription, &dbDuration, &dbEndTime, &dbJoinRequired, &dbMaxSize, &dbMaxNumScore, &dbTitle, &dbStartTime, &dbEnableRanks)
+
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			c.logger.Warn("Error loading leaderboard from database for cache fill",
+				zap.String("leaderboard_id", id),
+				zap.Error(err))
+		}
+		return nil
+	}
+
+	// 填充到本地缓存（不广播）
+	if localCache, ok := c.inner.(*LocalLeaderboardCache); ok {
+		var endUnix int64
+		if dbEndTime.Valid {
+			endUnix = dbEndTime.Time.Unix()
+		}
+
+		if dbDuration > 0 {
+			// 锦标赛
+			c.logger.Info("Loading tournament from database to local cache",
+				zap.String("tournament_id", id),
+				zap.String("title", dbTitle))
+			localCache.insertTournamentLocal(
+				id,
+				dbAuthoritative,
+				dbSortOrder,
+				dbOperator,
+				dbResetSchedule,
+				dbMetadata,
+				dbTitle,
+				dbDescription,
+				dbCategory,
+				dbDuration,
+				dbMaxSize,
+				dbMaxNumScore,
+				dbJoinRequired,
+				dbCreateTime.Unix(),
+				dbStartTime.Unix(),
+				endUnix,
+				dbEnableRanks,
+			)
+		} else {
+			// 普通排行榜
+			c.logger.Info("Loading leaderboard from database to local cache",
+				zap.String("leaderboard_id", id))
+			localCache.Insert(
+				id,
+				dbAuthoritative,
+				dbSortOrder,
+				dbOperator,
+				dbResetSchedule,
+				dbMetadata,
+				dbCreateTime.Unix(),
+				dbEnableRanks,
+			)
+		}
+	}
+
+	// 返回填充后的缓存对象
+	return c.inner.Get(id)
 }
