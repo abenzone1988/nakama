@@ -2,7 +2,7 @@ name: nakama-node-jp1
 
 database:
   address:
-    - "postgres://nakama:nakama@localhost:5432/nakama?sslmode=disable"
+    - "root:sparkinfi123!@192.168.102.223:5432?dbname=test"
   max_open_conns: 30
   max_idle_conns: 10
 logger:
@@ -18,7 +18,7 @@ session:
 
 cluster:
   enabled: true
-  redis_address: "localhost:6379"
+  redis_address: "192.168.102.223:6379"
   redis_password: ""
   redis_db: 0
 

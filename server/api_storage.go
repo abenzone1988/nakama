@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"go.uber.org/zap"
@@ -214,7 +215,7 @@ func (s *ApiServer) WriteStorageObjects(ctx context.Context, in *api.WriteStorag
 			}
 		} else {
 			//正式上线需要必须签名
-			return nil, status.Error(codes.InvalidArgument, "Invalid value.")
+			return nil, status.Error(codes.InvalidArgument, "Signature is null.")
 		}
 	}
 
