@@ -5630,10 +5630,11 @@
         "APPLE_APP_STORE",
         "GOOGLE_PLAY_STORE",
         "HUAWEI_APP_GALLERY",
-        "FACEBOOK_INSTANT_STORE"
+        "FACEBOOK_INSTANT_STORE",
+        "PLAY800_SDK"
       ],
       "default": "APPLE_APP_STORE",
-      "description": "- APPLE_APP_STORE: Apple App Store\n - GOOGLE_PLAY_STORE: Google Play Store\n - HUAWEI_APP_GALLERY: Huawei App Gallery\n - FACEBOOK_INSTANT_STORE: Facebook Instant Store",
+      "description": "- APPLE_APP_STORE: Apple App Store\n - GOOGLE_PLAY_STORE: Google Play Store\n - HUAWEI_APP_GALLERY: Huawei App Gallery\n - FACEBOOK_INSTANT_STORE: Facebook Instant Store\n - PLAY800_SDK: Play800 SDK",
       "title": "Validation Provider,"
     },
     "apiSubscriptionList": {
@@ -6325,10 +6326,9 @@
     "gameBuyChapterItemRequest": {
       "type": "object",
       "properties": {
-        "index": {
-          "type": "integer",
-          "format": "int32",
-          "title": "商品索引"
+        "id": {
+          "type": "string",
+          "title": "商品ID（唯一标识）"
         }
       },
       "title": "购买章节商品请求"
@@ -6362,10 +6362,9 @@
     "gameBuyGemItemRequest": {
       "type": "object",
       "properties": {
-        "index": {
-          "type": "integer",
-          "format": "int32",
-          "title": "商品索引"
+        "id": {
+          "type": "string",
+          "title": "商品ID（唯一标识）"
         }
       },
       "title": "购买钻石商品请求"
@@ -6400,10 +6399,9 @@
           "$ref": "#/definitions/gameShopType",
           "title": "商店类型"
         },
-        "index": {
-          "type": "integer",
-          "format": "int32",
-          "title": "商品索引"
+        "id": {
+          "type": "string",
+          "title": "商品ID（唯一标识）"
         },
         "count": {
           "type": "integer",
@@ -6797,14 +6795,9 @@
     "gameShopItem": {
       "type": "object",
       "properties": {
-        "index": {
-          "type": "integer",
-          "format": "int32",
-          "title": "商品在列表中的索引"
-        },
-        "shopItemId": {
+        "id": {
           "type": "string",
-          "title": "配置表ID"
+          "title": "配置表ID（唯一标识）"
         },
         "itemId": {
           "type": "string",
@@ -6921,7 +6914,7 @@
           "format": "int32"
         }
       },
-      "title": "钱包结构"
+      "title": "钱包结构v"
     },
     "protobufAny": {
       "type": "object",

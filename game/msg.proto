@@ -96,15 +96,38 @@ message LevelData{
   string last_get_on_hook_timestamp = 6; // 最后一次领取挂机奖励时间，ISO 8601 格式
 }
 
+// 首冲数据
+message FirstChargeData{
+  bool is_charged = 1;                     // 是否已首冲
+  string charge_time = 2;                  // 首冲时间，ISO 8601 格式
+  repeated int32 claimed_days = 3;         // 已领取的天数列表（例如：[1, 2, 3]）
+}
+
+// 七日购买数据
+message SevenDayData{
+  string last_purchase_time = 1;           // 最后一次购买时间，ISO 8601 格式
+  repeated int32 claimed_days = 2;         // 当前周期已领取的天数列表（例如：[0, 1, 2, 3]）
+  int32 total_purchases = 3;               // 总购买次数
+}
+
+// 每日签到数据
+message SignInData{
+  int32 current_day = 1;                   // 当前已签到到的天数（1-30）
+  string last_claim_date = 2;              // 最后一次签到日期（YYYY-MM-DD）
+}
+
 // 玩家元数据
 message UserMeta{
   int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
   StaminaData stamina = 2;
   EquipData equip = 3;
   LevelData level = 4;
+  FirstChargeData first_charge = 5; // 首冲数据
+  SevenDayData seven_day = 6;       // 七日购买数据
+  SignInData sign_in = 7;           // 每日签到数据
 }
 
-// 钱包结构
+// 钱包结构v
 message Wallet{
   int32 coin = 1;
   int32 gem = 2;
@@ -188,9 +211,8 @@ message ClaimOnHookRewardResponse{
   int32 code = 1;
   string msg = 2;
   int32 hours = 3; // 领取的小时数
-  int32 coin = 4; // 金币奖励
-  Reward reward = 5; // 其他奖励数据
-  Wallet wallet_updated = 6; // 钱包更新结果
+  Reward reward = 4; // 其他奖励数据
+  Wallet wallet_updated = 5; // 钱包更新结果
   repeated Item inventory_updated = 7; // 背包更新结果
 }
 
@@ -249,6 +271,93 @@ message ClaimLivenessRewardResponse{
   Reward reward = 3;                   // 奖励数据
   Wallet wallet_updated = 4;           // 钱包更新结果
   repeated Item inventory_updated = 5; // 背包更新结果
+}
+
+// 获取首冲状态请求
+message GetFirstChargeStatusRequest{
+}
+
+// 获取首冲状态响应
+message GetFirstChargeStatusResponse{
+  int32 code = 1;
+  string msg = 2;
+  bool is_charged = 3;                 // 是否已首冲
+  string charge_time = 4;              // 首冲时间
+  repeated int32 claimed_days = 5;     // 已领取的天数列表
+  int32 available_days = 6;            // 当前可领取的天数（例如第3天可以领1、2、3天的奖励）
+}
+
+// 领取首冲奖励请求
+message ClaimFirstChargeRewardRequest{
+  int32 day = 1; // 要领取的天数（1-7）
+}
+
+// 领取首冲奖励响应
+message ClaimFirstChargeRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;                   // 奖励数据
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+  repeated int32 claimed_days = 6;     // 更新后的已领取天数列表
+}
+
+// 获取七日购买状态请求
+message GetSevenDayStatusRequest{
+}
+
+// 获取七日购买状态响应
+message GetSevenDayStatusResponse{
+  int32 code = 1;
+  string msg = 2;
+  bool is_purchased = 3;               // 是否已购买当前周期
+  string purchase_time = 4;            // 最后一次购买时间
+  repeated int32 claimed_days = 5;     // 已领取的天数列表
+  int32 available_days = 6;            // 当前可领取的天数（例如第3天可以领0、1、2、3天的奖励）
+  int32 total_purchases = 7;           // 总购买次数
+}
+
+// 领取七日奖励请求
+message ClaimSevenDayRewardRequest{
+  int32 day = 1; // 要领取的天数（0-7，0表示立即获得）
+}
+
+// 领取七日奖励响应
+message ClaimSevenDayRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;                   // 奖励数据
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+  repeated int32 claimed_days = 6;     // 更新后的已领取天数列表
+}
+
+// 领取VIP奖励请求（一次性）
+message ClaimVipRewardRequest{
+}
+
+// 领取VIP奖励响应
+message ClaimVipRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;                   // 奖励数据
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+  bool reward_claimed = 6;             // 当前领奖状态
+}
+
+// 领取每日签到奖励请求
+message ClaimSignInRewardRequest{
+}
+
+// 领取每日签到奖励响应
+message ClaimSignInRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 day = 3;                       // 当前领取的天数
+  Reward reward = 4;                   // 奖励数据
+  Wallet wallet_updated = 5;           // 钱包更新结果
+  repeated Item inventory_updated = 6; // 背包更新结果
 }
 
 message OperateWalletRequest{
@@ -313,15 +422,14 @@ enum PayType {
 
 // 商店商品（普通商店）
 message ShopItem {
-  int32 index = 1;                // 商品在列表中的索引
-  string shop_item_id = 2;        // 配置表ID
-  string item_id = 3;             // 物品ID
-  PayType pay_type = 4;           // 货币类型
-  int32 price = 5;                // 当前价格
-  int32 discount = 6;             // 折扣（0-10，0表示无折扣）
-  int32 item_count = 7;           // 商品数量
-  int32 max_buy_count = 8;        // 最大购买次数（0表示无限制）
-  int32 bought_count = 9;         // 已购买次数
+  string id = 1;                  // 配置表ID（唯一标识）
+  string item_id = 2;             // 物品ID
+  PayType pay_type = 3;           // 货币类型
+  int32 price = 4;                // 当前价格
+  int32 discount = 5;             // 折扣（0-10，0表示无折扣）
+  int32 item_count = 6;           // 商品数量
+  int32 max_buy_count = 7;        // 最大购买次数（0表示无限制）
+  int32 bought_count = 8;         // 已购买次数
 }
 
 // 单个商店数据（普通商店）
@@ -349,7 +457,7 @@ enum ShopType {
 // 购买商店商品请求
 message BuyShopItemRequest {
   ShopType shop_type = 1;     // 商店类型
-  int32 index = 2;            // 商品索引
+  string id = 2;              // 商品ID（唯一标识）
   int32 count = 3;            // 购买数量（默认1，宝箱可能多个）
   bool use_ad = 4;            // 是否使用广告券（true=扣广告券，false=已看完广告免费）
 }
@@ -410,7 +518,7 @@ message ChapterShopData {
 
 // 购买章节商品请求
 message BuyChapterItemRequest {
-  int32 index = 1;      // 商品索引
+  string id = 1;              // 商品ID（唯一标识）
 }
 
 // 购买章节商品响应
@@ -429,7 +537,7 @@ message GemShopData {
 
 // 购买钻石商品请求
 message BuyGemItemRequest {
-  int32 index = 1;      // 商品索引
+  string id = 1;              // 商品ID（唯一标识）
 }
 
 // 购买钻石商品响应

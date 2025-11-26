@@ -1290,6 +1290,8 @@ enum StoreProvider {
   HUAWEI_APP_GALLERY = 2;
   // Facebook Instant Store
   FACEBOOK_INSTANT_STORE = 3;
+  // Play800 SDK
+  PLAY800_SDK = 4;
 }
 
 // Environment where a purchase/subscription took place,

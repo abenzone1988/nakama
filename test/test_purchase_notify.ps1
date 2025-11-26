@@ -18,11 +18,13 @@ $platforms = @{
         Site = "xjsmdyapp_android"
         Key = "0c373fedcec01cff88aacdb8d2e28dc2"
         DisplayName = "Android"
+        PayType = 2  # 支付宝
     }
     "ios" = @{
         Site = "xjsmdyapp_ios"
         Key = "234c4ec9c31af40a9a0239b868f10dd8"
         DisplayName = "iOS"
+        PayType = 1  # 苹果内购
     }
 }
 
@@ -42,6 +44,8 @@ function Test-Platform {
     $order_money = "6.00"
     $cp_order_id = "CP_${PlatformKey}_${timestamp}"
     $order_id = "ORDER_${PlatformKey}_${timestamp}"
+    $pay_type = $config.PayType
+    $ext = "test_ext_${PlatformKey}_${timestamp}"
     
     # Calculate signature: site + time + key + uid + order_money + cp_order_id
     $signStr = "$site$timestamp$key$uid$order_money$cp_order_id"
@@ -58,7 +62,7 @@ function Test-Platform {
     Write-Host ""
     
     # Build request body
-    $bodyString = "site=$site&order_id=$order_id&uid=$uid&sid=server_001&cp_order_id=$cp_order_id&roleid=role_${PlatformKey}_001&rolename=TestRole${PlatformKey}&order_money=$order_money&productid=product_${PlatformKey}_001&time=$timestamp&sign=$sign"
+    $bodyString = "site=$site&order_id=$order_id&uid=$uid&sid=server_001&cp_order_id=$cp_order_id&roleid=role_${PlatformKey}_001&rolename=TestRole${PlatformKey}&order_money=$order_money&productid=product_${PlatformKey}_001&pay_type=$pay_type&ext=$ext&time=$timestamp&sign=$sign"
     
     Write-Host "Sending request to: $Url" -ForegroundColor Cyan
     Write-Host ""

@@ -32,6 +32,9 @@ type TemplateManager interface {
 	GetTplShopGemItem() *TableTplShopGemItem
 	GetTplTasks() *TableTplTasks
 	GetTplProgressReward() *TableTplProgressReward
+	GetTplFirstCharge() *TableTplFirstCharge
+	GetTplSevenDay() *TableTplSevenDay
+	GetTplDailySignIn() *TableTplDailySignIn
 }
 
 type LocalTemplateManager struct {
@@ -54,6 +57,9 @@ type LocalTemplateManager struct {
 	tableTplShopGemItem       *TableTplShopGemItem
 	tableTplTasks             *TableTplTasks
 	tableTplProgressReward    *TableTplProgressReward
+	tableTplFirstCharge       *TableTplFirstCharge
+	tableTplSevenDay          *TableTplSevenDay
+	tableTplDailySignIn       *TableTplDailySignIn
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -77,9 +83,55 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplShopGemItem:       NewTableTplShopGemItem(logger, jsonPath),
 		tableTplTasks:             NewTableTplTasks(logger, jsonPath),
 		tableTplProgressReward:    NewTableTplProgressReward(logger, jsonPath),
+		tableTplFirstCharge:       NewTableTplFirstCharge(logger, jsonPath),
+		tableTplSevenDay:          NewTableTplSevenDay(logger, jsonPath),
+		tableTplDailySignIn:       NewTableTplDailySignIn(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
+}
+
+func (t *LocalTemplateManager) LoadData() {
+	t.Lock()
+	defer t.Unlock()
+
+	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
+	t.tableTplLevelInfo.LoadData(t.StorageReadTpl("TplLevelInfo"))
+	t.tableTplItem.LoadData(t.StorageReadTpl("TplItem"))
+	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
+	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
+	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
+	t.tableTplUnlock.LoadData(t.StorageReadTpl("TplUnlock"))
+	t.tableTplShop.LoadData(t.StorageReadTpl("TplShop"))
+	t.tableTplShopDailyItem.LoadData(t.StorageReadTpl("TplShopDailyItem"))
+	t.tableTplShopPermanentItem.LoadData(t.StorageReadTpl("TplShopPermanentItem"))
+	t.tableTplBoxShop.LoadData(t.StorageReadTpl("TplBoxShop"))
+	t.tableTplBoxShopItem.LoadData(t.StorageReadTpl("TplBoxShopItem"))
+	t.tableTplShopChapterItem.LoadData(t.StorageReadTpl("TplShopChapterItem"))
+	t.tableTplShopGemItem.LoadData(t.StorageReadTpl("TplShopGemItem"))
+	t.tableTplTasks.LoadData(t.StorageReadTpl("TplTasks"))
+	t.tableTplProgressReward.LoadData(t.StorageReadTpl("TplProgressReward"))
+	t.tableTplFirstCharge.LoadData(t.StorageReadTpl("TplFirstCharge"))
+	t.tableTplSevenDay.LoadData(t.StorageReadTpl("TplSevenDay"))
+	t.tableTplDailySignIn.LoadData(t.StorageReadTpl("TplDailySignIn"))
+}
+
+func (t *LocalTemplateManager) GetTplFirstCharge() *TableTplFirstCharge {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplFirstCharge
+}
+
+func (t *LocalTemplateManager) GetTplSevenDay() *TableTplSevenDay {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplSevenDay
+}
+
+func (t *LocalTemplateManager) GetTplDailySignIn() *TableTplDailySignIn {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplDailySignIn
 }
 
 func (t *LocalTemplateManager) GetTplRedemptionInfo() *TableTplRedemption {
@@ -134,28 +186,6 @@ func (t *LocalTemplateManager) GetTplLevelInfo() *TableTplLevelInfo {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplLevelInfo
-}
-
-func (t *LocalTemplateManager) LoadData() {
-	t.Lock()
-	defer t.Unlock()
-
-	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
-	t.tableTplLevelInfo.LoadData(t.StorageReadTpl("TplLevelInfo"))
-	t.tableTplItem.LoadData(t.StorageReadTpl("TplItem"))
-	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
-	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
-	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
-	t.tableTplUnlock.LoadData(t.StorageReadTpl("TplUnlock"))
-	t.tableTplShop.LoadData(t.StorageReadTpl("TplShop"))
-	t.tableTplShopDailyItem.LoadData(t.StorageReadTpl("TplShopDailyItem"))
-	t.tableTplShopPermanentItem.LoadData(t.StorageReadTpl("TplShopPermanentItem"))
-	t.tableTplBoxShop.LoadData(t.StorageReadTpl("TplBoxShop"))
-	t.tableTplBoxShopItem.LoadData(t.StorageReadTpl("TplBoxShopItem"))
-	t.tableTplShopChapterItem.LoadData(t.StorageReadTpl("TplShopChapterItem"))
-	t.tableTplShopGemItem.LoadData(t.StorageReadTpl("TplShopGemItem"))
-	t.tableTplTasks.LoadData(t.StorageReadTpl("TplTasks"))
-	t.tableTplProgressReward.LoadData(t.StorageReadTpl("TplProgressReward"))
 }
 
 func (t *LocalTemplateManager) GetTplShopDailyItem() *TableTplShopDailyItem {

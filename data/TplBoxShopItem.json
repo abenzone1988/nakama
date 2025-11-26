@@ -8,5 +8,6 @@
 "SB2007":{"shopItemName":"7级精致宝箱","res":"Box/Box2","payType":"GEM","level":7,"rewardInfo":"50000_1_65,60000_10_8,60000_20_4,60000_40_2,10000_200_15","refreshTime":12,"id":"SB2007","boxExp":50,"retailPrice":100,"wholesalePrice":950},
 "SB2008":{"shopItemName":"8级精致宝箱","res":"Box/Box2","payType":"GEM","level":8,"rewardInfo":"50000_1_67,60000_10_8,60000_20_4,60000_40_2,10000_200_15","refreshTime":12,"id":"SB2008","boxExp":50,"retailPrice":100,"wholesalePrice":950},
 "SB2009":{"shopItemName":"9级精致宝箱","res":"Box/Box2","payType":"GEM","level":9,"rewardInfo":"50000_1_69,60000_10_8,60000_20_4,60000_40_2,10000_200_15","refreshTime":12,"id":"SB2009","boxExp":50,"retailPrice":100,"wholesalePrice":950},
-"SB2010":{"shopItemName":"10级精致宝箱","res":"Box/Box2","payType":"GEM","level":10,"rewardInfo":"50000_1_71,60000_10_8,60000_20_4,60000_40_2,10000_200_15","refreshTime":12,"id":"SB2010","boxExp":50,"retailPrice":100,"wholesalePrice":950}
+"SB2010":{"shopItemName":"10级精致宝箱","res":"Box/Box2","payType":"GEM","level":10,"rewardInfo":"50000_1_71,60000_10_8,60000_20_4,60000_40_2,10000_200_15","refreshTime":12,"id":"SB2010","boxExp":50,"retailPrice":100,"wholesalePrice":950},
+"SB3001":{"shopItemName":"新手引导宝箱","res":"Box/Box2","payType":"GEM","level":1,"rewardInfo":"EQ1100_1","refreshTime":12,"id":"SB3001","boxExp":50,"retailPrice":100,"wholesalePrice":950}
 }

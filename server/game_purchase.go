@@ -3,10 +3,9 @@ package server
 import (
 	"context"
 	"crypto/md5"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,16 +26,18 @@ var (
 
 // PurchaseNotifyRequest 支付通知请求结构
 type PurchaseNotifyRequest struct {
-	Site       string `json:"site"`     // 应用 ID
-	OrderID    string `json:"order_id"` // 商户订单号
-	UID        string `json:"uid"`      // 用户ID
-	SID        string `json:"sid"`
+	Site       string `json:"site"`        // 应用 ID
+	OrderID    string `json:"order_id"`    // 商户订单号
+	UID        string `json:"uid"`         // 用户ID
+	SID        string `json:"sid"`         //服务器 ID
 	CPOrderID  string `json:"cp_order_id"` // CP订单号
 	RoleID     string `json:"roleid"`      // 角色ID
 	RoleName   string `json:"rolename"`    // 角色名称
 	OrderMoney string `json:"order_money"` // 实际总价
 	ProductID  string `json:"productid"`   // 商品ID
-	Time       string `json:"time"`        // 时间戳
+	PayType    int    `json:"pay_type"`    // 支付方式 1：苹果内购, 2：支付宝, 3和11：微信h5支付, 5：微信公众号支付, 13：微信虚拟内购
+	Ext        string `json:"ext"`         // 透传字段，由 CP 定义的字段
+	Time       string `json:"time"`        // 时间戳 10位
 	Sign       string `json:"sign"`        // 签名
 }
 
@@ -61,6 +62,7 @@ func (s *ApiServer) HandlePurchaseNotify(w http.ResponseWriter, r *http.Request)
 	// 先尝试解析表单数据
 	if err := r.ParseForm(); err == nil && len(r.Form) > 0 {
 		// 从表单获取参数
+		payType, _ := strconv.Atoi(r.FormValue("pay_type"))
 		req = PurchaseNotifyRequest{
 			Site:       r.FormValue("site"),
 			OrderID:    r.FormValue("order_id"),
@@ -71,12 +73,14 @@ func (s *ApiServer) HandlePurchaseNotify(w http.ResponseWriter, r *http.Request)
 			RoleName:   r.FormValue("rolename"),
 			OrderMoney: r.FormValue("order_money"),
 			ProductID:  r.FormValue("productid"),
+			PayType:    payType,
+			Ext:        r.FormValue("ext"),
 			Time:       r.FormValue("time"),
 			Sign:       r.FormValue("sign"),
 		}
 	} else {
 		// 如果表单解析失败，尝试JSON格式
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			s.logger.Error("读取购买通知请求失败", zap.Error(err))
 			s.writePurchaseError(w, "READ_ERROR", http.StatusBadRequest)
@@ -220,31 +224,6 @@ func (s *ApiServer) verifyPurchaseSignature(req PurchaseNotifyRequest) bool {
 
 // processPurchaseDelivery 处理购买发货
 func (s *ApiServer) processPurchaseDelivery(ctx context.Context, req *PurchaseNotifyRequest) error {
-	// TODO: 实现实际的发货逻辑
-	// 1. 根据UID查找用户
-	// 2. 验证订单是否已处理（防止重复发货）
-	// 3. 发放商品到用户账户
-	// 4. 记录订单状态
-
-	s.logger.Info("开始处理发货",
-		zap.String("uid", req.UID),
-		zap.String("product_id", req.ProductID),
-		zap.String("order_id", req.OrderID))
-
-	// 示例：这里应该调用实际的发货逻辑
-	// userID, err := FindUserByDeviceID(ctx, s.logger, s.db, req.UID)
-	// if err != nil {
-	//     return fmt.Errorf("查找用户失败: %v", err)
-	// }
-
-	// 发送通知或更新用户数据
-	// ...
-
-	return nil
-}
-
-// processPurchaseDelivery 处理购买发货
-func (s *ApiServer) processPurchaseDeliveryV3(ctx context.Context, req *PurchaseNotifyRequest) error {
 	s.logger.Info("开始处理发货",
 		zap.String("uid", req.UID),
 		zap.String("product_id", req.ProductID),
@@ -252,7 +231,7 @@ func (s *ApiServer) processPurchaseDeliveryV3(ctx context.Context, req *Purchase
 		zap.String("cp_order_id", req.CPOrderID))
 
 	// 1. 根据UID查找用户
-	userID, err := s.findUserByCustomID(ctx, req.UID)
+	userID, err := FindUserByCustomID(ctx, s.logger, s.db, req.UID)
 	if err != nil {
 		return fmt.Errorf("查找用户失败: %w", err)
 	}
@@ -273,7 +252,7 @@ func (s *ApiServer) processPurchaseDeliveryV3(ctx context.Context, req *Purchase
 		return nil
 	}
 
-	// 3. 将订单金额转换为整数（分）
+	// 3. 将订单金额转换为整数（元）
 	orderMoneyFloat, err := strconv.ParseFloat(req.OrderMoney, 64)
 	if err != nil {
 		return fmt.Errorf("订单金额格式错误: %w", err)
@@ -326,70 +305,6 @@ func (s *ApiServer) writePurchaseSuccessText(w http.ResponseWriter) {
 	w.Write([]byte("SUCCESS"))
 }
 
-// findUserByCustomID 根据第三方平台的UID查找用户UUID
-// 支持多种ID类型: custom_id, apple_id, facebook_id, google_id 等
-func (s *ApiServer) findUserByCustomID(ctx context.Context, customID string) (uuid.UUID, error) {
-	var userID uuid.UUID
-
-	// 根据实际情况选择查询方式
-	// 方式1: 如果使用 custom_id 字段 (需要在 users 表中有此字段)
-	// query := "SELECT id FROM users WHERE custom_id = $1 LIMIT 1"
-
-	// 方式2: 如果使用 username 作为第三方ID
-	query := "SELECT id FROM users WHERE username = $1 LIMIT 1"
-
-	// 方式3: 如果是Facebook ID (参考 core_user.go::GetUsers 的模式)
-	// query := "SELECT id FROM users WHERE facebook_id = $1 LIMIT 1"
-
-	// 方式4: 如果是Apple ID
-	// query := "SELECT id FROM users WHERE apple_id = $1 LIMIT 1"
-
-	// 方式5: 支持多种ID类型查询 (最灵活)
-	// query := `SELECT id FROM users
-	//           WHERE username = $1 OR custom_id = $1 OR facebook_id = $1
-	//           LIMIT 1`
-
-	err := s.db.QueryRowContext(ctx, query, customID).Scan(&userID)
-
-	if err == sql.ErrNoRows {
-		// 选项A: 返回错误，要求用户必须先注册
-		return uuid.Nil, fmt.Errorf("用户不存在: %s", customID)
-
-		// 选项B: 自动创建新用户 (如果业务允许)
-		// s.logger.Info("用户不存在，自动创建", zap.String("custom_id", customID))
-		// return s.createUserWithCustomID(ctx, customID)
-	}
-	if err != nil {
-		s.logger.Error("查找用户失败", zap.Error(err), zap.String("custom_id", customID))
-		return uuid.Nil, fmt.Errorf("数据库查询失败: %w", err)
-	}
-
-	return userID, nil
-}
-
-// createUserWithCustomID 自动创建用户 (可选功能)
-func (s *ApiServer) createUserWithCustomID(ctx context.Context, customID string) (uuid.UUID, error) {
-	userID := uuid.Must(uuid.NewV4())
-	username := "user_" + customID
-
-	// 创建新用户
-	query := `INSERT INTO users (id, username, create_time, update_time)
-	          VALUES ($1, $2, now(), now())
-	          RETURNING id`
-
-	err := s.db.QueryRowContext(ctx, query, userID, username).Scan(&userID)
-	if err != nil {
-		s.logger.Error("创建用户失败", zap.Error(err), zap.String("custom_id", customID))
-		return uuid.Nil, fmt.Errorf("创建用户失败: %w", err)
-	}
-
-	s.logger.Info("自动创建新用户",
-		zap.String("user_id", userID.String()),
-		zap.String("custom_id", customID))
-
-	return userID, nil
-}
-
 // recordThirdPartyPurchase 记录第三方购买到数据库（复用现有购买系统）
 func (s *ApiServer) recordThirdPartyPurchase(ctx context.Context, userID uuid.UUID, req *PurchaseNotifyRequest) error {
 	// 构建原始响应JSON（用于存储完整的通知数据）
@@ -408,7 +323,7 @@ func (s *ApiServer) recordThirdPartyPurchase(ctx context.Context, userID uuid.UU
 	// 构建存储购买对象
 	sPurchase := &storagePurchase{
 		userID:        userID,
-		store:         api.StoreProvider_APPLE_APP_STORE, // 可以添加自定义的 StoreProvider 类型
+		store:         api.StoreProvider_PLAY800_SDK,
 		productId:     req.ProductID,
 		transactionId: req.CPOrderID, // 使用CP订单号作为唯一交易ID
 		rawResponse:   string(rawResponse),
@@ -433,9 +348,98 @@ func (s *ApiServer) recordThirdPartyPurchase(ctx context.Context, userID uuid.UU
 
 // deliverProductToUser 向用户发放商品
 func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, productID string, amount float64, req *PurchaseNotifyRequest) error {
-	// TODO: 根据实际业务逻辑实现发货
-	// 这里提供几种常见的发货方式：
+	// 检测是否为特殊商品
+	isFirstCharge := productID == FirstChargeProductID || amount == FirstChargePriceFloat
+	isVipPurchase := productID == VipProductID || amount == VipPriceFloat
+	isSevenDayPurchase := productID == SevenDayProductID || amount == SevenDayPriceFloat
 
+	var ctxWithMeta context.Context
+	var needSaveMeta bool
+	if (isFirstCharge || isVipPurchase || isSevenDayPurchase) && ctx.Value(ctxUserIDKey{}) == nil {
+		ctx = context.WithValue(ctx, ctxUserIDKey{}, userID)
+	}
+	if isFirstCharge || isVipPurchase || isSevenDayPurchase {
+		ctxWithMeta = WithUserMetaManager(ctx, s.logger, s.db, s.statusRegistry)
+	}
+
+	// 如果是首冲，记录首冲状态
+	if isFirstCharge && ctxWithMeta != nil {
+		if err := RecordFirstCharge(ctxWithMeta, s.logger); err != nil {
+			s.logger.Error("记录首冲失败",
+				zap.Error(err),
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID))
+			// 首冲记录失败不影响发货流程，继续处理
+		} else {
+			s.logger.Info("首冲记录成功",
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID),
+				zap.Float64("amount", amount))
+			needSaveMeta = true
+		}
+	}
+
+	// 如果是VIP购买，记录VIP状态并解锁奖励
+	if isVipPurchase {
+		username := userID.String()
+		users, err := GetUsers(ctx, s.logger, s.db, s.statusRegistry, []string{userID.String()}, nil, nil)
+		if err == nil && users != nil && len(users.Users) > 0 && users.Users[0] != nil && users.Users[0].Username != "" {
+			username = users.Users[0].Username
+		}
+
+		expiryTime := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC) // 视为永久
+		if _, err := VipAccountAdd(ctx, s.logger, s.db, userID, username, expiryTime); err != nil {
+			if err == ErrVipAccountAlreadyExists {
+				s.logger.Info("VIP账户已存在，刷新有效期",
+					zap.String("user_id", userID.String()),
+					zap.String("product_id", productID))
+			} else {
+				s.logger.Error("记录VIP购买失败",
+					zap.Error(err),
+					zap.String("user_id", userID.String()),
+					zap.String("product_id", productID))
+			}
+		} else {
+			s.logger.Info("VIP购买记录成功",
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID),
+				zap.Time("vip_expiry", expiryTime))
+		}
+
+		// 重置VIP奖励领取状态
+		vipRewardData := &VipRewardData{}
+		vipRewardData.Init()
+		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, vipRewardData); err != nil {
+			s.logger.Error("重置VIP奖励状态失败",
+				zap.Error(err),
+				zap.String("user_id", userID.String()))
+		}
+	}
+
+	// 如果是七日购买，记录购买状态
+	if isSevenDayPurchase && ctxWithMeta != nil {
+		if err := s.RecordSevenDayPurchase(ctxWithMeta, userID); err != nil {
+			s.logger.Error("记录七日购买失败",
+				zap.Error(err),
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID))
+			// 记录失败不影响发货流程，继续处理
+		} else {
+			s.logger.Info("七日购买记录成功",
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID),
+				zap.Float64("amount", amount))
+			needSaveMeta = true
+		}
+	}
+
+	if needSaveMeta && ctxWithMeta != nil {
+		if err := SaveUserMeta(ctxWithMeta); err != nil {
+			s.logger.Error("保存用户元数据失败", zap.Error(err))
+		}
+	}
+
+	// TODO: 根据实际业务逻辑实现其他发货
 	// 方式1: 通过钱包系统发放虚拟货币
 	// changeset := map[string]int64{
 	// 	"coins": int64(amount * 100), // 转换为游戏币
@@ -471,7 +475,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 		{
 			Id:         uuid.Must(uuid.NewV4()).String(),
 			Subject:    "购买成功",
-			Content:    fmt.Sprintf(`{"product_id":"%s","amount":"%.2f","order_id":"%s"}`, productID, amount, req.CPOrderID),
+			Content:    fmt.Sprintf(`{"product_id":"%s","amount":"%.2f","order_id":"%s","is_first_charge":%t,"is_vip":%t}`, productID, amount, req.CPOrderID, isFirstCharge, isVipPurchase),
 			Code:       100, // 自定义通知代码
 			SenderId:   uuid.Nil.String(),
 			Persistent: true,
@@ -484,12 +488,13 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	// 	s.logger.Warn("发送通知失败", zap.Error(err))
 	// }
 
-	s.logger.Info("商品发放完成（模拟）",
+	s.logger.Info("商品发放完成",
 		zap.String("user_id", userID.String()),
 		zap.String("product_id", productID),
 		zap.Float64("amount", amount),
+		zap.Bool("is_first_charge", isFirstCharge),
+		zap.Bool("is_vip_purchase", isVipPurchase),
 		zap.Any("notifications", notifications))
 
-	// 临时返回成功，实际需要根据业务实现
 	return nil
 }

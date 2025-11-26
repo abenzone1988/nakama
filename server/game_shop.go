@@ -35,40 +35,6 @@ func (d *ShopData) Init() {
 	d.Shops = make(map[string]*ShopInfo)
 }
 
-// ChapterShopData 章节商店数据（独立存储）
-type ChapterShopData struct {
-	Items []*ShopItem `json:"items"`
-}
-
-func (d *ChapterShopData) GetCollection() string {
-	return "shop"
-}
-
-func (d *ChapterShopData) GetKey() string {
-	return "chapter"
-}
-
-func (d *ChapterShopData) Init() {
-	d.Items = []*ShopItem{}
-}
-
-// GemShopData 钻石商店数据（独立存储）
-type GemShopData struct {
-	Items []*ShopItem `json:"items"`
-}
-
-func (d *GemShopData) GetCollection() string {
-	return "shop"
-}
-
-func (d *GemShopData) GetKey() string {
-	return "gem"
-}
-
-func (d *GemShopData) Init() {
-	d.Items = []*ShopItem{}
-}
-
 type ShopInfo struct {
 	ShopType        game.ShopType `json:"shop_type"`
 	Items           []*ShopItem   `json:"items"`
@@ -78,7 +44,6 @@ type ShopInfo struct {
 }
 
 type ShopItem struct {
-	Index       int32        `json:"index"`
 	ShopItemID  string       `json:"shop_item_id"`
 	ItemID      string       `json:"item_id"`
 	PayType     game.PayType `json:"pay_type"`
@@ -144,50 +109,6 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 	//}
 
 	return convertToProtoShopData(shopData), nil
-}
-
-// GetChapterShop RPC获取章节商店数据（IAP）
-func (s *ApiServer) GetChapterShop(ctx context.Context, in *emptypb.Empty) (*game.ChapterShopData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	chapterShopData := &ChapterShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, chapterShopData); err != nil {
-		s.logger.Error("加载章节商店数据失败", zap.Error(err))
-		// 首次初始化
-		chapterShopData.Init()
-	}
-
-	// 初始化章节商店
-	s.initChapterShopStandalone(chapterShopData)
-
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, chapterShopData); err != nil {
-		s.logger.Error("保存章节商店数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	return convertToProtoChapterShop(chapterShopData), nil
-}
-
-// GetGemShop RPC获取钻石商店数据（IAP）
-func (s *ApiServer) GetGemShop(ctx context.Context, in *emptypb.Empty) (*game.GemShopData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	gemShopData := &GemShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, gemShopData); err != nil {
-		s.logger.Error("加载钻石商店数据失败", zap.Error(err))
-		// 首次初始化
-		gemShopData.Init()
-	}
-
-	// 初始化钻石商店
-	s.initGemShopStandalone(gemShopData)
-
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, gemShopData); err != nil {
-		s.logger.Error("保存钻石商店数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	return convertToProtoGemShop(gemShopData), nil
 }
 
 // initShop 初始化常规商店（只处理TplShop配置的商店）
@@ -286,7 +207,6 @@ func (s *ApiServer) addRandomShopItems(shop *ShopInfo, tplShop *TplShop) {
 	for i := int32(0); i < tplShop.FreeProductCount; i++ {
 		if item := getRandomDailyItem(freeItems); item != nil {
 			shopItem := &ShopItem{
-				Index:       int32(len(shop.Items)),
 				ShopItemID:  item.ID,
 				ItemID:      item.Item,
 				PayType:     game.PayType_FREE,
@@ -304,7 +224,6 @@ func (s *ApiServer) addRandomShopItems(shop *ShopInfo, tplShop *TplShop) {
 	for i := int32(0); i < tplShop.AdProductCount; i++ {
 		if item := getRandomDailyItem(adItems); item != nil {
 			shopItem := &ShopItem{
-				Index:       int32(len(shop.Items)),
 				ShopItemID:  item.ID,
 				ItemID:      item.Item,
 				PayType:     game.PayType_AD,
@@ -323,7 +242,6 @@ func (s *ApiServer) addRandomShopItems(shop *ShopInfo, tplShop *TplShop) {
 		if item := getRandomDailyItem(coinItems); item != nil {
 			discount := parseDiscountRate(tplShop.CoinProductDiscountRate)
 			shopItem := &ShopItem{
-				Index:       int32(len(shop.Items)),
 				ShopItemID:  item.ID,
 				ItemID:      item.Item,
 				PayType:     game.PayType_COIN,
@@ -342,7 +260,6 @@ func (s *ApiServer) addRandomShopItems(shop *ShopInfo, tplShop *TplShop) {
 		if item := getRandomDailyItem(gemItems); item != nil {
 			discount := parseDiscountRate(tplShop.GemProductDiscountRate)
 			shopItem := &ShopItem{
-				Index:       int32(len(shop.Items)),
 				ShopItemID:  item.ID,
 				ItemID:      item.Item,
 				PayType:     game.PayType_GEM,
@@ -393,7 +310,6 @@ func (s *ApiServer) addPermanentShopItems(shop *ShopInfo, tplShop *TplShop) {
 		}
 
 		shopItem := &ShopItem{
-			Index:         int32(len(shop.Items)),
 			ShopItemID:    tplPermanent.ID,
 			ItemID:        tplPermanent.Item,
 			PayType:       defaultPayType,
@@ -458,52 +374,6 @@ func parseDiscountRate(discountInfo string) int32 {
 	return 0
 }
 
-// initChapterShopStandalone 初始化章节商店（独立）
-func (s *ApiServer) initChapterShopStandalone(chapterShopData *ChapterShopData) {
-	if len(chapterShopData.Items) > 0 {
-		return
-	}
-
-	allItems := s.template.GetTplShopChapterItem().FindAll().ToSlice()
-	for idx, tplItem := range allItems {
-		shopItem := &ShopItem{
-			Index:       int32(idx),
-			ShopItemID:  tplItem.ID,
-			ItemID:      "",
-			PayType:     game.PayType_IAP, // IAP
-			Price:       0,
-			Discount:    0,
-			ItemCount:   1,
-			MaxBuyCount: tplItem.Count,
-			BoughtCount: 0,
-		}
-		chapterShopData.Items = append(chapterShopData.Items, shopItem)
-	}
-}
-
-// initGemShopStandalone 初始化钻石商店（独立）
-func (s *ApiServer) initGemShopStandalone(gemShopData *GemShopData) {
-	if len(gemShopData.Items) > 0 {
-		return
-	}
-
-	allItems := s.template.GetTplShopGemItem().FindAll().ToSlice()
-	for idx, tplItem := range allItems {
-		shopItem := &ShopItem{
-			Index:       int32(idx),
-			ShopItemID:  tplItem.ID,
-			ItemID:      "",
-			PayType:     game.PayType_IAP, // IAP
-			Price:       0,
-			Discount:    0,
-			ItemCount:   tplItem.Num,
-			MaxBuyCount: 0, // 无限制
-			BoughtCount: 0,
-		}
-		gemShopData.Items = append(gemShopData.Items, shopItem)
-	}
-}
-
 // BuyShopItem 统一的商店购买接口
 func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest) (*game.BuyShopItemResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
@@ -521,11 +391,18 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 		return &game.BuyShopItemResponse{Code: 1, Msg: "商店不存在"}, nil
 	}
 
-	if in.Index < 0 || in.Index >= int32(len(shop.Items)) {
-		return &game.BuyShopItemResponse{Code: 2, Msg: "无效的商品索引"}, nil
+	// 通过 id 查找商品
+	var item *ShopItem
+	for i := range shop.Items {
+		if shop.Items[i].ShopItemID == in.Id {
+			item = shop.Items[i]
+			break
+		}
 	}
 
-	item := shop.Items[in.Index]
+	if item == nil {
+		return &game.BuyShopItemResponse{Code: 2, Msg: "商品不存在"}, nil
+	}
 
 	// 检查购买次数
 	if item.MaxBuyCount > 0 && item.BoughtCount >= item.MaxBuyCount {
@@ -544,60 +421,17 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 		return &game.BuyShopItemResponse{Code: 4, Msg: err.Error()}, nil
 	}
 
-	// 扣除货币
-	var walletUpdateResult *game.WalletUpdateResult
-	if cost != nil && (cost.Coin > 0 || cost.Gem > 0 || cost.Ad > 0) {
-		walletChangeset := make(map[string]int64)
-		if cost.Coin > 0 {
-			walletChangeset["coin"] = -int64(cost.Coin)
-		}
-		if cost.Gem > 0 {
-			walletChangeset["gem"] = -int64(cost.Gem)
-		}
-		if cost.Ad > 0 {
-			walletChangeset["ad"] = -int64(cost.Ad)
-		}
-
-		metadata, _ := json.Marshal(map[string]interface{}{
-			"source":    "shop_purchase",
-			"shop_type": in.ShopType.String(),
-			"index":     in.Index,
-		})
-
-		walletUpdates := []*walletUpdate{{
-			UserID:    userID,
-			Changeset: walletChangeset,
-			Metadata:  string(metadata),
-		}}
-
-		results, err := UpdateWallets(ctx, s.logger, s.db, walletUpdates, true)
-		if err != nil {
-			s.logger.Error("扣除货币失败", zap.Error(err))
-			return &game.BuyShopItemResponse{Code: 5, Msg: "货币不足"}, nil
-		}
-
-		if len(results) > 0 {
-			walletUpdateResult = &game.WalletUpdateResult{
-				Previous: convertMapInt64ToWallet(results[0].Previous),
-				Updated:  convertMapInt64ToWallet(results[0].Updated),
-			}
-		}
+	// 使用统一的支付和奖励处理函数
+	source := fmt.Sprintf("shop_%s_%s", in.ShopType.String(), in.Id)
+	metadata := map[string]interface{}{
+		"shop_type": in.ShopType.String(),
+		"id":        in.Id,
 	}
 
-	// 发放奖励（使用统一的发放函数，支持特殊道具处理）
-	var inventoryUpdateResult *game.InventoryUpdateResult
-	if reward != nil {
-		source := fmt.Sprintf("shop_%s_%d", in.ShopType.String(), in.Index)
-		rewardWalletResult, rewardInventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
-		if err != nil {
-			s.logger.Error("发放奖励失败", zap.Error(err))
-		} else {
-			// 合并钱包结果（如果之前扣除货币的结果存在，使用扣除后的结果）
-			if rewardWalletResult != nil {
-				walletUpdateResult = rewardWalletResult
-			}
-			inventoryUpdateResult = rewardInventoryResult
-		}
+	walletUpdateResult, inventoryUpdateResult, err := s.processPaymentAndReward(ctx, cost, reward, source, metadata)
+	if err != nil {
+		s.logger.Error("处理支付和奖励失败", zap.Error(err))
+		return &game.BuyShopItemResponse{Code: 5, Msg: err.Error()}, nil
 	}
 
 	// 更新购买次数
@@ -687,102 +521,6 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 	}, nil
 }
 
-// BuyChapterItem 购买章节商品（独立接口，IAP）
-func (s *ApiServer) BuyChapterItem(ctx context.Context, in *game.BuyChapterItemRequest) (*game.BuyChapterItemResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	chapterShopData := &ChapterShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, chapterShopData); err != nil {
-		s.logger.Error("加载章节商店数据失败", zap.Error(err))
-		return &game.BuyChapterItemResponse{Code: -1, Msg: "加载商店数据失败"}, nil
-	}
-
-	if int(in.Index) >= len(chapterShopData.Items) {
-		return &game.BuyChapterItemResponse{Code: 1, Msg: "商品不存在"}, nil
-	}
-
-	item := chapterShopData.Items[in.Index]
-
-	// 处理章节商品购买逻辑
-	reward, err := s.processBuyChapterItemStandalone(item)
-	if err != nil {
-		return &game.BuyChapterItemResponse{Code: 4, Msg: err.Error()}, nil
-	}
-
-	// IAP 商品无需扣除货币，直接发放奖励
-	_, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "chapter_shop")
-	if err != nil {
-		return &game.BuyChapterItemResponse{Code: 5, Msg: err.Error()}, nil
-	}
-
-	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, chapterShopData); err != nil {
-		s.logger.Error("保存章节商店数据失败", zap.Error(err))
-		return &game.BuyChapterItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
-	}
-
-	response := &game.BuyChapterItemResponse{
-		Code:            0,
-		Msg:             "购买成功",
-		Reward:          reward,
-		ChapterShopData: convertToProtoChapterShop(chapterShopData),
-	}
-
-	if inventoryUpdateResult != nil {
-		response.InventoryUpdated = inventoryUpdateResult.Updated
-	}
-
-	return response, nil
-}
-
-// BuyGemItem 购买钻石商品（独立接口，IAP）
-func (s *ApiServer) BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	gemShopData := &GemShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, gemShopData); err != nil {
-		s.logger.Error("加载钻石商店数据失败", zap.Error(err))
-		return &game.BuyGemItemResponse{Code: -1, Msg: "加载商店数据失败"}, nil
-	}
-
-	if int(in.Index) >= len(gemShopData.Items) {
-		return &game.BuyGemItemResponse{Code: 1, Msg: "商品不存在"}, nil
-	}
-
-	item := gemShopData.Items[in.Index]
-
-	// 处理钻石商品购买逻辑
-	reward, err := s.processBuyGemItemStandalone(item)
-	if err != nil {
-		return &game.BuyGemItemResponse{Code: 4, Msg: err.Error()}, nil
-	}
-
-	// IAP 商品直接发放钻石
-	walletUpdateResult, _, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "gem_shop")
-	if err != nil {
-		return &game.BuyGemItemResponse{Code: 5, Msg: err.Error()}, nil
-	}
-
-	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, gemShopData); err != nil {
-		s.logger.Error("保存钻石商店数据失败", zap.Error(err))
-		return &game.BuyGemItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
-	}
-
-	response := &game.BuyGemItemResponse{
-		Code:        0,
-		Msg:         "购买成功",
-		Reward:      reward,
-		GemShopData: convertToProtoGemShop(gemShopData),
-	}
-
-	if walletUpdateResult != nil {
-		response.WalletUpdated = walletUpdateResult.Updated
-	}
-
-	return response, nil
-}
-
 // processBuyNormalItem 处理普通商品购买
 func (s *ApiServer) processBuyNormalItem(item *ShopItem, count int32) (*game.Wallet, *game.Reward, error) {
 	// 如果配置了分段购买，根据已购买次数确定当前支付阶段
@@ -829,38 +567,6 @@ func (s *ApiServer) processBuyNormalItem(item *ShopItem, count int32) (*game.Wal
 	return cost, reward, nil
 }
 
-// processBuyChapterItem 处理章节商店购买
-func (s *ApiServer) processBuyChapterItem(item *ShopItem) (*game.Reward, error) {
-	tplChapterItem, ok := s.template.GetTplShopChapterItem().FindByKey(item.ShopItemID)
-	if !ok {
-		return nil, fmt.Errorf("未找到章节商店配置")
-	}
-
-	reward := parseRewardString(tplChapterItem.Reward, s.logger)
-	return reward, nil
-}
-
-// processBuyGemItem 处理钻石商店购买
-func (s *ApiServer) processBuyGemItem(item *ShopItem) (*game.Reward, error) {
-	tplGemItem, ok := s.template.GetTplShopGemItem().FindByKey(item.ShopItemID)
-	if !ok {
-		return nil, fmt.Errorf("未找到钻石商店配置")
-	}
-
-	gemCount := tplGemItem.Num
-	if item.BoughtCount == 0 {
-		gemCount += tplGemItem.ExtraNum
-	}
-
-	reward := &game.Reward{
-		Wallet: &game.Wallet{
-			Gem: gemCount,
-		},
-	}
-
-	return reward, nil
-}
-
 // convertToProtoShopData 转换商店数据为proto ShopData
 func convertToProtoShopData(data *ShopData) *game.ShopData {
 	protoShops := make([]*game.SingleShopData, 0)
@@ -899,8 +605,7 @@ func convertToProtoSingleShop(shop *ShopInfo) *game.SingleShopData {
 		}
 
 		protoItems = append(protoItems, &game.ShopItem{
-			Index:       item.Index,
-			ShopItemId:  item.ShopItemID,
+			Id:          item.ShopItemID,
 			ItemId:      item.ItemID,
 			PayType:     displayPayType,
 			Price:       displayPrice,
@@ -1039,142 +744,20 @@ func calculateCost(payType game.PayType, amount int32) *game.Wallet {
 	return cost
 }
 
-func parseRewardString(rewardStr string, logger *zap.Logger) *game.Reward {
-	if rewardStr == "" {
-		return nil
-	}
-
-	reward := &game.Reward{
-		Wallet: &game.Wallet{},
-		Items:  []*game.Item{},
-	}
-
-	pairs := strings.Split(rewardStr, ",")
-	for _, pair := range pairs {
-		trimmedPair := strings.TrimSpace(pair)
-		if trimmedPair == "" {
-			continue
-		}
-
-		keyValue := strings.Split(trimmedPair, "_")
-		if len(keyValue) != 2 {
-			logger.Error("无效的奖励配置", zap.String("pair", trimmedPair))
-			continue
-		}
-
-		key := strings.TrimSpace(keyValue[0])
-		numStr := strings.TrimSpace(keyValue[1])
-
-		num, err := strconv.ParseInt(numStr, 10, 32)
-		if err != nil {
-			logger.Error("无效的奖励数量", zap.String("pair", trimmedPair), zap.Error(err))
-			continue
-		}
-
-		switch key {
-		case "coin":
-			reward.Wallet.Coin = int32(num)
-		case "gem":
-			reward.Wallet.Gem = int32(num)
-		case "ad":
-			reward.Wallet.Ad = int32(num)
-		default:
-			reward.Items = append(reward.Items, &game.Item{
-				Id:  key,
-				Num: int32(num),
-			})
-		}
-	}
-
-	return reward
-}
-
-// convertToProtoChapterShop 转换章节商店数据
-func convertToProtoChapterShop(data *ChapterShopData) *game.ChapterShopData {
-	protoItems := make([]*game.ShopItem, 0, len(data.Items))
-	for _, item := range data.Items {
-		protoItems = append(protoItems, &game.ShopItem{
-			Index:       item.Index,
-			ShopItemId:  item.ShopItemID,
-			ItemId:      item.ItemID,
-			PayType:     item.PayType,
-			Price:       item.Price,
-			Discount:    item.Discount,
-			ItemCount:   item.ItemCount,
-			MaxBuyCount: item.MaxBuyCount,
-			BoughtCount: item.BoughtCount,
-		})
-	}
-
-	return &game.ChapterShopData{
-		Items: protoItems,
-	}
-}
-
-// convertToProtoGemShop 转换钻石商店数据
-func convertToProtoGemShop(data *GemShopData) *game.GemShopData {
-	protoItems := make([]*game.ShopItem, 0, len(data.Items))
-	for _, item := range data.Items {
-		protoItems = append(protoItems, &game.ShopItem{
-			Index:       item.Index,
-			ShopItemId:  item.ShopItemID,
-			ItemId:      item.ItemID,
-			PayType:     item.PayType,
-			Price:       item.Price,
-			Discount:    item.Discount,
-			ItemCount:   item.ItemCount,
-			MaxBuyCount: item.MaxBuyCount,
-			BoughtCount: item.BoughtCount,
-		})
-	}
-
-	return &game.GemShopData{
-		Items: protoItems,
-	}
-}
-
-// processBuyChapterItemStandalone 处理章节商品购买（独立版本）
-func (s *ApiServer) processBuyChapterItemStandalone(item *ShopItem) (*game.Reward, error) {
-	if item.BoughtCount >= item.MaxBuyCount {
-		return nil, fmt.Errorf("已达到最大购买次数")
-	}
-
-	item.BoughtCount++
-
-	tplItem, ok := s.template.GetTplShopChapterItem().FindByKey(item.ShopItemID)
-	if !ok {
-		return nil, fmt.Errorf("未找到章节商品配置")
-	}
-
-	reward := parseRewardString(tplItem.Reward, s.logger)
-	return reward, nil
-}
-
-// processBuyGemItemStandalone 处理钻石商品购买（独立版本）
-func (s *ApiServer) processBuyGemItemStandalone(item *ShopItem) (*game.Reward, error) {
-	item.BoughtCount++
-
-	tplItem, ok := s.template.GetTplShopGemItem().FindByKey(item.ShopItemID)
-	if !ok {
-		return nil, fmt.Errorf("未找到钻石商品配置")
-	}
-
-	reward := &game.Reward{
-		Wallet: &game.Wallet{
-			Gem: tplItem.Num + tplItem.ExtraNum,
-		},
-	}
-
-	return reward, nil
-}
-
 // processPaymentAndReward 处理支付和奖励发放
-func (s *ApiServer) processPaymentAndReward(ctx context.Context, cost *game.Wallet, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+// metadata 为可选的额外元数据，会合并到 source 中
+func (s *ApiServer) processPaymentAndReward(ctx context.Context, cost *game.Wallet, reward *game.Reward, source string, metadata map[string]interface{}) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	// 扣除货币
 	var walletUpdateResult *game.WalletUpdateResult
 	if cost != nil && (cost.Coin > 0 || cost.Gem > 0 || cost.Ad > 0) {
 		userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-		metadata, _ := json.Marshal(map[string]interface{}{"source": source})
+
+		// 构建 metadata
+		meta := map[string]interface{}{"source": source}
+		for k, v := range metadata {
+			meta[k] = v
+		}
+		metadataBytes, _ := json.Marshal(meta)
 
 		walletChangeset := make(map[string]int64)
 		if cost.Coin > 0 {
@@ -1190,7 +773,7 @@ func (s *ApiServer) processPaymentAndReward(ctx context.Context, cost *game.Wall
 		walletUpdates := []*walletUpdate{{
 			UserID:    userID,
 			Changeset: walletChangeset,
-			Metadata:  string(metadata),
+			Metadata:  string(metadataBytes),
 		}}
 
 		results, err := UpdateWallets(ctx, s.logger, s.db, walletUpdates, true)
@@ -1206,10 +789,20 @@ func (s *ApiServer) processPaymentAndReward(ctx context.Context, cost *game.Wall
 		}
 	}
 
-	// 发放奖励
-	_, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
-	if err != nil {
-		return walletUpdateResult, nil, err
+	// 发放奖励（GrantReward 返回的钱包结果包含最终状态，包含扣除和奖励后的余额）
+	var inventoryUpdateResult *game.InventoryUpdateResult
+	if reward != nil {
+		rewardWalletResult, rewardInventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+		if err != nil {
+			return walletUpdateResult, nil, err
+		}
+
+		// 如果奖励中包含钱包奖励，使用 GrantReward 返回的最终钱包状态
+		// 否则使用扣除货币后的钱包状态
+		if rewardWalletResult != nil {
+			walletUpdateResult = rewardWalletResult
+		}
+		inventoryUpdateResult = rewardInventoryResult
 	}
 
 	return walletUpdateResult, inventoryUpdateResult, nil

@@ -297,7 +297,7 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 	}
 
 	// 检查是否配置了挂机奖励
-	if levelInfo.OnHookRewardCoin == 0 && levelInfo.OnHookRewardGroupID == "" {
+	if levelInfo.OnHookRewardID == "" {
 		return &game.ClaimOnHookRewardResponse{
 			Code: 4,
 			Msg:  "当前关卡没有挂机奖励",
@@ -354,16 +354,13 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 		newLastGetTime = lastGetTime.Add(time.Duration(hours) * time.Hour)
 	}
 
-	// 计算金币奖励
-	totalCoin := levelInfo.OnHookRewardCoin * int32(hours)
-
 	// 获取道具奖励
 	var reward *game.Reward
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	if levelInfo.OnHookRewardGroupID != "" {
-		reward = GetReward(levelInfo.OnHookRewardGroupID, s.template.GetTplReward(), s.logger)
+	if levelInfo.OnHookRewardID != "" {
+		reward = GetReward(levelInfo.OnHookRewardID, s.template.GetTplReward(), s.logger)
 		if reward != nil {
 			// 奖励乘以小时数
 			if reward.Wallet != nil {
@@ -377,40 +374,6 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 						item.Num *= int32(hours)
 					}
 				}
-			}
-		}
-	}
-
-	// 发放金币奖励
-	if totalCoin > 0 {
-		userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-		metadata, _ := json.Marshal(map[string]interface{}{
-			"source": "onhook_" + userMeta.Level.CurLevelId,
-			"hours":  hours,
-		})
-
-		walletChangeset := make(map[string]int64)
-		walletChangeset["coin"] = int64(totalCoin)
-
-		walletUpdates := []*walletUpdate{{
-			UserID:    userID,
-			Changeset: walletChangeset,
-			Metadata:  string(metadata),
-		}}
-
-		results, err := UpdateWallets(ctx, s.logger, s.db, walletUpdates, true)
-		if err != nil {
-			s.logger.Error("发放金币失败", zap.Error(err))
-			return &game.ClaimOnHookRewardResponse{
-				Code: 9,
-				Msg:  "发放金币失败: " + err.Error(),
-			}, nil
-		}
-
-		if len(results) > 0 {
-			walletUpdateResult = &game.WalletUpdateResult{
-				Previous: convertMapInt64ToWallet(results[0].Previous),
-				Updated:  convertMapInt64ToWallet(results[0].Updated),
 			}
 		}
 	}
@@ -463,17 +426,10 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 		inventoryUpdated = inventoryUpdateResult.Updated
 	}
 
-	s.logger.Info("挂机奖励领取成功",
-		zap.String("level_id", userMeta.Level.CurLevelId),
-		zap.Int("hours", hours),
-		zap.Int32("coin", totalCoin),
-		zap.String("new_last_get_time", newLastGetTime.Format(time.RFC3339)))
-
 	return &game.ClaimOnHookRewardResponse{
 		Code:             0,
 		Msg:              "领取成功",
 		Hours:            int32(hours),
-		Coin:             totalCoin,
 		Reward:           reward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,

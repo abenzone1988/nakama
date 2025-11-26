@@ -1,0 +1,10 @@
+{
+"10000":{"reward":"SevenDayReward000","name":"立即获得","dicount_rate":"","id":"10000","day":0},
+"10001":{"reward":"SevenDayReward001","name":"第1天","dicount_rate":"1100%","id":"10001","day":1},
+"10002":{"reward":"SevenDayReward002","name":"第2天","dicount_rate":"1100%","id":"10002","day":2},
+"10003":{"reward":"SevenDayReward003","name":"第3天","dicount_rate":"1100%","id":"10003","day":3},
+"10004":{"reward":"SevenDayReward004","name":"第4天","dicount_rate":"1100%","id":"10004","day":4},
+"10005":{"reward":"SevenDayReward005","name":"第5天","dicount_rate":"1100%","id":"10005","day":5},
+"10006":{"reward":"SevenDayReward006","name":"第6天","dicount_rate":"1100%","id":"10006","day":6},
+"10007":{"reward":"SevenDayReward007","name":"第7天","dicount_rate":"1100%","id":"10007","day":7}
+}

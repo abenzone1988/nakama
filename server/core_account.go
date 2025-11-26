@@ -19,6 +19,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -555,4 +556,20 @@ func UpdateAccountMetadata(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 		return status.Error(codes.Internal, "Error updating user account metadata:"+err.Error())
 	}
 	return nil
+}
+
+// FindUserByCustomID 根据 custom_id 查找用户
+func FindUserByCustomID(ctx context.Context, logger *zap.Logger, db *sql.DB, customID string) (uuid.UUID, error) {
+	var userID uuid.UUID
+	query := "SELECT id FROM users WHERE custom_id = $1 LIMIT 1"
+	err := db.QueryRowContext(ctx, query, customID).Scan(&userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Warn("user not found by custom_id", zap.String("custom_id", customID))
+			return uuid.Nil, fmt.Errorf("用户不存在: %s", customID)
+		}
+		logger.Error("query user by custom_id failed", zap.Error(err), zap.String("custom_id", customID))
+		return uuid.Nil, fmt.Errorf("数据库查询失败: %w", err)
+	}
+	return userID, nil
 }

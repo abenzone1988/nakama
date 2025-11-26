@@ -174,25 +174,25 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 
 			// 处理特殊道具
 			switch item.Id {
-			case "10000": // 金币
+			case ItemID_Coin: // 金币
 				walletChangeset["coin"] += int64(item.Num)
-			case "10001": // 钻石
+			case ItemID_Gem: // 钻石
 				walletChangeset["gem"] += int64(item.Num)
-			case "10002": // 体力
+			case ItemID_Stamina: // 体力
 				// 体力需要特殊处理，使用RefillStamina函数
 				if err := RefillStamina(ctx, logger, item.Num); err != nil {
 					logger.Error("添加体力失败", zap.Error(err))
 				}
-			case "20000": // 广告券
+			case ItemID_AdTicket: // 广告券
 				walletChangeset["ad"] += int64(item.Num)
-			case "60000": // 随机水晶
+			case ItemID_RandomCrystal: // 随机水晶
 				// 等概率转换为4种水晶 (30001-30004)
-				crystalIds := []string{"30001", "30002", "30003", "30004"}
+				crystalIds := []string{CrystalID_1, CrystalID_2, CrystalID_3, CrystalID_4}
 				for i := int32(0); i < item.Num; i++ {
 					randomCrystal := crystalIds[rand.Intn(len(crystalIds))]
 					inventoryChangeset[randomCrystal]++
 				}
-			case "50000": // 随机炮台（转为碎片）
+			case ItemID_RandomTurret: // 随机炮台（转为碎片）
 				// 随机选择一个炮台，给10个碎片
 				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num, true)
 				if err != nil {
@@ -202,7 +202,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 						inventoryChangeset[debrisId] += count
 					}
 				}
-			case "90000": // 炮台碎片
+			case ItemID_TurretDebris: // 炮台碎片
 				// 根据炮台等级概率分配，每个碎片单独随机
 				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num, false)
 				if err != nil {

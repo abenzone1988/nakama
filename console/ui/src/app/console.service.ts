@@ -1066,6 +1066,7 @@ export enum ApiStoreProvider {
   GOOGLE_PLAY_STORE = 1,
   HUAWEI_APP_GALLERY = 2,
   FACEBOOK_INSTANT_STORE = 3,
+  PLAY800_SDK = 4,
 }
 
 /** A list of validated subscriptions stored by Nakama. */
