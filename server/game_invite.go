@@ -11,31 +11,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type InviteRecord struct {
-	Invitee       string `json:"invitee"`
-	RewardClaimed bool   `json:"reward_claimed"`
-}
-
-type InviteData struct {
-	List      map[string]*InviteRecord `json:"invite_list"`
-	BeInvited bool                     `json:"be_invited"`
-	Inviter   string                   `json:"inviter"`
-}
-
-func (f *InviteData) GetCollection() string {
-	return "user_data"
-}
-
-func (f *InviteData) GetKey() string {
-	return "invite"
-}
-
-func (f *InviteData) Init() {
-	f.List = make(map[string]*InviteRecord)
-	f.BeInvited = false
-	f.Inviter = ""
-}
-
 func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvitedRequest) (*emptypb.Empty, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	userName := ctx.Value(ctxUsernameKey{}).(string)
@@ -92,24 +67,6 @@ func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvite
 	}
 
 	return &emptypb.Empty{}, nil
-}
-
-type HomeData struct {
-	CurLevelId             string `json:"curLevelId"`
-	LastGetOnHookTimestamp string `json:"lastGetOnHookTimestamp"`
-}
-
-func (f *HomeData) GetCollection() string {
-	return "Home"
-}
-
-func (f *HomeData) GetKey() string {
-	return "HomeData"
-}
-
-func (f *HomeData) Init() {
-	f.CurLevelId = ""
-	f.LastGetOnHookTimestamp = ""
 }
 
 func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.ListInviteeResponse, error) {

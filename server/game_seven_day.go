@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -20,25 +19,14 @@ import (
 func (s *ApiServer) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayStatusRequest) (*game.GetSevenDayStatusResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		s.logger.Error("获取用户元数据失败", zap.Error(err))
-		return &game.GetSevenDayStatusResponse{
-			Code: 1,
-			Msg:  "获取用户数据失败",
-		}, nil
+	// 从 storage 加载七日购买数据
+	sevenDayData := &SevenDayData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, sevenDayData); err != nil {
+		s.logger.Error("加载七日购买数据失败", zap.Error(err))
+		sevenDayData.Init()
 	}
 
-	// 如果七日购买数据为空，初始化
-	if userMeta.SevenDay == nil {
-		userMeta.SevenDay = &game.SevenDayData{
-			LastPurchaseTime: "",
-			ClaimedDays:      []int32{},
-			TotalPurchases:   0,
-		}
-	}
-
-	if _, err := s.handleSevenDayExpiration(ctx, userID, userMeta); err != nil {
+	if _, err := s.handleSevenDayExpiration(ctx, userID, sevenDayData); err != nil {
 		s.logger.Error("处理七日过期奖励失败", zap.Error(err))
 	}
 
@@ -46,8 +34,8 @@ func (s *ApiServer) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayS
 	isPurchased := false
 	availableDays := int32(0)
 
-	if userMeta.SevenDay.LastPurchaseTime != "" {
-		purchaseTime, err := time.Parse(time.RFC3339, userMeta.SevenDay.LastPurchaseTime)
+	if sevenDayData.LastPurchaseTime != "" {
+		purchaseTime, err := time.Parse(time.RFC3339, sevenDayData.LastPurchaseTime)
 		if err == nil {
 			// 计算从购买到现在经过了多少天
 			daysPassed := int32(time.Since(purchaseTime).Hours() / 24)
@@ -69,10 +57,10 @@ func (s *ApiServer) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayS
 		Code:           0,
 		Msg:            "Success",
 		IsPurchased:    isPurchased,
-		PurchaseTime:   userMeta.SevenDay.LastPurchaseTime,
-		ClaimedDays:    userMeta.SevenDay.ClaimedDays,
+		PurchaseTime:   sevenDayData.LastPurchaseTime,
+		ClaimedDays:    sevenDayData.ClaimedDays,
 		AvailableDays:  availableDays,
-		TotalPurchases: userMeta.SevenDay.TotalPurchases,
+		TotalPurchases: sevenDayData.TotalPurchases,
 	}, nil
 }
 
@@ -88,24 +76,22 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 		}, nil
 	}
 
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		s.logger.Error("获取用户元数据失败", zap.Error(err))
-		return &game.ClaimSevenDayRewardResponse{
-			Code: 1,
-			Msg:  "获取用户数据失败",
-		}, nil
+	// 从 storage 加载七日购买数据
+	sevenDayData := &SevenDayData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, sevenDayData); err != nil {
+		s.logger.Error("加载七日购买数据失败", zap.Error(err))
+		sevenDayData.Init()
 	}
 
 	// 检查是否已购买
-	if userMeta.SevenDay == nil || userMeta.SevenDay.LastPurchaseTime == "" {
+	if sevenDayData.LastPurchaseTime == "" {
 		return &game.ClaimSevenDayRewardResponse{
 			Code: 2,
 			Msg:  "尚未购买七日奖励",
 		}, nil
 	}
 
-	if handled, err := s.handleSevenDayExpiration(ctx, userID, userMeta); err != nil {
+	if handled, err := s.handleSevenDayExpiration(ctx, userID, sevenDayData); err != nil {
 		s.logger.Error("处理七日过期奖励失败", zap.Error(err))
 	} else if handled {
 		return &game.ClaimSevenDayRewardResponse{
@@ -115,7 +101,7 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 	}
 
 	// 检查是否在有效周期内
-	purchaseTime, err := time.Parse(time.RFC3339, userMeta.SevenDay.LastPurchaseTime)
+	purchaseTime, err := time.Parse(time.RFC3339, sevenDayData.LastPurchaseTime)
 	if err != nil {
 		s.logger.Error("解析购买时间失败", zap.Error(err))
 		return &game.ClaimSevenDayRewardResponse{
@@ -127,7 +113,7 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 	daysPassed := int32(time.Since(purchaseTime).Hours() / 24)
 
 	// 检查是否已领取过该天的奖励
-	for _, claimedDay := range userMeta.SevenDay.ClaimedDays {
+	for _, claimedDay := range sevenDayData.ClaimedDays {
 		if claimedDay == in.Day {
 			return &game.ClaimSevenDayRewardResponse{
 				Code: 5,
@@ -172,22 +158,14 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 	}
 
 	// 更新已领取天数
-	if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.SevenDay == nil {
-			return errors.New("七日购买数据为空")
-		}
-		meta.SevenDay.ClaimedDays = append(meta.SevenDay.ClaimedDays, in.Day)
-		return nil
-	}); err != nil {
-		s.logger.Error("更新七日购买数据失败", zap.Error(err))
+	sevenDayData.ClaimedDays = append(sevenDayData.ClaimedDays, in.Day)
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
+		s.logger.Error("保存七日购买数据失败", zap.Error(err))
 		return &game.ClaimSevenDayRewardResponse{
 			Code: 9,
 			Msg:  "更新数据失败",
 		}, nil
 	}
-
-	// 重新获取更新后的数据
-	userMeta, _, _ = GetUserMeta(ctx)
 
 	// 提取更新后的数据
 	var walletUpdated *game.Wallet
@@ -210,7 +188,7 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 		Reward:           reward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
-		ClaimedDays:      userMeta.SevenDay.ClaimedDays,
+		ClaimedDays:      sevenDayData.ClaimedDays,
 	}, nil
 }
 
@@ -238,79 +216,59 @@ func (s *ApiServer) getSevenDayReward(day int32) (*game.Reward, error) {
 
 // RecordSevenDayPurchase 记录七日购买（在充值回调中调用）
 func (s *ApiServer) RecordSevenDayPurchase(ctx context.Context, userID uuid.UUID) error {
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		return fmt.Errorf("获取用户元数据失败: %w", err)
+	// 从 storage 加载七日购买数据
+	sevenDayData := &SevenDayData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, sevenDayData); err != nil {
+		s.logger.Error("加载七日购买数据失败", zap.Error(err))
+		sevenDayData.Init()
 	}
 
-	// 如果七日购买数据为空，初始化
-	if userMeta.SevenDay == nil {
-		userMeta.SevenDay = &game.SevenDayData{
-			LastPurchaseTime: "",
-			ClaimedDays:      []int32{},
-			TotalPurchases:   0,
-		}
-	}
-
-	if _, err := s.handleSevenDayExpiration(ctx, userID, userMeta); err != nil {
+	if _, err := s.handleSevenDayExpiration(ctx, userID, sevenDayData); err != nil {
 		s.logger.Error("记录七日购买时处理过期奖励失败", zap.Error(err))
 	}
 
 	// 记录购买（可以重复购买）
-	return UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.SevenDay == nil {
-			meta.SevenDay = &game.SevenDayData{}
-		}
+	sevenDayData.LastPurchaseTime = time.Now().Format(time.RFC3339)
+	sevenDayData.ClaimedDays = []int32{} // 重置领取记录
+	sevenDayData.TotalPurchases++        // 增加购买次数
 
-		meta.SevenDay.LastPurchaseTime = time.Now().Format(time.RFC3339)
-		meta.SevenDay.ClaimedDays = []int32{} // 重置领取记录
-		meta.SevenDay.TotalPurchases++        // 增加购买次数
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
+		return fmt.Errorf("保存七日购买数据失败: %w", err)
+	}
 
-		s.logger.Info("七日购买记录成功",
-			zap.String("user_id", userID.String()),
-			zap.String("purchase_time", meta.SevenDay.LastPurchaseTime),
-			zap.Int32("total_purchases", meta.SevenDay.TotalPurchases))
-		return nil
-	})
+	s.logger.Info("七日购买记录成功",
+		zap.String("user_id", userID.String()),
+		zap.String("purchase_time", sevenDayData.LastPurchaseTime),
+		zap.Int32("total_purchases", sevenDayData.TotalPurchases))
+	return nil
 }
 
 // handleSevenDayExpiration 检测并处理七日购买过期补偿
-func (s *ApiServer) handleSevenDayExpiration(ctx context.Context, userID uuid.UUID, userMeta *game.UserMeta) (bool, error) {
-	if userMeta == nil || userMeta.SevenDay == nil || userMeta.SevenDay.LastPurchaseTime == "" {
+func (s *ApiServer) handleSevenDayExpiration(ctx context.Context, userID uuid.UUID, sevenDayData *SevenDayData) (bool, error) {
+	if sevenDayData == nil || sevenDayData.LastPurchaseTime == "" {
 		return false, nil
 	}
 
-	purchaseTime, err := time.Parse(time.RFC3339, userMeta.SevenDay.LastPurchaseTime)
+	purchaseTime, err := time.Parse(time.RFC3339, sevenDayData.LastPurchaseTime)
 	if err != nil {
-		return false, UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-			if meta.SevenDay == nil {
-				meta.SevenDay = &game.SevenDayData{}
-			}
-			meta.SevenDay.LastPurchaseTime = ""
-			meta.SevenDay.ClaimedDays = []int32{}
-			return nil
-		})
+		sevenDayData.Init()
+		return false, SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData)
 	}
 
 	if time.Since(purchaseTime) < 7*24*time.Hour {
 		return false, nil
 	}
 
-	pendingDays, pendingRewards := s.collectUnclaimedSevenDayRewards(userMeta.SevenDay.ClaimedDays)
+	pendingDays, pendingRewards := s.collectUnclaimedSevenDayRewards(sevenDayData.ClaimedDays)
 	if len(pendingRewards) > 0 {
 		if err := s.sendSevenDayExpiredRewardMail(ctx, userID, pendingDays, pendingRewards); err != nil {
 			return false, err
 		}
 	}
 
-	if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.SevenDay == nil {
-			meta.SevenDay = &game.SevenDayData{}
-		}
-		meta.SevenDay.LastPurchaseTime = ""
-		meta.SevenDay.ClaimedDays = []int32{}
-		return nil
-	}); err != nil {
+	sevenDayData.LastPurchaseTime = ""
+	sevenDayData.ClaimedDays = []int32{}
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
 		return false, err
 	}
 

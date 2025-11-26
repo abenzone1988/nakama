@@ -122,9 +122,6 @@ message UserMeta{
   StaminaData stamina = 2;
   EquipData equip = 3;
   LevelData level = 4;
-  FirstChargeData first_charge = 5; // 首冲数据
-  SevenDayData seven_day = 6;       // 七日购买数据
-  SignInData sign_in = 7;           // 每日签到数据
 }
 
 // 钱包结构v

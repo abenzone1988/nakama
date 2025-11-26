@@ -25,23 +25,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// VipRewardData 存储VIP奖励领取状态
-type VipRewardData struct {
-	RewardClaimed bool `json:"reward_claimed"`
-}
-
-func (v *VipRewardData) GetCollection() string {
-	return "vip"
-}
-
-func (v *VipRewardData) GetKey() string {
-	return "reward"
-}
-
-func (v *VipRewardData) Init() {
-	v.RewardClaimed = false
-}
-
 // CheckVipStatus 检查当前用户的VIP状态
 func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*game.CheckVipStatusResponse, error) {
 	// 从上下文中获取用户ID

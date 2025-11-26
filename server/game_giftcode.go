@@ -2,32 +2,14 @@ package server
 
 import (
 	"context"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 
-	"go.uber.org/zap"
 	"time"
+
+	"go.uber.org/zap"
 )
-
-type RedeemRecord struct {
-	Code       string    `json:"code"`
-	RedeemTime time.Time `json:"time"`
-}
-
-type RedeemHistory struct {
-	Records map[string]*RedeemRecord `json:"records"`
-}
-
-func (f *RedeemHistory) GetCollection() string {
-	return "user_data"
-}
-func (f *RedeemHistory) GetKey() string {
-	return "redeem"
-}
-
-func (f *RedeemHistory) Init() {
-	f.Records = make(map[string]*RedeemRecord)
-}
 
 func (s *ApiServer) RedeemGift(ctx context.Context, in *game.RedeemGiftRequest) (*game.RedeemGiftResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)

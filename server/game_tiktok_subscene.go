@@ -48,24 +48,6 @@ type SceneListResponse struct {
 	Data   DataStruct `json:"data"`    // 数据
 }
 
-type ByteDirectPlay struct {
-	SceneTimestamps map[int64]string `json:"scene_timestamps"` // 记录每个场景的最后返回时间
-}
-
-func (f *ByteDirectPlay) GetCollection() string {
-	return "ByteGame"
-}
-
-func (f *ByteDirectPlay) GetKey() string {
-	return "DirectPlay"
-}
-
-func (f *ByteDirectPlay) Init() {
-	if f.SceneTimestamps == nil {
-		f.SceneTimestamps = make(map[int64]string)
-	}
-}
-
 // NetReconnectData 重连数据
 type NetReconnectData struct {
 	BattleType int `json:"battleType"` // 战斗类型

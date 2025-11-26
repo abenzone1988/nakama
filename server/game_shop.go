@@ -16,25 +16,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// ShopData 商店数据存储结构（包含所有类型商店）
-type ShopData struct {
-	DateTime time.Time            `json:"date_time"`
-	Shops    map[string]*ShopInfo `json:"shops"` // key: ShopType string
-}
-
-func (d *ShopData) GetCollection() string {
-	return "shop"
-}
-
-func (d *ShopData) GetKey() string {
-	return "data"
-}
-
-func (d *ShopData) Init() {
-	d.DateTime = time.Now().UTC()
-	d.Shops = make(map[string]*ShopInfo)
-}
-
 type ShopInfo struct {
 	ShopType        game.ShopType `json:"shop_type"`
 	Items           []*ShopItem   `json:"items"`

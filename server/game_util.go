@@ -14,6 +14,7 @@ import (
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -23,11 +24,16 @@ const (
 )
 
 func CreateStorageOpWrite(collection, key, value, ownerID string) *StorageOpWrite {
+	return CreateStorageOpWriteWithVersion(collection, key, value, ownerID, "")
+}
+
+func CreateStorageOpWriteWithVersion(collection, key, value, ownerID, version string) *StorageOpWrite {
 	return &StorageOpWrite{
 		Object: &api.WriteStorageObject{
 			Collection:      collection,
 			Key:             key,
 			Value:           value,
+			Version:         version,
 			PermissionRead:  &wrapperspb.Int32Value{Value: permissionRead},
 			PermissionWrite: &wrapperspb.Int32Value{Value: permissionWrite},
 		},
@@ -39,6 +45,24 @@ type Storable interface {
 	GetCollection() string
 	GetKey() string
 	Init()
+	// GetVersion 返回当前数据的版本号，用于乐观并发控制（OCC）
+	// 如果返回空字符串，表示使用 "last write wins" 模式
+	GetVersion() string
+	// SetVersion 设置数据的版本号，在 LoadData 时自动调用
+	SetVersion(version string)
+}
+
+// BaseStorable 提供版本管理的基础实现，其他 Storable 结构体可以嵌入此结构体
+type BaseStorable struct {
+	version string // 版本号，用于乐观并发控制（不序列化到 JSON）
+}
+
+func (b *BaseStorable) GetVersion() string {
+	return b.version
+}
+
+func (b *BaseStorable) SetVersion(version string) {
+	b.version = version
 }
 
 func LoadData(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, storable Storable) error {
@@ -58,10 +82,15 @@ func LoadData(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.U
 
 	if len(storageObjects.Objects) == 0 {
 		storable.Init()
+		storable.SetVersion("") // 新数据，version 为空
 		return nil
 	}
 
-	if err := json.Unmarshal([]byte(storageObjects.Objects[0].Value), storable); err != nil {
+	// 保存 version 用于后续的 OCC 写入
+	storageObject := storageObjects.Objects[0]
+	storable.SetVersion(storageObject.Version)
+
+	if err := json.Unmarshal([]byte(storageObject.Value), storable); err != nil {
 		logger.Error("无法反序列化数据", zap.Error(err))
 		return err
 	}
@@ -76,14 +105,26 @@ func SaveData(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metri
 		return err
 	}
 
-	writeOp := CreateStorageOpWrite(storable.GetCollection(), storable.GetKey(), string(serializedData), userID.String())
+	// 使用保存的 version 进行 OCC 写入，防止并发覆盖
+	version := storable.GetVersion()
+	writeOp := CreateStorageOpWriteWithVersion(storable.GetCollection(), storable.GetKey(), string(serializedData), userID.String(), version)
 
 	ops := []*StorageOpWrite{writeOp}
 
-	_, _, err = StorageWriteObjects(ctx, logger, db, metrics, storageIndex, true, ops)
+	acks, code, err := StorageWriteObjects(ctx, logger, db, metrics, storageIndex, true, ops)
 	if err != nil {
 		logger.Error("无法保存数据到存储系统", zap.Error(err))
 		return err
+	}
+
+	// 如果版本冲突，返回错误
+	if code != codes.OK {
+		return fmt.Errorf("存储写入被拒绝，可能由于版本冲突或权限问题")
+	}
+
+	// 更新 version 为新的版本号
+	if len(acks.Acks) > 0 {
+		storable.SetVersion(acks.Acks[0].Version)
 	}
 
 	return nil

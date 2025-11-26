@@ -363,8 +363,8 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	}
 
 	// 如果是首冲，记录首冲状态
-	if isFirstCharge && ctxWithMeta != nil {
-		if err := RecordFirstCharge(ctxWithMeta, s.logger); err != nil {
+	if isFirstCharge {
+		if err := RecordFirstCharge(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID); err != nil {
 			s.logger.Error("记录首冲失败",
 				zap.Error(err),
 				zap.String("user_id", userID.String()),
@@ -375,7 +375,6 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 				zap.String("user_id", userID.String()),
 				zap.String("product_id", productID),
 				zap.Float64("amount", amount))
-			needSaveMeta = true
 		}
 	}
 
@@ -417,8 +416,8 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	}
 
 	// 如果是七日购买，记录购买状态
-	if isSevenDayPurchase && ctxWithMeta != nil {
-		if err := s.RecordSevenDayPurchase(ctxWithMeta, userID); err != nil {
+	if isSevenDayPurchase {
+		if err := s.RecordSevenDayPurchase(ctx, userID); err != nil {
 			s.logger.Error("记录七日购买失败",
 				zap.Error(err),
 				zap.String("user_id", userID.String()),
@@ -429,7 +428,6 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 				zap.String("user_id", userID.String()),
 				zap.String("product_id", productID),
 				zap.Float64("amount", amount))
-			needSaveMeta = true
 		}
 	}
 

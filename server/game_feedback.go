@@ -2,33 +2,12 @@ package server
 
 import (
 	"context"
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"time"
 )
-
-type FeedbackRecord struct {
-	Description string    `json:"content"`
-	Issues      int32     `json:"issues"`
-	ReportedAt  time.Time `json:"time"`
-}
-
-type FeedbackHistory struct {
-	List []*FeedbackRecord `json:"list"`
-}
-
-func (f *FeedbackHistory) GetCollection() string {
-	return "manager_data"
-}
-
-func (f *FeedbackHistory) GetKey() string {
-	return "feedback"
-}
-
-func (f *FeedbackHistory) Init() {
-	f.List = []*FeedbackRecord{}
-}
 
 const MaxFeedbackRecords = 10
 

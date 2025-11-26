@@ -12,40 +12,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// ChapterShopData 章节商店数据（独立存储，只保存购买次数）
-type ChapterShopData struct {
-	BoughtCounts map[string]int32 `json:"bought_counts"` // key: shopItemID, value: boughtCount
-}
-
-func (d *ChapterShopData) GetCollection() string {
-	return "shop"
-}
-
-func (d *ChapterShopData) GetKey() string {
-	return "chapter"
-}
-
-func (d *ChapterShopData) Init() {
-	d.BoughtCounts = make(map[string]int32)
-}
-
-// GemShopData 钻石商店数据（独立存储，只保存购买次数）
-type GemShopData struct {
-	BoughtCounts map[string]int32 `json:"bought_counts"` // key: shopItemID, value: boughtCount
-}
-
-func (d *GemShopData) GetCollection() string {
-	return "shop"
-}
-
-func (d *GemShopData) GetKey() string {
-	return "gem"
-}
-
-func (d *GemShopData) Init() {
-	d.BoughtCounts = make(map[string]int32)
-}
-
 // GetChapterShop RPC获取章节商店数据（IAP）
 func (s *ApiServer) GetChapterShop(ctx context.Context, in *emptypb.Empty) (*game.ChapterShopData, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)

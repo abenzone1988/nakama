@@ -24,23 +24,6 @@ func initializeLevelData(userMeta *game.UserMeta) {
 	}
 }
 
-// LevelBoxData 关卡宝箱数据存储结构
-type LevelBoxData struct {
-	ClaimedBoxes map[string][]int32 `json:"claimed_boxes"` // key: level_id, value: 已领取的宝箱ID列表
-}
-
-func (d *LevelBoxData) GetCollection() string {
-	return "level_box"
-}
-
-func (d *LevelBoxData) GetKey() string {
-	return "data"
-}
-
-func (d *LevelBoxData) Init() {
-	d.ClaimedBoxes = make(map[string][]int32)
-}
-
 // ClaimLevelBox 领取关卡宝箱奖励
 func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)

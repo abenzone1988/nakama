@@ -19,28 +19,22 @@ var errSignInAlreadyClaimed = errors.New("daily sign-in reward already claimed")
 func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		s.logger.Error("获取用户元数据失败", zap.Error(err))
-		return &game.ClaimSignInRewardResponse{
-			Code: 1,
-			Msg:  "获取用户数据失败",
-		}, nil
-	}
-
-	if userMeta.SignIn == nil {
-		initializeSignInData(userMeta)
+	// 从 storage 加载签到数据
+	signInData := &SignInData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, signInData); err != nil {
+		s.logger.Error("加载签到数据失败", zap.Error(err))
+		signInData.Init()
 	}
 
 	today := time.Now().Format(signInDateLayout)
-	if userMeta.SignIn.LastClaimDate == today {
+	if signInData.LastClaimDate == today {
 		return &game.ClaimSignInRewardResponse{
 			Code: 2,
 			Msg:  "今日已领取",
 		}, nil
 	}
 
-	nextDay := userMeta.SignIn.CurrentDay + 1
+	nextDay := signInData.CurrentDay + 1
 	if nextDay > DailySignInTotalDays {
 		nextDay = 1
 	}
@@ -64,24 +58,19 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 		}, nil
 	}
 
-	if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.SignIn == nil {
-			meta.SignIn = &game.SignInData{}
-		}
-		if meta.SignIn.LastClaimDate == today {
-			return errSignInAlreadyClaimed
-		}
-		meta.SignIn.CurrentDay = nextDay
-		meta.SignIn.LastClaimDate = today
-		return nil
-	}); err != nil {
-		if errors.Is(err, errSignInAlreadyClaimed) {
-			return &game.ClaimSignInRewardResponse{
-				Code: 2,
-				Msg:  "今日已领取",
-			}, nil
-		}
-		s.logger.Error("更新签到数据失败", zap.Error(err))
+	// 双重检查，防止并发
+	if signInData.LastClaimDate == today {
+		return &game.ClaimSignInRewardResponse{
+			Code: 2,
+			Msg:  "今日已领取",
+		}, nil
+	}
+
+	// 更新签到数据
+	signInData.CurrentDay = nextDay
+	signInData.LastClaimDate = today
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, signInData); err != nil {
+		s.logger.Error("保存签到数据失败", zap.Error(err))
 		return &game.ClaimSignInRewardResponse{
 			Code: 5,
 			Msg:  "更新数据失败",

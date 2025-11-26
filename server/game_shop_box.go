@@ -15,27 +15,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// BoxShopData 宝箱商店数据（独立存储）
-type BoxShopData struct {
-	BoxItemID string `json:"box_item_id"` // 当前宝箱商品ID
-	BoxLevel  int32  `json:"box_level"`   // 宝箱等级
-	BoxExp    int32  `json:"box_exp"`     // 宝箱经验
-}
-
-func (d *BoxShopData) GetCollection() string {
-	return "shop"
-}
-
-func (d *BoxShopData) GetKey() string {
-	return "box"
-}
-
-func (d *BoxShopData) Init() {
-	d.BoxItemID = ""
-	d.BoxLevel = 1
-	d.BoxExp = 0
-}
-
 // BuyBoxItem 购买宝箱商品（独立接口）
 func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) (*game.BuyBoxItemResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)

@@ -256,16 +256,8 @@ func InitializeNewUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 	// 初始化关卡数据
 	initializeLevelData(userMeta)
 
-	// 初始化首冲数据
-	initializeFirstChargeData(userMeta)
-
-	// 初始化七日购买数据
-	initializeSevenDayData(userMeta)
-
-	// 初始化每日签到数据
-	initializeSignInData(userMeta)
-
 	// TODO: 在这里添加其他模块的初始化（如商店、任务等）
+	// 注意：首冲、七日购买、每日签到数据已迁移到独立的 storage 存储
 
 	// 序列化并保存到数据库
 	metadataJSON, err := json.Marshal(userMeta)
@@ -286,28 +278,4 @@ func InitializeNewUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 		zap.String("user_id", userID.String()),
 		zap.String("metadata", string(metadataJSON)))
 	return nil
-}
-
-// initializeFirstChargeData 初始化首冲数据
-func initializeFirstChargeData(userMeta *game.UserMeta) {
-	userMeta.FirstCharge = &game.FirstChargeData{
-		IsCharged:   false,
-		ChargeTime:  "",
-		ClaimedDays: []int32{},
-	}
-}
-
-func initializeSevenDayData(userMeta *game.UserMeta) {
-	userMeta.SevenDay = &game.SevenDayData{
-		LastPurchaseTime: "",
-		ClaimedDays:      []int32{},
-		TotalPurchases:   0,
-	}
-}
-
-func initializeSignInData(userMeta *game.UserMeta) {
-	userMeta.SignIn = &game.SignInData{
-		CurrentDay:    0,
-		LastClaimDate: "",
-	}
 }

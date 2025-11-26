@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -14,36 +14,27 @@ import (
 
 // GetFirstChargeStatus 获取首冲状态
 func (s *ApiServer) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error) {
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		s.logger.Error("获取用户元数据失败", zap.Error(err))
-		return &game.GetFirstChargeStatusResponse{
-			Code: 1,
-			Msg:  "获取用户数据失败",
-		}, nil
-	}
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	// 如果首冲数据为空，初始化
-	if userMeta.FirstCharge == nil {
-		userMeta.FirstCharge = &game.FirstChargeData{
-			IsCharged:   false,
-			ChargeTime:  "",
-			ClaimedDays: []int32{},
-		}
+	// 从 storage 加载首冲数据
+	firstChargeData := &FirstChargeData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, firstChargeData); err != nil {
+		s.logger.Error("加载首冲数据失败", zap.Error(err))
+		firstChargeData.Init()
 	}
 
 	// 计算可领取的天数
 	availableDays := int32(0)
-	if userMeta.FirstCharge.IsCharged {
-		availableDays = calculateAvailableDays(userMeta.FirstCharge.ChargeTime)
+	if firstChargeData.IsCharged {
+		availableDays = calculateAvailableDays(firstChargeData.ChargeTime)
 	}
 
 	return &game.GetFirstChargeStatusResponse{
 		Code:          0,
 		Msg:           "Success",
-		IsCharged:     userMeta.FirstCharge.IsCharged,
-		ChargeTime:    userMeta.FirstCharge.ChargeTime,
-		ClaimedDays:   userMeta.FirstCharge.ClaimedDays,
+		IsCharged:     firstChargeData.IsCharged,
+		ChargeTime:    firstChargeData.ChargeTime,
+		ClaimedDays:   firstChargeData.ClaimedDays,
 		AvailableDays: availableDays,
 	}, nil
 }
@@ -60,17 +51,15 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 		}, nil
 	}
 
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		s.logger.Error("获取用户元数据失败", zap.Error(err))
-		return &game.ClaimFirstChargeRewardResponse{
-			Code: 1,
-			Msg:  "获取用户数据失败",
-		}, nil
+	// 从 storage 加载首冲数据
+	firstChargeData := &FirstChargeData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, firstChargeData); err != nil {
+		s.logger.Error("加载首冲数据失败", zap.Error(err))
+		firstChargeData.Init()
 	}
 
 	// 检查是否已首冲
-	if userMeta.FirstCharge == nil || !userMeta.FirstCharge.IsCharged {
+	if !firstChargeData.IsCharged {
 		return &game.ClaimFirstChargeRewardResponse{
 			Code: 2,
 			Msg:  "尚未首冲",
@@ -78,7 +67,7 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 	}
 
 	// 检查是否已领取过该天的奖励
-	for _, claimedDay := range userMeta.FirstCharge.ClaimedDays {
+	for _, claimedDay := range firstChargeData.ClaimedDays {
 		if claimedDay == in.Day {
 			return &game.ClaimFirstChargeRewardResponse{
 				Code: 3,
@@ -88,7 +77,7 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 	}
 
 	// 计算当前可领取的天数
-	availableDays := calculateAvailableDays(userMeta.FirstCharge.ChargeTime)
+	availableDays := calculateAvailableDays(firstChargeData.ChargeTime)
 	if in.Day > availableDays {
 		return &game.ClaimFirstChargeRewardResponse{
 			Code: 4,
@@ -118,22 +107,14 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 	}
 
 	// 更新已领取天数
-	if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.FirstCharge == nil {
-			return errors.New("首冲数据为空")
-		}
-		meta.FirstCharge.ClaimedDays = append(meta.FirstCharge.ClaimedDays, in.Day)
-		return nil
-	}); err != nil {
-		s.logger.Error("更新首冲数据失败", zap.Error(err))
+	firstChargeData.ClaimedDays = append(firstChargeData.ClaimedDays, in.Day)
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, firstChargeData); err != nil {
+		s.logger.Error("保存首冲数据失败", zap.Error(err))
 		return &game.ClaimFirstChargeRewardResponse{
 			Code: 7,
 			Msg:  "更新数据失败",
 		}, nil
 	}
-
-	// 重新获取更新后的数据
-	userMeta, _, _ = GetUserMeta(ctx)
 
 	// 提取更新后的数据
 	var walletUpdated *game.Wallet
@@ -156,7 +137,7 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 		Reward:           reward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
-		ClaimedDays:      userMeta.FirstCharge.ClaimedDays,
+		ClaimedDays:      firstChargeData.ClaimedDays,
 	}, nil
 }
 
@@ -205,37 +186,29 @@ func (s *ApiServer) getFirstChargeReward(day int32) (*game.Reward, error) {
 }
 
 // RecordFirstCharge 记录首冲（在充值回调中调用）
-func RecordFirstCharge(ctx context.Context, logger *zap.Logger) error {
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		return fmt.Errorf("获取用户元数据失败: %w", err)
-	}
-
-	// 如果首冲数据为空，初始化
-	if userMeta.FirstCharge == nil {
-		userMeta.FirstCharge = &game.FirstChargeData{
-			IsCharged:   false,
-			ChargeTime:  "",
-			ClaimedDays: []int32{},
-		}
+func RecordFirstCharge(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, userID uuid.UUID) error {
+	// 从 storage 加载首冲数据
+	firstChargeData := &FirstChargeData{}
+	if err := LoadData(ctx, logger, db, userID, firstChargeData); err != nil {
+		logger.Error("加载首冲数据失败", zap.Error(err))
+		firstChargeData.Init()
 	}
 
 	// 如果已经首冲过，直接返回
-	if userMeta.FirstCharge.IsCharged {
+	if firstChargeData.IsCharged {
 		logger.Info("用户已经首冲过，跳过记录")
 		return nil
 	}
 
 	// 记录首冲
-	return UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.FirstCharge == nil {
-			meta.FirstCharge = &game.FirstChargeData{}
-		}
-		meta.FirstCharge.IsCharged = true
-		meta.FirstCharge.ChargeTime = time.Now().Format(time.RFC3339)
-		meta.FirstCharge.ClaimedDays = []int32{}
+	firstChargeData.IsCharged = true
+	firstChargeData.ChargeTime = time.Now().Format(time.RFC3339)
+	firstChargeData.ClaimedDays = []int32{}
 
-		logger.Info("首冲记录成功", zap.String("charge_time", meta.FirstCharge.ChargeTime))
-		return nil
-	})
+	if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, firstChargeData); err != nil {
+		return fmt.Errorf("保存首冲数据失败: %w", err)
+	}
+
+	logger.Info("首冲记录成功", zap.String("charge_time", firstChargeData.ChargeTime))
+	return nil
 }

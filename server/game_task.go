@@ -9,29 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TaskData 任务数据存储结构
-type TaskData struct {
-	DateTime               time.Time `json:"date_time"`                // 最后更新时间
-	ClaimedTasks           []string  `json:"claimed_tasks"`            // 已领取的任务ID列表
-	ClaimedLivenessRewards []string  `json:"claimed_liveness_rewards"` // 已领取的活跃度奖励ID列表
-	CurrentLiveness        int32     `json:"current_liveness"`         // 当前活跃度
-}
-
-func (d *TaskData) GetCollection() string {
-	return "task"
-}
-
-func (d *TaskData) GetKey() string {
-	return "data"
-}
-
-func (d *TaskData) Init() {
-	d.DateTime = time.Now().UTC()
-	d.ClaimedTasks = []string{}
-	d.ClaimedLivenessRewards = []string{}
-	d.CurrentLiveness = 0
-}
-
 // GetTask 获取任务状态
 func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game.GetTaskResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
