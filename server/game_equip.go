@@ -13,7 +13,29 @@ import (
 )
 
 func (s *ApiServer) GetEquipData(ctx context.Context, in *emptypb.Empty) (*game.EquipData, error) {
-	return GetEquipData(ctx, s.logger, s.template)
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 加载装备数据
+	equipData := &EquipData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+		s.logger.Error("加载装备数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	// 如果数据为空，初始化装备数据
+	if len(equipData.UnlockEquips) == 0 {
+		initializeEquipData(equipData, s.template)
+		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
+			s.logger.Error("保存初始化的装备数据失败", zap.Error(err))
+			return nil, err
+		}
+	}
+	// 转换为 proto 格式返回
+	return &game.EquipData{
+		BattleEquips:         equipData.BattleEquips,
+		UnlockEquips:         equipData.UnlockEquips,
+		CrystalTechTreeIndex: equipData.CrystalTechTreeIndex,
+	}, nil
 }
 
 func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDataRequest) (*game.UpdateEquipDataResponse, error) {
@@ -22,8 +44,9 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	equipData, err := GetEquipData(ctx, s.logger, s.template)
-	if err != nil {
+	// 加载实际的 EquipData 结构用于修改
+	equipData := &EquipData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
 		return nil, err
 	}
 
@@ -94,11 +117,17 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 	}
 
 	equipData.UnlockEquips[in.EquipId] += 1
-	if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		meta.Equip = equipData
-		return nil
-	}); err != nil {
+
+	// 保存装备数据
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
 		return nil, err
+	}
+
+	// 转换为 proto 格式返回
+	protoEquipData := &game.EquipData{
+		BattleEquips:         equipData.BattleEquips,
+		UnlockEquips:         equipData.UnlockEquips,
+		CrystalTechTreeIndex: equipData.CrystalTechTreeIndex,
 	}
 
 	// 提取更新后的数据
@@ -116,34 +145,14 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 	return &game.UpdateEquipDataResponse{
 		Code:             0,
 		Msg:              "Success",
-		EquipData:        equipData,
+		EquipData:        protoEquipData,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 	}, nil
 }
 
-// GetEquipData 获取当前装备数据
-func GetEquipData(ctx context.Context, logger *zap.Logger, template TemplateManager) (*game.EquipData, error) {
-	userMeta, _, err := GetUserMeta(ctx)
-	if err != nil {
-		logger.Error("Failed to get UserMeta", zap.Error(err))
-		return nil, err
-	}
-
-	// 首次访问：初始化装备数据
-	if userMeta.Equip == nil {
-		if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-			initializeEquipData(meta, template)
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-	}
-
-	return userMeta.Equip, nil
-}
-
-func initializeEquipData(userMeta *game.UserMeta, table TemplateManager) {
+// 初始化装备数据
+func initializeEquipData(equipData *EquipData, table TemplateManager) {
 	initEquips := table.GetTplUnlock().FindByFilter(func(unlock template.TplUnlock) bool {
 		return unlock.ConditionParameter == ZeroLevelId && unlock.Type == UnlockType_Equipment
 	})
@@ -156,9 +165,7 @@ func initializeEquipData(userMeta *game.UserMeta, table TemplateManager) {
 		unlockEquips[equip.Parameter] = 1 // 等级为1
 	}
 
-	userMeta.Equip = &game.EquipData{
-		BattleEquips:         battleEquips,
-		UnlockEquips:         unlockEquips,
-		CrystalTechTreeIndex: 0,
-	}
+	equipData.BattleEquips = battleEquips
+	equipData.UnlockEquips = unlockEquips
+	equipData.CrystalTechTreeIndex = 0
 }

@@ -773,7 +773,7 @@ func (s *ApiServer) processPaymentAndReward(ctx context.Context, cost *game.Wall
 	// 发放奖励（GrantReward 返回的钱包结果包含最终状态，包含扣除和奖励后的余额）
 	var inventoryUpdateResult *game.InventoryUpdateResult
 	if reward != nil {
-		rewardWalletResult, rewardInventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+		rewardWalletResult, rewardInventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 		if err != nil {
 			return walletUpdateResult, nil, err
 		}

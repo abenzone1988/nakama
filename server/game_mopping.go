@@ -23,20 +23,16 @@ const (
 func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppingRewardRequest) (*game.ClaimMoppingRewardResponse, error) {
 	// 检查关卡 ID 是否有效
 
-	userMeta, _, err := GetUserMeta(ctx)
+	// 获取关卡数据
+	levelData, err := GetLevelData(ctx, s.logger, s.db, s.metrics, s.storageIndex)
 	if err != nil {
 		return &game.ClaimMoppingRewardResponse{
 			Code: 3,
-			Msg:  "获取用户元数据失败",
+			Msg:  "获取关卡数据失败",
 		}, nil
 	}
 
-	// 初始化关卡数据
-	if userMeta.Level == nil {
-		initializeLevelData(userMeta)
-	}
-
-	levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(userMeta.Level.CurLevelId)
+	levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(levelData.CurLevelId)
 	if !exist {
 		return &game.ClaimMoppingRewardResponse{
 			Code: 1,
@@ -53,7 +49,7 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	}
 
 	// 检查并刷新每日次数
-	needsReset, err := checkAndResetDailyMoppingTimes(userMeta.Level, s.logger)
+	needsReset, err := checkAndResetDailyMoppingTimes(levelData, s.logger)
 	if err != nil {
 		s.logger.Error("检查每日重置失败", zap.Error(err))
 		return &game.ClaimMoppingRewardResponse{
@@ -63,10 +59,10 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	}
 
 	if needsReset {
-		err = UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-			return nil
-		})
-		if err != nil {
+		// 重置每日次数
+		resetMoppingTimes(levelData)
+		userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, levelData); err != nil {
 			return &game.ClaimMoppingRewardResponse{
 				Code: 5,
 				Msg:  "重置每日次数失败: " + err.Error(),
@@ -75,8 +71,8 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	}
 
 	// 判断当前处于哪个阶段
-	stage1Times := userMeta.Level.HasMoppingTimes
-	stage2Times := userMeta.Level.HasMoppingTimesForAdv
+	stage1Times := levelData.HasMoppingTimes
+	stage2Times := levelData.HasMoppingTimesForAdv
 
 	var isStage2 bool
 	var needsAd bool
@@ -98,7 +94,7 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	}
 
 	// 扣除体力
-	if err := ConsumeStamina(ctx, s.logger, MoppingCostStamina); err != nil {
+	if err := ConsumeStamina(ctx, s.logger, s.db, s.metrics, s.storageIndex, MoppingCostStamina); err != nil {
 		return &game.ClaimMoppingRewardResponse{
 			Code: 7,
 			Msg:  "体力不足: " + err.Error(),
@@ -112,7 +108,7 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	if needsAd {
 		// 扣除 1 个广告券
 		userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-		metadata, _ := json.Marshal(map[string]interface{}{"source": "mopping_ad_" + userMeta.Level.CurLevelId})
+		metadata, _ := json.Marshal(map[string]interface{}{"source": "mopping_ad_" + levelData.CurLevelId})
 
 		walletChangeset := make(map[string]int64)
 		walletChangeset["ad"] = -1
@@ -144,12 +140,12 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	if reward != nil {
 		// 发放奖励
 		var err error
-		source := "mopping_" + userMeta.Level.CurLevelId
+		source := "mopping_" + levelData.CurLevelId
 
 		// 如果之前扣除了 ad，需要合并钱包更新结果
 		if walletUpdateResult != nil {
 			// 先发放奖励
-			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 			if err != nil {
 				return &game.ClaimMoppingRewardResponse{
 					Code: 9,
@@ -162,7 +158,7 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 			}
 			inventoryUpdateResult = iResult
 		} else {
-			walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 			if err != nil {
 				return &game.ClaimMoppingRewardResponse{
 					Code: 9,
@@ -173,20 +169,15 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	}
 
 	// 更新扫荡次数
-	err = UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.Level == nil {
-			meta.Level = &game.LevelData{}
-		}
-		if isStage2 {
-			meta.Level.HasMoppingTimesForAdv++
-		} else {
-			meta.Level.HasMoppingTimes++
-		}
-		meta.Level.LastMoppingTimestamp = time.Now().Format(time.RFC3339)
-		return nil
-	})
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	if isStage2 {
+		levelData.HasMoppingTimesForAdv++
+	} else {
+		levelData.HasMoppingTimes++
+	}
+	levelData.LastMoppingTimestamp = time.Now().Format(time.RFC3339)
 
-	if err != nil {
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, levelData); err != nil {
 		s.logger.Error("更新扫荡次数失败", zap.Error(err))
 		return &game.ClaimMoppingRewardResponse{
 			Code: 10,
@@ -206,23 +197,20 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 		inventoryUpdated = inventoryUpdateResult.Updated
 	}
 
-	// 重新获取更新后的次数
-	userMeta, _, _ = GetUserMeta(ctx)
-
 	return &game.ClaimMoppingRewardResponse{
 		Code:                  0,
 		Msg:                   "扫荡成功",
 		Reward:                reward,
 		WalletUpdated:         walletUpdated,
 		InventoryUpdated:      inventoryUpdated,
-		HasMoppingTimes:       userMeta.Level.HasMoppingTimes,
-		HasMoppingTimesForAdv: userMeta.Level.HasMoppingTimesForAdv,
+		HasMoppingTimes:       levelData.HasMoppingTimes,
+		HasMoppingTimesForAdv: levelData.HasMoppingTimesForAdv,
 	}, nil
 }
 
 // checkAndResetDailyMoppingTimes 检查并重置每日扫荡次数
 // 如果跨天了，返回 true 表示需要重置
-func checkAndResetDailyMoppingTimes(levelData *game.LevelData, logger *zap.Logger) (bool, error) {
+func checkAndResetDailyMoppingTimes(levelData *LevelData, logger *zap.Logger) (bool, error) {
 	if levelData == nil {
 		return false, errors.New("levelData is nil")
 	}
@@ -261,34 +249,24 @@ func checkAndResetDailyMoppingTimes(levelData *game.LevelData, logger *zap.Logge
 }
 
 // resetMoppingTimes 重置扫荡次数
-func resetMoppingTimes(levelData *game.LevelData) {
+func resetMoppingTimes(levelData *LevelData) {
 	levelData.HasMoppingTimes = 0
 	levelData.HasMoppingTimesForAdv = 0
 }
 
 // ClaimOnHookReward 领取挂机（巡逻）奖励
 func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error) {
-	// 获取用户元数据
-	userMeta, _, err := GetUserMeta(ctx)
+	// 获取关卡数据
+	levelData, err := GetLevelData(ctx, s.logger, s.db, s.metrics, s.storageIndex)
 	if err != nil {
 		return &game.ClaimOnHookRewardResponse{
 			Code: 1,
-			Msg:  "获取用户元数据失败",
-		}, nil
-	}
-
-	// 初始化关卡数据
-	if userMeta.Level == nil {
-		initializeLevelData(userMeta)
-		// 首次初始化，没有挂机时间，不发放奖励
-		return &game.ClaimOnHookRewardResponse{
-			Code: 2,
-			Msg:  "暂无挂机奖励",
+			Msg:  "获取关卡数据失败",
 		}, nil
 	}
 
 	// 获取当前关卡配置
-	levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(userMeta.Level.CurLevelId)
+	levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(levelData.CurLevelId)
 	if !exist {
 		return &game.ClaimOnHookRewardResponse{
 			Code: 3,
@@ -309,7 +287,7 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 	var newLastGetTime time.Time
 	now := time.Now()
 
-	if userMeta.Level.LastGetOnHookTimestamp == "" {
+	if levelData.LastGetOnHookTimestamp == "" {
 		// 首次领取，直接给予最大8小时奖励
 		hours = OnHookMaxHours
 		newLastGetTime = now
@@ -317,9 +295,9 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 			zap.Int("hours", OnHookMaxHours))
 	} else {
 		// 非首次领取，计算经过的时间
-		lastGetTime, err := time.Parse(time.RFC3339, userMeta.Level.LastGetOnHookTimestamp)
+		lastGetTime, err := time.Parse(time.RFC3339, levelData.LastGetOnHookTimestamp)
 		if err != nil {
-			s.logger.Error("解析上次领取时间失败", zap.Error(err), zap.String("timestamp", userMeta.Level.LastGetOnHookTimestamp))
+			s.logger.Error("解析上次领取时间失败", zap.Error(err), zap.String("timestamp", levelData.LastGetOnHookTimestamp))
 			return &game.ClaimOnHookRewardResponse{
 				Code: 7,
 				Msg:  "解析上次领取时间失败",
@@ -380,8 +358,8 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 
 	// 发放道具奖励
 	if reward != nil {
-		source := "onhook_" + userMeta.Level.CurLevelId
-		wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+		source := "onhook_" + levelData.CurLevelId
+		wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 		if err != nil {
 			s.logger.Error("发放道具奖励失败", zap.Error(err))
 			// 不返回错误，金币已经发放成功
@@ -398,15 +376,10 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 	}
 
 	// 更新上次领取时间（只增加完整小时数，不满1小时的分钟累加到下次）
-	err = UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		if meta.Level == nil {
-			meta.Level = &game.LevelData{}
-		}
-		meta.Level.LastGetOnHookTimestamp = newLastGetTime.Format(time.RFC3339)
-		return nil
-	})
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	levelData.LastGetOnHookTimestamp = newLastGetTime.Format(time.RFC3339)
 
-	if err != nil {
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, levelData); err != nil {
 		s.logger.Error("更新挂机时间失败", zap.Error(err))
 		return &game.ClaimOnHookRewardResponse{
 			Code: 10,

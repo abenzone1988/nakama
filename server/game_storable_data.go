@@ -381,3 +381,89 @@ func (f *HomeData) Init() {
 	f.LastGetOnHookTimestamp = ""
 	f.SetVersion("")
 }
+
+// ============================================================================
+// 装备相关数据结构
+// ============================================================================
+
+// EquipData 装备数据存储结构
+type EquipData struct {
+	BaseStorable
+	BattleEquips         []string         `json:"battle_equips"`           // 战斗装备列表
+	UnlockEquips         map[string]int32 `json:"unlock_equips"`           // 已解锁装备及其等级
+	CrystalTechTreeIndex int32            `json:"crystal_tech_tree_index"` // 水晶科技树索引
+}
+
+func (d *EquipData) GetCollection() string {
+	return "equip"
+}
+
+func (d *EquipData) GetKey() string {
+	return "data"
+}
+
+func (d *EquipData) Init() {
+	d.BattleEquips = []string{}
+	d.UnlockEquips = make(map[string]int32)
+	d.CrystalTechTreeIndex = 0
+	d.SetVersion("")
+}
+
+// ============================================================================
+// 关卡相关数据结构
+// ============================================================================
+
+// LevelData 关卡数据存储结构
+type LevelData struct {
+	BaseStorable
+	CurLevelId             string `json:"cur_level_id"`               // 当前关卡ID
+	BestProgress           int32  `json:"best_progress"`              // 最佳进度
+	HasMoppingTimes        int32  `json:"has_mopping_times"`          // 第一阶段已使用次数（扣体力）
+	HasMoppingTimesForAdv  int32  `json:"has_mopping_times_for_adv"`  // 第二阶段已使用次数（扣体力+广告）
+	LastMoppingTimestamp   string `json:"last_mopping_timestamp"`     // 最后一次扫荡时间，ISO 8601 格式
+	LastGetOnHookTimestamp string `json:"last_get_on_hook_timestamp"` // 最后一次领取挂机奖励时间，ISO 8601 格式
+}
+
+func (d *LevelData) GetCollection() string {
+	return "level"
+}
+
+func (d *LevelData) GetKey() string {
+	return "data"
+}
+
+func (d *LevelData) Init() {
+	now := time.Now().Format(time.RFC3339)
+	d.CurLevelId = ZeroLevelId // "L1000"
+	d.BestProgress = 0
+	d.HasMoppingTimes = 0
+	d.HasMoppingTimesForAdv = 0
+	d.LastMoppingTimestamp = now
+	d.LastGetOnHookTimestamp = now
+	d.SetVersion("")
+}
+
+// ============================================================================
+// 体力相关数据结构
+// ============================================================================
+
+// StaminaData 体力数据存储结构
+type StaminaData struct {
+	BaseStorable
+	Stamina         int32  `json:"stamina"`           // 当前体力值
+	LastRefreshTime string `json:"last_refresh_time"` // 最后刷新时间，ISO 8601 格式
+}
+
+func (d *StaminaData) GetCollection() string {
+	return "stamina"
+}
+
+func (d *StaminaData) GetKey() string {
+	return "data"
+}
+
+func (d *StaminaData) Init() {
+	d.Stamina = MaxStamina
+	d.LastRefreshTime = time.Now().Format(time.RFC3339)
+	d.SetVersion("")
+}

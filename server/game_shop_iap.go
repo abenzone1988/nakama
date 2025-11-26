@@ -88,7 +88,7 @@ func (s *ApiServer) BuyChapterItem(ctx context.Context, in *game.BuyChapterItemR
 	}
 
 	// IAP 商品无需扣除货币，直接发放奖励
-	_, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "chapter_shop")
+	_, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, "chapter_shop")
 	if err != nil {
 		return &game.BuyChapterItemResponse{Code: 5, Msg: err.Error()}, nil
 	}
@@ -147,7 +147,7 @@ func (s *ApiServer) BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest) 
 	}
 
 	// IAP 商品直接发放钻石
-	walletUpdateResult, _, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "gem_shop")
+	walletUpdateResult, _, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, "gem_shop")
 	if err != nil {
 		return &game.BuyGemItemResponse{Code: 5, Msg: err.Error()}, nil
 	}

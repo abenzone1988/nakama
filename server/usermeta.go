@@ -250,11 +250,8 @@ func InitializeNewUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 	// 创建新的 UserMeta
 	userMeta := &game.UserMeta{}
 
-	// 初始化装备数据
-	initializeEquipData(userMeta, templateMgr)
-
-	// 初始化关卡数据
-	initializeLevelData(userMeta)
+	// 注意：StaminaData、EquipData 和 LevelData 已迁移到独立的 storage 存储
+	// 它们会在首次访问时自动初始化，不需要在这里初始化
 
 	// TODO: 在这里添加其他模块的初始化（如商店、任务等）
 	// 注意：首冲、七日购买、每日签到数据已迁移到独立的 storage 存储

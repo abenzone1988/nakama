@@ -182,7 +182,7 @@ func convertMapInt64ToWallet(m map[string]int64) *game.Wallet {
 
 // GrantReward 统一的奖励发放函数（处理特殊道具逻辑）
 // 用于商店购买、战斗结算、礼包兑换等所有奖励发放场景
-func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template TemplateManager, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template TemplateManager, metrics Metrics, storageIndex StorageIndex, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	if reward == nil {
 		return nil, nil, nil
 	}
@@ -221,7 +221,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				walletChangeset["gem"] += int64(item.Num)
 			case ItemID_Stamina: // 体力
 				// 体力需要特殊处理，使用RefillStamina函数
-				if err := RefillStamina(ctx, logger, item.Num); err != nil {
+				if err := RefillStamina(ctx, logger, db, metrics, storageIndex, item.Num); err != nil {
 					logger.Error("添加体力失败", zap.Error(err))
 				}
 			case ItemID_AdTicket: // 广告券
@@ -235,7 +235,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				}
 			case ItemID_RandomTurret: // 随机炮台（转为碎片）
 				// 随机选择一个炮台，给10个碎片
-				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num, true)
+				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, metrics, storageIndex, item.Num, true)
 				if err != nil {
 					logger.Error("分配随机炮台碎片失败", zap.Error(err))
 				} else {
@@ -245,7 +245,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				}
 			case ItemID_TurretDebris: // 炮台碎片
 				// 根据炮台等级概率分配，每个碎片单独随机
-				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, item.Num, false)
+				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, metrics, storageIndex, item.Num, false)
 				if err != nil {
 					logger.Error("分配炮台碎片失败", zap.Error(err))
 				} else {
@@ -257,7 +257,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				// 检查是否是炮台装备（以EQ开头）
 				if strings.HasPrefix(item.Id, "EQ") {
 					// 炮台装备特殊处理
-					alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, item.Id)
+					alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, db, metrics, storageIndex, item.Id)
 					if err != nil {
 						logger.Error("解锁炮台失败",
 							zap.Error(err),
@@ -347,45 +347,42 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 
 // tryUnlockEquipment 尝试解锁炮台装备
 // 返回值：alreadyUnlocked（是否已解锁）, error（错误）
-func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, equipID string) (bool, error) {
+func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, equipID string) (bool, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 加载装备数据
+	equipData := &EquipData{}
+	if err := LoadData(ctx, logger, db, userID, equipData); err != nil {
+		logger.Error("加载装备数据失败", zap.Error(err))
+		return false, fmt.Errorf("加载装备数据失败")
+	}
+
 	// 检查是否已解锁
-	alreadyUnlocked := false
-
-	// 更新玩家装备数据
-	err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-		// 初始化装备数据（如果不存在）
-		if meta.Equip == nil {
-			return fmt.Errorf("装备数据为空")
-		}
-
-		// 检查是否已解锁
-		if _, exists := meta.Equip.UnlockEquips[equipID]; exists {
-			alreadyUnlocked = true
-			logger.Debug("炮台已解锁",
-				zap.String("equip_id", equipID))
-			return nil
-		}
-
-		// 解锁炮台，初始等级为1
-		meta.Equip.UnlockEquips[equipID] = 1
-
-		logger.Info("解锁新炮台",
+	if _, exists := equipData.UnlockEquips[equipID]; exists {
+		logger.Debug("炮台已解锁",
 			zap.String("equip_id", equipID))
+		return true, nil
+	}
 
-		return nil
-	})
+	// 解锁炮台，初始等级为1
+	equipData.UnlockEquips[equipID] = 1
 
-	if err != nil {
-		logger.Error("更新玩家装备数据失败",
+	// 保存装备数据
+	if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, equipData); err != nil {
+		logger.Error("保存装备数据失败",
 			zap.Error(err),
 			zap.String("equip_id", equipID))
-		return false, fmt.Errorf("更新玩家装备数据失败")
+		return false, fmt.Errorf("保存装备数据失败")
 	}
-	return alreadyUnlocked, nil
+
+	logger.Info("解锁新炮台",
+		zap.String("equip_id", equipID))
+
+	return false, nil
 }
 
 // distributeTurretDebris 根据炮台等级概率分配炮台碎片
-func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, totalDebrisCount int32, singleTurret bool) (map[string]int64, error) {
+func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, totalDebrisCount int32, singleTurret bool) (map[string]int64, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	logger.Debug("开始分配炮台碎片",
@@ -393,11 +390,17 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		zap.Int32("total_debris_count", totalDebrisCount),
 		zap.Bool("single_turret", singleTurret))
 
-	// 获取玩家装备数据
-	equipData, err := GetEquipData(ctx, logger, templateMgr)
-	if err != nil {
-		logger.Error("获取装备数据失败", zap.Error(err))
+	// 直接加载装备数据（不需要保存，所以传入 nil）
+	equipData := &EquipData{}
+	if err := LoadData(ctx, logger, db, userID, equipData); err != nil {
+		logger.Error("加载装备数据失败", zap.Error(err))
 		return nil, err
+	}
+
+	// 如果数据为空，返回空结果
+	if len(equipData.UnlockEquips) == 0 {
+		logger.Debug("装备数据为空，无法分配碎片")
+		return make(map[string]int64), nil
 	}
 
 	logger.Debug("玩家已解锁炮台数量",

@@ -96,7 +96,7 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 		if reward != nil {
 			// 发放奖励
 			source := "task_" + in.GetTaskId()
-			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 			if err != nil {
 				s.logger.Error("发放任务奖励失败", zap.Error(err))
 				return &game.ClaimTaskRewardResponse{
@@ -220,7 +220,7 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		if reward != nil {
 			// 发放奖励
 			source := "liveness_" + in.GetRewardId()
-			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 			if err != nil {
 				s.logger.Error("发放活跃度奖励失败", zap.Error(err))
 				return &game.ClaimLivenessRewardResponse{

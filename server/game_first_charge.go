@@ -97,7 +97,7 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 
 	// 发放奖励
 	source := fmt.Sprintf("first_charge_day_%d", in.Day)
-	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 	if err != nil {
 		s.logger.Error("发放首冲奖励失败", zap.Error(err), zap.Int32("day", in.Day))
 		return &game.ClaimFirstChargeRewardResponse{

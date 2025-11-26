@@ -111,7 +111,7 @@ func (s *ApiServer) ClaimVipReward(ctx context.Context, in *game.ClaimVipRewardR
 	}
 
 	// 发放奖励
-	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "vip_reward")
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, "vip_reward")
 	if err != nil {
 		s.logger.Error("发放VIP奖励失败", zap.String("user_id", userID.String()), zap.Error(err))
 		return &game.ClaimVipRewardResponse{

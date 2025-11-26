@@ -2,26 +2,52 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 )
 
-// 初始化关卡数据
-func initializeLevelData(userMeta *game.UserMeta) {
-	now := time.Now().Format(time.RFC3339)
-	userMeta.Level = &game.LevelData{
-		CurLevelId:             ZeroLevelId, // "L1000"
-		BestProgress:           0,
-		HasMoppingTimes:        0,
-		HasMoppingTimesForAdv:  0,
-		LastMoppingTimestamp:   now,
-		LastGetOnHookTimestamp: now, // 初始化为当前时间
+// GetLevelData 获取关卡数据（返回 storage 结构）
+func GetLevelData(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex) (*LevelData, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	levelData := &LevelData{}
+	if err := LoadData(ctx, logger, db, userID, levelData); err != nil {
+		logger.Error("加载关卡数据失败", zap.Error(err))
+		return nil, err
 	}
+
+	// 如果数据为空，初始化并保存
+	if levelData.CurLevelId == "" {
+		levelData.Init()
+		if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, levelData); err != nil {
+			logger.Error("保存初始化的关卡数据失败", zap.Error(err))
+			return nil, err
+		}
+	}
+
+	return levelData, nil
+}
+
+// GetLevelDataProto 获取关卡数据（返回 proto 格式）
+func GetLevelDataProto(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex) (*game.LevelData, error) {
+	levelData, err := GetLevelData(ctx, logger, db, metrics, storageIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	return &game.LevelData{
+		CurLevelId:             levelData.CurLevelId,
+		BestProgress:           levelData.BestProgress,
+		HasMoppingTimes:        levelData.HasMoppingTimes,
+		HasMoppingTimesForAdv:  levelData.HasMoppingTimesForAdv,
+		LastMoppingTimestamp:   levelData.LastMoppingTimestamp,
+		LastGetOnHookTimestamp: levelData.LastGetOnHookTimestamp,
+	}, nil
 }
 
 // ClaimLevelBox 领取关卡宝箱奖励
@@ -62,22 +88,17 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 		}, nil
 	}
 
-	// 获取用户元数据，检查关卡是否已通过
-	userMeta, _, err := GetUserMeta(ctx)
+	// 获取关卡数据
+	levelData, err := GetLevelData(ctx, s.logger, s.db, s.metrics, s.storageIndex)
 	if err != nil {
 		return &game.ClaimLevelBoxResponse{
 			Code: 5,
-			Msg:  "获取用户数据失败",
+			Msg:  "获取关卡数据失败",
 		}, nil
 	}
 
-	// 初始化关卡数据
-	if userMeta.Level == nil {
-		initializeLevelData(userMeta)
-	}
-
 	// 检查关卡是否已通过（当前关卡ID要小于等于已通过的关卡）
-	if !isLevelPassed(in.GetLevelId(), userMeta.Level.CurLevelId) {
+	if !isLevelPassed(in.GetLevelId(), levelData.CurLevelId) {
 		return &game.ClaimLevelBoxResponse{
 			Code: 6,
 			Msg:  "关卡尚未通过",
@@ -140,7 +161,7 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 
 			// 发放奖励
 			source := fmt.Sprintf("level_box_%s_%d", in.GetLevelId(), boxId)
-			walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+			walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 			if err != nil {
 				s.logger.Error("发放宝箱奖励失败", zap.Error(err), zap.String("level_id", in.GetLevelId()), zap.Int32("box_id", boxId))
 				return &game.ClaimLevelBoxResponse{

@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 	"strings"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
@@ -68,7 +70,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	}
 
 	//扣除体力值
-	if err := ConsumeStamina(ctx, s.logger, BattleCostStamina); err != nil {
+	if err := ConsumeStamina(ctx, s.logger, s.db, s.metrics, s.storageIndex, BattleCostStamina); err != nil {
 		return &game.EndBattleResponse{
 			Code: 3,
 			Msg:  "体力扣除失败: " + err.Error(),
@@ -82,7 +84,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 
 		// 使用统一的奖励发放函数（支持特殊道具处理）
 		var err error
-		walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+		walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 
 		if err != nil {
 			return &game.EndBattleResponse{
@@ -94,7 +96,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 
 	// 更新关卡进度（仅对普通关卡）
 	if in.GetType() == game.BattleType_BATTLE_TYPE_NORMAL {
-		if err := updateLevelProgress(ctx, s.logger, in.GetLevelId(), in.GetProgress()); err != nil {
+		if err := updateLevelProgress(ctx, s.logger, s.db, s.metrics, s.storageIndex, in.GetLevelId(), in.GetProgress()); err != nil {
 			s.logger.Error("更新关卡进度失败",
 				zap.Error(err),
 				zap.String("level_id", in.GetLevelId()),
@@ -207,49 +209,50 @@ func applyProgressToReward(reward *game.Reward, progress int32) {
 	}
 }
 
-// updateLevelProgress 更新关卡进度到 UserMeta
-func updateLevelProgress(ctx context.Context, logger *zap.Logger, levelId string, progress int32) error {
-	return UpdateUserMeta(ctx, func(userMeta *game.UserMeta) error {
-		// 初始化关卡数据
-		if userMeta.Level == nil {
-			userMeta.Level = &game.LevelData{
-				CurLevelId:   levelId,
-				BestProgress: progress,
-			}
-			logger.Info("初始化关卡进度",
-				zap.String("level_id", levelId),
-				zap.Int32("progress", progress))
-			return nil
-		}
+// updateLevelProgress 更新关卡进度到 storage
+func updateLevelProgress(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, levelId string, progress int32) error {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-		// 更新最大关卡
-		needUpdate := false
-		if compareLevelId(levelId, userMeta.Level.CurLevelId) {
-			// 新关卡更大，更新关卡和进度
-			userMeta.Level.CurLevelId = levelId
-			userMeta.Level.BestProgress = progress
-			needUpdate = true
-			logger.Info("更新最大关卡",
-				zap.String("old_level_id", userMeta.Level.CurLevelId),
-				zap.String("new_level_id", levelId),
-				zap.Int32("progress", progress))
-		} else if levelId == userMeta.Level.CurLevelId && progress > userMeta.Level.BestProgress {
-			// 同一关卡，更新最好进度
-			oldProgress := userMeta.Level.BestProgress
-			userMeta.Level.BestProgress = progress
-			needUpdate = true
-			logger.Info("更新最好进度",
-				zap.String("level_id", levelId),
-				zap.Int32("old_progress", oldProgress),
-				zap.Int32("new_progress", progress))
-		}
+	// 加载关卡数据
+	levelData, err := GetLevelData(ctx, logger, db, metrics, storageIndex)
+	if err != nil {
+		logger.Error("加载关卡数据失败", zap.Error(err))
+		return err
+	}
 
-		if needUpdate {
-			logger.Info("关卡进度已更新",
-				zap.String("cur_level_id", userMeta.Level.CurLevelId),
-				zap.Int32("best_progress", userMeta.Level.BestProgress))
-		}
+	// 更新最大关卡
+	needUpdate := false
+	if compareLevelId(levelId, levelData.CurLevelId) {
+		// 新关卡更大，更新关卡和进度
+		oldLevelId := levelData.CurLevelId
+		levelData.CurLevelId = levelId
+		levelData.BestProgress = progress
+		needUpdate = true
+		logger.Info("更新最大关卡",
+			zap.String("old_level_id", oldLevelId),
+			zap.String("new_level_id", levelId),
+			zap.Int32("progress", progress))
+	} else if levelId == levelData.CurLevelId && progress > levelData.BestProgress {
+		// 同一关卡，更新最好进度
+		oldProgress := levelData.BestProgress
+		levelData.BestProgress = progress
+		needUpdate = true
+		logger.Info("更新最好进度",
+			zap.String("level_id", levelId),
+			zap.Int32("old_progress", oldProgress),
+			zap.Int32("new_progress", progress))
+	}
 
-		return nil
-	})
+	if needUpdate {
+		// 保存更新的关卡数据
+		if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, levelData); err != nil {
+			logger.Error("保存关卡数据失败", zap.Error(err))
+			return err
+		}
+		logger.Info("关卡进度已更新",
+			zap.String("cur_level_id", levelData.CurLevelId),
+			zap.Int32("best_progress", levelData.BestProgress))
+	}
+
+	return nil
 }

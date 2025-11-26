@@ -119,9 +119,7 @@ message SignInData{
 // 玩家元数据
 message UserMeta{
   int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
-  StaminaData stamina = 2;
-  EquipData equip = 3;
-  LevelData level = 4;
+  // StaminaData、EquipData 和 LevelData 已迁移到独立的 storage 存储
 }
 
 // 钱包结构v

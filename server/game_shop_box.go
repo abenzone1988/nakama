@@ -97,7 +97,7 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 
 	// 发放所有奖励并累加背包更新
 	for _, reward := range rewards {
-		_, invResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, "box_shop")
+		_, invResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, "box_shop")
 		if err != nil {
 			s.logger.Error("发放宝箱奖励失败", zap.Error(err))
 		} else if invResult != nil && invResult.Updated != nil {

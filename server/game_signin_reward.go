@@ -49,7 +49,7 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 	}
 
 	source := fmt.Sprintf("daily_sign_in_day_%d", nextDay)
-	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, reward, source)
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 	if err != nil {
 		s.logger.Error("发放每日签到奖励失败", zap.Error(err), zap.Int32("day", nextDay))
 		return &game.ClaimSignInRewardResponse{
