@@ -847,10 +847,7 @@ service Nakama {
     };
   }
 
-  // Check if current user is VIP
-  rpc CheckVipStatus(google.protobuf.Empty) returns (game.CheckVipStatusResponse) {
-    option (google.api.http).get = "/v2/game/activity/status";
-  }
+
 
   //Get current stamina
   rpc GetCurrentStamina(google.protobuf.Empty) returns (game.StaminaData) {
@@ -938,6 +935,108 @@ service Nakama {
   rpc BuyGemItem(game.BuyGemItemRequest) returns (game.BuyGemItemResponse) {
     option (google.api.http) = {
       post: "/v2/game/shop/gem/buy"
+      body: "*"
+    };
+  }
+
+  // ==================== Battle & AFK ====================
+  rpc EndBattle(game.EndBattleRequest) returns (game.EndBattleResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/battle/end"
+      body: "*"
+    };
+  }
+
+  rpc ClaimMoppingReward(game.ClaimMoppingRewardRequest) returns (game.ClaimMoppingRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/mopping/claim"
+      body: "*"
+    };
+  }
+
+  rpc ClaimOnHookReward(game.ClaimOnHookRewardRequest) returns (game.ClaimOnHookRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/onhook/claim"
+      body: "*"
+    };
+  }
+
+  // ==================== Equip ====================
+  rpc UpdateEquipData(game.UpdateEquipDataRequest) returns (game.UpdateEquipDataResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/equip/update"
+      body: "*"
+    };
+  }
+
+  // ==================== Level ====================
+  rpc ClaimLevelBox(game.ClaimLevelBoxRequest) returns (game.ClaimLevelBoxResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/level/box/claim"
+      body: "*"
+    };
+  }
+
+  // ==================== Sign In ====================
+  rpc ClaimSignInReward(game.ClaimSignInRewardRequest) returns (game.ClaimSignInRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/signin/claim"
+      body: "*"
+    };
+  }
+
+  // ==================== First Charge ====================
+  rpc GetFirstChargeStatus(game.GetFirstChargeStatusRequest) returns (game.GetFirstChargeStatusResponse) {
+    option (google.api.http).get = "/v2/game/firstcharge/status";
+  }
+
+  rpc ClaimFirstChargeReward(game.ClaimFirstChargeRewardRequest) returns (game.ClaimFirstChargeRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/firstcharge/claim"
+      body: "*"
+    };
+  }
+
+  // ==================== Task ====================
+  rpc GetTask(game.GetTaskRequest) returns (game.GetTaskResponse) {
+    option (google.api.http).get = "/v2/game/task";
+  }
+
+  rpc ClaimTaskReward(game.ClaimTaskRewardRequest) returns (game.ClaimTaskRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/task/claim"
+      body: "*"
+    };
+  }
+
+  rpc ClaimLivenessReward(game.ClaimLivenessRewardRequest) returns (game.ClaimLivenessRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/task/liveness/claim"
+      body: "*"
+    };
+  }
+
+  // ==================== VIP ====================
+  rpc ClaimVipReward(game.ClaimVipRewardRequest) returns (game.ClaimVipRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/activity/claim"
+      body: "*"
+    };
+  }
+
+  // Check if current user is VIP
+  rpc CheckVipStatus(google.protobuf.Empty) returns (game.CheckVipStatusResponse) {
+    option (google.api.http).get = "/v2/game/activity/status";
+  }
+
+  // ==================== Seven Day Event ====================
+  rpc GetSevenDayStatus(game.GetSevenDayStatusRequest) returns (game.GetSevenDayStatusResponse) {
+    option (google.api.http).get = "/v2/game/sevenday/status";
+  }
+
+  rpc ClaimSevenDayReward(game.ClaimSevenDayRewardRequest) returns (game.ClaimSevenDayRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/sevenday/claim"
       body: "*"
     };
   }

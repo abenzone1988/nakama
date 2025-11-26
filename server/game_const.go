@@ -61,3 +61,8 @@ const (
 	DailySignInTotalDays = 30
 	DailySignInBaseID    = 10000
 )
+
+// 装备相关常量
+const (
+	EquipID_Crystal = "EQ1999"
+)

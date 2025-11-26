@@ -159,6 +159,8 @@ message CheckVipStatusResponse {
   int64 expire_time = 1;
   // Signature
   string signature = 2;
+  // 当前领奖状态
+  bool reward_claimed = 3;
 }
 
 enum BattleType{

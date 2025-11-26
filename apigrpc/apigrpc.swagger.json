@@ -1780,6 +1780,39 @@
         ]
       }
     },
+    "/v2/game/activity/claim": {
+      "post": {
+        "summary": "==================== VIP ====================",
+        "operationId": "Nakama_ClaimVipReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimVipRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimVipRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/activity/status": {
       "get": {
         "summary": "Check if current user is VIP",
@@ -1843,6 +1876,39 @@
         ]
       }
     },
+    "/v2/game/battle/end": {
+      "post": {
+        "summary": "==================== Battle \u0026 AFK ====================",
+        "operationId": "Nakama_EndBattle",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameEndBattleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameEndBattleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/equip": {
       "get": {
         "summary": "Get equip data",
@@ -1861,6 +1927,39 @@
             }
           }
         },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/equip/update": {
+      "post": {
+        "summary": "==================== Equip ====================",
+        "operationId": "Nakama_UpdateEquipData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUpdateEquipDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUpdateEquipDataRequest"
+            }
+          }
+        ],
         "tags": [
           "Nakama"
         ]
@@ -1900,6 +1999,61 @@
         ]
       }
     },
+    "/v2/game/firstcharge/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimFirstChargeReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimFirstChargeRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimFirstChargeRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/firstcharge/status": {
+      "get": {
+        "summary": "==================== First Charge ====================",
+        "operationId": "Nakama_GetFirstChargeStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetFirstChargeStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/inventory/operate": {
       "post": {
         "summary": "Operate Inventory",
@@ -1925,6 +2079,103 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/gameOperateInventoryRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/level/box/claim": {
+      "post": {
+        "summary": "==================== Level ====================",
+        "operationId": "Nakama_ClaimLevelBox",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimLevelBoxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimLevelBoxRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/mopping/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimMoppingReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimMoppingRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimMoppingRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/onhook/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimOnHookReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimOnHookRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimOnHookRewardRequest"
             }
           }
         ],
@@ -1961,6 +2212,61 @@
             }
           }
         ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/sevenday/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimSevenDayReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimSevenDayRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimSevenDayRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/sevenday/status": {
+      "get": {
+        "summary": "==================== Seven Day Event ====================",
+        "operationId": "Nakama_GetSevenDayStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetSevenDayStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
         "tags": [
           "Nakama"
         ]
@@ -2223,6 +2529,39 @@
         ]
       }
     },
+    "/v2/game/signin/claim": {
+      "post": {
+        "summary": "==================== Sign In ====================",
+        "operationId": "Nakama_ClaimSignInReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimSignInRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimSignInRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/stamina": {
       "get": {
         "summary": "Get current stamina",
@@ -2241,6 +2580,93 @@
             }
           }
         },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/task": {
+      "get": {
+        "summary": "==================== Task ====================",
+        "operationId": "Nakama_GetTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetTaskResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/task/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimTaskReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimTaskRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimTaskRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/task/liveness/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimLivenessReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimLivenessRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimLivenessRewardRequest"
+            }
+          }
+        ],
         "tags": [
           "Nakama"
         ]
@@ -6255,6 +6681,14 @@
       },
       "title": "公告信息"
     },
+    "gameBattleType": {
+      "type": "string",
+      "enum": [
+        "BATTLE_TYPE_NORMAL",
+        "BATTLE_TYPE_GOLDEN"
+      ],
+      "default": "BATTLE_TYPE_NORMAL"
+    },
     "gameBoxShopData": {
       "type": "object",
       "properties": {
@@ -6475,9 +6909,60 @@
         "signature": {
           "type": "string",
           "title": "Signature"
+        },
+        "rewardClaimed": {
+          "type": "boolean",
+          "title": "当前领奖状态"
         }
       },
       "title": "VIP状态"
+    },
+    "gameClaimFirstChargeRewardRequest": {
+      "type": "object",
+      "properties": {
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "title": "要领取的天数（1-7）"
+        }
+      },
+      "title": "领取首冲奖励请求"
+    },
+    "gameClaimFirstChargeRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        },
+        "claimedDays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "更新后的已领取天数列表"
+        }
+      },
+      "title": "领取首冲奖励响应"
     },
     "gameClaimInviteRewardRequest": {
       "type": "object",
@@ -6487,6 +6972,384 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "gameClaimLevelBoxRequest": {
+      "type": "object",
+      "properties": {
+        "levelId": {
+          "type": "string",
+          "title": "关卡ID，如 \"L1001\""
+        },
+        "boxIds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "宝箱ID列表，1-3"
+        }
+      },
+      "title": "领取关卡宝箱请求"
+    },
+    "gameClaimLevelBoxResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "rewards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameReward"
+          },
+          "title": "奖励列表"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取关卡宝箱响应"
+    },
+    "gameClaimLivenessRewardRequest": {
+      "type": "object",
+      "properties": {
+        "rewardId": {
+          "type": "string",
+          "title": "活跃度奖励ID"
+        }
+      },
+      "title": "领取活跃度奖励请求"
+    },
+    "gameClaimLivenessRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取活跃度奖励响应"
+    },
+    "gameClaimMoppingRewardRequest": {
+      "type": "object",
+      "properties": {
+        "watchedAd": {
+          "type": "boolean",
+          "title": "是否观看了广告（第二阶段使用）"
+        }
+      },
+      "title": "扫荡奖励请求"
+    },
+    "gameClaimMoppingRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        },
+        "hasMoppingTimes": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第一阶段已使用次数"
+        },
+        "hasMoppingTimesForAdv": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第二阶段已使用次数"
+        }
+      },
+      "title": "扫荡奖励响应"
+    },
+    "gameClaimOnHookRewardRequest": {
+      "type": "object",
+      "title": "领取挂机奖励请求"
+    },
+    "gameClaimOnHookRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "hours": {
+          "type": "integer",
+          "format": "int32",
+          "title": "领取的小时数"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "其他奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取挂机奖励响应"
+    },
+    "gameClaimSevenDayRewardRequest": {
+      "type": "object",
+      "properties": {
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "title": "要领取的天数（0-7，0表示立即获得）"
+        }
+      },
+      "title": "领取七日奖励请求"
+    },
+    "gameClaimSevenDayRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        },
+        "claimedDays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "更新后的已领取天数列表"
+        }
+      },
+      "title": "领取七日奖励响应"
+    },
+    "gameClaimSignInRewardRequest": {
+      "type": "object",
+      "title": "领取每日签到奖励请求"
+    },
+    "gameClaimSignInRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前领取的天数"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取每日签到奖励响应"
+    },
+    "gameClaimTaskRewardRequest": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "title": "任务ID"
+        }
+      },
+      "title": "领取任务奖励请求"
+    },
+    "gameClaimTaskRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "liveness": {
+          "type": "integer",
+          "format": "int32",
+          "title": "获得的活跃度"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "任务奖励"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取任务奖励响应"
+    },
+    "gameClaimVipRewardRequest": {
+      "type": "object",
+      "title": "领取VIP奖励请求（一次性）"
+    },
+    "gameClaimVipRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        },
+        "rewardClaimed": {
+          "type": "boolean",
+          "title": "当前领奖状态"
+        }
+      },
+      "title": "领取VIP奖励响应"
+    },
+    "gameEndBattleRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/gameBattleType"
+        },
+        "levelId": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "结束战斗"
+    },
+    "gameEndBattleResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
         }
       }
     },
@@ -6537,6 +7400,40 @@
       },
       "title": "==================== 钻石商店（独立，IAP） ===================="
     },
+    "gameGetFirstChargeStatusResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "isCharged": {
+          "type": "boolean",
+          "title": "是否已首冲"
+        },
+        "chargeTime": {
+          "type": "string",
+          "title": "首冲时间"
+        },
+        "claimedDays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "已领取的天数列表"
+        },
+        "availableDays": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前可领取的天数（例如第3天可以领1、2、3天的奖励）"
+        }
+      },
+      "title": "获取首冲状态响应"
+    },
     "gameGetGameTimeResponse": {
       "type": "object",
       "properties": {
@@ -6545,6 +7442,77 @@
           "format": "date-time"
         }
       }
+    },
+    "gameGetSevenDayStatusResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "isPurchased": {
+          "type": "boolean",
+          "title": "是否已购买当前周期"
+        },
+        "purchaseTime": {
+          "type": "string",
+          "title": "最后一次购买时间"
+        },
+        "claimedDays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "已领取的天数列表"
+        },
+        "availableDays": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前可领取的天数（例如第3天可以领0、1、2、3天的奖励）"
+        },
+        "totalPurchases": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总购买次数"
+        }
+      },
+      "title": "获取七日购买状态响应"
+    },
+    "gameGetTaskResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "currentLiveness": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前活跃度"
+        },
+        "claimedTasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "已领取的任务ID列表"
+        },
+        "claimedLivenessRewards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "已领取的活跃度奖励ID列表"
+        }
+      },
+      "title": "获取任务状态响应"
     },
     "gameItem": {
       "type": "object",
@@ -6895,6 +7863,40 @@
       "properties": {
         "inviterId": {
           "type": "string"
+        }
+      }
+    },
+    "gameUpdateEquipDataRequest": {
+      "type": "object",
+      "properties": {
+        "equipId": {
+          "type": "string"
+        }
+      }
+    },
+    "gameUpdateEquipDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipData": {
+          "$ref": "#/definitions/gameEquipData"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
         }
       }
     },

@@ -18,6 +18,7 @@ type TemplateManager interface {
 	GetTplRedemption() *TableTplRedemption
 	GetTplLevelInfo() *TableTplLevelInfo
 	GetTplActivityLevelInfo() *TableTplActivityLevelInfo
+	GetTplCrystalTechnologyDev() *TableTplCrystalTechnologyDev
 	GetTplRedemptionInfo() *TableTplRedemption
 	GetTplItem() *TableTplItem
 	GetTplReward() *TableTplReward
@@ -46,6 +47,7 @@ type LocalTemplateManager struct {
 	tableTplItem              *TableTplItem
 	tableTplReward            *TableTplReward
 	tableTplActivityLevelInfo *TableTplActivityLevelInfo
+	tableTplCrystalTechnology *TableTplCrystalTechnologyDev
 	tableTplEquipmentDev      *TableTplEquipmentDev
 	tableTplUnlock            *TableTplUnlock
 	tableTplShop              *TableTplShop
@@ -73,6 +75,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplUnlock:            NewTableTplUnlock(logger, jsonPath),
 		tableTplReward:            NewTableTplReward(logger, jsonPath),
 		tableTplActivityLevelInfo: NewTableTplActivityLevelInfo(logger, jsonPath),
+		tableTplCrystalTechnology: NewTableTplCrystalTechnologyDev(logger, jsonPath),
 		tableTplEquipmentDev:      NewTableTplEquipmentDev(logger, jsonPath),
 		tableTplShop:              NewTableTplShop(logger, jsonPath),
 		tableTplShopDailyItem:     NewTableTplShopDailyItem(logger, jsonPath),
@@ -100,6 +103,7 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplItem.LoadData(t.StorageReadTpl("TplItem"))
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
+	t.tableTplCrystalTechnology.LoadData(t.StorageReadTpl("TplCrystalTechnologyDev"))
 	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
 	t.tableTplUnlock.LoadData(t.StorageReadTpl("TplUnlock"))
 	t.tableTplShop.LoadData(t.StorageReadTpl("TplShop"))
@@ -168,6 +172,12 @@ func (t *LocalTemplateManager) GetTplActivityLevelInfo() *TableTplActivityLevelI
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplActivityLevelInfo
+}
+
+func (t *LocalTemplateManager) GetTplCrystalTechnologyDev() *TableTplCrystalTechnologyDev {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalTechnology
 }
 
 func (t *LocalTemplateManager) GetTplEquipmentDev() *TableTplEquipmentDev {

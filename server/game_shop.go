@@ -16,34 +16,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type ShopInfo struct {
-	ShopType        game.ShopType `json:"shop_type"`
-	Items           []*ShopItem   `json:"items"`
-	CanRefresh      bool          `json:"can_refresh"`
-	RefreshCount    int32         `json:"refresh_count"`
-	NextRefreshTime time.Time     `json:"next_refresh_time"`
-}
-
-type ShopItem struct {
-	ShopItemID  string       `json:"shop_item_id"`
-	ItemID      string       `json:"item_id"`
-	PayType     game.PayType `json:"pay_type"`
-	Price       int32        `json:"price"`
-	Discount    int32        `json:"discount"`
-	ItemCount   int32        `json:"item_count"`
-	MaxBuyCount int32        `json:"max_buy_count"`
-	BoughtCount int32        `json:"bought_count"`
-	// 分段购买配置（用于支持多种支付方式，如先免费再广告）
-	PaymentStages []PaymentStage `json:"payment_stages,omitempty"`
-}
-
-// PaymentStage 支付阶段配置
-type PaymentStage struct {
-	PayType    game.PayType `json:"pay_type"`    // 支付类型
-	Price      int32        `json:"price"`       // 价格
-	LimitCount int32        `json:"limit_count"` // 该阶段购买次数限制
-}
-
 // checkNeedRefresh 检查是否需要刷新（跨天）
 func checkNeedRefresh(lastTime time.Time) bool {
 	if lastTime.IsZero() {
@@ -84,10 +56,10 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 	s.initShop(shopData, game.ShopType_SHOP_COIN, false)
 	s.initShop(shopData, game.ShopType_SHOP_STRENGTH, false)
 
-	//if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
-	//	s.logger.Error("保存商店数据失败", zap.Error(err))
-	//	return nil, err
-	//}
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
+		s.logger.Error("保存商店数据失败", zap.Error(err))
+		return nil, err
+	}
 
 	return convertToProtoShopData(shopData), nil
 }

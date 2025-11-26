@@ -56,6 +56,11 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 		} else {
 			response.Signature = signature
 			response.ExpireTime = vipAccount.ExpiryTime.AsTime().Unix()
+			vipRewardData := &VipRewardData{}
+			if err := LoadData(ctx, s.logger, s.db, userIDUUID, vipRewardData); err != nil {
+				return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
+			}
+			response.RewardClaimed = vipRewardData.RewardClaimed
 		}
 	}
 

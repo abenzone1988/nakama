@@ -2,6 +2,8 @@ package server
 
 import (
 	"time"
+
+	"github.com/heroiclabs/nakama/v3/game"
 )
 
 // ============================================================================
@@ -84,6 +86,34 @@ func (d *SignInData) Init() {
 // ============================================================================
 
 // ShopData 商店数据存储结构（包含所有类型商店）
+type ShopInfo struct {
+	ShopType        game.ShopType `json:"shop_type"`
+	Items           []*ShopItem   `json:"items"`
+	CanRefresh      bool          `json:"can_refresh"`
+	RefreshCount    int32         `json:"refresh_count"`
+	NextRefreshTime time.Time     `json:"next_refresh_time"`
+}
+
+type ShopItem struct {
+	ShopItemID  string       `json:"shop_item_id"`
+	ItemID      string       `json:"item_id"`
+	PayType     game.PayType `json:"pay_type"`
+	Price       int32        `json:"price"`
+	Discount    int32        `json:"discount"`
+	ItemCount   int32        `json:"item_count"`
+	MaxBuyCount int32        `json:"max_buy_count"`
+	BoughtCount int32        `json:"bought_count"`
+	// 分段购买配置（用于支持多种支付方式，如先免费再广告）
+	PaymentStages []PaymentStage `json:"payment_stages,omitempty"`
+}
+
+// PaymentStage 支付阶段配置
+type PaymentStage struct {
+	PayType    game.PayType `json:"pay_type"`    // 支付类型
+	Price      int32        `json:"price"`       // 价格
+	LimitCount int32        `json:"limit_count"` // 该阶段购买次数限制
+}
+
 type ShopData struct {
 	BaseStorable
 	DateTime time.Time            `json:"date_time"`
@@ -95,7 +125,7 @@ func (d *ShopData) GetCollection() string {
 }
 
 func (d *ShopData) GetKey() string {
-	return "data"
+	return "daily"
 }
 
 func (d *ShopData) Init() {

@@ -133,7 +133,6 @@ const (
 	Nakama_ListPublishedAnnouncements_FullMethodName        = "/nakama.api.Nakama/ListPublishedAnnouncements"
 	Nakama_MarkNotificationsRead_FullMethodName             = "/nakama.api.Nakama/MarkNotificationsRead"
 	Nakama_ClaimNotificationAttachments_FullMethodName      = "/nakama.api.Nakama/ClaimNotificationAttachments"
-	Nakama_CheckVipStatus_FullMethodName                    = "/nakama.api.Nakama/CheckVipStatus"
 	Nakama_GetCurrentStamina_FullMethodName                 = "/nakama.api.Nakama/GetCurrentStamina"
 	Nakama_GetEquipData_FullMethodName                      = "/nakama.api.Nakama/GetEquipData"
 	Nakama_OperateWallet_FullMethodName                     = "/nakama.api.Nakama/OperateWallet"
@@ -147,6 +146,21 @@ const (
 	Nakama_BuyChapterItem_FullMethodName                    = "/nakama.api.Nakama/BuyChapterItem"
 	Nakama_GetGemShop_FullMethodName                        = "/nakama.api.Nakama/GetGemShop"
 	Nakama_BuyGemItem_FullMethodName                        = "/nakama.api.Nakama/BuyGemItem"
+	Nakama_EndBattle_FullMethodName                         = "/nakama.api.Nakama/EndBattle"
+	Nakama_ClaimMoppingReward_FullMethodName                = "/nakama.api.Nakama/ClaimMoppingReward"
+	Nakama_ClaimOnHookReward_FullMethodName                 = "/nakama.api.Nakama/ClaimOnHookReward"
+	Nakama_UpdateEquipData_FullMethodName                   = "/nakama.api.Nakama/UpdateEquipData"
+	Nakama_ClaimLevelBox_FullMethodName                     = "/nakama.api.Nakama/ClaimLevelBox"
+	Nakama_ClaimSignInReward_FullMethodName                 = "/nakama.api.Nakama/ClaimSignInReward"
+	Nakama_GetFirstChargeStatus_FullMethodName              = "/nakama.api.Nakama/GetFirstChargeStatus"
+	Nakama_ClaimFirstChargeReward_FullMethodName            = "/nakama.api.Nakama/ClaimFirstChargeReward"
+	Nakama_GetTask_FullMethodName                           = "/nakama.api.Nakama/GetTask"
+	Nakama_ClaimTaskReward_FullMethodName                   = "/nakama.api.Nakama/ClaimTaskReward"
+	Nakama_ClaimLivenessReward_FullMethodName               = "/nakama.api.Nakama/ClaimLivenessReward"
+	Nakama_ClaimVipReward_FullMethodName                    = "/nakama.api.Nakama/ClaimVipReward"
+	Nakama_CheckVipStatus_FullMethodName                    = "/nakama.api.Nakama/CheckVipStatus"
+	Nakama_GetSevenDayStatus_FullMethodName                 = "/nakama.api.Nakama/GetSevenDayStatus"
+	Nakama_ClaimSevenDayReward_FullMethodName               = "/nakama.api.Nakama/ClaimSevenDayReward"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -341,8 +355,6 @@ type NakamaClient interface {
 	MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*api.MarkNotificationsReadResponse, error)
 	// Claim notification attachments
 	ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*api.ClaimNotificationAttachmentsResponse, error)
-	// Check if current user is VIP
-	CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error)
 	// Get current stamina
 	GetCurrentStamina(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.StaminaData, error)
 	// Get equip data
@@ -372,6 +384,30 @@ type NakamaClient interface {
 	GetGemShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GemShopData, error)
 	// Buy item from gem shop
 	BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest, opts ...grpc.CallOption) (*game.BuyGemItemResponse, error)
+	// ==================== Battle & AFK ====================
+	EndBattle(ctx context.Context, in *game.EndBattleRequest, opts ...grpc.CallOption) (*game.EndBattleResponse, error)
+	ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppingRewardRequest, opts ...grpc.CallOption) (*game.ClaimMoppingRewardResponse, error)
+	ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookRewardRequest, opts ...grpc.CallOption) (*game.ClaimOnHookRewardResponse, error)
+	// ==================== Equip ====================
+	UpdateEquipData(ctx context.Context, in *game.UpdateEquipDataRequest, opts ...grpc.CallOption) (*game.UpdateEquipDataResponse, error)
+	// ==================== Level ====================
+	ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error)
+	// ==================== Sign In ====================
+	ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest, opts ...grpc.CallOption) (*game.ClaimSignInRewardResponse, error)
+	// ==================== First Charge ====================
+	GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest, opts ...grpc.CallOption) (*game.GetFirstChargeStatusResponse, error)
+	ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFirstChargeRewardRequest, opts ...grpc.CallOption) (*game.ClaimFirstChargeRewardResponse, error)
+	// ==================== Task ====================
+	GetTask(ctx context.Context, in *game.GetTaskRequest, opts ...grpc.CallOption) (*game.GetTaskResponse, error)
+	ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewardRequest, opts ...grpc.CallOption) (*game.ClaimTaskRewardResponse, error)
+	ClaimLivenessReward(ctx context.Context, in *game.ClaimLivenessRewardRequest, opts ...grpc.CallOption) (*game.ClaimLivenessRewardResponse, error)
+	// ==================== VIP ====================
+	ClaimVipReward(ctx context.Context, in *game.ClaimVipRewardRequest, opts ...grpc.CallOption) (*game.ClaimVipRewardResponse, error)
+	// Check if current user is VIP
+	CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error)
+	// ==================== Seven Day Event ====================
+	GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayStatusRequest, opts ...grpc.CallOption) (*game.GetSevenDayStatusResponse, error)
+	ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest, opts ...grpc.CallOption) (*game.ClaimSevenDayRewardResponse, error)
 }
 
 type nakamaClient struct {
@@ -1228,15 +1264,6 @@ func (c *nakamaClient) ClaimNotificationAttachments(ctx context.Context, in *api
 	return out, nil
 }
 
-func (c *nakamaClient) CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error) {
-	out := new(game.CheckVipStatusResponse)
-	err := c.cc.Invoke(ctx, Nakama_CheckVipStatus_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *nakamaClient) GetCurrentStamina(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.StaminaData, error) {
 	out := new(game.StaminaData)
 	err := c.cc.Invoke(ctx, Nakama_GetCurrentStamina_FullMethodName, in, out, opts...)
@@ -1348,6 +1375,141 @@ func (c *nakamaClient) GetGemShop(ctx context.Context, in *emptypb.Empty, opts .
 func (c *nakamaClient) BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest, opts ...grpc.CallOption) (*game.BuyGemItemResponse, error) {
 	out := new(game.BuyGemItemResponse)
 	err := c.cc.Invoke(ctx, Nakama_BuyGemItem_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) EndBattle(ctx context.Context, in *game.EndBattleRequest, opts ...grpc.CallOption) (*game.EndBattleResponse, error) {
+	out := new(game.EndBattleResponse)
+	err := c.cc.Invoke(ctx, Nakama_EndBattle_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppingRewardRequest, opts ...grpc.CallOption) (*game.ClaimMoppingRewardResponse, error) {
+	out := new(game.ClaimMoppingRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimMoppingReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookRewardRequest, opts ...grpc.CallOption) (*game.ClaimOnHookRewardResponse, error) {
+	out := new(game.ClaimOnHookRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimOnHookReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDataRequest, opts ...grpc.CallOption) (*game.UpdateEquipDataResponse, error) {
+	out := new(game.UpdateEquipDataResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpdateEquipData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error) {
+	out := new(game.ClaimLevelBoxResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimLevelBox_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest, opts ...grpc.CallOption) (*game.ClaimSignInRewardResponse, error) {
+	out := new(game.ClaimSignInRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimSignInReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest, opts ...grpc.CallOption) (*game.GetFirstChargeStatusResponse, error) {
+	out := new(game.GetFirstChargeStatusResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetFirstChargeStatus_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFirstChargeRewardRequest, opts ...grpc.CallOption) (*game.ClaimFirstChargeRewardResponse, error) {
+	out := new(game.ClaimFirstChargeRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimFirstChargeReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetTask(ctx context.Context, in *game.GetTaskRequest, opts ...grpc.CallOption) (*game.GetTaskResponse, error) {
+	out := new(game.GetTaskResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetTask_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewardRequest, opts ...grpc.CallOption) (*game.ClaimTaskRewardResponse, error) {
+	out := new(game.ClaimTaskRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimTaskReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimLivenessReward(ctx context.Context, in *game.ClaimLivenessRewardRequest, opts ...grpc.CallOption) (*game.ClaimLivenessRewardResponse, error) {
+	out := new(game.ClaimLivenessRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimLivenessReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimVipReward(ctx context.Context, in *game.ClaimVipRewardRequest, opts ...grpc.CallOption) (*game.ClaimVipRewardResponse, error) {
+	out := new(game.ClaimVipRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimVipReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) CheckVipStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.CheckVipStatusResponse, error) {
+	out := new(game.CheckVipStatusResponse)
+	err := c.cc.Invoke(ctx, Nakama_CheckVipStatus_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayStatusRequest, opts ...grpc.CallOption) (*game.GetSevenDayStatusResponse, error) {
+	out := new(game.GetSevenDayStatusResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetSevenDayStatus_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest, opts ...grpc.CallOption) (*game.ClaimSevenDayRewardResponse, error) {
+	out := new(game.ClaimSevenDayRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimSevenDayReward_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1546,8 +1708,6 @@ type NakamaServer interface {
 	MarkNotificationsRead(context.Context, *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error)
 	// Claim notification attachments
 	ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error)
-	// Check if current user is VIP
-	CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error)
 	// Get current stamina
 	GetCurrentStamina(context.Context, *emptypb.Empty) (*game.StaminaData, error)
 	// Get equip data
@@ -1577,6 +1737,30 @@ type NakamaServer interface {
 	GetGemShop(context.Context, *emptypb.Empty) (*game.GemShopData, error)
 	// Buy item from gem shop
 	BuyGemItem(context.Context, *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error)
+	// ==================== Battle & AFK ====================
+	EndBattle(context.Context, *game.EndBattleRequest) (*game.EndBattleResponse, error)
+	ClaimMoppingReward(context.Context, *game.ClaimMoppingRewardRequest) (*game.ClaimMoppingRewardResponse, error)
+	ClaimOnHookReward(context.Context, *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error)
+	// ==================== Equip ====================
+	UpdateEquipData(context.Context, *game.UpdateEquipDataRequest) (*game.UpdateEquipDataResponse, error)
+	// ==================== Level ====================
+	ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error)
+	// ==================== Sign In ====================
+	ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error)
+	// ==================== First Charge ====================
+	GetFirstChargeStatus(context.Context, *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error)
+	ClaimFirstChargeReward(context.Context, *game.ClaimFirstChargeRewardRequest) (*game.ClaimFirstChargeRewardResponse, error)
+	// ==================== Task ====================
+	GetTask(context.Context, *game.GetTaskRequest) (*game.GetTaskResponse, error)
+	ClaimTaskReward(context.Context, *game.ClaimTaskRewardRequest) (*game.ClaimTaskRewardResponse, error)
+	ClaimLivenessReward(context.Context, *game.ClaimLivenessRewardRequest) (*game.ClaimLivenessRewardResponse, error)
+	// ==================== VIP ====================
+	ClaimVipReward(context.Context, *game.ClaimVipRewardRequest) (*game.ClaimVipRewardResponse, error)
+	// Check if current user is VIP
+	CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error)
+	// ==================== Seven Day Event ====================
+	GetSevenDayStatus(context.Context, *game.GetSevenDayStatusRequest) (*game.GetSevenDayStatusResponse, error)
+	ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -1866,9 +2050,6 @@ func (UnimplementedNakamaServer) MarkNotificationsRead(context.Context, *api.Mar
 func (UnimplementedNakamaServer) ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimNotificationAttachments not implemented")
 }
-func (UnimplementedNakamaServer) CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CheckVipStatus not implemented")
-}
 func (UnimplementedNakamaServer) GetCurrentStamina(context.Context, *emptypb.Empty) (*game.StaminaData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentStamina not implemented")
 }
@@ -1907,6 +2088,51 @@ func (UnimplementedNakamaServer) GetGemShop(context.Context, *emptypb.Empty) (*g
 }
 func (UnimplementedNakamaServer) BuyGemItem(context.Context, *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BuyGemItem not implemented")
+}
+func (UnimplementedNakamaServer) EndBattle(context.Context, *game.EndBattleRequest) (*game.EndBattleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EndBattle not implemented")
+}
+func (UnimplementedNakamaServer) ClaimMoppingReward(context.Context, *game.ClaimMoppingRewardRequest) (*game.ClaimMoppingRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimMoppingReward not implemented")
+}
+func (UnimplementedNakamaServer) ClaimOnHookReward(context.Context, *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimOnHookReward not implemented")
+}
+func (UnimplementedNakamaServer) UpdateEquipData(context.Context, *game.UpdateEquipDataRequest) (*game.UpdateEquipDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateEquipData not implemented")
+}
+func (UnimplementedNakamaServer) ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimLevelBox not implemented")
+}
+func (UnimplementedNakamaServer) ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimSignInReward not implemented")
+}
+func (UnimplementedNakamaServer) GetFirstChargeStatus(context.Context, *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFirstChargeStatus not implemented")
+}
+func (UnimplementedNakamaServer) ClaimFirstChargeReward(context.Context, *game.ClaimFirstChargeRewardRequest) (*game.ClaimFirstChargeRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimFirstChargeReward not implemented")
+}
+func (UnimplementedNakamaServer) GetTask(context.Context, *game.GetTaskRequest) (*game.GetTaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTask not implemented")
+}
+func (UnimplementedNakamaServer) ClaimTaskReward(context.Context, *game.ClaimTaskRewardRequest) (*game.ClaimTaskRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimTaskReward not implemented")
+}
+func (UnimplementedNakamaServer) ClaimLivenessReward(context.Context, *game.ClaimLivenessRewardRequest) (*game.ClaimLivenessRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimLivenessReward not implemented")
+}
+func (UnimplementedNakamaServer) ClaimVipReward(context.Context, *game.ClaimVipRewardRequest) (*game.ClaimVipRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimVipReward not implemented")
+}
+func (UnimplementedNakamaServer) CheckVipStatus(context.Context, *emptypb.Empty) (*game.CheckVipStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckVipStatus not implemented")
+}
+func (UnimplementedNakamaServer) GetSevenDayStatus(context.Context, *game.GetSevenDayStatusRequest) (*game.GetSevenDayStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSevenDayStatus not implemented")
+}
+func (UnimplementedNakamaServer) ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimSevenDayReward not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -3613,24 +3839,6 @@ func _Nakama_ClaimNotificationAttachments_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Nakama_CheckVipStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NakamaServer).CheckVipStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Nakama_CheckVipStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).CheckVipStatus(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Nakama_GetCurrentStamina_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -3861,6 +4069,276 @@ func _Nakama_BuyGemItem_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(NakamaServer).BuyGemItem(ctx, req.(*game.BuyGemItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_EndBattle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.EndBattleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).EndBattle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_EndBattle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).EndBattle(ctx, req.(*game.EndBattleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimMoppingReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimMoppingRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimMoppingReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimMoppingReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimMoppingReward(ctx, req.(*game.ClaimMoppingRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimOnHookReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimOnHookRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimOnHookReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimOnHookReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimOnHookReward(ctx, req.(*game.ClaimOnHookRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UpdateEquipData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpdateEquipDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UpdateEquipData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UpdateEquipData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UpdateEquipData(ctx, req.(*game.UpdateEquipDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimLevelBox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimLevelBoxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimLevelBox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimLevelBox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimLevelBox(ctx, req.(*game.ClaimLevelBoxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimSignInReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimSignInRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimSignInReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimSignInReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimSignInReward(ctx, req.(*game.ClaimSignInRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetFirstChargeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetFirstChargeStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetFirstChargeStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetFirstChargeStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetFirstChargeStatus(ctx, req.(*game.GetFirstChargeStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimFirstChargeReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimFirstChargeRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimFirstChargeReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimFirstChargeReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimFirstChargeReward(ctx, req.(*game.ClaimFirstChargeRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetTask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetTask(ctx, req.(*game.GetTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimTaskReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimTaskRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimTaskReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimTaskReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimTaskReward(ctx, req.(*game.ClaimTaskRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimLivenessReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimLivenessRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimLivenessReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimLivenessReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimLivenessReward(ctx, req.(*game.ClaimLivenessRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimVipReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimVipRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimVipReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimVipReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimVipReward(ctx, req.(*game.ClaimVipRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_CheckVipStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).CheckVipStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_CheckVipStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).CheckVipStatus(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetSevenDayStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetSevenDayStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetSevenDayStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetSevenDayStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetSevenDayStatus(ctx, req.(*game.GetSevenDayStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimSevenDayReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimSevenDayRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimSevenDayReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimSevenDayReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimSevenDayReward(ctx, req.(*game.ClaimSevenDayRewardRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4249,10 +4727,6 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Nakama_ClaimNotificationAttachments_Handler,
 		},
 		{
-			MethodName: "CheckVipStatus",
-			Handler:    _Nakama_CheckVipStatus_Handler,
-		},
-		{
 			MethodName: "GetCurrentStamina",
 			Handler:    _Nakama_GetCurrentStamina_Handler,
 		},
@@ -4303,6 +4777,66 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BuyGemItem",
 			Handler:    _Nakama_BuyGemItem_Handler,
+		},
+		{
+			MethodName: "EndBattle",
+			Handler:    _Nakama_EndBattle_Handler,
+		},
+		{
+			MethodName: "ClaimMoppingReward",
+			Handler:    _Nakama_ClaimMoppingReward_Handler,
+		},
+		{
+			MethodName: "ClaimOnHookReward",
+			Handler:    _Nakama_ClaimOnHookReward_Handler,
+		},
+		{
+			MethodName: "UpdateEquipData",
+			Handler:    _Nakama_UpdateEquipData_Handler,
+		},
+		{
+			MethodName: "ClaimLevelBox",
+			Handler:    _Nakama_ClaimLevelBox_Handler,
+		},
+		{
+			MethodName: "ClaimSignInReward",
+			Handler:    _Nakama_ClaimSignInReward_Handler,
+		},
+		{
+			MethodName: "GetFirstChargeStatus",
+			Handler:    _Nakama_GetFirstChargeStatus_Handler,
+		},
+		{
+			MethodName: "ClaimFirstChargeReward",
+			Handler:    _Nakama_ClaimFirstChargeReward_Handler,
+		},
+		{
+			MethodName: "GetTask",
+			Handler:    _Nakama_GetTask_Handler,
+		},
+		{
+			MethodName: "ClaimTaskReward",
+			Handler:    _Nakama_ClaimTaskReward_Handler,
+		},
+		{
+			MethodName: "ClaimLivenessReward",
+			Handler:    _Nakama_ClaimLivenessReward_Handler,
+		},
+		{
+			MethodName: "ClaimVipReward",
+			Handler:    _Nakama_ClaimVipReward_Handler,
+		},
+		{
+			MethodName: "CheckVipStatus",
+			Handler:    _Nakama_CheckVipStatus_Handler,
+		},
+		{
+			MethodName: "GetSevenDayStatus",
+			Handler:    _Nakama_GetSevenDayStatus_Handler,
+		},
+		{
+			MethodName: "ClaimSevenDayReward",
+			Handler:    _Nakama_ClaimSevenDayReward_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

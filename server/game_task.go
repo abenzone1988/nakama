@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -17,7 +18,7 @@ func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game
 	taskData := &TaskData{}
 	if err := LoadData(ctx, s.logger, s.db, userID, taskData); err != nil {
 		s.logger.Warn("加载任务数据失败，初始化新数据", zap.Error(err))
-		taskData.Init()
+		return nil, fmt.Errorf("加载任务数据失败")
 	}
 
 	// 检查是否需要每日重置
