@@ -16,9 +16,13 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama/v3/console"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -150,9 +154,34 @@ func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *api.Cl
 		return &api.ClaimNotificationAttachmentsResponse{Claimedcount: 0}, nil
 	}
 
-	claimedCount, err := NotificationClaimAttachments(ctx, s.logger, s.db, userID, in.GetIds())
+	contents, claimedCount, err := NotificationClaimAttachments(ctx, s.logger, s.db, userID, in.GetIds())
 	if err != nil {
+		if errors.Is(err, ErrNotificationAlreadyClaimed) {
+			return nil, status.Error(codes.FailedPrecondition, "Some notifications are already claimed.")
+		}
 		return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
+	}
+
+	for id, contentStr := range contents {
+		if contentStr == "" {
+			continue
+		}
+		var noticeContent console.NoticeContent
+		if err := json.Unmarshal([]byte(contentStr), &noticeContent); err != nil {
+			s.logger.Error("解析通知内容失败", zap.String("notification_id", id), zap.Error(err))
+			return nil, status.Error(codes.Internal, "Error while parsing notification attachments.")
+		}
+
+		for _, reward := range noticeContent.GetRewards() {
+			if reward == nil {
+				continue
+			}
+			source := fmt.Sprintf("notification:%s", id)
+			if _, _, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source); err != nil {
+				s.logger.Error("发放通知奖励失败", zap.String("notification_id", id), zap.Error(err))
+				return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
+			}
+		}
 	}
 
 	return &api.ClaimNotificationAttachmentsResponse{Claimedcount: claimedCount}, nil

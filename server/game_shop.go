@@ -137,11 +137,38 @@ func (s *ApiServer) forceRefreshShop(ctx context.Context, userID uuid.UUID, shop
 
 	now := time.Now().UTC()
 
-	// 清空商品列表
-	shop.Items = []*ShopItem{}
+	permanentIDs := parsePermanentProductIDs(tplShop.PermanentProduct)
+	permanentSet := make(map[string]struct{}, len(permanentIDs))
+	for _, id := range permanentIDs {
+		permanentSet[id] = struct{}{}
+	}
 
-	// 1. 添加固定商品（如果配置了）
-	s.addPermanentShopItems(shop, tplShop)
+	existingPermanent := make(map[string]*ShopItem)
+	for _, item := range shop.Items {
+		if _, ok := permanentSet[item.ShopItemID]; ok {
+			existingPermanent[item.ShopItemID] = item
+		}
+	}
+
+	newItems := make([]*ShopItem, 0, len(permanentIDs))
+	for _, id := range permanentIDs {
+		if id == "" {
+			continue
+		}
+		if existing, ok := existingPermanent[id]; ok {
+			newItems = append(newItems, existing)
+			continue
+		}
+
+		tplPermanent, ok := s.template.GetTplShopPermanentItem().FindByKey(id)
+		if !ok {
+			s.logger.Warn("未找到固定商品配置", zap.String("item_id", id))
+			continue
+		}
+		newItems = append(newItems, s.createPermanentShopItem(&tplPermanent))
+	}
+
+	shop.Items = newItems
 
 	// 2. 添加随机商品（如果配置了）
 	s.addRandomShopItems(ctx, userID, shop, tplShop)
@@ -304,13 +331,8 @@ func (s *ApiServer) addRandomShopItems(ctx context.Context, userID uuid.UUID, sh
 
 // addPermanentShopItems 添加固定商品
 func (s *ApiServer) addPermanentShopItems(shop *ShopInfo, tplShop *TplShop) {
-	if tplShop.PermanentProduct == "" {
-		return
-	}
-
-	permanentIDs := strings.Split(tplShop.PermanentProduct, ",")
+	permanentIDs := parsePermanentProductIDs(tplShop.PermanentProduct)
 	for _, permanentID := range permanentIDs {
-		permanentID = strings.TrimSpace(permanentID)
 		if permanentID == "" {
 			continue
 		}
@@ -321,35 +343,53 @@ func (s *ApiServer) addPermanentShopItems(shop *ShopInfo, tplShop *TplShop) {
 			continue
 		}
 
-		// 解析多种支付方式
-		paymentStages := parsePaymentStages(tplPermanent.PayType, tplPermanent.SalePrice, tplPermanent.LimitTimes)
-
-		// 使用第一个支付阶段的信息作为默认显示
-		var defaultPayType game.PayType = game.PayType_COIN
-		var defaultPrice int32
-		var totalLimitCount int32
-
-		if len(paymentStages) > 0 {
-			defaultPayType = paymentStages[0].PayType
-			defaultPrice = paymentStages[0].Price
-			for _, stage := range paymentStages {
-				totalLimitCount += stage.LimitCount
-			}
-		}
-
-		shopItem := &ShopItem{
-			ShopItemID:    tplPermanent.ID,
-			ItemID:        tplPermanent.Item,
-			PayType:       defaultPayType,
-			Price:         defaultPrice,
-			Discount:      0,
-			ItemCount:     tplPermanent.Num,
-			MaxBuyCount:   totalLimitCount,
-			BoughtCount:   0,
-			PaymentStages: paymentStages,
-		}
+		shopItem := s.createPermanentShopItem(&tplPermanent)
 		shop.Items = append(shop.Items, shopItem)
 	}
+}
+
+func (s *ApiServer) createPermanentShopItem(tplPermanent *TplShopPermanentItem) *ShopItem {
+	paymentStages := parsePaymentStages(tplPermanent.PayType, tplPermanent.SalePrice, tplPermanent.LimitTimes)
+
+	var defaultPayType game.PayType = game.PayType_COIN
+	var defaultPrice int32
+	var totalLimitCount int32
+
+	if len(paymentStages) > 0 {
+		defaultPayType = paymentStages[0].PayType
+		defaultPrice = paymentStages[0].Price
+		for _, stage := range paymentStages {
+			totalLimitCount += stage.LimitCount
+		}
+	}
+
+	return &ShopItem{
+		ShopItemID:    tplPermanent.ID,
+		ItemID:        tplPermanent.Item,
+		PayType:       defaultPayType,
+		Price:         defaultPrice,
+		Discount:      0,
+		ItemCount:     tplPermanent.Num,
+		MaxBuyCount:   totalLimitCount,
+		BoughtCount:   0,
+		PaymentStages: paymentStages,
+	}
+}
+
+func parsePermanentProductIDs(permanentProduct string) []string {
+	if permanentProduct == "" {
+		return []string{}
+	}
+
+	parts := strings.Split(permanentProduct, ",")
+	ids := make([]string, 0, len(parts))
+	for _, part := range parts {
+		id := strings.TrimSpace(part)
+		if id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // getRandomDailyItem 随机获取每日商品
@@ -559,13 +599,15 @@ func (s *ApiServer) processBuyNormalItem(item *ShopItem, count int32) (*game.Wal
 
 		foundStage := false
 		for _, stage := range item.PaymentStages {
-			if currentBought < accumulatedLimit+stage.LimitCount {
+			if stage.LimitCount < 0 || currentBought < accumulatedLimit+stage.LimitCount {
 				payType = stage.PayType
 				price = stage.Price
 				foundStage = true
 				break
 			}
-			accumulatedLimit += stage.LimitCount
+			if stage.LimitCount > 0 {
+				accumulatedLimit += stage.LimitCount
+			}
 		}
 
 		if !foundStage {
@@ -637,12 +679,14 @@ func convertToProtoShopItem(item *ShopItem, index int32) *game.ShopItem {
 		currentBought := item.BoughtCount
 		accumulatedLimit := int32(0)
 		for _, stage := range item.PaymentStages {
-			if currentBought < accumulatedLimit+stage.LimitCount {
+			if stage.LimitCount < 0 || currentBought < accumulatedLimit+stage.LimitCount {
 				displayPayType = stage.PayType
 				displayPrice = stage.Price
 				break
 			}
-			accumulatedLimit += stage.LimitCount
+			if stage.LimitCount > 0 {
+				accumulatedLimit += stage.LimitCount
+			}
 		}
 	}
 

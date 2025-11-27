@@ -50,6 +50,8 @@ const (
 	NotificationCodeUserBanned       int32 = -8
 )
 
+var ErrNotificationAlreadyClaimed = errors.New("some notifications are already claimed")
+
 type notificationCacheableCursor struct {
 	NotificationID []byte
 	CreateTime     int64
@@ -503,38 +505,68 @@ func NotificationMarkRead(ctx context.Context, logger *zap.Logger, db *sql.DB, u
 }
 
 // NotificationClaimAttachments claims attachments from notifications for a user
-func NotificationClaimAttachments(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, notificationIDs []string) (int32, error) {
+func NotificationClaimAttachments(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, notificationIDs []string) (map[string]string, int32, error) {
 	if len(notificationIDs) == 0 {
-		return 0, nil
+		return map[string]string{}, 0, nil
 	}
 
-	// 首先检查是否有已领取状态的通知
-	query := "SELECT id FROM notification WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status = 2"
+	query := `
+SELECT id, content, status
+FROM notification
+WHERE user_id = $1
+  AND id = ANY($2::uuid[])
+`
 	rows, err := db.QueryContext(ctx, query, userID, notificationIDs)
 	if err != nil {
-		logger.Error("Error checking notification status", zap.Error(err))
-		return 0, err
+		logger.Error("查询通知内容失败", zap.Error(err))
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	// 如果有任何通知已经是领取状态,返回错误
-	if rows.Next() {
-		return 0, errors.New("some notifications are already claimed")
+	contents := make(map[string]string, len(notificationIDs))
+	for rows.Next() {
+		var (
+			id         string
+			contentStr string
+			status     int32
+		)
+		if err := rows.Scan(&id, &contentStr, &status); err != nil {
+			logger.Error("扫描通知内容失败", zap.Error(err))
+			return nil, 0, err
+		}
+
+		if status == 2 {
+			return nil, 0, ErrNotificationAlreadyClaimed
+		}
+
+		contents[id] = contentStr
 	}
 
-	// 更新未读或已读状态的通知为已领取状态
-	query = "UPDATE notification SET status = 2 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status < 2"
-	result, err := db.ExecContext(ctx, query, userID, notificationIDs)
+	if err := rows.Err(); err != nil {
+		logger.Error("遍历通知内容失败", zap.Error(err))
+		return nil, 0, err
+	}
+
+	if len(contents) == 0 {
+		return map[string]string{}, 0, nil
+	}
+
+	updateQuery := "UPDATE notification SET status = 2 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status < 2"
+	result, err := db.ExecContext(ctx, updateQuery, userID, notificationIDs)
 	if err != nil {
-		logger.Error("Error claiming notification attachments", zap.Error(err))
-		return 0, err
+		logger.Error("更新通知状态失败", zap.Error(err))
+		return nil, 0, err
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		logger.Error("Error getting affected rows count", zap.Error(err))
-		return 0, err
+		logger.Error("获取通知更新数量失败", zap.Error(err))
+		return nil, 0, err
 	}
 
-	return int32(rowsAffected), nil
+	if int(rowsAffected) != len(contents) {
+		return nil, 0, ErrNotificationAlreadyClaimed
+	}
+
+	return contents, int32(rowsAffected), nil
 }
