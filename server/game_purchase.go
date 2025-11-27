@@ -353,13 +353,8 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	isVipPurchase := productID == VipProductID || amount == VipPriceFloat
 	isSevenDayPurchase := productID == SevenDayProductID || amount == SevenDayPriceFloat
 
-	var ctxWithMeta context.Context
-	var needSaveMeta bool
 	if (isFirstCharge || isVipPurchase || isSevenDayPurchase) && ctx.Value(ctxUserIDKey{}) == nil {
 		ctx = context.WithValue(ctx, ctxUserIDKey{}, userID)
-	}
-	if isFirstCharge || isVipPurchase || isSevenDayPurchase {
-		ctxWithMeta = WithUserMetaManager(ctx, s.logger, s.db, s.statusRegistry)
 	}
 
 	// 如果是首冲，记录首冲状态
@@ -428,12 +423,6 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 				zap.String("user_id", userID.String()),
 				zap.String("product_id", productID),
 				zap.Float64("amount", amount))
-		}
-	}
-
-	if needSaveMeta && ctxWithMeta != nil {
-		if err := SaveUserMeta(ctxWithMeta); err != nil {
-			s.logger.Error("保存用户元数据失败", zap.Error(err))
 		}
 	}
 

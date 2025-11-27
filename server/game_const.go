@@ -26,6 +26,10 @@ const (
 	ItemID_TurretDebris  = "90000" // 炮台碎片
 )
 
+const (
+	ItemType_EquipmentFragment = 4 // 装备碎片
+)
+
 // 水晶ID常量
 const (
 	CrystalID_1 = "30001"

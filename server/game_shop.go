@@ -16,19 +16,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// checkNeedRefresh 检查是否需要刷新（跨天）
-func checkNeedRefresh(lastTime time.Time) bool {
-	if lastTime.IsZero() {
-		return true
-	}
-
-	now := time.Now().UTC()
-	lastDay := time.Date(lastTime.Year(), lastTime.Month(), lastTime.Day(), 0, 0, 0, 0, time.UTC)
-	nowDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-
-	return nowDay.After(lastDay)
-}
-
 // GetShopData RPC获取所有商店数据
 func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.ShopData, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
@@ -39,22 +26,10 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 		return nil, err
 	}
 
-	// 检查是否需要跨天刷新
-	needRefresh := checkNeedRefresh(shopData.DateTime)
-	if needRefresh {
-		s.logger.Info("检测到需要刷新商店", zap.Time("last_date", shopData.DateTime))
-		shopData.DateTime = time.Now().UTC()
-
-		// 重置每日商店的手动刷新次数
-		if dailyShop, ok := shopData.Shops[game.ShopType_SHOP_DAILY.String()]; ok {
-			dailyShop.RefreshCount = 0
-		}
-	}
-
-	// 只初始化基于TplShop的常规商店
-	s.initShop(shopData, game.ShopType_SHOP_DAILY, needRefresh)
-	s.initShop(shopData, game.ShopType_SHOP_COIN, false)
-	s.initShop(shopData, game.ShopType_SHOP_STRENGTH, false)
+	// 初始化基于TplShop的常规商店（每个商店独立检查刷新时间）
+	s.initShop(ctx, userID, shopData, game.ShopType_SHOP_DAILY)
+	s.initShop(ctx, userID, shopData, game.ShopType_SHOP_COIN)
+	s.initShop(ctx, userID, shopData, game.ShopType_SHOP_STRENGTH)
 
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
 		s.logger.Error("保存商店数据失败", zap.Error(err))
@@ -65,7 +40,7 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 }
 
 // initShop 初始化常规商店（只处理TplShop配置的商店）
-func (s *ApiServer) initShop(shopData *ShopData, shopType game.ShopType, refresh bool) {
+func (s *ApiServer) initShop(ctx context.Context, userID uuid.UUID, shopData *ShopData, shopType game.ShopType) {
 	if shopData.Shops == nil {
 		shopData.Shops = make(map[string]*ShopInfo)
 	}
@@ -73,16 +48,16 @@ func (s *ApiServer) initShop(shopData *ShopData, shopType game.ShopType, refresh
 	key := shopType.String()
 	switch shopType {
 	case game.ShopType_SHOP_DAILY:
-		s.initCommonShop(shopData.Shops, key, shopType, "Daily", refresh)
+		s.initCommonShop(ctx, userID, shopData.Shops, key, shopType, "Daily")
 	case game.ShopType_SHOP_COIN:
-		s.initCommonShop(shopData.Shops, key, shopType, "Coin", refresh)
+		s.initCommonShop(ctx, userID, shopData.Shops, key, shopType, "Coin")
 	case game.ShopType_SHOP_STRENGTH:
-		s.initCommonShop(shopData.Shops, key, shopType, "Strength", refresh)
+		s.initCommonShop(ctx, userID, shopData.Shops, key, shopType, "Strength")
 	}
 }
 
 // initCommonShop 统一的商店初始化（支持随机商品+固定商品）
-func (s *ApiServer) initCommonShop(shops map[string]*ShopInfo, key string, shopType game.ShopType, configKey string, refresh bool) {
+func (s *ApiServer) initCommonShop(ctx context.Context, userID uuid.UUID, shops map[string]*ShopInfo, key string, shopType game.ShopType, configKey string) {
 	// 初始化商店结构
 	if shops[key] == nil {
 		shops[key] = &ShopInfo{
@@ -105,10 +80,30 @@ func (s *ApiServer) initCommonShop(shops map[string]*ShopInfo, key string, shopT
 	// 判断是否支持手动刷新
 	if tplShop.HandleRefreshTimes > 0 {
 		shop.CanRefresh = true
+		shop.RefreshCount = tplShop.HandleRefreshTimes
+	} else {
+		shop.CanRefresh = false
+		shop.RefreshCount = 0
 	}
 
-	// 如果需要刷新或首次初始化
-	if len(shop.Items) == 0 || refresh {
+	// 检查是否需要刷新
+	needRefresh := false
+	now := time.Now().UTC()
+
+	// 如果是首次初始化（没有商品），需要刷新
+	if len(shop.Items) == 0 {
+		needRefresh = true
+	} else if shop.CanRefresh {
+		// 如果可以刷新，检查是否到了刷新时间
+		if !shop.NextRefreshTime.IsZero() && now.After(shop.NextRefreshTime) {
+			needRefresh = true
+			// 重置手动刷新次数
+			shop.RefreshCount = tplShop.HandleRefreshTimes
+		}
+	}
+
+	// 如果需要刷新
+	if needRefresh {
 		// 清空商品列表
 		shop.Items = []*ShopItem{}
 
@@ -116,17 +111,51 @@ func (s *ApiServer) initCommonShop(shops map[string]*ShopInfo, key string, shopT
 		s.addPermanentShopItems(shop, &tplShop)
 
 		// 2. 添加随机商品（如果配置了）
-		s.addRandomShopItems(shop, &tplShop)
+		s.addRandomShopItems(ctx, userID, shop, &tplShop)
 
-		// 设置下次刷新时间为第二天0点（UTC）
-		now := time.Now().UTC()
-		nextRefreshTime := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
-		shop.NextRefreshTime = nextRefreshTime
+		// 如果可以刷新，设置下次刷新时间为第二天0点（UTC）
+		if shop.CanRefresh {
+			nextRefreshTime := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+			shop.NextRefreshTime = nextRefreshTime
+		}
+		// 如果不可刷新，NextRefreshTime 保持零值（不设置）
 	}
 }
 
+// forceRefreshShop 强制刷新商店（用于手动刷新）
+func (s *ApiServer) forceRefreshShop(ctx context.Context, userID uuid.UUID, shops map[string]*ShopInfo, key string, shopType game.ShopType, tplShop *TplShop) {
+	shop := shops[key]
+	if shop == nil {
+		shop = &ShopInfo{
+			ShopType:     shopType,
+			Items:        []*ShopItem{},
+			CanRefresh:   tplShop.HandleRefreshTimes > 0,
+			RefreshCount: tplShop.HandleRefreshTimes,
+		}
+		shops[key] = shop
+	}
+
+	now := time.Now().UTC()
+
+	// 清空商品列表
+	shop.Items = []*ShopItem{}
+
+	// 1. 添加固定商品（如果配置了）
+	s.addPermanentShopItems(shop, tplShop)
+
+	// 2. 添加随机商品（如果配置了）
+	s.addRandomShopItems(ctx, userID, shop, tplShop)
+
+	// 如果可以刷新，设置下次刷新时间为第二天0点（UTC）
+	if shop.CanRefresh {
+		nextRefreshTime := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+		shop.NextRefreshTime = nextRefreshTime
+	}
+	// 如果不可刷新，NextRefreshTime 保持零值（不设置）
+}
+
 // addRandomShopItems 添加随机商品
-func (s *ApiServer) addRandomShopItems(shop *ShopInfo, tplShop *TplShop) {
+func (s *ApiServer) addRandomShopItems(ctx context.Context, userID uuid.UUID, shop *ShopInfo, tplShop *TplShop) {
 	// 如果没有配置随机商品数量，直接返回
 	if tplShop.FreeProductCount == 0 && tplShop.AdProductCount == 0 &&
 		tplShop.CoinProductCount == 0 && tplShop.GemProductCount == 0 {
@@ -134,6 +163,52 @@ func (s *ApiServer) addRandomShopItems(shop *ShopInfo, tplShop *TplShop) {
 	}
 
 	allDailyItems := s.template.GetTplShopDailyItem().FindAll().ToSlice()
+
+	// 加载玩家装备数据，用于过滤已拥有装备的碎片
+	equipData := &EquipData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+		s.logger.Warn("加载装备数据失败，跳过碎片过滤", zap.Error(err))
+		equipData = nil
+	}
+
+	// 过滤掉未拥有装备的碎片类型商品
+	filteredDailyItems := make([]TplShopDailyItem, 0, len(allDailyItems))
+	for _, item := range allDailyItems {
+		// 检查是否为碎片类型（类型4）
+		tplItem, ok := s.template.GetTplItem().FindByKey(item.Item)
+		if !ok {
+			s.logger.Warn("找不到item配置 过滤掉该商品", zap.String("id", item.Item))
+			// 找不到item配置，过滤掉该商品
+			continue
+		}
+
+		// 如果不是碎片类型，直接保留
+		if tplItem.ItemType != ItemType_EquipmentFragment {
+			filteredDailyItems = append(filteredDailyItems, item)
+			s.logger.Debug("不是碎片类型，直接保留", zap.String("id", item.Item))
+			continue
+		}
+
+		// 如果是碎片类型，检查玩家是否已拥有对应装备
+		if equipData == nil {
+			s.logger.Debug("装备数据加载失败，无法判断，过滤掉碎片商品", zap.String("id", item.Item))
+			// 装备数据加载失败，无法判断，过滤掉碎片商品
+			continue
+		}
+
+		equipID := "EQ" + item.Item
+		if _, exists := equipData.UnlockEquips[equipID]; !exists {
+			s.logger.Debug("玩家未拥有该装备，过滤掉该碎片商品", zap.String("id", item.Item))
+			// 玩家未拥有该装备，过滤掉该碎片商品
+			continue
+		}
+
+		// 保留该商品
+		filteredDailyItems = append(filteredDailyItems, item)
+		s.logger.Debug("保留该商品", zap.String("id", item.Item))
+	}
+
+	allDailyItems = filteredDailyItems
 
 	// 按支付类型分类
 	freeItems := []TplShopDailyItem{}
@@ -344,15 +419,12 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 		return &game.BuyShopItemResponse{Code: 1, Msg: "商店不存在"}, nil
 	}
 
-	// 通过 id 查找商品
-	var item *ShopItem
-	for i := range shop.Items {
-		if shop.Items[i].ShopItemID == in.Id {
-			item = shop.Items[i]
-			break
-		}
+	// 通过 index 查找商品
+	index := int(in.Index)
+	if index < 0 || index >= len(shop.Items) {
+		return &game.BuyShopItemResponse{Code: 2, Msg: "商品不存在"}, nil
 	}
-
+	item := shop.Items[index]
 	if item == nil {
 		return &game.BuyShopItemResponse{Code: 2, Msg: "商品不存在"}, nil
 	}
@@ -375,10 +447,10 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 	}
 
 	// 使用统一的支付和奖励处理函数
-	source := fmt.Sprintf("shop_%s_%s", in.ShopType.String(), in.Id)
+	source := fmt.Sprintf("shop_%s_%s", in.ShopType.String(), item.ShopItemID)
 	metadata := map[string]interface{}{
 		"shop_type": in.ShopType.String(),
-		"id":        in.Id,
+		"item_id":   item.ShopItemID,
 	}
 
 	walletUpdateResult, inventoryUpdateResult, err := s.processPaymentAndReward(ctx, cost, reward, source, metadata)
@@ -397,10 +469,10 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 	}
 
 	response := &game.BuyShopItemResponse{
-		Code:   0,
-		Msg:    "购买成功",
-		Reward: reward,
-		// ShopData 字段在购买接口中不返回，客户端可以单独调用GetShopData刷新
+		Code:     0,
+		Msg:      "购买成功",
+		Reward:   reward,
+		ShopItem: convertToProtoShopItem(item, in.Index),
 	}
 
 	if walletUpdateResult != nil {
@@ -451,15 +523,15 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 	}
 
 	// 检查刷新次数限制
-	if shop.RefreshCount >= tplShop.HandleRefreshTimes {
+	if shop.RefreshCount <= 0 {
 		return &game.RefreshShopResponse{Code: 5, Msg: "已达到最大刷新次数"}, nil
 	}
 
-	// 执行刷新（重新初始化商店）
-	s.initShop(shopData, in.ShopType, true)
+	// 执行刷新（强制刷新商店）
+	s.forceRefreshShop(ctx, userID, shopData.Shops, key, in.ShopType, &tplShop)
 
-	// 增加刷新次数
-	shop.RefreshCount++
+	// 减少刷新次数
+	shop.RefreshCount--
 
 	// 保存商店数据
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
@@ -530,7 +602,7 @@ func convertToProtoShopData(data *ShopData) *game.ShopData {
 	}
 
 	return &game.ShopData{
-		DateTime: data.DateTime.Format(time.RFC3339),
+		DateTime: "", // 不再使用整体时间，每个商店有独立的刷新时间
 		Shops:    protoShops,
 	}
 }
@@ -538,35 +610,10 @@ func convertToProtoShopData(data *ShopData) *game.ShopData {
 // convertToProtoSingleShop 转换单个商店为proto格式
 func convertToProtoSingleShop(shop *ShopInfo) *game.SingleShopData {
 	protoItems := make([]*game.ShopItem, 0, len(shop.Items))
+	index := int32(0)
 	for _, item := range shop.Items {
-		// 如果有分段购买配置，根据已购买次数计算当前显示的支付方式和价格
-		displayPayType := item.PayType
-		displayPrice := item.Price
-
-		if len(item.PaymentStages) > 0 {
-			currentBought := item.BoughtCount
-			accumulatedLimit := int32(0)
-
-			for _, stage := range item.PaymentStages {
-				if currentBought < accumulatedLimit+stage.LimitCount {
-					displayPayType = stage.PayType
-					displayPrice = stage.Price
-					break
-				}
-				accumulatedLimit += stage.LimitCount
-			}
-		}
-
-		protoItems = append(protoItems, &game.ShopItem{
-			Id:          item.ShopItemID,
-			ItemId:      item.ItemID,
-			PayType:     displayPayType,
-			Price:       displayPrice,
-			Discount:    item.Discount,
-			ItemCount:   item.ItemCount,
-			MaxBuyCount: item.MaxBuyCount,
-			BoughtCount: item.BoughtCount,
-		})
+		protoItems = append(protoItems, convertToProtoShopItem(item, index))
+		index++
 	}
 
 	protoShop := &game.SingleShopData{
@@ -583,16 +630,33 @@ func convertToProtoSingleShop(shop *ShopInfo) *game.SingleShopData {
 	return protoShop
 }
 
-// 辅助函数
-func parseDiscount(discountStr string) int32 {
-	if discountStr == "" {
-		return 0
+func convertToProtoShopItem(item *ShopItem, index int32) *game.ShopItem {
+	displayPayType := item.PayType
+	displayPrice := item.Price
+	if len(item.PaymentStages) > 0 {
+		currentBought := item.BoughtCount
+		accumulatedLimit := int32(0)
+		for _, stage := range item.PaymentStages {
+			if currentBought < accumulatedLimit+stage.LimitCount {
+				displayPayType = stage.PayType
+				displayPrice = stage.Price
+				break
+			}
+			accumulatedLimit += stage.LimitCount
+		}
 	}
-	discount, err := strconv.ParseInt(discountStr, 10, 32)
-	if err != nil {
-		return 0
+
+	return &game.ShopItem{
+		Id:          item.ShopItemID,
+		ItemId:      item.ItemID,
+		PayType:     displayPayType,
+		Price:       displayPrice,
+		Discount:    item.Discount,
+		ItemCount:   item.ItemCount,
+		MaxBuyCount: item.MaxBuyCount,
+		BoughtCount: item.BoughtCount,
+		Index:       index,
 	}
-	return int32(discount)
 }
 
 func parsePayType(payTypeStr string) game.PayType {
@@ -647,39 +711,6 @@ func parsePaymentStages(payTypeStr string, salePrices []int32, limitTimes []int3
 	}
 
 	return stages
-}
-
-type PayInfo struct {
-	PayType    game.PayType
-	Price      int32
-	LimitCount int32
-}
-
-func parsePayInfos(payInfoStr string) []PayInfo {
-	if payInfoStr == "" {
-		return []PayInfo{}
-	}
-
-	parts := strings.Split(payInfoStr, ";")
-	payInfos := make([]PayInfo, 0, len(parts))
-
-	for _, part := range parts {
-		fields := strings.Split(part, "_")
-		if len(fields) != 3 {
-			continue
-		}
-
-		price, _ := strconv.ParseInt(fields[0], 10, 32)
-		limitCount, _ := strconv.ParseInt(fields[1], 10, 32)
-
-		payInfos = append(payInfos, PayInfo{
-			PayType:    parsePayType(fields[2]),
-			Price:      int32(price),
-			LimitCount: int32(limitCount),
-		})
-	}
-
-	return payInfos
 }
 
 func calculateCost(payType game.PayType, amount int32) *game.Wallet {

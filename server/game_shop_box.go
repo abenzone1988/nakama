@@ -228,7 +228,7 @@ func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid
 	// 每次打开宝箱都抽取奖励
 	rewards := make([]*game.Reward, 0, count)
 	for i := int32(0); i < count; i++ {
-		reward := s.rollBoxReward(ctx, userID, &tplBoxItem)
+		reward := s.rollBoxReward(userID, &tplBoxItem)
 		if reward != nil {
 			rewards = append(rewards, reward)
 		}
@@ -289,7 +289,7 @@ func convertToProtoBoxShop(data *BoxShopData) *game.BoxShopData {
 }
 
 // 抽取宝箱奖励
-func (s *ApiServer) rollBoxReward(ctx context.Context, userID uuid.UUID, tplBoxItem *TplBoxShopItem) *game.Reward {
+func (s *ApiServer) rollBoxReward(userID uuid.UUID, tplBoxItem *TplBoxShopItem) *game.Reward {
 	// 解析 rewardInfo 格式：itemid_count_weight
 	rewardInfo := tplBoxItem.RewardInfo
 	if rewardInfo == "" {

@@ -42,22 +42,6 @@ func (s *ConsoleServer) CallRpcEndpoint(ctx context.Context, in *console.CallApi
 
 	out, err := s.api.RpcFunc(callCtx, &api.Rpc{Id: in.Method, Payload: in.Body})
 
-	// 自动保存 UserMeta（如果有修改）
-	if manager := GetUserMetaManager(callCtx); manager != nil {
-		if saveErr := manager.Save(callCtx); saveErr != nil {
-			s.logger.Error("Failed to auto-save UserMeta",
-				zap.Error(saveErr),
-				zap.String("method", in.Method))
-			// 如果原方法没有错误，但保存失败，返回保存错误
-			if err == nil {
-				return &console.CallApiEndpointResponse{
-					Body:         "",
-					ErrorMessage: saveErr.Error(),
-				}, nil
-			}
-		}
-	}
-
 	if err != nil {
 		return &console.CallApiEndpointResponse{
 			Body:         "",
@@ -103,22 +87,6 @@ func (s *ConsoleServer) CallApiEndpoint(ctx context.Context, in *console.CallApi
 	out := r.method.Func.Call(args)
 	cval := out[0].Interface()
 	cerr := out[1].Interface()
-
-	// 自动保存 UserMeta（如果有修改）
-	if manager := GetUserMetaManager(callCtx); manager != nil {
-		if saveErr := manager.Save(callCtx); saveErr != nil {
-			s.logger.Error("Failed to auto-save UserMeta",
-				zap.Error(saveErr),
-				zap.String("method", in.Method))
-			// 如果原方法没有错误，但保存失败，返回保存错误
-			if cerr == nil {
-				return &console.CallApiEndpointResponse{
-					Body:         "",
-					ErrorMessage: saveErr.Error(),
-				}, nil
-			}
-		}
-	}
 
 	if cerr != nil {
 		return &console.CallApiEndpointResponse{
@@ -177,10 +145,6 @@ func (s *ConsoleServer) extractApiCallContext(ctx context.Context, in *console.C
 		if in.SessionVars != nil {
 			callCtx = context.WithValue(callCtx, ctxVarsKey{}, in.SessionVars)
 		}
-
-		// 为 Console API Explorer 调用添加 UserMetaManager
-		// 因为 Console 通过反射直接调用 API，绕过了 gRPC 拦截器
-		callCtx = WithUserMetaManager(callCtx, s.logger, s.db, s.statusRegistry)
 	}
 	return callCtx, nil
 }

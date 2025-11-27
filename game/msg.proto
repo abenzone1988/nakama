@@ -419,7 +419,7 @@ enum PayType {
 
 // 商店商品（普通商店）
 message ShopItem {
-  string id = 1;                  // 配置表ID（唯一标识）
+  string id = 1;                  // 配置表ID
   string item_id = 2;             // 物品ID
   PayType pay_type = 3;           // 货币类型
   int32 price = 4;                // 当前价格
@@ -427,6 +427,7 @@ message ShopItem {
   int32 item_count = 6;           // 商品数量
   int32 max_buy_count = 7;        // 最大购买次数（0表示无限制）
   int32 bought_count = 8;         // 已购买次数
+  int32 index = 9;                // 通过index来购买
 }
 
 // 单个商店数据（普通商店）
@@ -434,7 +435,7 @@ message SingleShopData {
   ShopType shop_type = 1;         // 商店类型
   repeated ShopItem items = 2;    // 商品列表
   bool can_refresh = 3;           // 是否可手动刷新
-  int32 refresh_count = 4;        // 已手动刷新次数
+  int32 refresh_count = 4;        // 可手动刷新次数
   string next_refresh_time = 5;   // 下次自动刷新时间
 }
 
@@ -454,7 +455,7 @@ enum ShopType {
 // 购买商店商品请求
 message BuyShopItemRequest {
   ShopType shop_type = 1;     // 商店类型
-  string id = 2;              // 商品ID（唯一标识）
+  int32 index = 2;            // 商品索引
   int32 count = 3;            // 购买数量（默认1，宝箱可能多个）
   bool use_ad = 4;            // 是否使用广告券（true=扣广告券，false=已看完广告免费）
 }
@@ -465,9 +466,8 @@ message BuyShopItemResponse {
   string msg = 2;
   Reward reward = 3;                    // 获得的奖励
   Wallet wallet_updated = 4;            // 更新后的钱包
-  repeated Item inventory_updated = 5;   // 更新后的背包
-  ShopData shop_data = 6;               // 更新后的商店数据
-  bool box_level_up = 7;                // 宝箱是否升级
+  repeated Item inventory_updated = 5;  // 更新后的背包
+  ShopItem shop_item = 6;               // 购买的物品更新
 }
 
 // 手动刷新商店请求

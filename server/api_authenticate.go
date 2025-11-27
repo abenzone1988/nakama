@@ -35,27 +35,6 @@ var (
 	emailRegex           = regexp.MustCompile(`^.+@.+\..+$`)
 )
 
-// initializeNewUserIfCreated 如果用户是新创建的，则初始化其 UserMeta
-func (s *ApiServer) initializeNewUserIfCreated(ctx context.Context, userID string, created bool) {
-	if !created {
-		return
-	}
-
-	uid, err := uuid.FromString(userID)
-	if err != nil {
-		s.logger.Error("解析用户ID失败", zap.Error(err), zap.String("user_id", userID))
-		return
-	}
-
-	// 初始化新用户的 UserMeta
-	if err := InitializeNewUserMeta(ctx, s.logger, s.db, uid, s.template); err != nil {
-		s.logger.Error("初始化新用户 UserMeta 失败",
-			zap.Error(err),
-			zap.String("user_id", userID))
-		// 不中断认证流程，记录错误即可
-	}
-}
-
 type SessionTokenClaims struct {
 	TokenId   string            `json:"tid,omitempty"`
 	UserId    string            `json:"uid,omitempty"`
@@ -132,9 +111,6 @@ func (s *ApiServer) AuthenticateApple(ctx context.Context, in *api.AuthenticateA
 		return nil, err
 	}
 
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
-
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
 	}
@@ -207,9 +183,6 @@ func (s *ApiServer) AuthenticateCustom(ctx context.Context, in *api.Authenticate
 		return nil, err
 	}
 
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
-
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
 	}
@@ -281,9 +254,6 @@ func (s *ApiServer) AuthenticateDevice(ctx context.Context, in *api.Authenticate
 	if err != nil {
 		return nil, err
 	}
-
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
 
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
@@ -387,9 +357,6 @@ func (s *ApiServer) AuthenticateEmail(ctx context.Context, in *api.AuthenticateE
 		return nil, err
 	}
 
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
-
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
 	}
@@ -457,9 +424,6 @@ func (s *ApiServer) AuthenticateFacebook(ctx context.Context, in *api.Authentica
 	if err != nil {
 		return nil, err
 	}
-
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
 
 	// Import friends if requested.
 	if in.Sync != nil && in.Sync.Value {
@@ -533,9 +497,6 @@ func (s *ApiServer) AuthenticateFacebookInstantGame(ctx context.Context, in *api
 	if err != nil {
 		return nil, err
 	}
-
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
 
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
@@ -617,9 +578,6 @@ func (s *ApiServer) AuthenticateGameCenter(ctx context.Context, in *api.Authenti
 		return nil, err
 	}
 
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
-
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
 	}
@@ -687,9 +645,6 @@ func (s *ApiServer) AuthenticateGoogle(ctx context.Context, in *api.Authenticate
 	if err != nil {
 		return nil, err
 	}
-
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
 
 	if s.config.GetSession().SingleSession {
 		s.sessionCache.RemoveAll(uuid.Must(uuid.FromString(dbUserID)))
@@ -762,9 +717,6 @@ func (s *ApiServer) AuthenticateSteam(ctx context.Context, in *api.AuthenticateS
 	if err != nil {
 		return nil, err
 	}
-
-	// 如果是新用户，初始化 UserMeta
-	s.initializeNewUserIfCreated(ctx, dbUserID, created)
 
 	// Import friends if requested.
 	if in.Sync != nil && in.Sync.Value {

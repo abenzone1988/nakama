@@ -116,8 +116,7 @@ type PaymentStage struct {
 
 type ShopData struct {
 	BaseStorable
-	DateTime time.Time            `json:"date_time"`
-	Shops    map[string]*ShopInfo `json:"shops"` // key: ShopType string
+	Shops map[string]*ShopInfo `json:"shops"` // key: ShopType string
 }
 
 func (d *ShopData) GetCollection() string {
@@ -129,7 +128,6 @@ func (d *ShopData) GetKey() string {
 }
 
 func (d *ShopData) Init() {
-	d.DateTime = time.Now().UTC()
 	d.Shops = make(map[string]*ShopInfo)
 	d.SetVersion("")
 }

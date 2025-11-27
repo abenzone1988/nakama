@@ -35,7 +35,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/heroiclabs/nakama/v3/console"
-	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -443,11 +442,11 @@ func SystemNotificationGet(ctx context.Context, db *sql.DB, logger *zap.Logger, 
 }
 
 func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, id uuid.UUID) error {
-	// 获取用户元数据
-	userMeta, _, err := GetUserMeta(ctx)
+	// 加载用户元数据
+	userMeta, _, err := LoadUserMeta(ctx, logger, db, statusRegistry, id)
 	if err != nil {
-		logger.Error("获取用户元数据失败", zap.Error(err))
-		return status.Error(codes.Internal, "获取用户元数据失败")
+		logger.Error("加载用户元数据失败", zap.Error(err))
+		return status.Error(codes.Internal, "加载用户元数据失败")
 	}
 
 	// 查询新的系统通知
@@ -509,11 +508,9 @@ func SyncSystemNotifications(ctx context.Context, logger *zap.Logger, db *sql.DB
 	// 如果有新通知，使用最新的通知时间；否则使用当前时间
 	if len(notices) > 0 {
 		logger.Info("更新同步的时间", zap.String("last_sync_time", time.Unix(latestSyncTime, 0).Format("2006-01-02 15:04:05")))
-		if err := UpdateUserMeta(ctx, func(meta *game.UserMeta) error {
-			meta.LastSyncNotice = latestSyncTime
-			return nil
-		}); err != nil {
-			logger.Error("更新用户元数据失败", zap.Error(err))
+		userMeta.LastSyncNotice = latestSyncTime
+		if err := SaveUserMeta(ctx, logger, db, id, userMeta); err != nil {
+			logger.Error("保存用户元数据失败", zap.Error(err))
 		}
 	}
 

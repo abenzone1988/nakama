@@ -7,9 +7,9 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidateSet("android", "ios", "all")]
     [string]$Platform = "all",
-    
+
     [Parameter(Mandatory=$false)]
-    [string]$Url = "http://39.101.186.196:6000/v2/tiktok/purchase/notify"
+    [string]$Url = "http://127.0.0.1:7350/v2/tiktok/purchase/notify"
 )
 
 # Platform configurations
@@ -33,10 +33,10 @@ function Test-Platform {
     param(
         [string]$PlatformKey
     )
-    
+
     $config = $platforms[$PlatformKey]
     $timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
-    
+
     # Test data
     $site = $config.Site
     $key = $config.Key
@@ -46,31 +46,31 @@ function Test-Platform {
     $order_id = "ORDER_${PlatformKey}_${timestamp}"
     $pay_type = $config.PayType
     $ext = "test_ext_${PlatformKey}_${timestamp}"
-    
+
     # Calculate signature: site + time + key + uid + order_money + cp_order_id
     $signStr = "$site$timestamp$key$uid$order_money$cp_order_id"
     $md5 = New-Object System.Security.Cryptography.MD5CryptoServiceProvider
     $utf8 = New-Object System.Text.UTF8Encoding
     $hash = [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($signStr)))
     $sign = $hash.Replace("-", "").ToLower()
-    
+
     Write-Host "=== $($config.DisplayName) Platform Test ===" -ForegroundColor Magenta
     Write-Host "Site: $site" -ForegroundColor Cyan
     Write-Host "Key: $key" -ForegroundColor Cyan
     Write-Host "Sign String: $signStr" -ForegroundColor Yellow
     Write-Host "Sign Result: $sign" -ForegroundColor Green
     Write-Host ""
-    
+
     # Build request body
     $bodyString = "site=$site&order_id=$order_id&uid=$uid&sid=server_001&cp_order_id=$cp_order_id&roleid=role_${PlatformKey}_001&rolename=TestRole${PlatformKey}&order_money=$order_money&productid=product_${PlatformKey}_001&pay_type=$pay_type&ext=$ext&time=$timestamp&sign=$sign"
-    
+
     Write-Host "Sending request to: $Url" -ForegroundColor Cyan
     Write-Host ""
-    
+
     try {
         # Send POST request
         $response = Invoke-WebRequest -Uri $Url -Method POST -Body $bodyString -ContentType "application/x-www-form-urlencoded" -UseBasicParsing
-        
+
         Write-Host "[SUCCESS] Response Status: $($response.StatusCode)" -ForegroundColor Green
         Write-Host "[SUCCESS] Response Content: $($response.Content)" -ForegroundColor Green
         return $true
@@ -103,7 +103,7 @@ if ($Platform -eq "all") {
         Write-Host ""
         Start-Sleep -Milliseconds 500
     }
-    
+
     # Display summary
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "Test Summary" -ForegroundColor Cyan

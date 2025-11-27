@@ -6833,9 +6833,10 @@
           "$ref": "#/definitions/gameShopType",
           "title": "商店类型"
         },
-        "id": {
-          "type": "string",
-          "title": "商品ID（唯一标识）"
+        "index": {
+          "type": "integer",
+          "format": "int32",
+          "title": "商品索引"
         },
         "count": {
           "type": "integer",
@@ -6874,13 +6875,9 @@
           },
           "title": "更新后的背包"
         },
-        "shopData": {
-          "$ref": "#/definitions/gameShopData",
-          "title": "更新后的商店数据"
-        },
-        "boxLevelUp": {
-          "type": "boolean",
-          "title": "宝箱是否升级"
+        "shopItem": {
+          "$ref": "#/definitions/gameShopItem",
+          "title": "购买的物品更新"
         }
       },
       "title": "购买商店商品响应"
@@ -7765,7 +7762,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "title": "配置表ID（唯一标识）"
+          "title": "配置表ID"
         },
         "itemId": {
           "type": "string",
@@ -7799,6 +7796,11 @@
           "type": "integer",
           "format": "int32",
           "title": "已购买次数"
+        },
+        "index": {
+          "type": "integer",
+          "format": "int32",
+          "title": "通过index来购买"
         }
       },
       "title": "商店商品（普通商店）"

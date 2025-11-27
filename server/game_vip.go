@@ -49,19 +49,14 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 
 	// 如果用户是VIP，添加签名
 	if isVip && vipAccount.ExpiryTime != nil {
-		signature, err := GenerateVipSignature(userIDUUID.String(), vipAccount.ExpiryTime.AsTime().Unix())
-		if err != nil {
-			s.logger.Error("生成VIP签名失败", zap.String("user_id", userIDUUID.String()), zap.Error(err))
-			// 签名生成失败不影响VIP状态返回，只是不包含签名
-		} else {
-			response.Signature = signature
-			response.ExpireTime = vipAccount.ExpiryTime.AsTime().Unix()
-			vipRewardData := &VipRewardData{}
-			if err := LoadData(ctx, s.logger, s.db, userIDUUID, vipRewardData); err != nil {
-				return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
-			}
-			response.RewardClaimed = vipRewardData.RewardClaimed
+		signature, _ := GenerateVipSignature(userIDUUID.String(), vipAccount.ExpiryTime.AsTime().Unix())
+		response.Signature = signature
+		response.ExpireTime = vipAccount.ExpiryTime.AsTime().Unix()
+		vipRewardData := &VipRewardData{}
+		if err := LoadData(ctx, s.logger, s.db, userIDUUID, vipRewardData); err != nil {
+			return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
 		}
+		response.RewardClaimed = vipRewardData.RewardClaimed
 	}
 
 	return response, nil

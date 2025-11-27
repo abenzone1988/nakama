@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -12,8 +11,6 @@ import (
 )
 
 const signInDateLayout = "2006-01-02"
-
-var errSignInAlreadyClaimed = errors.New("daily sign-in reward already claimed")
 
 // ClaimSignInReward 领取每日签到奖励
 func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error) {
