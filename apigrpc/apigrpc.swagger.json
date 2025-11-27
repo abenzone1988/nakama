@@ -2054,6 +2054,29 @@
         ]
       }
     },
+    "/v2/game/inventory": {
+      "get": {
+        "summary": "Get inventory data",
+        "operationId": "Nakama_GetInventoryData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetInventoryDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/inventory/operate": {
       "post": {
         "summary": "Operate Inventory",
@@ -2681,6 +2704,29 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/gameGetGameTimeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/wallet": {
+      "get": {
+        "summary": "Get wallet data",
+        "operationId": "Nakama_GetWalletData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetWalletDataResponse"
             }
           },
           "default": {
@@ -7440,6 +7486,24 @@
         }
       }
     },
+    "gameGetInventoryDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
+        }
+      }
+    },
     "gameGetSevenDayStatusResponse": {
       "type": "object",
       "properties": {
@@ -7510,6 +7574,21 @@
         }
       },
       "title": "获取任务状态响应"
+    },
+    "gameGetWalletDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "wallet": {
+          "$ref": "#/definitions/gameWallet"
+        }
+      }
     },
     "gameItem": {
       "type": "object",
@@ -7837,7 +7916,7 @@
         "refreshCount": {
           "type": "integer",
           "format": "int32",
-          "title": "已手动刷新次数"
+          "title": "可手动刷新次数"
         },
         "nextRefreshTime": {
           "type": "string",

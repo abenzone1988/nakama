@@ -435,3 +435,30 @@ func ListWalletLedger(ctx context.Context, logger *zap.Logger, db *sql.DB, userI
 
 	return results, nextCursorStr, prevCursorStr, nil
 }
+
+// GetWallet 获取玩家钱包数据并返回是否存在
+func GetWallet(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) (map[string]int64, bool, error) {
+	query := `SELECT wallet FROM users WHERE id = $1`
+
+	var walletJSON sql.NullString
+	err := db.QueryRowContext(ctx, query, userID.String()).Scan(&walletJSON)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	}
+	if err != nil {
+		logger.Error("Error retrieving user wallet.", zap.String("user_id", userID.String()), zap.Error(err))
+		return nil, false, err
+	}
+
+	if !walletJSON.Valid || walletJSON.String == "" || walletJSON.String == "{}" {
+		return make(map[string]int64), true, nil
+	}
+
+	var walletMap map[string]int64
+	if err := json.Unmarshal([]byte(walletJSON.String), &walletMap); err != nil {
+		logger.Error("Error converting user wallet.", zap.String("user_id", userID.String()), zap.Error(err))
+		return nil, true, err
+	}
+
+	return walletMap, true, nil
+}

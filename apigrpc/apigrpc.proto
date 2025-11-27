@@ -868,12 +868,22 @@ service Nakama {
     };
   }
 
+  //Get wallet data
+  rpc GetWalletData(game.GetWalletDataRequest) returns (game.GetWalletDataResponse) {
+    option (google.api.http).get = "/v2/game/wallet";
+  }
+
   //Operate Inventory
   rpc OperateInventory(game.OperateInventoryRequest) returns (game.OperateInventoryResponse) {
     option (google.api.http) = {
       post: "/v2/game/inventory/operate"
       body: "*"
     };
+  }
+
+  //Get inventory data
+  rpc GetInventoryData(game.GetInventoryDataRequest) returns (game.GetInventoryDataResponse) {
+    option (google.api.http).get = "/v2/game/inventory";
   }
 
   // Get common shop data (only TplShop based: daily, coin, strength)

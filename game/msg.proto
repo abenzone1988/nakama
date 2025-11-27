@@ -396,6 +396,24 @@ message OperateInventoryResponse{
   repeated Item inventory_updated = 5; // 背包更新结果
 }
 
+message GetWalletDataRequest{
+}
+
+message GetWalletDataResponse{
+  int32 code = 1;
+  string msg = 2;
+  Wallet wallet = 3;
+}
+
+message GetInventoryDataRequest{
+}
+
+message GetInventoryDataResponse{
+  int32 code = 1;
+  string msg = 2;
+  repeated Item items = 3;
+}
+
 message UpdateEquipDataRequest{
   string equip_id = 1;
 }

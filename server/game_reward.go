@@ -364,3 +364,52 @@ func (s *ApiServer) OperateInventory(ctx context.Context, in *game.OperateInvent
 		InventoryUpdated: convertMapInt64ToItems(results[0].Updated),
 	}, nil
 }
+
+func (s *ApiServer) GetWalletData(ctx context.Context, _ *game.GetWalletDataRequest) (*game.GetWalletDataResponse, error) {
+	userID, ok := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	if !ok {
+		return &game.GetWalletDataResponse{Code: 1, Msg: "未登录"}, nil
+	}
+
+	walletMap, exists, err := GetWallet(ctx, s.logger, s.db, userID)
+	if err != nil {
+		s.logger.Error("查询玩家钱包失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return &game.GetWalletDataResponse{Code: 3, Msg: "获取钱包失败"}, nil
+	}
+	if !exists {
+		return &game.GetWalletDataResponse{Code: 2, Msg: "用户不存在"}, nil
+	}
+
+	wallet := convertMapInt64ToWallet(walletMap)
+	if wallet == nil {
+		wallet = &game.Wallet{}
+	}
+
+	return &game.GetWalletDataResponse{
+		Code:   0,
+		Msg:    "success",
+		Wallet: wallet,
+	}, nil
+}
+
+func (s *ApiServer) GetInventoryData(ctx context.Context, _ *game.GetInventoryDataRequest) (*game.GetInventoryDataResponse, error) {
+	userID, ok := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	if !ok {
+		return &game.GetInventoryDataResponse{Code: 1, Msg: "未登录"}, nil
+	}
+
+	inventoryMap, exists, err := GetInventory(ctx, s.logger, s.db, userID)
+	if err != nil {
+		s.logger.Error("查询玩家背包失败", zap.String("user_id", userID.String()), zap.Error(err))
+		return &game.GetInventoryDataResponse{Code: 3, Msg: "获取背包失败"}, nil
+	}
+	if !exists {
+		return &game.GetInventoryDataResponse{Code: 2, Msg: "用户不存在"}, nil
+	}
+
+	return &game.GetInventoryDataResponse{
+		Code:  0,
+		Msg:   "success",
+		Items: convertMapInt64ToItems(inventoryMap),
+	}, nil
+}

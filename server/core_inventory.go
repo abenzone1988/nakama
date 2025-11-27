@@ -455,30 +455,30 @@ func ListInventoryLedger(ctx context.Context, logger *zap.Logger, db *sql.DB, us
 	return results, nextCursorStr, prevCursorStr, nil
 }
 
-// GetInventory 获取玩家背包数据
-func GetInventory(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) (map[string]int64, error) {
+// GetInventory 获取玩家背包数据并返回是否存在
+func GetInventory(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID) (map[string]int64, bool, error) {
 	query := `SELECT inventory FROM users WHERE id = $1`
 
 	var inventoryJSON sql.NullString
 	err := db.QueryRowContext(ctx, query, userID.String()).Scan(&inventoryJSON)
 	if err == sql.ErrNoRows {
-		return make(map[string]int64), nil
+		return nil, false, nil
 	}
 	if err != nil {
 		logger.Error("Error retrieving user inventory.", zap.String("user_id", userID.String()), zap.Error(err))
-		return nil, err
+		return nil, false, err
 	}
 
 	// 如果 inventory 为空或 NULL，返回空 map
 	if !inventoryJSON.Valid || inventoryJSON.String == "" || inventoryJSON.String == "{}" {
-		return make(map[string]int64), nil
+		return make(map[string]int64), true, nil
 	}
 
 	var inventoryMap map[string]int64
 	if err := json.Unmarshal([]byte(inventoryJSON.String), &inventoryMap); err != nil {
 		logger.Error("Error converting user inventory.", zap.String("user_id", userID.String()), zap.Error(err))
-		return nil, err
+		return nil, true, err
 	}
 
-	return inventoryMap, nil
+	return inventoryMap, true, nil
 }
