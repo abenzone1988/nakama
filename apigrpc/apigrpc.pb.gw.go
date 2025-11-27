@@ -3190,7 +3190,7 @@ func local_request_Nakama_ListPublishedAnnouncements_0(ctx context.Context, mars
 
 func request_Nakama_MarkNotificationsRead_0(ctx context.Context, marshaler runtime.Marshaler, client NakamaClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq api.MarkNotificationsReadRequest
+		protoReq game.MarkNotificationsReadRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
@@ -3202,7 +3202,7 @@ func request_Nakama_MarkNotificationsRead_0(ctx context.Context, marshaler runti
 
 func local_request_Nakama_MarkNotificationsRead_0(ctx context.Context, marshaler runtime.Marshaler, server NakamaServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq api.MarkNotificationsReadRequest
+		protoReq game.MarkNotificationsReadRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
@@ -3214,7 +3214,7 @@ func local_request_Nakama_MarkNotificationsRead_0(ctx context.Context, marshaler
 
 func request_Nakama_ClaimNotificationAttachments_0(ctx context.Context, marshaler runtime.Marshaler, client NakamaClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq api.ClaimNotificationAttachmentsRequest
+		protoReq game.ClaimNotificationAttachmentsRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
@@ -3226,7 +3226,7 @@ func request_Nakama_ClaimNotificationAttachments_0(ctx context.Context, marshale
 
 func local_request_Nakama_ClaimNotificationAttachments_0(ctx context.Context, marshaler runtime.Marshaler, server NakamaServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq api.ClaimNotificationAttachmentsRequest
+		protoReq game.ClaimNotificationAttachmentsRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {

@@ -541,8 +541,9 @@ message BuyChapterItemResponse {
   int32 code = 1;
   string msg = 2;
   Reward reward = 3;
-  repeated Item inventory_updated = 4;
-  ChapterShopData chapter_shop_data = 5;  // 更新后的章节商店
+  Wallet wallet_updated = 4;
+  repeated Item inventory_updated = 5;
+  ChapterShopData chapter_shop_data = 6;  // 更新后的章节商店
 }
 
 // ==================== 钻石商店（独立，IAP） ====================
@@ -561,5 +562,32 @@ message BuyGemItemResponse {
   string msg = 2;
   Reward reward = 3;
   Wallet wallet_updated = 4;
-  GemShopData gem_shop_data = 5;  // 更新后的钻石商店
+  repeated Item inventory_updated = 5;
+  GemShopData gem_shop_data = 6;  // 更新后的钻石商店
+}
+
+// Mark notifications as read.
+message MarkNotificationsReadRequest{
+  // Notification IDs to mark as read.
+  repeated string ids  =1;
+}
+
+message MarkNotificationsReadResponse{
+  // Marked count.
+  int32 markedcount = 1;
+}
+
+// Claim notification attachments.
+message ClaimNotificationAttachmentsRequest{
+  // Notification IDs to claim.
+  repeated string ids  =1;
+}
+
+message ClaimNotificationAttachmentsResponse{
+  // Claimed count.
+  int32 claimedcount = 1;
+    // Latest wallet snapshot after claiming attachments.
+  Wallet wallet_updated = 2;
+  // Aggregated inventory changes after claiming attachments.
+  repeated Item inventory_updated = 3;
 }

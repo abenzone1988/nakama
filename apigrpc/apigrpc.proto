@@ -832,7 +832,7 @@ service Nakama {
   }
 
   // Mark notifications as read
-  rpc MarkNotificationsRead(MarkNotificationsReadRequest) returns (MarkNotificationsReadResponse) {
+  rpc MarkNotificationsRead(game.MarkNotificationsReadRequest) returns (game.MarkNotificationsReadResponse) {
     option (google.api.http) = {
       post: "/v2/notification/read"
       body: "*"
@@ -840,7 +840,7 @@ service Nakama {
   }
 
   // Claim notification attachments
-  rpc ClaimNotificationAttachments(ClaimNotificationAttachmentsRequest) returns (ClaimNotificationAttachmentsResponse) {
+  rpc ClaimNotificationAttachments(game.ClaimNotificationAttachmentsRequest) returns (game.ClaimNotificationAttachmentsResponse) {
     option (google.api.http) = {
       post: "/v2/notification/claim"
       body: "*"

@@ -23,6 +23,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/console"
+	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -133,11 +134,11 @@ func (s *ApiServer) DeleteNotifications(ctx context.Context, in *api.DeleteNotif
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ApiServer) MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error) {
+func (s *ApiServer) MarkNotificationsRead(ctx context.Context, in *game.MarkNotificationsReadRequest) (*game.MarkNotificationsReadResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	if len(in.GetIds()) == 0 {
-		return &api.MarkNotificationsReadResponse{Markedcount: 0}, nil
+		return &game.MarkNotificationsReadResponse{Markedcount: 0}, nil
 	}
 
 	markedCount, err := NotificationMarkRead(ctx, s.logger, s.db, userID, in.GetIds())
@@ -145,13 +146,13 @@ func (s *ApiServer) MarkNotificationsRead(ctx context.Context, in *api.MarkNotif
 		return nil, status.Error(codes.Internal, "Error while marking notifications as read.")
 	}
 
-	return &api.MarkNotificationsReadResponse{Markedcount: markedCount}, nil
+	return &game.MarkNotificationsReadResponse{Markedcount: markedCount}, nil
 }
 
-func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error) {
+func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *game.ClaimNotificationAttachmentsRequest) (*game.ClaimNotificationAttachmentsResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	if len(in.GetIds()) == 0 {
-		return &api.ClaimNotificationAttachmentsResponse{Claimedcount: 0}, nil
+		return &game.ClaimNotificationAttachmentsResponse{Claimedcount: 0}, nil
 	}
 
 	contents, claimedCount, err := NotificationClaimAttachments(ctx, s.logger, s.db, userID, in.GetIds())
@@ -161,6 +162,9 @@ func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *api.Cl
 		}
 		return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
 	}
+
+	var walletSnapshot *game.Wallet
+	inventoryChanges := make(map[string]int32)
 
 	for id, contentStr := range contents {
 		if contentStr == "" {
@@ -177,12 +181,51 @@ func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *api.Cl
 				continue
 			}
 			source := fmt.Sprintf("notification:%s", id)
-			if _, _, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source); err != nil {
+			walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
+			if err != nil {
 				s.logger.Error("发放通知奖励失败", zap.String("notification_id", id), zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
+			}
+
+			if walletResult != nil && walletResult.Updated != nil {
+				walletSnapshot = convertGameWalletToAPI(walletResult.Updated)
+			}
+			if inventoryResult != nil && len(inventoryResult.Updated) > 0 {
+				for _, item := range inventoryResult.Updated {
+					if item == nil || item.Id == "" || item.Num == 0 {
+						continue
+					}
+					inventoryChanges[item.Id] += item.Num
+				}
 			}
 		}
 	}
 
-	return &api.ClaimNotificationAttachmentsResponse{Claimedcount: claimedCount}, nil
+	var inventoryUpdated []*game.Item
+	if len(inventoryChanges) > 0 {
+		inventoryUpdated = make([]*game.Item, 0, len(inventoryChanges))
+		for id, num := range inventoryChanges {
+			inventoryUpdated = append(inventoryUpdated, &game.Item{
+				Id:  id,
+				Num: num,
+			})
+		}
+	}
+
+	return &game.ClaimNotificationAttachmentsResponse{
+		Claimedcount:     claimedCount,
+		WalletUpdated:    walletSnapshot,
+		InventoryUpdated: inventoryUpdated,
+	}, nil
+}
+
+func convertGameWalletToAPI(wallet *game.Wallet) *game.Wallet {
+	if wallet == nil {
+		return nil
+	}
+	return &game.Wallet{
+		Coin: wallet.Coin,
+		Gem:  wallet.Gem,
+		Ad:   wallet.Ad,
+	}
 }

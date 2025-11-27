@@ -4040,7 +4040,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/apiClaimNotificationAttachmentsResponse"
+              "$ref": "#/definitions/gameClaimNotificationAttachmentsResponse"
             }
           },
           "default": {
@@ -4057,7 +4057,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/apiClaimNotificationAttachmentsRequest"
+              "$ref": "#/definitions/gameClaimNotificationAttachmentsRequest"
             }
           }
         ],
@@ -4074,7 +4074,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/apiMarkNotificationsReadResponse"
+              "$ref": "#/definitions/gameMarkNotificationsReadResponse"
             }
           },
           "default": {
@@ -4091,7 +4091,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/apiMarkNotificationsReadRequest"
+              "$ref": "#/definitions/gameMarkNotificationsReadRequest"
             }
           }
         ],
@@ -5304,29 +5304,6 @@
       },
       "description": "A list of channel messages, usually a result of a list operation."
     },
-    "apiClaimNotificationAttachmentsRequest": {
-      "type": "object",
-      "properties": {
-        "ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Notification IDs to claim."
-        }
-      },
-      "description": "Claim notification attachments."
-    },
-    "apiClaimNotificationAttachmentsResponse": {
-      "type": "object",
-      "properties": {
-        "claimedcount": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Claimed count."
-        }
-      }
-    },
     "apiCreateGroupRequest": {
       "type": "object",
       "properties": {
@@ -5688,29 +5665,6 @@
         }
       },
       "description": "List user subscriptions."
-    },
-    "apiMarkNotificationsReadRequest": {
-      "type": "object",
-      "properties": {
-        "ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Notification IDs to mark as read."
-        }
-      },
-      "description": "Mark notifications as read."
-    },
-    "apiMarkNotificationsReadResponse": {
-      "type": "object",
-      "properties": {
-        "markedcount": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Marked count."
-        }
-      }
     },
     "apiMatch": {
       "type": "object",
@@ -6826,6 +6780,9 @@
         "reward": {
           "$ref": "#/definitions/gameReward"
         },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet"
+        },
         "inventoryUpdated": {
           "type": "array",
           "items": {
@@ -6864,6 +6821,12 @@
         },
         "walletUpdated": {
           "$ref": "#/definitions/gameWallet"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
         },
         "gemShopData": {
           "$ref": "#/definitions/gameGemShopData",
@@ -7152,6 +7115,40 @@
         }
       },
       "title": "扫荡奖励响应"
+    },
+    "gameClaimNotificationAttachmentsRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notification IDs to claim."
+        }
+      },
+      "description": "Claim notification attachments."
+    },
+    "gameClaimNotificationAttachmentsResponse": {
+      "type": "object",
+      "properties": {
+        "claimedcount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Claimed count."
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "description": "Latest wallet snapshot after claiming attachments."
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "description": "Aggregated inventory changes after claiming attachments."
+        }
+      }
     },
     "gameClaimOnHookRewardRequest": {
       "type": "object",
@@ -7635,6 +7632,29 @@
         }
       },
       "title": "获取已发布公告响应"
+    },
+    "gameMarkNotificationsReadRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notification IDs to mark as read."
+        }
+      },
+      "description": "Mark notifications as read."
+    },
+    "gameMarkNotificationsReadResponse": {
+      "type": "object",
+      "properties": {
+        "markedcount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Marked count."
+        }
+      }
     },
     "gameOperateInventoryRequest": {
       "type": "object",

@@ -354,9 +354,9 @@ type NakamaClient interface {
 	// List published announcements
 	ListPublishedAnnouncements(ctx context.Context, in *game.ListPublishedAnnouncementsRequest, opts ...grpc.CallOption) (*game.ListPublishedAnnouncementsResponse, error)
 	// Mark notifications as read
-	MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*api.MarkNotificationsReadResponse, error)
+	MarkNotificationsRead(ctx context.Context, in *game.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*game.MarkNotificationsReadResponse, error)
 	// Claim notification attachments
-	ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*api.ClaimNotificationAttachmentsResponse, error)
+	ClaimNotificationAttachments(ctx context.Context, in *game.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*game.ClaimNotificationAttachmentsResponse, error)
 	// Get current stamina
 	GetCurrentStamina(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.StaminaData, error)
 	// Get equip data
@@ -1252,8 +1252,8 @@ func (c *nakamaClient) ListPublishedAnnouncements(ctx context.Context, in *game.
 	return out, nil
 }
 
-func (c *nakamaClient) MarkNotificationsRead(ctx context.Context, in *api.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*api.MarkNotificationsReadResponse, error) {
-	out := new(api.MarkNotificationsReadResponse)
+func (c *nakamaClient) MarkNotificationsRead(ctx context.Context, in *game.MarkNotificationsReadRequest, opts ...grpc.CallOption) (*game.MarkNotificationsReadResponse, error) {
+	out := new(game.MarkNotificationsReadResponse)
 	err := c.cc.Invoke(ctx, Nakama_MarkNotificationsRead_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1261,8 +1261,8 @@ func (c *nakamaClient) MarkNotificationsRead(ctx context.Context, in *api.MarkNo
 	return out, nil
 }
 
-func (c *nakamaClient) ClaimNotificationAttachments(ctx context.Context, in *api.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*api.ClaimNotificationAttachmentsResponse, error) {
-	out := new(api.ClaimNotificationAttachmentsResponse)
+func (c *nakamaClient) ClaimNotificationAttachments(ctx context.Context, in *game.ClaimNotificationAttachmentsRequest, opts ...grpc.CallOption) (*game.ClaimNotificationAttachmentsResponse, error) {
+	out := new(game.ClaimNotificationAttachmentsResponse)
 	err := c.cc.Invoke(ctx, Nakama_ClaimNotificationAttachments_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1729,9 +1729,9 @@ type NakamaServer interface {
 	// List published announcements
 	ListPublishedAnnouncements(context.Context, *game.ListPublishedAnnouncementsRequest) (*game.ListPublishedAnnouncementsResponse, error)
 	// Mark notifications as read
-	MarkNotificationsRead(context.Context, *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error)
+	MarkNotificationsRead(context.Context, *game.MarkNotificationsReadRequest) (*game.MarkNotificationsReadResponse, error)
 	// Claim notification attachments
-	ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error)
+	ClaimNotificationAttachments(context.Context, *game.ClaimNotificationAttachmentsRequest) (*game.ClaimNotificationAttachmentsResponse, error)
 	// Get current stamina
 	GetCurrentStamina(context.Context, *emptypb.Empty) (*game.StaminaData, error)
 	// Get equip data
@@ -2072,10 +2072,10 @@ func (UnimplementedNakamaServer) GetGameTime(context.Context, *emptypb.Empty) (*
 func (UnimplementedNakamaServer) ListPublishedAnnouncements(context.Context, *game.ListPublishedAnnouncementsRequest) (*game.ListPublishedAnnouncementsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPublishedAnnouncements not implemented")
 }
-func (UnimplementedNakamaServer) MarkNotificationsRead(context.Context, *api.MarkNotificationsReadRequest) (*api.MarkNotificationsReadResponse, error) {
+func (UnimplementedNakamaServer) MarkNotificationsRead(context.Context, *game.MarkNotificationsReadRequest) (*game.MarkNotificationsReadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MarkNotificationsRead not implemented")
 }
-func (UnimplementedNakamaServer) ClaimNotificationAttachments(context.Context, *api.ClaimNotificationAttachmentsRequest) (*api.ClaimNotificationAttachmentsResponse, error) {
+func (UnimplementedNakamaServer) ClaimNotificationAttachments(context.Context, *game.ClaimNotificationAttachmentsRequest) (*game.ClaimNotificationAttachmentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimNotificationAttachments not implemented")
 }
 func (UnimplementedNakamaServer) GetCurrentStamina(context.Context, *emptypb.Empty) (*game.StaminaData, error) {
@@ -3838,7 +3838,7 @@ func _Nakama_ListPublishedAnnouncements_Handler(srv interface{}, ctx context.Con
 }
 
 func _Nakama_MarkNotificationsRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(api.MarkNotificationsReadRequest)
+	in := new(game.MarkNotificationsReadRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3850,13 +3850,13 @@ func _Nakama_MarkNotificationsRead_Handler(srv interface{}, ctx context.Context,
 		FullMethod: Nakama_MarkNotificationsRead_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).MarkNotificationsRead(ctx, req.(*api.MarkNotificationsReadRequest))
+		return srv.(NakamaServer).MarkNotificationsRead(ctx, req.(*game.MarkNotificationsReadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Nakama_ClaimNotificationAttachments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(api.ClaimNotificationAttachmentsRequest)
+	in := new(game.ClaimNotificationAttachmentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3868,7 +3868,7 @@ func _Nakama_ClaimNotificationAttachments_Handler(srv interface{}, ctx context.C
 		FullMethod: Nakama_ClaimNotificationAttachments_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).ClaimNotificationAttachments(ctx, req.(*api.ClaimNotificationAttachmentsRequest))
+		return srv.(NakamaServer).ClaimNotificationAttachments(ctx, req.(*game.ClaimNotificationAttachmentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

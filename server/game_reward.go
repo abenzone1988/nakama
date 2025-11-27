@@ -398,13 +398,10 @@ func (s *ApiServer) GetInventoryData(ctx context.Context, _ *game.GetInventoryDa
 		return &game.GetInventoryDataResponse{Code: 1, Msg: "未登录"}, nil
 	}
 
-	inventoryMap, exists, err := GetInventory(ctx, s.logger, s.db, userID)
+	inventoryMap, err := GetInventory(ctx, s.logger, s.db, userID)
 	if err != nil {
 		s.logger.Error("查询玩家背包失败", zap.String("user_id", userID.String()), zap.Error(err))
 		return &game.GetInventoryDataResponse{Code: 3, Msg: "获取背包失败"}, nil
-	}
-	if !exists {
-		return &game.GetInventoryDataResponse{Code: 2, Msg: "用户不存在"}, nil
 	}
 
 	return &game.GetInventoryDataResponse{
