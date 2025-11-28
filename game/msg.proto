@@ -119,6 +119,7 @@ message SignInData{
 // 玩家元数据
 message UserMeta{
   int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
+  string stamina_last_refresh_time = 2; // 体力最后刷新时间，ISO 8601 格式
   // StaminaData、EquipData 和 LevelData 已迁移到独立的 storage 存储
 }
 
@@ -127,6 +128,7 @@ message Wallet{
   int32 coin = 1;
   int32 gem = 2;
   int32 ad = 3;
+  int32 stamina = 4;
 }
 
 // 道具
@@ -459,8 +461,7 @@ message SingleShopData {
 
 // 完整商店数据
 message ShopData {
-  string date_time = 1;
-  repeated SingleShopData shops = 2;  // 所有商店列表
+  repeated SingleShopData shops = 1;  // 所有商店列表
 }
 
 // 商店类型枚举（只包含基于TplShop配置的常规商店）
@@ -486,7 +487,7 @@ message BuyShopItemResponse {
   Wallet wallet_updated = 4;            // 更新后的钱包
   repeated Item inventory_updated = 5;  // 更新后的背包
   ShopItem shop_item = 6;               // 购买的物品更新
-}
+ }
 
 // 手动刷新商店请求
 message RefreshShopRequest {
@@ -507,12 +508,16 @@ message BoxShopData {
   string box_item_id = 1;         // 当前宝箱商品ID（对应TplBoxShopItem的ID）
   int32 box_level = 2;            // 宝箱等级
   int32 box_exp = 3;              // 宝箱经验
+  bool free_ad_used = 4;          // 当天的广告免费购买是否已用
+  string next_free_refresh_time = 5; // 下次广告免费购买刷新时间（RFC3339）
 }
 
 // 购买宝箱请求
 message BuyBoxItemRequest {
   int32 count = 1;      // 开启数量（1或10）
   bool use_key = 2;     // 是否使用宝箱钥匙（itemId: 20001）
+  bool use_free_ad = 3; // 是否使用广告免费购买
+  bool ad_watched = 4;  // 是否已完整观看广告（true=免费，false=扣广告券）
 }
 
 // 购买宝箱响应

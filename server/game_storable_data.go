@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"context"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/game"
@@ -213,7 +214,7 @@ type PaymentStage struct {
 
 type ShopData struct {
 	BaseStorable
-	Shops map[string]*ShopInfo `json:"shops"` // key: ShopType string
+	Shops map[game.ShopType]*ShopInfo `json:"shops"` // key: ShopType string
 }
 
 func (d *ShopData) GetCollection() string {
@@ -225,7 +226,7 @@ func (d *ShopData) GetKey() string {
 }
 
 func (d *ShopData) Init() {
-	d.Shops = make(map[string]*ShopInfo)
+	d.Shops = make(map[game.ShopType]*ShopInfo)
 	d.SetVersion("")
 }
 
@@ -270,9 +271,11 @@ func (d *GemShopData) Init() {
 // BoxShopData 宝箱商店数据
 type BoxShopData struct {
 	BaseStorable
-	BoxItemID string `json:"box_item_id"` // 当前宝箱商品ID
-	BoxLevel  int32  `json:"box_level"`   // 宝箱等级
-	BoxExp    int32  `json:"box_exp"`     // 宝箱经验
+	BoxItemID           string    `json:"box_item_id"`            // 当前宝箱商品ID
+	BoxLevel            int32     `json:"box_level"`              // 宝箱等级
+	BoxExp              int32     `json:"box_exp"`                // 宝箱经验
+	FreeAdUsed          bool      `json:"free_ad_used"`           // 当日广告免费购买是否已用
+	NextFreeRefreshTime time.Time `json:"next_free_refresh_time"` // 下次广告免费刷新时间
 }
 
 func (d *BoxShopData) GetCollection() string {
@@ -287,7 +290,32 @@ func (d *BoxShopData) Init() {
 	d.BoxItemID = ""
 	d.BoxLevel = 1
 	d.BoxExp = 0
+	d.FreeAdUsed = false
+	d.NextFreeRefreshTime = time.Time{}
 	d.SetVersion("")
+}
+
+func (d *BoxShopData) RefreshFreeAdState() {
+	now := time.Now().UTC()
+	if d == nil {
+		return
+	}
+
+	if d.NextFreeRefreshTime.IsZero() {
+		d.NextFreeRefreshTime = nextDayZero(now)
+		d.FreeAdUsed = false
+		return
+	}
+
+	if now.After(d.NextFreeRefreshTime) || now.Equal(d.NextFreeRefreshTime) {
+		d.FreeAdUsed = false
+		d.NextFreeRefreshTime = nextDayZero(now)
+	}
+}
+
+func nextDayZero(t time.Time) time.Time {
+	loc := t.Location()
+	return time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, loc)
 }
 
 // ============================================================================
@@ -565,30 +593,5 @@ func (d *LevelData) Init() {
 	d.HasMoppingTimesForAdv = 0
 	d.LastMoppingTimestamp = now
 	d.LastGetOnHookTimestamp = now
-	d.SetVersion("")
-}
-
-// ============================================================================
-// 体力相关数据结构
-// ============================================================================
-
-// StaminaData 体力数据存储结构
-type StaminaData struct {
-	BaseStorable
-	Stamina         int32  `json:"stamina"`           // 当前体力值
-	LastRefreshTime string `json:"last_refresh_time"` // 最后刷新时间，ISO 8601 格式
-}
-
-func (d *StaminaData) GetCollection() string {
-	return "stamina"
-}
-
-func (d *StaminaData) GetKey() string {
-	return "data"
-}
-
-func (d *StaminaData) Init() {
-	d.Stamina = MaxStamina
-	d.LastRefreshTime = time.Now().Format(time.RFC3339)
 	d.SetVersion("")
 }

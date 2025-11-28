@@ -94,7 +94,7 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	}
 
 	// 扣除体力
-	if err := ConsumeStamina(ctx, s.logger, s.db, s.metrics, s.storageIndex, MoppingCostStamina); err != nil {
+	if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, MoppingCostStamina); err != nil {
 		return &game.ClaimMoppingRewardResponse{
 			Code: 7,
 			Msg:  "体力不足: " + err.Error(),

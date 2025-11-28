@@ -73,9 +73,10 @@ func convertMapInt64ToWallet(m map[string]int64) *game.Wallet {
 		return nil
 	}
 	return &game.Wallet{
-		Coin: int32(m["coin"]),
-		Gem:  int32(m["gem"]),
-		Ad:   int32(m["ad"]),
+		Coin:    int32(m["coin"]),
+		Gem:     int32(m["gem"]),
+		Ad:      int32(m["ad"]),
+		Stamina: int32(m["stamina"]),
 	}
 }
 
@@ -103,10 +104,15 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 		if reward.Wallet.Ad > 0 {
 			walletChangeset["ad"] = int64(reward.Wallet.Ad)
 		}
+		if reward.Wallet.Stamina > 0 {
+			walletChangeset["stamina"] = int64(reward.Wallet.Stamina)
+		}
 	}
 
 	// 处理道具奖励（包含特殊道具转换）
 	if len(reward.Items) > 0 {
+		convertedRandomCrystals := make(map[string]int32)
+		convertedRandomEquips := make(map[string]int32)
 		for _, item := range reward.Items {
 			if item == nil || item.Num <= 0 {
 				continue
@@ -118,19 +124,17 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				walletChangeset["coin"] += int64(item.Num)
 			case ItemID_Gem: // 钻石
 				walletChangeset["gem"] += int64(item.Num)
-			case ItemID_Stamina: // 体力
-				// 体力需要特殊处理，使用RefillStamina函数
-				if err := RefillStamina(ctx, logger, db, metrics, storageIndex, item.Num); err != nil {
-					logger.Error("添加体力失败", zap.Error(err))
-				}
 			case ItemID_AdTicket: // 广告券
 				walletChangeset["ad"] += int64(item.Num)
+			case ItemID_Stamina: // 体力
+				walletChangeset["stamina"] += int64(item.Num)
 			case ItemID_RandomCrystal: // 随机水晶
 				// 等概率转换为4种水晶 (30001-30004)
 				crystalIds := []string{CrystalID_1, CrystalID_2, CrystalID_3, CrystalID_4}
 				for i := int32(0); i < item.Num; i++ {
 					randomCrystal := crystalIds[rand.Intn(len(crystalIds))]
 					inventoryChangeset[randomCrystal]++
+					convertedRandomCrystals[randomCrystal]++
 				}
 			case ItemID_RandomTurret: // 随机炮台（转为碎片）
 				// 随机选择一个炮台，给10个碎片
@@ -140,6 +144,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				} else {
 					for debrisId, count := range distributedDebris {
 						inventoryChangeset[debrisId] += count
+						convertedRandomEquips[debrisId] += int32(count)
 					}
 				}
 			case ItemID_TurretDebris: // 炮台碎片
@@ -184,6 +189,40 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 					inventoryChangeset[item.Id] += int64(item.Num)
 				}
 			}
+		}
+		if len(convertedRandomCrystals) > 0 || len(convertedRandomEquips) > 0 {
+			skipIds := map[string]struct{}{}
+			if len(convertedRandomCrystals) > 0 {
+				skipIds[ItemID_RandomCrystal] = struct{}{}
+			}
+			if len(convertedRandomEquips) > 0 {
+				skipIds[ItemID_RandomTurret] = struct{}{}
+			}
+
+			newItems := make([]*game.Item, 0, len(reward.Items)+len(convertedRandomCrystals)+len(convertedRandomEquips))
+			for _, item := range reward.Items {
+				if item == nil {
+					continue
+				}
+				if _, skip := skipIds[item.Id]; skip {
+					continue
+				}
+				newItems = append(newItems, item)
+			}
+
+			for crystalID, count := range convertedRandomCrystals {
+				newItems = append(newItems, &game.Item{
+					Id:  crystalID,
+					Num: count,
+				})
+			}
+			for equipID, count := range convertedRandomEquips {
+				newItems = append(newItems, &game.Item{
+					Id:  equipID,
+					Num: count,
+				})
+			}
+			reward.Items = newItems
 		}
 	}
 
@@ -400,7 +439,7 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 			currentWeight += t.DebrisWeight
 			if randomValue < currentWeight {
 				debrisId := strings.TrimPrefix(t.EquipID, "EQ")
-				result[debrisId] = int64(totalDebrisCount)
+				result[debrisId] = int64(totalDebrisCount) * int64(TurretDebrisCount) // 给全部碎片
 
 				logger.Info("随机选择炮台（50000模式）",
 					zap.String("user_id", userID.String()),

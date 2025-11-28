@@ -5523,6 +5523,10 @@
         "ad": {
           "type": "integer",
           "format": "int32"
+        },
+        "stamina": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "钱包结构v"

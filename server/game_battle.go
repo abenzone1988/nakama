@@ -70,7 +70,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	}
 
 	//扣除体力值
-	if err := ConsumeStamina(ctx, s.logger, s.db, s.metrics, s.storageIndex, BattleCostStamina); err != nil {
+	if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, BattleCostStamina); err != nil {
 		return &game.EndBattleResponse{
 			Code: 3,
 			Msg:  "体力扣除失败: " + err.Error(),

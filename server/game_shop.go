@@ -27,9 +27,9 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 	}
 
 	// 初始化基于TplShop的常规商店（每个商店独立检查刷新时间）
-	s.initShop(ctx, userID, shopData, game.ShopType_SHOP_DAILY)
-	s.initShop(ctx, userID, shopData, game.ShopType_SHOP_COIN)
-	s.initShop(ctx, userID, shopData, game.ShopType_SHOP_STRENGTH)
+	s.initCommonShop(ctx, userID, shopData.Shops, game.ShopType_SHOP_DAILY, "Daily")
+	s.initCommonShop(ctx, userID, shopData.Shops, game.ShopType_SHOP_COIN, "Coin")
+	s.initCommonShop(ctx, userID, shopData.Shops, game.ShopType_SHOP_STRENGTH, "Strength")
 
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
 		s.logger.Error("保存商店数据失败", zap.Error(err))
@@ -39,28 +39,11 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 	return convertToProtoShopData(shopData), nil
 }
 
-// initShop 初始化常规商店（只处理TplShop配置的商店）
-func (s *ApiServer) initShop(ctx context.Context, userID uuid.UUID, shopData *ShopData, shopType game.ShopType) {
-	if shopData.Shops == nil {
-		shopData.Shops = make(map[string]*ShopInfo)
-	}
-
-	key := shopType.String()
-	switch shopType {
-	case game.ShopType_SHOP_DAILY:
-		s.initCommonShop(ctx, userID, shopData.Shops, key, shopType, "Daily")
-	case game.ShopType_SHOP_COIN:
-		s.initCommonShop(ctx, userID, shopData.Shops, key, shopType, "Coin")
-	case game.ShopType_SHOP_STRENGTH:
-		s.initCommonShop(ctx, userID, shopData.Shops, key, shopType, "Strength")
-	}
-}
-
 // initCommonShop 统一的商店初始化（支持随机商品+固定商品）
-func (s *ApiServer) initCommonShop(ctx context.Context, userID uuid.UUID, shops map[string]*ShopInfo, key string, shopType game.ShopType, configKey string) {
+func (s *ApiServer) initCommonShop(ctx context.Context, userID uuid.UUID, shops map[game.ShopType]*ShopInfo, shopType game.ShopType, configKey string) {
 	// 初始化商店结构
-	if shops[key] == nil {
-		shops[key] = &ShopInfo{
+	if shops[shopType] == nil {
+		shops[shopType] = &ShopInfo{
 			ShopType:     shopType,
 			Items:        []*ShopItem{},
 			CanRefresh:   false, // 默认不可刷新
@@ -68,44 +51,39 @@ func (s *ApiServer) initCommonShop(ctx context.Context, userID uuid.UUID, shops 
 		}
 	}
 
-	shop := shops[key]
-
-	// 从配置表中读取商店配置
-	tplShop, ok := s.template.GetTplShop().FindByKey(configKey)
-	if !ok {
-		s.logger.Error("未找到商店配置", zap.String("shop_config_key", configKey))
-		return
-	}
-
-	// 判断是否支持手动刷新
-	if tplShop.HandleRefreshTimes > 0 {
-		shop.CanRefresh = true
-		shop.RefreshCount = tplShop.HandleRefreshTimes
-	} else {
-		shop.CanRefresh = false
-		shop.RefreshCount = 0
-	}
+	shop := shops[shopType]
 
 	// 检查是否需要刷新
 	needRefresh := false
 	now := time.Now().UTC()
 
-	// 如果是首次初始化（没有商品），需要刷新
 	if len(shop.Items) == 0 {
 		needRefresh = true
-	} else if shop.CanRefresh {
-		// 如果可以刷新，检查是否到了刷新时间
-		if !shop.NextRefreshTime.IsZero() && now.After(shop.NextRefreshTime) {
-			needRefresh = true
-			// 重置手动刷新次数
-			shop.RefreshCount = tplShop.HandleRefreshTimes
-		}
 	}
 
+	if !shop.NextRefreshTime.IsZero() && now.After(shop.NextRefreshTime) {
+		needRefresh = true
+	}
 	// 如果需要刷新
 	if needRefresh {
 		// 清空商品列表
 		shop.Items = []*ShopItem{}
+
+		// 从配置表中读取商店配置
+		tplShop, ok := s.template.GetTplShop().FindByKey(configKey)
+		if !ok {
+			s.logger.Error("未找到商店配置", zap.String("shop_config_key", configKey))
+			return
+		}
+
+		// 判断是否支持手动刷新
+		if tplShop.HandleRefreshTimes > 0 {
+			shop.CanRefresh = true
+			shop.RefreshCount = tplShop.HandleRefreshTimes
+		} else {
+			shop.CanRefresh = false
+			shop.RefreshCount = 0
+		}
 
 		// 1. 添加固定商品（如果配置了）
 		s.addPermanentShopItems(shop, &tplShop)
@@ -113,18 +91,14 @@ func (s *ApiServer) initCommonShop(ctx context.Context, userID uuid.UUID, shops 
 		// 2. 添加随机商品（如果配置了）
 		s.addRandomShopItems(ctx, userID, shop, &tplShop)
 
-		// 如果可以刷新，设置下次刷新时间为第二天0点（UTC）
-		if shop.CanRefresh {
-			nextRefreshTime := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
-			shop.NextRefreshTime = nextRefreshTime
-		}
-		// 如果不可刷新，NextRefreshTime 保持零值（不设置）
+		nextRefreshTime := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+		shop.NextRefreshTime = nextRefreshTime
 	}
 }
 
 // forceRefreshShop 强制刷新商店（用于手动刷新）
-func (s *ApiServer) forceRefreshShop(ctx context.Context, userID uuid.UUID, shops map[string]*ShopInfo, key string, shopType game.ShopType, tplShop *TplShop) {
-	shop := shops[key]
+func (s *ApiServer) forceRefreshShop(ctx context.Context, userID uuid.UUID, shops map[game.ShopType]*ShopInfo, shopType game.ShopType, tplShop *TplShop) {
+	shop := shops[shopType]
 	if shop == nil {
 		shop = &ShopInfo{
 			ShopType:     shopType,
@@ -132,40 +106,32 @@ func (s *ApiServer) forceRefreshShop(ctx context.Context, userID uuid.UUID, shop
 			CanRefresh:   tplShop.HandleRefreshTimes > 0,
 			RefreshCount: tplShop.HandleRefreshTimes,
 		}
-		shops[key] = shop
+		shops[shopType] = shop
 	}
 
-	now := time.Now().UTC()
-
+	// 1. 从现有商品中筛选出固定商品（手动刷新时只保留已存在的固定商品）
 	permanentIDs := parsePermanentProductIDs(tplShop.PermanentProduct)
-	permanentSet := make(map[string]struct{}, len(permanentIDs))
-	for _, id := range permanentIDs {
-		permanentSet[id] = struct{}{}
-	}
 
-	existingPermanent := make(map[string]*ShopItem)
+	// 从现有商品中提取固定商品
+	existingPermanentMap := make(map[string]*ShopItem)
 	for _, item := range shop.Items {
-		if _, ok := permanentSet[item.ShopItemID]; ok {
-			existingPermanent[item.ShopItemID] = item
+		// 检查该商品ID是否属于固定商品配置
+		if _, ok := s.template.GetTplShopPermanentItem().FindByKey(item.ShopItemID); ok {
+			existingPermanentMap[item.ShopItemID] = item
 		}
 	}
 
+	// 按配置顺序保留已存在的固定商品
 	newItems := make([]*ShopItem, 0, len(permanentIDs))
 	for _, id := range permanentIDs {
 		if id == "" {
 			continue
 		}
-		if existing, ok := existingPermanent[id]; ok {
-			newItems = append(newItems, existing)
-			continue
-		}
 
-		tplPermanent, ok := s.template.GetTplShopPermanentItem().FindByKey(id)
-		if !ok {
-			s.logger.Warn("未找到固定商品配置", zap.String("item_id", id))
-			continue
+		// 只使用已存在的固定商品，不创建新的
+		if existing, exists := existingPermanentMap[id]; exists {
+			newItems = append(newItems, existing)
 		}
-		newItems = append(newItems, s.createPermanentShopItem(&tplPermanent))
 	}
 
 	shop.Items = newItems
@@ -173,12 +139,6 @@ func (s *ApiServer) forceRefreshShop(ctx context.Context, userID uuid.UUID, shop
 	// 2. 添加随机商品（如果配置了）
 	s.addRandomShopItems(ctx, userID, shop, tplShop)
 
-	// 如果可以刷新，设置下次刷新时间为第二天0点（UTC）
-	if shop.CanRefresh {
-		nextRefreshTime := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
-		shop.NextRefreshTime = nextRefreshTime
-	}
-	// 如果不可刷新，NextRefreshTime 保持零值（不设置）
 }
 
 // addRandomShopItems 添加随机商品
@@ -329,7 +289,7 @@ func (s *ApiServer) addRandomShopItems(ctx context.Context, userID uuid.UUID, sh
 	}
 }
 
-// addPermanentShopItems 添加固定商品
+// 添加固定商品
 func (s *ApiServer) addPermanentShopItems(shop *ShopInfo, tplShop *TplShop) {
 	permanentIDs := parsePermanentProductIDs(tplShop.PermanentProduct)
 	for _, permanentID := range permanentIDs {
@@ -453,7 +413,7 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 		return &game.BuyShopItemResponse{Code: -1, Msg: "加载商店数据失败"}, nil
 	}
 
-	key := in.ShopType.String()
+	key := in.ShopType
 	shop, ok := shopData.Shops[key]
 	if !ok {
 		return &game.BuyShopItemResponse{Code: 1, Msg: "商店不存在"}, nil
@@ -537,8 +497,7 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 		return &game.RefreshShopResponse{Code: -1, Msg: "加载商店数据失败"}, nil
 	}
 
-	key := in.ShopType.String()
-	shop, ok := shopData.Shops[key]
+	shop, ok := shopData.Shops[in.ShopType]
 	if !ok {
 		return &game.RefreshShopResponse{Code: 1, Msg: "商店不存在"}, nil
 	}
@@ -548,15 +507,7 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 		return &game.RefreshShopResponse{Code: 2, Msg: "该商店不支持手动刷新"}, nil
 	}
 
-	// 获取商店配置
-	var tplShop TplShop
-	var found bool
-	switch in.ShopType {
-	case game.ShopType_SHOP_DAILY:
-		tplShop, found = s.template.GetTplShop().FindByKey("Daily")
-	default:
-		return &game.RefreshShopResponse{Code: 3, Msg: "不支持的商店类型"}, nil
-	}
+	tplShop, found := s.template.GetTplShop().FindByKey("Daily")
 
 	if !found {
 		return &game.RefreshShopResponse{Code: 4, Msg: "未找到商店配置"}, nil
@@ -568,7 +519,7 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 	}
 
 	// 执行刷新（强制刷新商店）
-	s.forceRefreshShop(ctx, userID, shopData.Shops, key, in.ShopType, &tplShop)
+	s.forceRefreshShop(ctx, userID, shopData.Shops, in.ShopType, &tplShop)
 
 	// 减少刷新次数
 	shop.RefreshCount--
@@ -644,8 +595,7 @@ func convertToProtoShopData(data *ShopData) *game.ShopData {
 	}
 
 	return &game.ShopData{
-		DateTime: "", // 不再使用整体时间，每个商店有独立的刷新时间
-		Shops:    protoShops,
+		Shops: protoShops,
 	}
 }
 
@@ -659,14 +609,10 @@ func convertToProtoSingleShop(shop *ShopInfo) *game.SingleShopData {
 	}
 
 	protoShop := &game.SingleShopData{
-		ShopType:   shop.ShopType,
-		Items:      protoItems,
-		CanRefresh: shop.CanRefresh,
-	}
-
-	if shop.CanRefresh {
-		protoShop.RefreshCount = shop.RefreshCount
-		protoShop.NextRefreshTime = shop.NextRefreshTime.Format(time.RFC3339)
+		ShopType:        shop.ShopType,
+		Items:           protoItems,
+		CanRefresh:      shop.CanRefresh,
+		NextRefreshTime: shop.NextRefreshTime.Format(time.RFC3339),
 	}
 
 	return protoShop

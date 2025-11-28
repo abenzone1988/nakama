@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
@@ -38,13 +39,24 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 
 	// 初始化宝箱商店
 	s.initBoxShopStandalone(boxShopData)
+	boxShopData.RefreshFreeAdState()
 
 	if boxShopData.BoxItemID == "" {
 		return &game.BuyBoxItemResponse{Code: 2, Msg: "宝箱商店未初始化"}, nil
 	}
 
+	if in.UseFreeAd {
+		if boxShopData.FreeAdUsed {
+			return &game.BuyBoxItemResponse{Code: 3, Msg: "当日广告免费购买已用完"}, nil
+		}
+		if in.Count != 1 {
+			return &game.BuyBoxItemResponse{Code: 1, Msg: "广告免费购买仅支持单次开启"}, nil
+		}
+		boxShopData.FreeAdUsed = true
+	}
+
 	// 处理宝箱购买逻辑（包含钥匙扣除）
-	cost, rewards, boxLevelUp, keyInventoryResult, err := s.processBuyBoxItemStandalone(ctx, userID, boxShopData, in.UseKey, in.Count)
+	cost, rewards, boxLevelUp, keyInventoryResult, err := s.processBuyBoxItemStandalone(ctx, userID, boxShopData, in.UseKey, in.Count, in.UseFreeAd, in.AdWatched)
 	if err != nil {
 		return &game.BuyBoxItemResponse{Code: 4, Msg: err.Error()}, nil
 	}
@@ -75,7 +87,8 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 			walletChangeset["ad"] = -int64(cost.Ad)
 		}
 
-		metadata, _ := json.Marshal(map[string]interface{}{"source": "box_shop"})
+		metaSource := map[string]interface{}{"source": "box_shop"}
+		metadata, _ := json.Marshal(metaSource)
 		walletUpdates := []*walletUpdate{{
 			UserID:    userID,
 			Changeset: walletChangeset,
@@ -161,6 +174,7 @@ func (s *ApiServer) GetBoxShop(ctx context.Context, in *emptypb.Empty) (*game.Bo
 
 	// 初始化宝箱商店
 	s.initBoxShopStandalone(boxShopData)
+	boxShopData.RefreshFreeAdState()
 
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, boxShopData); err != nil {
 		s.logger.Error("保存宝箱商店数据失败", zap.Error(err))
@@ -171,7 +185,7 @@ func (s *ApiServer) GetBoxShop(ctx context.Context, in *emptypb.Empty) (*game.Bo
 }
 
 // 处理宝箱购买（独立版本）
-func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid.UUID, boxShopData *BoxShopData, useKey bool, count int32) (*game.Wallet, []*game.Reward, bool, *game.InventoryUpdateResult, error) {
+func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid.UUID, boxShopData *BoxShopData, useKey bool, count int32, freeAd bool, adWatched bool) (*game.Wallet, []*game.Reward, bool, *game.InventoryUpdateResult, error) {
 	var cost *game.Wallet
 	boxLevelUp := false
 	var keyInventoryResult *game.InventoryUpdateResult
@@ -181,47 +195,55 @@ func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid
 		return nil, nil, false, nil, fmt.Errorf("未找到宝箱配置")
 	}
 
-	if useKey {
-		// 使用宝箱钥匙（itemId: 20001）
-		// 检查并扣除背包中的钥匙
-		inventory, err := GetInventory(ctx, s.logger, s.db, userID)
-		if err != nil {
-			return nil, nil, false, nil, fmt.Errorf("加载玩家背包失败")
-		}
-
-		keyCount := inventory["20001"]
-		if keyCount < int64(count) {
-			return nil, nil, false, nil, fmt.Errorf("宝箱钥匙不足")
-		}
-
-		// 直接扣除钥匙并保存更新结果
-		results, err := UpdateInventories(ctx, s.logger, s.db, []*inventoryUpdate{
-			{
-				UserID:    userID,
-				Changeset: map[string]int64{"20001": -int64(count)},
-				Metadata:  `{"reason": "box_shop_use_key"}`,
-			},
-		}, true)
-		if err != nil {
-			return nil, nil, false, nil, fmt.Errorf("扣除宝箱钥匙失败")
-		}
-
-		// 保存钥匙扣除的背包更新结果
-		if len(results) > 0 {
-			keyInventoryResult = &game.InventoryUpdateResult{
-				Previous: convertMapInt64ToItems(results[0].Previous),
-				Updated:  convertMapInt64ToItems(results[0].Updated),
-			}
-		}
-
-		cost = &game.Wallet{} // 使用钥匙不扣除货币
-	} else {
-		// 使用货币购买
-		payType := parsePayType(tplBoxItem.PayType)
-		if count == 10 {
-			cost = calculateCost(payType, tplBoxItem.WholesalePrice)
+	if freeAd {
+		if adWatched {
+			cost = nil
 		} else {
-			cost = calculateCost(payType, tplBoxItem.RetailPrice)
+			cost = &game.Wallet{Ad: 1}
+		}
+	} else {
+		if useKey {
+			// 使用宝箱钥匙（itemId: 20001）
+			// 检查并扣除背包中的钥匙
+			inventory, err := GetInventory(ctx, s.logger, s.db, userID)
+			if err != nil {
+				return nil, nil, false, nil, fmt.Errorf("加载玩家背包失败")
+			}
+
+			keyCount := inventory["20001"]
+			if keyCount < int64(count) {
+				return nil, nil, false, nil, fmt.Errorf("宝箱钥匙不足")
+			}
+
+			// 直接扣除钥匙并保存更新结果
+			results, err := UpdateInventories(ctx, s.logger, s.db, []*inventoryUpdate{
+				{
+					UserID:    userID,
+					Changeset: map[string]int64{"20001": -int64(count)},
+					Metadata:  `{"reason": "box_shop_use_key"}`,
+				},
+			}, true)
+			if err != nil {
+				return nil, nil, false, nil, fmt.Errorf("扣除宝箱钥匙失败")
+			}
+
+			// 保存钥匙扣除的背包更新结果
+			if len(results) > 0 {
+				keyInventoryResult = &game.InventoryUpdateResult{
+					Previous: convertMapInt64ToItems(results[0].Previous),
+					Updated:  convertMapInt64ToItems(results[0].Updated),
+				}
+			}
+
+			cost = &game.Wallet{} // 使用钥匙不扣除货币
+		} else {
+			// 使用货币购买
+			payType := parsePayType(tplBoxItem.PayType)
+			if count == 10 {
+				cost = calculateCost(payType, tplBoxItem.WholesalePrice)
+			} else {
+				cost = calculateCost(payType, tplBoxItem.RetailPrice)
+			}
 		}
 	}
 
@@ -281,11 +303,18 @@ func (s *ApiServer) initBoxShopStandalone(boxShopData *BoxShopData) {
 
 // 转换宝箱商店数据
 func convertToProtoBoxShop(data *BoxShopData) *game.BoxShopData {
-	return &game.BoxShopData{
+	protoData := &game.BoxShopData{
 		BoxItemId: data.BoxItemID,
 		BoxLevel:  data.BoxLevel,
 		BoxExp:    data.BoxExp,
 	}
+
+	protoData.FreeAdUsed = data.FreeAdUsed
+	if !data.NextFreeRefreshTime.IsZero() {
+		protoData.NextFreeRefreshTime = data.NextFreeRefreshTime.Format(time.RFC3339)
+	}
+
+	return protoData
 }
 
 // 抽取宝箱奖励

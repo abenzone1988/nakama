@@ -1196,6 +1196,7 @@ export interface GameWallet {
   ad?:number
   coin?:number
   gem?:number
+  stamina?:number
 }
 
 /** A user session associated to a stream, usually through a list operation or a join/leave event. */

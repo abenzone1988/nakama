@@ -6705,6 +6705,14 @@
           "type": "integer",
           "format": "int32",
           "title": "宝箱经验"
+        },
+        "freeAdUsed": {
+          "type": "boolean",
+          "title": "当天的广告免费购买是否已用"
+        },
+        "nextFreeRefreshTime": {
+          "type": "string",
+          "title": "下次广告免费购买刷新时间（RFC3339）"
         }
       },
       "title": "==================== 宝箱商店（独立） ====================\n宝箱商店数据"
@@ -6720,6 +6728,14 @@
         "useKey": {
           "type": "boolean",
           "title": "是否使用宝箱钥匙（itemId: 20001）"
+        },
+        "useFreeAd": {
+          "type": "boolean",
+          "title": "是否使用广告免费购买"
+        },
+        "adWatched": {
+          "type": "boolean",
+          "title": "是否已完整观看广告（true=免费，false=扣广告券）"
         }
       },
       "title": "购买宝箱请求"
@@ -7843,9 +7859,6 @@
     "gameShopData": {
       "type": "object",
       "properties": {
-        "dateTime": {
-          "type": "string"
-        },
         "shops": {
           "type": "array",
           "items": {
@@ -8013,6 +8026,10 @@
           "format": "int32"
         },
         "ad": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "stamina": {
           "type": "integer",
           "format": "int32"
         }
