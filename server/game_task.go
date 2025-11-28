@@ -285,13 +285,3 @@ func needsDailyReset(lastUpdateTime time.Time) bool {
 
 	return today.After(lastDay)
 }
-
-// containsString 检查字符串切片中是否包含指定元素
-func containsString(slice []string, item string) bool {
-	for _, v := range slice {
-		if v == item {
-			return true
-		}
-	}
-	return false
-}
