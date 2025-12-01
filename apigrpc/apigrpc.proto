@@ -995,6 +995,10 @@ service Nakama {
     };
   }
 
+  rpc GetSignInReward(google.protobuf.Empty) returns (game.GetSignInRewardResponse) {
+    option (google.api.http).get = "/v2/game/signin";
+  }
+
   // ==================== First Charge ====================
   rpc GetFirstChargeStatus(game.GetFirstChargeStatusRequest) returns (game.GetFirstChargeStatusResponse) {
     option (google.api.http).get = "/v2/game/firstcharge/status";

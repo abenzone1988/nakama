@@ -154,6 +154,7 @@ const (
 	Nakama_UpdateEquipData_FullMethodName                   = "/nakama.api.Nakama/UpdateEquipData"
 	Nakama_ClaimLevelBox_FullMethodName                     = "/nakama.api.Nakama/ClaimLevelBox"
 	Nakama_ClaimSignInReward_FullMethodName                 = "/nakama.api.Nakama/ClaimSignInReward"
+	Nakama_GetSignInReward_FullMethodName                   = "/nakama.api.Nakama/GetSignInReward"
 	Nakama_GetFirstChargeStatus_FullMethodName              = "/nakama.api.Nakama/GetFirstChargeStatus"
 	Nakama_ClaimFirstChargeReward_FullMethodName            = "/nakama.api.Nakama/ClaimFirstChargeReward"
 	Nakama_GetTask_FullMethodName                           = "/nakama.api.Nakama/GetTask"
@@ -400,6 +401,7 @@ type NakamaClient interface {
 	ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error)
 	// ==================== Sign In ====================
 	ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest, opts ...grpc.CallOption) (*game.ClaimSignInRewardResponse, error)
+	GetSignInReward(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetSignInRewardResponse, error)
 	// ==================== First Charge ====================
 	GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest, opts ...grpc.CallOption) (*game.GetFirstChargeStatusResponse, error)
 	ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFirstChargeRewardRequest, opts ...grpc.CallOption) (*game.ClaimFirstChargeRewardResponse, error)
@@ -1459,6 +1461,15 @@ func (c *nakamaClient) ClaimSignInReward(ctx context.Context, in *game.ClaimSign
 	return out, nil
 }
 
+func (c *nakamaClient) GetSignInReward(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetSignInRewardResponse, error) {
+	out := new(game.GetSignInRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetSignInReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest, opts ...grpc.CallOption) (*game.GetFirstChargeStatusResponse, error) {
 	out := new(game.GetFirstChargeStatusResponse)
 	err := c.cc.Invoke(ctx, Nakama_GetFirstChargeStatus_FullMethodName, in, out, opts...)
@@ -1775,6 +1786,7 @@ type NakamaServer interface {
 	ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error)
 	// ==================== Sign In ====================
 	ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error)
+	GetSignInReward(context.Context, *emptypb.Empty) (*game.GetSignInRewardResponse, error)
 	// ==================== First Charge ====================
 	GetFirstChargeStatus(context.Context, *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error)
 	ClaimFirstChargeReward(context.Context, *game.ClaimFirstChargeRewardRequest) (*game.ClaimFirstChargeRewardResponse, error)
@@ -2140,6 +2152,9 @@ func (UnimplementedNakamaServer) ClaimLevelBox(context.Context, *game.ClaimLevel
 }
 func (UnimplementedNakamaServer) ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimSignInReward not implemented")
+}
+func (UnimplementedNakamaServer) GetSignInReward(context.Context, *emptypb.Empty) (*game.GetSignInRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSignInReward not implemented")
 }
 func (UnimplementedNakamaServer) GetFirstChargeStatus(context.Context, *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFirstChargeStatus not implemented")
@@ -4251,6 +4266,24 @@ func _Nakama_ClaimSignInReward_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetSignInReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetSignInReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetSignInReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetSignInReward(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_GetFirstChargeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.GetFirstChargeStatusRequest)
 	if err := dec(in); err != nil {
@@ -4879,6 +4912,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimSignInReward",
 			Handler:    _Nakama_ClaimSignInReward_Handler,
+		},
+		{
+			MethodName: "GetSignInReward",
+			Handler:    _Nakama_GetSignInReward_Handler,
 		},
 		{
 			MethodName: "GetFirstChargeStatus",

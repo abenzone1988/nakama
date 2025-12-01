@@ -8,6 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const signInDateLayout = "2006-01-02"
@@ -94,6 +95,22 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 		Reward:           reward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
+	}, nil
+}
+
+func (s *ApiServer) GetSignInReward(ctx context.Context, in *emptypb.Empty) (*game.GetSignInRewardResponse, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	signInData := &SignInData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, signInData); err != nil {
+		s.logger.Error("加载签到数据失败", zap.Error(err))
+		signInData.Init()
+	}
+
+	return &game.GetSignInRewardResponse{
+		Code: 0,
+		Msg:  "Success",
+		Day:  signInData.CurrentDay,
 	}, nil
 }
 

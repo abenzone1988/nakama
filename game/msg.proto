@@ -359,6 +359,15 @@ message ClaimSignInRewardResponse{
   repeated Item inventory_updated = 6; // 背包更新结果
 }
 
+message GetSignInRewardRequest{
+}
+
+message GetSignInRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 day = 3;                       // 当前领取的天数
+}
+
 message OperateWalletRequest{
   enum Option {
     GAIN = 0;
@@ -475,8 +484,7 @@ enum ShopType {
 message BuyShopItemRequest {
   ShopType shop_type = 1;     // 商店类型
   int32 index = 2;            // 商品索引
-  int32 count = 3;            // 购买数量（默认1，宝箱可能多个）
-  bool use_ad = 4;            // 是否使用广告券（true=扣广告券，false=已看完广告免费）
+  bool ad_watched = 3;        // 是否已完整观看广告（true=免费，false=扣广告券）
 }
 
 // 购买商店商品响应

@@ -2552,6 +2552,28 @@
         ]
       }
     },
+    "/v2/game/signin": {
+      "get": {
+        "operationId": "Nakama_GetSignInReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetSignInRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/signin/claim": {
       "post": {
         "summary": "==================== Sign In ====================",
@@ -6863,14 +6885,9 @@
           "format": "int32",
           "title": "商品索引"
         },
-        "count": {
-          "type": "integer",
-          "format": "int32",
-          "title": "购买数量（默认1，宝箱可能多个）"
-        },
-        "useAd": {
+        "adWatched": {
           "type": "boolean",
-          "title": "是否使用广告券（true=扣广告券，false=已看完广告免费）"
+          "title": "是否已完整观看广告（true=免费，false=扣广告券）"
         }
       },
       "title": "购买商店商品请求"
@@ -7555,6 +7572,23 @@
         }
       },
       "title": "获取七日购买状态响应"
+    },
+    "gameGetSignInRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前领取的天数"
+        }
+      }
     },
     "gameGetTaskResponse": {
       "type": "object",

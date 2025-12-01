@@ -440,7 +440,7 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 	var err error
 
 	// 常规商店只处理 Daily、Coin、Strength
-	cost, reward, err = s.processBuyNormalItem(item, in.Count)
+	cost, reward, err = s.processBuyNormalItem(item, in.AdWatched)
 
 	if err != nil {
 		return &game.BuyShopItemResponse{Code: 4, Msg: err.Error()}, nil
@@ -537,8 +537,8 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 	}, nil
 }
 
-// processBuyNormalItem 处理普通商品购买
-func (s *ApiServer) processBuyNormalItem(item *ShopItem, count int32) (*game.Wallet, *game.Reward, error) {
+// 处理普通商品购买
+func (s *ApiServer) processBuyNormalItem(item *ShopItem, adWatched bool) (*game.Wallet, *game.Reward, error) {
 	// 如果配置了分段购买，根据已购买次数确定当前支付阶段
 	var payType game.PayType
 	var price int32
@@ -573,12 +573,16 @@ func (s *ApiServer) processBuyNormalItem(item *ShopItem, count int32) (*game.Wal
 		}
 	}
 
-	cost := calculateCost(payType, price*count)
+	cost := calculateCost(payType, price)
+
+	if adWatched {
+		cost.Ad = 0
+	}
 
 	reward := &game.Reward{
 		Items: []*game.Item{{
 			Id:  item.ItemID,
-			Num: item.ItemCount * count,
+			Num: item.ItemCount,
 		}},
 	}
 
@@ -711,8 +715,8 @@ func calculateCost(payType game.PayType, amount int32) *game.Wallet {
 		cost.Coin = amount
 	case game.PayType_GEM:
 		cost.Gem = amount
-	case game.PayType_AD:
-		cost.Ad = amount
+	case game.PayType_AD: //使用广告购买默认扣1
+		cost.Ad = 1
 	}
 
 	return cost
@@ -752,7 +756,7 @@ func (s *ApiServer) processPaymentAndReward(ctx context.Context, cost *game.Wall
 
 		results, err := UpdateWallets(ctx, s.logger, s.db, walletUpdates, true)
 		if err != nil {
-			return nil, nil, fmt.Errorf("货币不足或扣除失败")
+			return nil, nil, fmt.Errorf("货币不足")
 		}
 
 		if len(results) > 0 {
