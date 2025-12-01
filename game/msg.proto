@@ -185,6 +185,20 @@ message EndBattleResponse{
   repeated Item inventory_updated = 5; // 背包更新结果
 }
 
+
+// 分享后领取战斗奖励请求
+message ClaimBattleRewardByShareRequest{
+}
+
+// 分享后领取战斗奖励响应
+message ClaimBattleRewardByShareResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3; // 奖励数据
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
 // 扫荡奖励请求
 message ClaimMoppingRewardRequest{
   bool watched_ad = 1; // 是否观看了广告（第二阶段使用）
@@ -365,7 +379,8 @@ message GetSignInRewardRequest{
 message GetSignInRewardResponse{
   int32 code = 1;
   string msg = 2;
-  int32 day = 3;                       // 当前领取的天数
+  int32 current_day = 3;     // 当前已签到到的天数（1-30）
+  bool is_claimed_today = 4; // 今天是否已经领取了奖励
 }
 
 message OperateWalletRequest{

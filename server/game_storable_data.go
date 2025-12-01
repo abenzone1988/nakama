@@ -577,6 +577,37 @@ type LevelData struct {
 	LastGetOnHookTimestamp string `json:"last_get_on_hook_timestamp"` // 最后一次领取挂机奖励时间，ISO 8601 格式
 }
 
+// ============================================================================
+// 战斗奖励相关数据结构
+// ============================================================================
+
+// BattleData 战斗数据存储结构
+type BattleData struct {
+	BaseStorable
+	LevelId            string `json:"level_id"`             // 最后一次战斗的关卡ID
+	Progress           int32  `json:"progress"`             // 最后一次战斗的进度
+	BattleType         int32  `json:"battle_type"`          // 最后一次战斗类型（0=普通，1=黄金）
+	ShareRewardClaimed bool   `json:"share_reward_claimed"` // 是否已领取分享奖励（全局唯一一次）
+	RewardJSON         string `json:"reward_json"`          // 保存的奖励 JSON 字符串
+}
+
+func (d *BattleData) GetCollection() string {
+	return "battle"
+}
+
+func (d *BattleData) GetKey() string {
+	return "data"
+}
+
+func (d *BattleData) Init() {
+	d.LevelId = ""
+	d.Progress = 0
+	d.BattleType = 0
+	d.ShareRewardClaimed = false
+	d.RewardJSON = ""
+	d.SetVersion("")
+}
+
 func (d *LevelData) GetCollection() string {
 	return "level"
 }

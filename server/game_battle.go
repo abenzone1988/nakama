@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"strconv"
-	"strings"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
-	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // compareLevelId 比较两个关卡 ID 的大小，返回 true 表示 id1 > id2
@@ -26,11 +25,27 @@ func compareLevelId(id1, id2 string) bool {
 	return num1 > num2
 }
 
+// 结束战斗领取奖励 扣除体力
 func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*game.EndBattleResponse, error) {
-	if in.GetProgress() > 100 || in.GetProgress() <= 0 {
+	if in.GetProgress() > 100 || in.GetProgress() < 0 {
 		return &game.EndBattleResponse{
 			Code: 1,
 			Msg:  "进度错误",
+		}, nil
+	}
+
+	//扣除体力值
+	if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, BattleCostStamina); err != nil {
+		return &game.EndBattleResponse{
+			Code: 3,
+			Msg:  "体力扣除失败: " + err.Error(),
+		}, nil
+	}
+
+	if in.GetProgress() == 0 {
+		return &game.EndBattleResponse{
+			Code: 0,
+			Msg:  "通过成功",
 		}, nil
 	}
 
@@ -69,14 +84,6 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}, nil
 	}
 
-	//扣除体力值
-	if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, BattleCostStamina); err != nil {
-		return &game.EndBattleResponse{
-			Code: 3,
-			Msg:  "体力扣除失败: " + err.Error(),
-		}, nil
-	}
-
 	reward := GetReward(rewardId, s.template.GetTplReward(), s.logger)
 	if reward != nil {
 		// 应用进度折扣
@@ -105,6 +112,34 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}
 	}
 
+	// 保存战斗信息，用于后续再次领取奖励
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	battleData := &BattleData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, battleData); err != nil {
+		s.logger.Error("加载战斗奖励数据失败", zap.Error(err))
+		// 不影响战斗结算，仅记录错误
+	} else {
+		battleData.LevelId = in.GetLevelId()
+		battleData.Progress = in.GetProgress()
+		battleData.BattleType = int32(in.GetType())
+		battleData.ShareRewardClaimed = false // 重置再次领取状态
+
+		// 保存奖励 JSON（用于分享后再次领取相同奖励）
+		if reward != nil {
+			rewardJSON, err := protojson.Marshal(reward)
+			if err != nil {
+				s.logger.Error("序列化奖励失败", zap.Error(err))
+			} else {
+				battleData.RewardJSON = string(rewardJSON)
+			}
+		}
+
+		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, battleData); err != nil {
+			s.logger.Error("保存战斗奖励数据失败", zap.Error(err))
+			// 不影响战斗结算，仅记录错误
+		}
+	}
+
 	// 提取更新后的数据
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
@@ -126,64 +161,102 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	}, nil
 }
 
-func GetReward(rewardId string, tplReward *template.TableTplReward, logger *zap.Logger) *game.Reward {
-	reward, exist := tplReward.FindByKey(rewardId)
-	if !exist {
-		return nil
+// 分享后领取战斗奖励（每场战斗一次）
+func (s *ApiServer) ClaimBattleRewardByShare(ctx context.Context, in *game.ClaimBattleRewardByShareRequest) (*game.ClaimBattleRewardByShareResponse, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 加载战斗奖励数据
+	battleData := &BattleData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, battleData); err != nil {
+		s.logger.Error("加载战斗奖励数据失败", zap.Error(err))
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 1,
+			Msg:  "加载数据失败",
+		}, nil
 	}
 
-	items := parseItems(reward.Items, logger)
-
-	return &game.Reward{
-		Wallet: &game.Wallet{
-			Coin: reward.Coin,
-			Gem:  reward.Gem,
-			Ad:   reward.Coupon,
-		},
-		Items: items,
-	}
-}
-
-func parseItems(itemsString string, logger *zap.Logger) []*game.Item {
-	if itemsString == "" {
-		return nil
+	if battleData.LevelId == "" {
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 2,
+			Msg:  "未完成战斗",
+		}, nil
 	}
 
-	pairs := strings.Split(itemsString, ",")
-	result := make([]*game.Item, 0, len(pairs))
+	if battleData.ShareRewardClaimed {
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 3,
+			Msg:  "奖励已领取",
+		}, nil
+	}
 
-	for _, pair := range pairs {
-		trimmedPair := strings.TrimSpace(pair)
-		if trimmedPair == "" {
-			continue
+	// 从保存的奖励 JSON 中恢复奖励
+	var reward *game.Reward
+	if battleData.RewardJSON != "" {
+		reward = &game.Reward{}
+		if err := protojson.Unmarshal([]byte(battleData.RewardJSON), reward); err != nil {
+			s.logger.Error("反序列化奖励失败", zap.Error(err))
+			return &game.ClaimBattleRewardByShareResponse{
+				Code: 4,
+				Msg:  "奖励数据错误",
+			}, nil
 		}
-
-		keyValue := strings.Split(trimmedPair, "_")
-		if len(keyValue) != 2 {
-			if logger != nil {
-				logger.Error("Invalid key-value pair", zap.String("pair", trimmedPair))
-			}
-			continue
-		}
-
-		id := strings.TrimSpace(keyValue[0])
-		numStr := strings.TrimSpace(keyValue[1])
-
-		num, err := strconv.ParseInt(numStr, 10, 32)
-		if err != nil {
-			if logger != nil {
-				logger.Error("Warning: Invalid key-value pair", zap.String("pair", trimmedPair), zap.Error(err))
-			}
-			continue
-		}
-
-		result = append(result, &game.Item{
-			Id:  id,
-			Num: int32(num),
-		})
+	} else {
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 4,
+			Msg:  "未找到保存的奖励数据",
+		}, nil
 	}
 
-	return result
+	// 根据战斗类型确定 source
+	var source string
+	battleType := game.BattleType(battleData.BattleType)
+	switch battleType {
+	case game.BattleType_BATTLE_TYPE_NORMAL:
+		source = "battle_normal_share_" + battleData.LevelId
+	case game.BattleType_BATTLE_TYPE_GOLDEN:
+		source = "battle_golden_share_" + battleData.LevelId
+	default:
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 4,
+			Msg:  "无效的战斗类型",
+		}, nil
+	}
+
+	// 发放奖励
+	walletUpdateResult, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
+	if err != nil {
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 6,
+			Msg:  "奖励发放失败: " + err.Error(),
+		}, nil
+	}
+
+	// 标记为已领取（全局唯一一次）
+	battleData.ShareRewardClaimed = true
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, battleData); err != nil {
+		s.logger.Error("保存战斗奖励数据失败", zap.Error(err))
+		// 不影响奖励发放，仅记录错误
+	}
+
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
+	return &game.ClaimBattleRewardByShareResponse{
+		Code:             0,
+		Msg:              "领取成功",
+		Reward:           reward,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
+	}, nil
 }
 
 func applyProgressToReward(reward *game.Reward, progress int32) {

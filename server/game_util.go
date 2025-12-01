@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -507,4 +508,64 @@ func containsString(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func GetReward(rewardId string, tplReward *template.TableTplReward, logger *zap.Logger) *game.Reward {
+	reward, exist := tplReward.FindByKey(rewardId)
+	if !exist {
+		return nil
+	}
+
+	items := parseItems(reward.Items, logger)
+
+	return &game.Reward{
+		Wallet: &game.Wallet{
+			Coin: reward.Coin,
+			Gem:  reward.Gem,
+			Ad:   reward.Coupon,
+		},
+		Items: items,
+	}
+}
+
+func parseItems(itemsString string, logger *zap.Logger) []*game.Item {
+	if itemsString == "" {
+		return nil
+	}
+
+	pairs := strings.Split(itemsString, ",")
+	result := make([]*game.Item, 0, len(pairs))
+
+	for _, pair := range pairs {
+		trimmedPair := strings.TrimSpace(pair)
+		if trimmedPair == "" {
+			continue
+		}
+
+		keyValue := strings.Split(trimmedPair, "_")
+		if len(keyValue) != 2 {
+			if logger != nil {
+				logger.Error("Invalid key-value pair", zap.String("pair", trimmedPair))
+			}
+			continue
+		}
+
+		id := strings.TrimSpace(keyValue[0])
+		numStr := strings.TrimSpace(keyValue[1])
+
+		num, err := strconv.ParseInt(numStr, 10, 32)
+		if err != nil {
+			if logger != nil {
+				logger.Error("Warning: Invalid key-value pair", zap.String("pair", trimmedPair), zap.Error(err))
+			}
+			continue
+		}
+
+		result = append(result, &game.Item{
+			Id:  id,
+			Num: int32(num),
+		})
+	}
+
+	return result
 }

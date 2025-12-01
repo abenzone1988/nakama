@@ -25,7 +25,8 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 	}
 
 	today := time.Now().Format(signInDateLayout)
-	if signInData.LastClaimDate == today {
+	// 如果上次领取日期不为空且等于今天，则已领取
+	if signInData.LastClaimDate != "" && signInData.LastClaimDate == today {
 		return &game.ClaimSignInRewardResponse{
 			Code: 2,
 			Msg:  "今日已领取",
@@ -57,7 +58,7 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 	}
 
 	// 双重检查，防止并发
-	if signInData.LastClaimDate == today {
+	if signInData.LastClaimDate != "" && signInData.LastClaimDate == today {
 		return &game.ClaimSignInRewardResponse{
 			Code: 2,
 			Msg:  "今日已领取",
@@ -107,10 +108,15 @@ func (s *ApiServer) GetSignInReward(ctx context.Context, in *emptypb.Empty) (*ga
 		signInData.Init()
 	}
 
+	today := time.Now().Format(signInDateLayout)
+	// 只有当上次领取日期不为空且等于今天时，才算今日已领取
+	isClaimedToday := signInData.LastClaimDate != "" && signInData.LastClaimDate == today
+
 	return &game.GetSignInRewardResponse{
-		Code: 0,
-		Msg:  "Success",
-		Day:  signInData.CurrentDay,
+		Code:           0,
+		Msg:            "Success",
+		CurrentDay:     signInData.CurrentDay,
+		IsClaimedToday: isClaimedToday,
 	}, nil
 }
 

@@ -1909,6 +1909,38 @@
         ]
       }
     },
+    "/v2/game/battle/reward/share": {
+      "post": {
+        "operationId": "Nakama_ClaimBattleRewardByShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimBattleRewardByShareResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimBattleRewardByShareRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/equip": {
       "get": {
         "summary": "Get equip data",
@@ -6956,6 +6988,38 @@
       },
       "title": "VIP状态"
     },
+    "gameClaimBattleRewardByShareRequest": {
+      "type": "object",
+      "title": "分享后领取战斗奖励请求"
+    },
+    "gameClaimBattleRewardByShareResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "分享后领取战斗奖励响应"
+    },
     "gameClaimFirstChargeRewardRequest": {
       "type": "object",
       "properties": {
@@ -7583,10 +7647,14 @@
         "msg": {
           "type": "string"
         },
-        "day": {
+        "currentDay": {
           "type": "integer",
           "format": "int32",
-          "title": "当前领取的天数"
+          "title": "当前已签到到的天数（1-30）"
+        },
+        "isClaimedToday": {
+          "type": "boolean",
+          "title": "今天是否已经领取了奖励"
         }
       }
     },
