@@ -114,8 +114,9 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 	if len(reward.Items) > 0 {
 		convertedRandomCrystals := make(map[string]int32)
 		convertedRandomEquips := make(map[string]int32)
+		convertedEquipToDebris := make(map[string]int32) // 装备转换为碎片
 		for _, item := range reward.Items {
-			logger.Info("处理道具奖励", zap.Any("item", item))
+			//logger.Info("处理道具奖励", zap.Any("item", item))
 			if item == nil || item.Num <= 0 {
 				continue
 			}
@@ -176,6 +177,9 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 						debrisId := strings.TrimPrefix(item.Id, "EQ")
 						debrisCount := item.Num * 10 // 每个炮台转换为10个碎片
 						inventoryChangeset[debrisId] += int64(debrisCount)
+						convertedEquipToDebris[debrisId] += debrisCount // 记录转换的碎片
+						// 标记装备ID需要跳过（已解锁的装备应该被移除，只保留碎片）
+						convertedEquipToDebris[item.Id] = 0 // 0表示需要移除装备，只保留碎片
 
 						logger.Info("炮台已解锁，转换为碎片",
 							zap.String("equip_id", item.Id),
@@ -184,16 +188,20 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 					} else {
 						// 炮台首次解锁成功，装备不发到背包，只解锁
 						if item.Num == 1 {
-							// 只有1个，只解锁，不发到背包
+							// 只有1个，只解锁，不发到背包，但奖励中保留装备
 							logger.Info("成功解锁新炮台",
 								zap.String("equip_id", item.Id),
 								zap.Int32("equip_count", 1))
+							// 不添加到 convertedEquipToDebris，保留在奖励中
 						} else {
-							// 数量大于1：第1个用于解锁（不发到背包），剩下的转换为碎片
+							// 数量大于1：第1个用于解锁（不发到背包，但奖励中保留），剩下的转换为碎片
 							remainingCount := item.Num - 1 // 剩下的装备数量
 							debrisId := strings.TrimPrefix(item.Id, "EQ")
 							debrisCount := remainingCount * 10 // 每个装备转换为10个碎片
 							inventoryChangeset[debrisId] += int64(debrisCount)
+							convertedEquipToDebris[debrisId] += debrisCount // 记录转换的碎片
+							// 标记需要将装备数量改为1（保留第1个装备）
+							convertedEquipToDebris[item.Id] = -item.Num // 负数表示需要修改数量
 
 							logger.Info("成功解锁新炮台，部分转换为碎片",
 								zap.String("equip_id", item.Id),
@@ -209,7 +217,8 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				}
 			}
 		}
-		if len(convertedRandomCrystals) > 0 || len(convertedRandomEquips) > 0 {
+		// 更新 reward.Items 以反映转换后的结果
+		if len(convertedRandomCrystals) > 0 || len(convertedRandomEquips) > 0 || len(convertedEquipToDebris) > 0 {
 			skipIds := map[string]struct{}{}
 			if len(convertedRandomCrystals) > 0 {
 				skipIds[ItemID_RandomCrystal] = struct{}{}
@@ -217,29 +226,63 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 			if len(convertedRandomEquips) > 0 {
 				skipIds[ItemID_RandomTurret] = struct{}{}
 			}
+			// 标记需要移除或修改数量的装备
+			equipCountModify := make(map[string]int32) // 需要修改数量的装备
+			for equipId, count := range convertedEquipToDebris {
+				if count < 0 {
+					// 负数表示需要修改数量（首次解锁且数量>1的情况）
+					equipCountModify[equipId] = 1 // 将数量改为1
+					skipIds[equipId] = struct{}{} // 先跳过，后面重新添加
+				} else if count == 0 && strings.HasPrefix(equipId, "EQ") {
+					// 0表示需要移除的装备（已解锁，全部转换为碎片）
+					skipIds[equipId] = struct{}{}
+				} else if count > 0 && strings.HasPrefix(equipId, "EQ") {
+					// 正数且以EQ开头，这不应该发生，但为了安全也跳过
+					skipIds[equipId] = struct{}{}
+				}
+			}
 
-			newItems := make([]*game.Item, 0, len(reward.Items)+len(convertedRandomCrystals)+len(convertedRandomEquips))
+			newItems := make([]*game.Item, 0, len(reward.Items)+len(convertedRandomCrystals)+len(convertedRandomEquips)+len(convertedEquipToDebris))
 			for _, item := range reward.Items {
 				if item == nil {
 					continue
 				}
 				if _, skip := skipIds[item.Id]; skip {
+					// 如果是需要修改数量的装备，重新添加数量为1的版本
+					if newCount, needModify := equipCountModify[item.Id]; needModify {
+						newItems = append(newItems, &game.Item{
+							Id:  item.Id,
+							Num: newCount,
+						})
+						logger.Info("修改装备数量", zap.String("equip_id", item.Id), zap.Int32("old_count", item.Num), zap.Int32("new_count", newCount))
+					}
 					continue
 				}
 				newItems = append(newItems, item)
 			}
 
+			// 添加转换后的随机水晶
 			for crystalID, count := range convertedRandomCrystals {
 				newItems = append(newItems, &game.Item{
 					Id:  crystalID,
 					Num: count,
 				})
 			}
+			// 添加转换后的随机炮台碎片
 			for equipID, count := range convertedRandomEquips {
 				newItems = append(newItems, &game.Item{
 					Id:  equipID,
 					Num: count,
 				})
+			}
+			// 添加转换后的装备碎片
+			for debrisId, count := range convertedEquipToDebris {
+				if count > 0 {
+					newItems = append(newItems, &game.Item{
+						Id:  debrisId,
+						Num: count,
+					})
+				}
 			}
 			reward.Items = newItems
 		}
@@ -384,8 +427,8 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	for equipID, level := range equipData.UnlockEquips {
 		// 跳过 EQ1999（水晶），它有独立的升级逻辑
 		if equipID == "EQ1999" {
-			logger.Debug("跳过水晶装备，不参与碎片随机分配",
-				zap.String("equip_id", equipID))
+			//logger.Debug("跳过水晶装备，不参与碎片随机分配",
+			//	zap.String("equip_id", equipID))
 			continue
 		}
 
@@ -415,14 +458,14 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		// 基础权重 = 10000，权重 = 基础权重 / (totalDebris + 1)
 		weight := int32(10000) / (totalDebris + 1)
 
-		logger.Debug("炮台碎片计算详情",
-			zap.String("equip_id", equipID),
-			zap.String("debris_id", debrisId),
-			zap.Int32("level", level),
-			zap.Int32("consumed_debris", consumedDebris),
-			zap.Int32("inventory_debris", inventoryDebris),
-			zap.Int32("total_debris", totalDebris),
-			zap.Int32("weight", weight))
+		//logger.Debug("炮台碎片计算详情",
+		//	zap.String("equip_id", equipID),
+		//	zap.String("debris_id", debrisId),
+		//	zap.Int32("level", level),
+		//	zap.Int32("consumed_debris", consumedDebris),
+		//	zap.Int32("inventory_debris", inventoryDebris),
+		//	zap.Int32("total_debris", totalDebris),
+		//	zap.Int32("weight", weight))
 
 		turrets = append(turrets, TurretInfo{
 			EquipID:      equipID,
@@ -442,10 +485,10 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	for _, t := range turrets {
 		totalWeight += t.DebrisWeight
 	}
-
-	logger.Debug("炮台权重汇总",
-		zap.Int("turret_count", len(turrets)),
-		zap.Int32("total_weight", totalWeight))
+	//
+	//logger.Debug("炮台权重汇总",
+	//	zap.Int("turret_count", len(turrets)),
+	//	zap.Int32("total_weight", totalWeight))
 
 	result := make(map[string]int64)
 

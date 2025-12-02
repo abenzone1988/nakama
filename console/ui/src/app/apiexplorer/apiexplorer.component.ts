@@ -51,29 +51,42 @@ export class ApiExplorerComponent implements OnInit, AfterViewInit {
     });
 
     this.f.method.valueChanges.subscribe(newMethod => {
+      if (!newMethod) {
+        return;
+      }
       const endpoint = this.endpoints.concat(this.rpcEndpoints).find((e) => {
-        return e.method === newMethod ? e : null;
+        return e.method === newMethod;
       });
-      this.updateQueryParam(endpoint.method);
-      this.setupRequestBody(endpoint.body_template);
+      if (endpoint) {
+        this.updateQueryParam(endpoint.method);
+        this.setupRequestBody(endpoint.body_template);
+      }
     });
 
     this.route.data.subscribe(data => {
       const endpoints = data[0] as ApiEndpointList;
       this.endpoints.length = 0;
-      this.endpoints.push(...endpoints.endpoints);
+      if (endpoints.endpoints) {
+        this.endpoints.push(...endpoints.endpoints);
+      }
       this.rpcEndpoints.length = 0;
-      this.rpcEndpoints.push(...endpoints.rpc_endpoints);
+      if (endpoints.rpc_endpoints) {
+        this.rpcEndpoints.push(...endpoints.rpc_endpoints);
+      }
+
+      // 在数据加载完成后，检查 query params 并设置 method
+      const qpEndpointMethod = this.route.snapshot.queryParamMap.get('endpoint');
+      if (qpEndpointMethod) {
+        const qpEndpoint = this.endpoints.concat(this.rpcEndpoints).find((e) => {
+          return e.method === qpEndpointMethod;
+        });
+        if (qpEndpoint != null) {
+          this.f.method.setValue(qpEndpoint.method);
+        }
+      }
     }, err => {
       this.error = err;
     });
-
-    const qpEndpoint = this.endpoints.concat(this.rpcEndpoints).find((e) => {
-      return e.method === this.route.snapshot.queryParamMap.get('endpoint') ? e : null;
-    });
-    if (qpEndpoint != null) {
-      this.f.method.setValue(qpEndpoint.method);
-    }
   }
 
   ngAfterViewInit(): void {
@@ -97,6 +110,17 @@ export class ApiExplorerComponent implements OnInit, AfterViewInit {
         readOnly: true,
       },
     });
+
+    // 如果编辑器初始化时已经有 method 值，设置 RequestBody
+    const currentMethod = this.f.method.value;
+    if (currentMethod) {
+      const endpoint = this.endpoints.concat(this.rpcEndpoints).find((e) => {
+        return e.method === currentMethod;
+      });
+      if (endpoint) {
+        this.setupRequestBody(endpoint.body_template);
+      }
+    }
   }
 
   public sendRequest(): void {
@@ -136,7 +160,7 @@ export class ApiExplorerComponent implements OnInit, AfterViewInit {
       session_vars: vars as Map<string, string>,
     };
 
-    let endpointCall = null;
+    let endpointCall: Observable<any>;
     if (this.isRpcEndpoint(this.f.method.value)) {
       endpointCall = this.consoleService.callRpcEndpoint('', this.f.method.value, req);
     } else {

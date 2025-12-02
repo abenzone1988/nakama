@@ -118,16 +118,58 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		}
 	}
 
+	// 收集所有发放后的奖励（转换后的）
+	var processedRewards []*game.Reward
+
 	// 发放所有奖励并累加背包更新
 	for _, reward := range rewards {
-		_, invResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, "box_shop")
+		// 复制奖励，避免修改原始奖励
+		rewardCopy := &game.Reward{}
+		if reward.Wallet != nil {
+			rewardCopy.Wallet = &game.Wallet{
+				Coin:    reward.Wallet.Coin,
+				Gem:     reward.Wallet.Gem,
+				Ad:      reward.Wallet.Ad,
+				Stamina: reward.Wallet.Stamina,
+			}
+		}
+		if len(reward.Items) > 0 {
+			rewardCopy.Items = make([]*game.Item, len(reward.Items))
+			for i, item := range reward.Items {
+				rewardCopy.Items[i] = &game.Item{
+					Id:  item.Id,
+					Num: item.Num,
+				}
+			}
+		}
+
+		walletResult, invResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, rewardCopy, "box_shop")
 		if err != nil {
 			s.logger.Error("发放宝箱奖励失败", zap.Error(err))
-		} else if invResult != nil && invResult.Updated != nil {
-			// 累加每次奖励的背包更新
+			return &game.BuyBoxItemResponse{Code: 6, Msg: "发放奖励失败: " + err.Error()}, nil
+		}
+
+		// 合并钱包更新结果（使用最后一次的结果，因为 GrantReward 会返回最终状态）
+		if walletResult != nil {
+			walletUpdateResult = walletResult
+		}
+
+		// 累加每次奖励的背包更新
+		if invResult != nil && invResult.Updated != nil {
 			for _, item := range invResult.Updated {
-				allInventoryUpdates[item.Id] = int64(item.Num)
+				allInventoryUpdates[item.Id] += int64(item.Num)
 			}
+		}
+
+		// 收集转换后的奖励（GrantReward 会修改 rewardCopy.Items 来反映转换结果）
+		if rewardCopy != nil {
+			// 记录转换后的奖励内容，用于调试
+			if len(rewardCopy.Items) > 0 {
+				for _, item := range rewardCopy.Items {
+					s.logger.Info("转换后的奖励项", zap.String("item_id", item.Id), zap.Int32("item_num", item.Num))
+				}
+			}
+			processedRewards = append(processedRewards, rewardCopy)
 		}
 	}
 
@@ -137,18 +179,13 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		return &game.BuyBoxItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
 	}
 
-	// 合并所有奖励
-	mergedReward := &game.Reward{
-		Wallet: &game.Wallet{},
-		Items:  []*game.Item{},
-	}
-	for _, r := range rewards {
-		if r.Wallet != nil {
-			mergedReward.Wallet.Coin += r.Wallet.Coin
-			mergedReward.Wallet.Gem += r.Wallet.Gem
-			mergedReward.Wallet.Ad += r.Wallet.Ad
+	// 合并所有发放后的奖励（转换后的奖励）
+	mergedReward := MergeRewards(processedRewards)
+	if mergedReward != nil && len(mergedReward.Items) > 0 {
+		s.logger.Info("合并后的奖励", zap.Int("reward_count", len(processedRewards)))
+		for _, item := range mergedReward.Items {
+			s.logger.Info("合并后的奖励项", zap.String("item_id", item.Id), zap.Int32("item_num", item.Num))
 		}
-		mergedReward.Items = append(mergedReward.Items, r.Items...)
 	}
 
 	response := &game.BuyBoxItemResponse{
