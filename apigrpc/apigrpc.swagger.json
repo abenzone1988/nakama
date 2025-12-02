@@ -7139,10 +7139,7 @@
           "type": "string"
         },
         "rewards": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameReward"
-          },
+          "$ref": "#/definitions/gameReward",
           "title": "奖励列表"
         },
         "walletUpdated": {

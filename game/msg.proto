@@ -239,7 +239,7 @@ message ClaimLevelBoxRequest{
 message ClaimLevelBoxResponse{
   int32 code = 1;
   string msg = 2;
-  repeated Reward rewards = 3;         // 奖励列表
+  Reward rewards = 3;         // 奖励列表
   Wallet wallet_updated = 4;           // 钱包更新结果
   repeated Item inventory_updated = 5; // 背包更新结果
 }

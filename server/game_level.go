@@ -33,24 +33,7 @@ func GetLevelData(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics M
 	return levelData, nil
 }
 
-// GetLevelDataProto 获取关卡数据（返回 proto 格式）
-func GetLevelDataProto(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex) (*game.LevelData, error) {
-	levelData, err := GetLevelData(ctx, logger, db, metrics, storageIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	return &game.LevelData{
-		CurLevelId:             levelData.CurLevelId,
-		BestProgress:           levelData.BestProgress,
-		HasMoppingTimes:        levelData.HasMoppingTimes,
-		HasMoppingTimesForAdv:  levelData.HasMoppingTimesForAdv,
-		LastMoppingTimestamp:   levelData.LastMoppingTimestamp,
-		LastGetOnHookTimestamp: levelData.LastGetOnHookTimestamp,
-	}, nil
-}
-
-// ClaimLevelBox 领取关卡宝箱奖励
+// 领取关卡宝箱奖励
 func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
@@ -136,8 +119,6 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 
 	// 收集要发放的奖励
 	var allRewards []*game.Reward
-	var totalWalletUpdate *game.WalletUpdateResult
-	var totalInventoryUpdate *game.InventoryUpdateResult
 
 	for _, boxId := range toClaimBoxIds {
 		var rewardId string
@@ -158,32 +139,29 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 		reward := GetReward(rewardId, s.template.GetTplReward(), s.logger)
 		if reward != nil {
 			allRewards = append(allRewards, reward)
-
-			// 发放奖励
-			source := fmt.Sprintf("level_box_%s_%d", in.GetLevelId(), boxId)
-			walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-			if err != nil {
-				s.logger.Error("发放宝箱奖励失败", zap.Error(err), zap.String("level_id", in.GetLevelId()), zap.Int32("box_id", boxId))
-				return &game.ClaimLevelBoxResponse{
-					Code: 9,
-					Msg:  "发放奖励失败: " + err.Error(),
-				}, nil
-			}
-
-			// 合并钱包更新结果
-			if walletResult != nil {
-				totalWalletUpdate = walletResult
-			}
-
-			// 合并背包更新结果
-			if inventoryResult != nil {
-				if totalInventoryUpdate == nil {
-					totalInventoryUpdate = inventoryResult
-				} else {
-					totalInventoryUpdate.Updated = append(totalInventoryUpdate.Updated, inventoryResult.Updated...)
-				}
-			}
 		}
+	}
+
+	// 如果没有奖励，直接返回
+	if len(allRewards) == 0 {
+		return &game.ClaimLevelBoxResponse{
+			Code: 9,
+			Msg:  "没有可发放的奖励",
+		}, nil
+	}
+
+	// 合并所有奖励
+	mergedReward := MergeRewards(allRewards)
+
+	// 合并领取奖励
+	source := fmt.Sprintf("level_box_%s:%v", in.GetLevelId(), toClaimBoxIds)
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
+	if err != nil {
+		s.logger.Error("发放宝箱奖励失败", zap.Error(err), zap.String("level_id", in.GetLevelId()))
+		return &game.ClaimLevelBoxResponse{
+			Code: 9,
+			Msg:  "发放奖励失败: " + err.Error(),
+		}, nil
 	}
 
 	// 更新已领取的宝箱列表
@@ -207,12 +185,12 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
 
-	if totalWalletUpdate != nil {
-		walletUpdated = totalWalletUpdate.Updated
+	if walletResult != nil && walletResult.Updated != nil {
+		walletUpdated = walletResult.Updated
 	}
 
-	if totalInventoryUpdate != nil {
-		inventoryUpdated = totalInventoryUpdate.Updated
+	if inventoryResult != nil && inventoryResult.Updated != nil {
+		inventoryUpdated = inventoryResult.Updated
 	}
 
 	s.logger.Info("宝箱领取成功",
@@ -222,7 +200,7 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 	return &game.ClaimLevelBoxResponse{
 		Code:             0,
 		Msg:              "领取成功",
-		Rewards:          allRewards,
+		Rewards:          mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 	}, nil
