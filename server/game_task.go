@@ -188,24 +188,16 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 	}, nil
 }
 
-// ClaimLivenessReward 领取活跃度奖励
+// ClaimLivenessReward 领取活跃度奖励（支持批量领取）
 func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLivenessRewardRequest) (*game.ClaimLivenessRewardResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	// 验证参数
-	if in.GetRewardId() == "" {
+	rewardIDs := in.GetRewardIds()
+	if len(rewardIDs) == 0 {
 		return &game.ClaimLivenessRewardResponse{
 			Code: 1,
-			Msg:  "奖励ID不能为空",
-		}, nil
-	}
-
-	// 检查活跃度奖励配置是否存在
-	rewardConfig, exist := s.template.GetTplProgressReward().FindByKey(in.GetRewardId())
-	if !exist {
-		return &game.ClaimLivenessRewardResponse{
-			Code: 2,
-			Msg:  "活跃度奖励不存在",
+			Msg:  "奖励ID列表不能为空",
 		}, nil
 	}
 
@@ -230,33 +222,76 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		}, nil
 	}
 
-	// 检查活跃度是否足够
-	if taskData.CurrentLiveness < rewardConfig.NeedValue {
-		return &game.ClaimLivenessRewardResponse{
-			Code: 5,
-			Msg:  "活跃度不足",
-		}, nil
+	// 分离已领取和未领取的奖励
+	var toClaimRewardIDs []string
+	var alreadyClaimedRewardIDs []string
+
+	for _, rewardID := range rewardIDs {
+		if rewardID == "" {
+			continue
+		}
+		if containsString(taskData.ClaimedLivenessRewards, rewardID) {
+			alreadyClaimedRewardIDs = append(alreadyClaimedRewardIDs, rewardID)
+		} else {
+			toClaimRewardIDs = append(toClaimRewardIDs, rewardID)
+		}
 	}
 
-	// 检查奖励是否已领取
-	if containsString(taskData.ClaimedLivenessRewards, in.GetRewardId()) {
+	// 如果所有奖励都已领取
+	if len(toClaimRewardIDs) == 0 {
 		return &game.ClaimLivenessRewardResponse{
 			Code: 6,
-			Msg:  "活跃度奖励已经领取过了",
+			Msg:  "所有活跃度奖励已经领取过了",
 		}, nil
 	}
 
-	// 获取活跃度奖励
-	var reward *game.Reward
+	// 验证所有奖励配置并检查活跃度要求
+	var allRewards []*game.Reward
+	var validRewardIDs []string
+
+	for _, rewardID := range toClaimRewardIDs {
+		rewardConfig, exist := s.template.GetTplProgressReward().FindByKey(rewardID)
+		if !exist {
+			s.logger.Warn("活跃度奖励配置不存在", zap.String("reward_id", rewardID))
+			continue
+		}
+
+		// 检查活跃度是否足够
+		if taskData.CurrentLiveness < rewardConfig.NeedValue {
+			s.logger.Warn("活跃度不足，跳过奖励", zap.String("reward_id", rewardID), zap.Int32("need_liveness", rewardConfig.NeedValue), zap.Int32("current_liveness", taskData.CurrentLiveness))
+			continue
+		}
+
+		validRewardIDs = append(validRewardIDs, rewardID)
+
+		// 获取活跃度奖励
+		if rewardConfig.Reward != "" {
+			reward := GetReward(rewardConfig.Reward, s.template.GetTplReward(), s.logger)
+			if reward != nil {
+				allRewards = append(allRewards, reward)
+			}
+		}
+	}
+
+	// 如果没有有效的奖励
+	if len(validRewardIDs) == 0 {
+		return &game.ClaimLivenessRewardResponse{
+			Code: 5,
+			Msg:  "没有可领取的活跃度奖励（活跃度不足或配置不存在）",
+		}, nil
+	}
+
+	// 合并所有奖励
+	var mergedReward *game.Reward
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	if rewardConfig.Reward != "" {
-		reward = GetReward(rewardConfig.Reward, s.template.GetTplReward(), s.logger)
-		if reward != nil {
+	if len(allRewards) > 0 {
+		mergedReward = MergeRewards(allRewards)
+		if mergedReward != nil {
 			// 发放奖励
-			source := "liveness_" + in.GetRewardId()
-			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
+			source := "liveness_merged:" + fmt.Sprintf("%v", validRewardIDs)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
 			if err != nil {
 				s.logger.Error("发放活跃度奖励失败", zap.Error(err))
 				return &game.ClaimLivenessRewardResponse{
@@ -269,8 +304,8 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		}
 	}
 
-	// 标记奖励已领取
-	taskData.ClaimedLivenessRewards = append(taskData.ClaimedLivenessRewards, in.GetRewardId())
+	// 标记所有奖励已领取
+	taskData.ClaimedLivenessRewards = append(taskData.ClaimedLivenessRewards, validRewardIDs...)
 
 	// 保存任务数据
 	err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, taskData)
@@ -295,14 +330,13 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 	}
 
 	s.logger.Info("活跃度奖励领取成功",
-		zap.String("reward_id", in.GetRewardId()),
-		zap.Int32("need_liveness", rewardConfig.NeedValue),
+		zap.Strings("reward_ids", validRewardIDs),
 		zap.Int32("current_liveness", taskData.CurrentLiveness))
 
 	return &game.ClaimLivenessRewardResponse{
 		Code:             0,
 		Msg:              "领取成功",
-		Reward:           reward,
+		Reward:           mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 	}, nil

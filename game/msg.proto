@@ -274,7 +274,7 @@ message ClaimTaskRewardResponse{
 
 // 领取活跃度奖励请求
 message ClaimLivenessRewardRequest{
-  string reward_id = 1; // 活跃度奖励ID
+  repeated string reward_ids = 1; // 活跃度奖励ID
 }
 
 // 领取活跃度奖励响应

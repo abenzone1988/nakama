@@ -7163,8 +7163,11 @@
     "gameClaimLivenessRewardRequest": {
       "type": "object",
       "properties": {
-        "rewardId": {
-          "type": "string",
+        "rewardIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
           "title": "活跃度奖励ID"
         }
       },
