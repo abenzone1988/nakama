@@ -6822,6 +6822,10 @@
         "adWatched": {
           "type": "boolean",
           "title": "是否已完整观看广告（true=免费，false=扣广告券）"
+        },
+        "rookieBox": {
+          "type": "string",
+          "title": "新手宝箱"
         }
       },
       "title": "购买宝箱请求"
@@ -7403,9 +7407,12 @@
     "gameClaimTaskRewardRequest": {
       "type": "object",
       "properties": {
-        "taskId": {
-          "type": "string",
-          "title": "任务ID"
+        "taskIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "任务ID列表（可多个）"
         }
       },
       "title": "领取任务奖励请求"
@@ -7420,10 +7427,13 @@
         "msg": {
           "type": "string"
         },
-        "liveness": {
-          "type": "integer",
-          "format": "int32",
-          "title": "获得的活跃度"
+        "livenessRewards": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "获得的活跃度奖励 ID列表"
         },
         "reward": {
           "$ref": "#/definitions/gameReward",

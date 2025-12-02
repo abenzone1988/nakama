@@ -10,12 +10,13 @@ import (
 
 type TplBoxShopItem struct {
 	BoxExp         int32  `json:"boxExp"`
+	FixedReward    string `json:"fixedReward"`
 	ID             string `json:"id"`
 	Level          int32  `json:"level"`
 	PayType        string `json:"payType"`
+	RandomReward   string `json:"randomReward"`
 	Res            string `json:"res"`
 	RetailPrice    int32  `json:"retailPrice"`
-	RewardInfo     string `json:"rewardInfo"`
 	ShopItemName   string `json:"shopItemName"`
 	WholesalePrice int32  `json:"wholesalePrice"`
 }

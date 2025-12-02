@@ -42,24 +42,16 @@ func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game
 	}, nil
 }
 
-// ClaimTaskReward 领取任务奖励
+// ClaimTaskReward 领取任务奖励（支持批量领取）
 func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewardRequest) (*game.ClaimTaskRewardResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	// 验证参数
-	if in.GetTaskId() == "" {
+	taskIDs := in.GetTaskIds()
+	if len(taskIDs) == 0 {
 		return &game.ClaimTaskRewardResponse{
 			Code: 1,
-			Msg:  "任务ID不能为空",
-		}, nil
-	}
-
-	// 检查任务配置是否存在
-	taskConfig, exist := s.template.GetTplTasks().FindByKey(in.GetTaskId())
-	if !exist {
-		return &game.ClaimTaskRewardResponse{
-			Code: 2,
-			Msg:  "任务不存在",
+			Msg:  "任务ID列表不能为空",
 		}, nil
 	}
 
@@ -76,28 +68,72 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 		taskData.Init()
 	}
 
-	// 检查任务是否已领取
-	if containsString(taskData.ClaimedTasks, in.GetTaskId()) {
+	// 分离已领取和未领取的任务
+	var toClaimTaskIDs []string
+	var alreadyClaimedTaskIDs []string
+
+	for _, taskID := range taskIDs {
+		if taskID == "" {
+			continue
+		}
+		if containsString(taskData.ClaimedTasks, taskID) {
+			alreadyClaimedTaskIDs = append(alreadyClaimedTaskIDs, taskID)
+		} else {
+			toClaimTaskIDs = append(toClaimTaskIDs, taskID)
+		}
+	}
+
+	// 如果所有任务都已领取
+	if len(toClaimTaskIDs) == 0 {
 		return &game.ClaimTaskRewardResponse{
 			Code: 3,
-			Msg:  "任务奖励已经领取过了",
+			Msg:  "所有任务奖励已经领取过了",
 		}, nil
 	}
 
-	// TODO: 这里应该检查任务是否完成（需要前端传递进度或后端记录进度）
-	// 暂时先允许直接领取
+	// 验证所有任务配置是否存在
+	var allRewards []*game.Reward
+	var totalLiveness int32
+	var validTaskIDs []string
 
-	// 获取任务奖励
-	var reward *game.Reward
+	for _, taskID := range toClaimTaskIDs {
+		taskConfig, exist := s.template.GetTplTasks().FindByKey(taskID)
+		if !exist {
+			s.logger.Warn("任务配置不存在", zap.String("task_id", taskID))
+			continue
+		}
+
+		validTaskIDs = append(validTaskIDs, taskID)
+		totalLiveness += taskConfig.Liveness
+
+		// 获取任务奖励
+		if taskConfig.Reward != "" {
+			reward := GetReward(taskConfig.Reward, s.template.GetTplReward(), s.logger)
+			if reward != nil {
+				allRewards = append(allRewards, reward)
+			}
+		}
+	}
+
+	// 如果没有有效的任务
+	if len(validTaskIDs) == 0 {
+		return &game.ClaimTaskRewardResponse{
+			Code: 2,
+			Msg:  "没有有效的任务",
+		}, nil
+	}
+
+	// 合并所有奖励
+	var mergedReward *game.Reward
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	if taskConfig.Reward != "" {
-		reward = GetReward(taskConfig.Reward, s.template.GetTplReward(), s.logger)
-		if reward != nil {
+	if len(allRewards) > 0 {
+		mergedReward = MergeRewards(allRewards)
+		if mergedReward != nil {
 			// 发放奖励
-			source := "task_" + in.GetTaskId()
-			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
+			source := "task_merged:" + fmt.Sprintf("%v", validTaskIDs)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
 			if err != nil {
 				s.logger.Error("发放任务奖励失败", zap.Error(err))
 				return &game.ClaimTaskRewardResponse{
@@ -111,10 +147,10 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 	}
 
 	// 增加活跃度
-	taskData.CurrentLiveness += taskConfig.Liveness
+	taskData.CurrentLiveness += totalLiveness
 
-	// 标记任务已领取
-	taskData.ClaimedTasks = append(taskData.ClaimedTasks, in.GetTaskId())
+	// 标记所有任务已领取
+	taskData.ClaimedTasks = append(taskData.ClaimedTasks, validTaskIDs...)
 
 	// 保存任务数据
 	err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, taskData)
@@ -139,15 +175,14 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 	}
 
 	s.logger.Info("任务奖励领取成功",
-		zap.String("task_id", in.GetTaskId()),
-		zap.Int32("liveness", taskConfig.Liveness),
-		zap.Int32("total_liveness", taskData.CurrentLiveness))
+		zap.Strings("task_ids", validTaskIDs),
+		zap.Int32("total_liveness", totalLiveness),
+		zap.Int32("current_liveness", taskData.CurrentLiveness))
 
 	return &game.ClaimTaskRewardResponse{
 		Code:             0,
 		Msg:              "领取成功",
-		Liveness:         taskConfig.Liveness,
-		Reward:           reward,
+		Reward:           mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 	}, nil

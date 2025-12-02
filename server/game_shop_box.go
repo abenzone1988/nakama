@@ -55,8 +55,18 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		boxShopData.FreeAdUsed = true
 	}
 
+	// 处理新手宝箱逻辑
+	var boxItemID string
+	if in.RookieBox == "Rookie" {
+		// 如果传入的是新手宝箱ID，使用该ID查找宝箱配置
+		boxItemID = in.RookieBox
+	} else {
+		// 否则使用当前宝箱商店的ID
+		boxItemID = boxShopData.BoxItemID
+	}
+
 	// 处理宝箱购买逻辑（包含钥匙扣除）
-	cost, rewards, boxLevelUp, keyInventoryResult, err := s.processBuyBoxItemStandalone(ctx, userID, boxShopData, in.UseKey, in.Count, in.UseFreeAd, in.AdWatched)
+	cost, rewards, boxLevelUp, keyInventoryResult, err := s.processBuyBoxItemStandalone(ctx, userID, boxShopData, boxItemID, in.UseKey, in.Count, in.UseFreeAd, in.AdWatched)
 	if err != nil {
 		return &game.BuyBoxItemResponse{Code: 4, Msg: err.Error()}, nil
 	}
@@ -185,12 +195,12 @@ func (s *ApiServer) GetBoxShop(ctx context.Context, in *emptypb.Empty) (*game.Bo
 }
 
 // 处理宝箱购买（独立版本）
-func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid.UUID, boxShopData *BoxShopData, useKey bool, count int32, freeAd bool, adWatched bool) (*game.Wallet, []*game.Reward, bool, *game.InventoryUpdateResult, error) {
+func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid.UUID, boxShopData *BoxShopData, boxItemID string, useKey bool, count int32, freeAd bool, adWatched bool) (*game.Wallet, []*game.Reward, bool, *game.InventoryUpdateResult, error) {
 	var cost *game.Wallet
 	boxLevelUp := false
 	var keyInventoryResult *game.InventoryUpdateResult
 
-	tplBoxItem, ok := s.template.GetTplBoxShopItem().FindByKey(boxShopData.BoxItemID)
+	tplBoxItem, ok := s.template.GetTplBoxShopItem().FindByKey(boxItemID)
 	if !ok {
 		return nil, nil, false, nil, fmt.Errorf("未找到宝箱配置")
 	}
@@ -250,9 +260,15 @@ func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid
 	// 每次打开宝箱都抽取奖励
 	rewards := make([]*game.Reward, 0, count)
 	for i := int32(0); i < count; i++ {
-		reward := s.rollBoxReward(userID, &tplBoxItem)
-		if reward != nil {
-			rewards = append(rewards, reward)
+
+		randomReward := s.rollBoxReward(userID, &tplBoxItem)
+		if randomReward != nil {
+			rewards = append(rewards, randomReward)
+		}
+
+		fixedReward := s.getFixedReward(&tplBoxItem)
+		if fixedReward != nil {
+			rewards = append(rewards, fixedReward)
 		}
 
 		// 增加经验
@@ -279,6 +295,7 @@ func (s *ApiServer) processBuyBoxItemStandalone(ctx context.Context, userID uuid
 					tplBoxItem = tplNewBoxItem
 				}
 			}
+
 		}
 	}
 
@@ -320,7 +337,7 @@ func convertToProtoBoxShop(data *BoxShopData) *game.BoxShopData {
 // 抽取宝箱奖励
 func (s *ApiServer) rollBoxReward(userID uuid.UUID, tplBoxItem *TplBoxShopItem) *game.Reward {
 	// 解析 rewardInfo 格式：itemid_count_weight
-	rewardInfo := tplBoxItem.RewardInfo
+	rewardInfo := tplBoxItem.RandomReward
 	if rewardInfo == "" {
 		return nil
 	}
@@ -337,7 +354,7 @@ func (s *ApiServer) rollBoxReward(userID uuid.UUID, tplBoxItem *TplBoxShopItem) 
 
 	for _, item := range items {
 		parts := strings.Split(strings.TrimSpace(item), "_")
-		if len(parts) != 3 {
+		if len(parts) < 3 {
 			continue
 		}
 
@@ -381,5 +398,46 @@ func (s *ApiServer) rollBoxReward(userID uuid.UUID, tplBoxItem *TplBoxShopItem) 
 			Id:  selectedOption.ItemID,
 			Num: selectedOption.Count,
 		}},
+	}
+}
+
+// 获取固定奖励
+func (s *ApiServer) getFixedReward(tplBoxItem *TplBoxShopItem) *game.Reward {
+	// 解析 FixedReward 格式：id_num（多个用逗号分隔）
+	fixedRewardStr := tplBoxItem.FixedReward
+	if fixedRewardStr == "" {
+		return nil
+	}
+
+	items := strings.Split(fixedRewardStr, ",")
+	rewardItems := make([]*game.Item, 0)
+
+	for _, item := range items {
+		parts := strings.Split(strings.TrimSpace(item), "_")
+		if len(parts) < 2 {
+			continue
+		}
+
+		itemID := strings.TrimSpace(parts[0])
+		count, err := strconv.ParseInt(parts[1], 10, 32)
+		if err != nil {
+			s.logger.Error("解析固定奖励数量失败", zap.String("item", item), zap.Error(err))
+			continue
+		}
+
+		if itemID != "" && count > 0 {
+			rewardItems = append(rewardItems, &game.Item{
+				Id:  itemID,
+				Num: int32(count),
+			})
+		}
+	}
+
+	if len(rewardItems) == 0 {
+		return nil
+	}
+
+	return &game.Reward{
+		Items: rewardItems,
 	}
 }

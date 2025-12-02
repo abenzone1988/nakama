@@ -259,14 +259,14 @@ message GetTaskResponse{
 
 // 领取任务奖励请求
 message ClaimTaskRewardRequest{
-  string task_id = 1; // 任务ID
+  repeated string task_ids = 1; // 任务ID列表（可多个）
 }
 
 // 领取任务奖励响应
 message ClaimTaskRewardResponse{
   int32 code = 1;
   string msg = 2;
-  int32 liveness = 3;                  // 获得的活跃度
+  repeated int32 liveness_rewards = 3;                  // 获得的活跃度奖励 ID列表
   Reward reward = 4;                   // 任务奖励
   Wallet wallet_updated = 5;           // 钱包更新结果
   repeated Item inventory_updated = 6; // 背包更新结果
@@ -553,6 +553,7 @@ message BuyBoxItemRequest {
   bool use_key = 2;     // 是否使用宝箱钥匙（itemId: 20001）
   bool use_free_ad = 3; // 是否使用广告免费购买
   bool ad_watched = 4;  // 是否已完整观看广告（true=免费，false=扣广告券）
+  string rookie_box = 5; //新手宝箱
 }
 
 // 购买宝箱响应
@@ -631,4 +632,8 @@ message ClaimNotificationAttachmentsResponse{
   Wallet wallet_updated = 3;
   // Aggregated inventory changes after claiming attachments.
   repeated Item inventory_updated = 4;
+}
+
+message PurchaseRequest{
+
 }
