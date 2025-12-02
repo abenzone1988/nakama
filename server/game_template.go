@@ -36,6 +36,7 @@ type TemplateManager interface {
 	GetTplFirstCharge() *TableTplFirstCharge
 	GetTplSevenDay() *TableTplSevenDay
 	GetTplDailySignIn() *TableTplDailySignIn
+	GetTplPay() *TableTplPay
 }
 
 type LocalTemplateManager struct {
@@ -62,6 +63,7 @@ type LocalTemplateManager struct {
 	tableTplFirstCharge       *TableTplFirstCharge
 	tableTplSevenDay          *TableTplSevenDay
 	tableTplDailySignIn       *TableTplDailySignIn
+	tableTplPay               *TableTplPay
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -89,6 +91,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplFirstCharge:       NewTableTplFirstCharge(logger, jsonPath),
 		tableTplSevenDay:          NewTableTplSevenDay(logger, jsonPath),
 		tableTplDailySignIn:       NewTableTplDailySignIn(logger, jsonPath),
+		tableTplPay:               NewTableTplPay(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -118,12 +121,19 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplFirstCharge.LoadData(t.StorageReadTpl("TplFirstCharge"))
 	t.tableTplSevenDay.LoadData(t.StorageReadTpl("TplSevenDay"))
 	t.tableTplDailySignIn.LoadData(t.StorageReadTpl("TplDailySignIn"))
+	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
 }
 
 func (t *LocalTemplateManager) GetTplFirstCharge() *TableTplFirstCharge {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplFirstCharge
+}
+
+func (t *LocalTemplateManager) GetTplPay() *TableTplPay {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplPay
 }
 
 func (t *LocalTemplateManager) GetTplSevenDay() *TableTplSevenDay {

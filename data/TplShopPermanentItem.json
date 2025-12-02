@@ -2,7 +2,7 @@
 "SP1001":{"shopItemName":"一点金币","res":"CoinBag/CoinBag1","item":"10000","payType":"free,ad","salePrice":[0,0],"limitTimes":[1,3],"num":500,"refreshTime":0,"id":"SP1001"},
 "SP1002":{"shopItemName":"一袋金币","res":"CoinBag/CoinBag2","item":"10000","payType":"gem","salePrice":[100],"limitTimes":[-1],"num":1000,"refreshTime":0,"id":"SP1002"},
 "SP1003":{"shopItemName":"一箱金币","res":"CoinBag/CoinBag3","item":"10000","payType":"gem","salePrice":[400],"limitTimes":[-1],"num":5000,"refreshTime":0,"id":"SP1003"},
-"SP1004":{"shopItemName":"一点钻石","res":"CoinBag/GemBag1","item":"10001","payType":"free,ad","salePrice":[0,0],"limitTimes":[1,3],"num":100,"refreshTime":0,"id":"SP1004"},
+"SP1004":{"shopItemName":"一点钻石","res":"CoinBag/GemBag1","item":"10001","payType":"free,ad","salePrice":[0,0],"limitTimes":[1,3],"num":50,"refreshTime":0,"id":"SP1004"},
 "SP1005":{"shopItemName":"一点体力","res":"Currency/Strength","item":"10002","payType":"ad","salePrice":[0],"limitTimes":[3],"num":10,"refreshTime":0,"id":"SP1005"},
 "SP1006":{"shopItemName":"大量体力","res":"Currency/Strength","item":"10002","payType":"gem","salePrice":[100],"limitTimes":[3],"num":15,"refreshTime":0,"id":"SP1006"}
 }

@@ -161,7 +161,7 @@ func (d *SevenDayData) Init() {
 // SignInData 每日签到数据存储结构
 type SignInData struct {
 	BaseStorable
-	CurrentDay    int32  `json:"current_day"`     // 当前已签到到的天数（1-30）
+	ClaimedDay    int32  `json:"current_day"`     // 当前已签到到的天数（1-30）
 	LastClaimDate string `json:"last_claim_date"` // 最后一次签到日期（YYYY-MM-DD）
 }
 
@@ -174,7 +174,7 @@ func (d *SignInData) GetKey() string {
 }
 
 func (d *SignInData) Init() {
-	d.CurrentDay = 0
+	d.ClaimedDay = 0
 	d.LastClaimDate = ""
 	d.SetVersion("")
 }
@@ -617,12 +617,9 @@ func (d *LevelData) GetKey() string {
 }
 
 func (d *LevelData) Init() {
-	now := time.Now().Format(time.RFC3339)
 	d.CurLevelId = ZeroLevelId // "L1000"
 	d.BestProgress = 0
 	d.HasMoppingTimes = 0
 	d.HasMoppingTimesForAdv = 0
-	d.LastMoppingTimestamp = now
-	d.LastGetOnHookTimestamp = now
 	d.SetVersion("")
 }

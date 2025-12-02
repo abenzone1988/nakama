@@ -152,7 +152,8 @@ const (
 	Nakama_ClaimBattleRewardByShare_FullMethodName          = "/nakama.api.Nakama/ClaimBattleRewardByShare"
 	Nakama_ClaimMoppingReward_FullMethodName                = "/nakama.api.Nakama/ClaimMoppingReward"
 	Nakama_ClaimOnHookReward_FullMethodName                 = "/nakama.api.Nakama/ClaimOnHookReward"
-	Nakama_UpdateEquipData_FullMethodName                   = "/nakama.api.Nakama/UpdateEquipData"
+	Nakama_UpgradeEquip_FullMethodName                      = "/nakama.api.Nakama/UpgradeEquip"
+	Nakama_UpgradeCrystalTech_FullMethodName                = "/nakama.api.Nakama/UpgradeCrystalTech"
 	Nakama_ClaimLevelBox_FullMethodName                     = "/nakama.api.Nakama/ClaimLevelBox"
 	Nakama_ClaimSignInReward_FullMethodName                 = "/nakama.api.Nakama/ClaimSignInReward"
 	Nakama_GetSignInReward_FullMethodName                   = "/nakama.api.Nakama/GetSignInReward"
@@ -398,7 +399,8 @@ type NakamaClient interface {
 	ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppingRewardRequest, opts ...grpc.CallOption) (*game.ClaimMoppingRewardResponse, error)
 	ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookRewardRequest, opts ...grpc.CallOption) (*game.ClaimOnHookRewardResponse, error)
 	// ==================== Equip ====================
-	UpdateEquipData(ctx context.Context, in *game.UpdateEquipDataRequest, opts ...grpc.CallOption) (*game.UpdateEquipDataResponse, error)
+	UpgradeEquip(ctx context.Context, in *game.UpgradeEquipRequest, opts ...grpc.CallOption) (*game.UpgradeEquipResponse, error)
+	UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrystalTechRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalTechResponse, error)
 	// ==================== Level ====================
 	ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error)
 	// ==================== Sign In ====================
@@ -1445,9 +1447,18 @@ func (c *nakamaClient) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHo
 	return out, nil
 }
 
-func (c *nakamaClient) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDataRequest, opts ...grpc.CallOption) (*game.UpdateEquipDataResponse, error) {
-	out := new(game.UpdateEquipDataResponse)
-	err := c.cc.Invoke(ctx, Nakama_UpdateEquipData_FullMethodName, in, out, opts...)
+func (c *nakamaClient) UpgradeEquip(ctx context.Context, in *game.UpgradeEquipRequest, opts ...grpc.CallOption) (*game.UpgradeEquipResponse, error) {
+	out := new(game.UpgradeEquipResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpgradeEquip_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrystalTechRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalTechResponse, error) {
+	out := new(game.UpgradeCrystalTechResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpgradeCrystalTech_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1793,7 +1804,8 @@ type NakamaServer interface {
 	ClaimMoppingReward(context.Context, *game.ClaimMoppingRewardRequest) (*game.ClaimMoppingRewardResponse, error)
 	ClaimOnHookReward(context.Context, *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error)
 	// ==================== Equip ====================
-	UpdateEquipData(context.Context, *game.UpdateEquipDataRequest) (*game.UpdateEquipDataResponse, error)
+	UpgradeEquip(context.Context, *game.UpgradeEquipRequest) (*game.UpgradeEquipResponse, error)
+	UpgradeCrystalTech(context.Context, *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error)
 	// ==================== Level ====================
 	ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error)
 	// ==================== Sign In ====================
@@ -2159,8 +2171,11 @@ func (UnimplementedNakamaServer) ClaimMoppingReward(context.Context, *game.Claim
 func (UnimplementedNakamaServer) ClaimOnHookReward(context.Context, *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimOnHookReward not implemented")
 }
-func (UnimplementedNakamaServer) UpdateEquipData(context.Context, *game.UpdateEquipDataRequest) (*game.UpdateEquipDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateEquipData not implemented")
+func (UnimplementedNakamaServer) UpgradeEquip(context.Context, *game.UpgradeEquipRequest) (*game.UpgradeEquipResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradeEquip not implemented")
+}
+func (UnimplementedNakamaServer) UpgradeCrystalTech(context.Context, *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradeCrystalTech not implemented")
 }
 func (UnimplementedNakamaServer) ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimLevelBox not implemented")
@@ -4245,20 +4260,38 @@ func _Nakama_ClaimOnHookReward_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Nakama_UpdateEquipData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(game.UpdateEquipDataRequest)
+func _Nakama_UpgradeEquip_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpgradeEquipRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NakamaServer).UpdateEquipData(ctx, in)
+		return srv.(NakamaServer).UpgradeEquip(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Nakama_UpdateEquipData_FullMethodName,
+		FullMethod: Nakama_UpgradeEquip_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).UpdateEquipData(ctx, req.(*game.UpdateEquipDataRequest))
+		return srv.(NakamaServer).UpgradeEquip(ctx, req.(*game.UpgradeEquipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UpgradeCrystalTech_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpgradeCrystalTechRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UpgradeCrystalTech(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UpgradeCrystalTech_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UpgradeCrystalTech(ctx, req.(*game.UpgradeCrystalTechRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4939,8 +4972,12 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Nakama_ClaimOnHookReward_Handler,
 		},
 		{
-			MethodName: "UpdateEquipData",
-			Handler:    _Nakama_UpdateEquipData_Handler,
+			MethodName: "UpgradeEquip",
+			Handler:    _Nakama_UpgradeEquip_Handler,
+		},
+		{
+			MethodName: "UpgradeCrystalTech",
+			Handler:    _Nakama_UpgradeCrystalTech_Handler,
 		},
 		{
 			MethodName: "ClaimLevelBox",

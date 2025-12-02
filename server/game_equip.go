@@ -39,7 +39,7 @@ func (s *ApiServer) GetEquipData(ctx context.Context, in *emptypb.Empty) (*game.
 	}, nil
 }
 
-func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDataRequest) (*game.UpdateEquipDataResponse, error) {
+func (s *ApiServer) UpgradeEquip(ctx context.Context, in *game.UpgradeEquipRequest) (*game.UpgradeEquipResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	// 加载实际的 EquipData 结构用于修改
@@ -56,29 +56,14 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	var err error
-	if in.EquipId == EquipID_Crystal {
-		walletUpdateResult, inventoryUpdateResult, err = s.handleCrystalEquipUpgrade(ctx, userID, in.EquipId, equipData)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		walletUpdateResult, inventoryUpdateResult, err = s.handleNormalEquipUpgrade(ctx, userID, in.EquipId, levelUpEquip, equipData)
-		if err != nil {
-			return nil, err
-		}
+	walletUpdateResult, inventoryUpdateResult, err := s.handleEquipUpgrade(ctx, userID, in.EquipId, levelUpEquip, equipData)
+	if err != nil {
+		return nil, err
 	}
 
 	// 保存装备数据
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
 		return nil, err
-	}
-
-	// 转换为 proto 格式返回
-	protoEquipData := &game.EquipData{
-		BattleEquips:         equipData.BattleEquips,
-		UnlockEquips:         equipData.UnlockEquips,
-		CrystalTechTreeIndex: equipData.CrystalTechTreeIndex,
 	}
 
 	// 提取更新后的数据
@@ -93,13 +78,58 @@ func (s *ApiServer) UpdateEquipData(ctx context.Context, in *game.UpdateEquipDat
 		inventoryUpdated = inventoryUpdateResult.Updated
 	}
 
-	return &game.UpdateEquipDataResponse{
+	return &game.UpgradeEquipResponse{
 		Code:             0,
 		Msg:              "Success",
-		EquipData:        protoEquipData,
+		EquipId:          in.EquipId,
+		Level:            equipData.UnlockEquips[in.EquipId],
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 	}, nil
+}
+
+func (s *ApiServer) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 加载实际的 EquipData 结构用于修改
+	equipData := &EquipData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+		return nil, err
+	}
+
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	walletUpdateResult, inventoryUpdateResult, err := s.handleCrystalTechUpgrade(ctx, userID, equipData)
+	if err != nil {
+		return nil, err
+	}
+
+	// 保存装备数据
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
+		return nil, err
+	}
+
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
+	return &game.UpgradeCrystalTechResponse{
+		Code:                 0,
+		Msg:                  "Success",
+		CrystalTechTreeIndex: equipData.CrystalTechTreeIndex,
+		WalletUpdated:        walletUpdated,
+		InventoryUpdated:     inventoryUpdated,
+	}, nil
+
 }
 
 // 初始化装备数据
@@ -121,7 +151,7 @@ func initializeEquipData(equipData *EquipData, table TemplateManager) {
 	equipData.CrystalTechTreeIndex = 0
 }
 
-func (s *ApiServer) handleNormalEquipUpgrade(ctx context.Context, userID uuid.UUID, equipID string, currentLevel int32, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+func (s *ApiServer) handleEquipUpgrade(ctx context.Context, userID uuid.UUID, equipID string, currentLevel int32, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	nextEquips := s.template.GetTplEquipmentDev().FindByFilter(func(equip template.TplEquipmentDev) bool {
 		return equip.EquipID == equipID && currentLevel+1 == equip.Level
 	})
@@ -145,7 +175,7 @@ func (s *ApiServer) handleNormalEquipUpgrade(ctx context.Context, userID uuid.UU
 		},
 	}, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.New(fmt.Sprintf("背包数量 %s : %d 不足，需要 %d", costDebrisID, costDebrisNum, nextEquip.CostItemNum))
 	}
 
 	var inventoryUpdateResult *game.InventoryUpdateResult
@@ -193,7 +223,7 @@ func (s *ApiServer) handleNormalEquipUpgrade(ctx context.Context, userID uuid.UU
 	return walletUpdateResult, inventoryUpdateResult, nil
 }
 
-func (s *ApiServer) handleCrystalEquipUpgrade(ctx context.Context, userID uuid.UUID, equipID string, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UUID, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	targetIndex := equipData.CrystalTechTreeIndex + 1
 	crystalTechs := s.template.GetTplCrystalTechnologyDev().FindByFilter(func(dev template.TplCrystalTechnologyDev) bool {
 		return dev.PointIndex == targetIndex
@@ -207,7 +237,7 @@ func (s *ApiServer) handleCrystalEquipUpgrade(ctx context.Context, userID uuid.U
 		return nil, nil, errors.New("invalid crystal tech cost config")
 	}
 
-	metadata := buildEquipLevelUpMetadata(equipID)
+	metadata := buildEquipLevelUpMetadata(EquipID_Crystal)
 	results, err := UpdateInventories(ctx, s.logger, s.db, []*inventoryUpdate{
 		{
 			UserID: userID,
@@ -259,7 +289,7 @@ func (s *ApiServer) handleCrystalEquipUpgrade(ctx context.Context, userID uuid.U
 						Changeset: map[string]int64{
 							nextTech.CostItemID: int64(nextTech.CostItemNum),
 						},
-						Metadata: buildEquipLevelUpRollbackMetadata(equipID),
+						Metadata: buildEquipLevelUpRollbackMetadata(EquipID_Crystal),
 					},
 				}, true)
 				if rollbackErr != nil {
@@ -276,8 +306,7 @@ func (s *ApiServer) handleCrystalEquipUpgrade(ctx context.Context, userID uuid.U
 		}
 	}
 
-	equipData.UnlockEquips[equipID] += 1
-	equipData.CrystalTechTreeIndex = nextTech.PointIndex
+	equipData.CrystalTechTreeIndex = targetIndex
 
 	return walletUpdateResult, inventoryUpdateResult, nil
 }

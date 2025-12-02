@@ -979,9 +979,16 @@ service Nakama {
   }
 
   // ==================== Equip ====================
-  rpc UpdateEquipData(game.UpdateEquipDataRequest) returns (game.UpdateEquipDataResponse) {
+  rpc UpgradeEquip(game.UpgradeEquipRequest) returns (game.UpgradeEquipResponse) {
     option (google.api.http) = {
-      post: "/v2/game/equip/update"
+      post: "/v2/game/equip/upgrade"
+      body: "*"
+    };
+  }
+
+  rpc UpgradeCrystalTech(game.UpgradeCrystalTechRequest) returns (game.UpgradeCrystalTechResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/equip/crystaltech/upgrade"
       body: "*"
     };
   }

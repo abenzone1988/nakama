@@ -13,7 +13,7 @@ type TplShopGemItem struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Num      int32  `json:"num"`
-	Price    int32  `json:"price"`
+	PayID    string `json:"payId"`
 	Res      string `json:"res"`
 }
 

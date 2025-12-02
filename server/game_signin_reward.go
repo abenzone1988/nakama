@@ -17,7 +17,6 @@ const signInDateLayout = "2006-01-02"
 func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	// 从 storage 加载签到数据
 	signInData := &SignInData{}
 	if err := LoadData(ctx, s.logger, s.db, userID, signInData); err != nil {
 		s.logger.Error("加载签到数据失败", zap.Error(err))
@@ -25,7 +24,6 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 	}
 
 	today := time.Now().Format(signInDateLayout)
-	// 如果上次领取日期不为空且等于今天，则已领取
 	if signInData.LastClaimDate != "" && signInData.LastClaimDate == today {
 		return &game.ClaimSignInRewardResponse{
 			Code: 2,
@@ -33,9 +31,10 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 		}, nil
 	}
 
-	nextDay := signInData.CurrentDay + 1
+	// 计算本次要领取的天数
+	nextDay := signInData.ClaimedDay + 1
 	if nextDay > DailySignInTotalDays {
-		nextDay = 1
+		nextDay = 1 // 重新开始新一轮
 	}
 
 	reward, err := s.getDailySignInReward(nextDay)
@@ -65,8 +64,8 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 		}, nil
 	}
 
-	// 更新签到数据
-	signInData.CurrentDay = nextDay
+	// 更新签到数据：保存已领取的天数
+	signInData.ClaimedDay = nextDay
 	signInData.LastClaimDate = today
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, signInData); err != nil {
 		s.logger.Error("保存签到数据失败", zap.Error(err))
@@ -109,13 +108,25 @@ func (s *ApiServer) GetSignInReward(ctx context.Context, in *emptypb.Empty) (*ga
 	}
 
 	today := time.Now().Format(signInDateLayout)
-	// 只有当上次领取日期不为空且等于今天时，才算今日已领取
 	isClaimedToday := signInData.LastClaimDate != "" && signInData.LastClaimDate == today
+
+	// 计算当前应该领取的天数
+	var currentDay int32
+	if isClaimedToday {
+		// 今天已领取，返回已领取的天数
+		currentDay = signInData.ClaimedDay
+	} else {
+		// 今天未领取，返回应该领取的天数
+		currentDay = signInData.ClaimedDay + 1
+		if currentDay > DailySignInTotalDays {
+			currentDay = 1 // 重新开始新一轮
+		}
+	}
 
 	return &game.GetSignInRewardResponse{
 		Code:           0,
 		Msg:            "Success",
-		CurrentDay:     signInData.CurrentDay,
+		CurrentDay:     currentDay,
 		IsClaimedToday: isClaimedToday,
 	}, nil
 }

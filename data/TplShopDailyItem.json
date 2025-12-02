@@ -1,6 +1,6 @@
 {
 "SD1001":{"coinPrice":100,"gemPrice":10,"item":"1100","canFree":0,"canAd":0,"canGem":1,"num":1,"id":"SD1001","canCoin":1},
-"SD1002":{"coinPrice":200,"gemPrice":20,"item":"1100","canFree":0,"canAd":1,"canGem":1,"num":2,"id":"SD1002","canCoin":1},
+"SD1002":{"coinPrice":200,"gemPrice":20,"item":"1100","canFree":0,"canAd":0,"canGem":1,"num":2,"id":"SD1002","canCoin":1},
 "SD1003":{"coinPrice":300,"gemPrice":30,"item":"1100","canFree":0,"canAd":0,"canGem":1,"num":3,"id":"SD1003","canCoin":1},
 "SD1004":{"coinPrice":500,"gemPrice":50,"item":"1100","canFree":0,"canAd":0,"canGem":1,"num":5,"id":"SD1004","canCoin":1},
 "SD1005":{"coinPrice":1000,"gemPrice":100,"item":"1100","canFree":0,"canAd":0,"canGem":1,"num":10,"id":"SD1005","canCoin":1},

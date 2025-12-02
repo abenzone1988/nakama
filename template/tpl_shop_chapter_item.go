@@ -14,7 +14,7 @@ type TplShopChapterItem struct {
 	ID      string `json:"id"`
 	LevelID string `json:"levelId"`
 	Name    string `json:"name"`
-	Price   int32  `json:"price"`
+	PayID   string `json:"payId"`
 	Reward  string `json:"reward"`
 }
 

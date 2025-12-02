@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"strings"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -163,9 +163,8 @@ func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *game.C
 		return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
 	}
 
-	var walletSnapshot *game.Wallet
-	inventoryChanges := make(map[string]int32)
-
+	// 收集所有通知的奖励
+	var allRewards []*game.Reward
 	for id, contentStr := range contents {
 		if contentStr == "" {
 			continue
@@ -177,43 +176,45 @@ func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *game.C
 		}
 
 		for _, reward := range noticeContent.GetRewards() {
-			if reward == nil {
-				continue
-			}
-			source := fmt.Sprintf("notification:%s", id)
-			walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-			if err != nil {
-				s.logger.Error("发放通知奖励失败", zap.String("notification_id", id), zap.Error(err))
-				return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
-			}
-
-			if walletResult != nil && walletResult.Updated != nil {
-				walletSnapshot = convertGameWalletToAPI(walletResult.Updated)
-			}
-			if inventoryResult != nil && len(inventoryResult.Updated) > 0 {
-				for _, item := range inventoryResult.Updated {
-					if item == nil || item.Id == "" || item.Num == 0 {
-						continue
-					}
-					inventoryChanges[item.Id] += item.Num
-				}
+			if reward != nil {
+				allRewards = append(allRewards, reward)
 			}
 		}
 	}
 
+	// 如果没有奖励，直接返回
+	if len(allRewards) == 0 {
+		return &game.ClaimNotificationAttachmentsResponse{
+			Claimedcount:     claimedCount,
+			WalletUpdated:    nil,
+			InventoryUpdated: nil,
+		}, nil
+	}
+
+	// 合并所有奖励
+	mergedReward := MergeRewards(allRewards)
+
+	// 合并领取奖励
+	source := "notification_merged:" + strings.Join(in.GetIds(), ",")
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
+	if err != nil {
+		s.logger.Error("发放通知奖励失败", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
+	}
+
+	var walletSnapshot *game.Wallet
+	if walletResult != nil && walletResult.Updated != nil {
+		walletSnapshot = convertGameWalletToAPI(walletResult.Updated)
+	}
+
 	var inventoryUpdated []*game.Item
-	if len(inventoryChanges) > 0 {
-		inventoryUpdated = make([]*game.Item, 0, len(inventoryChanges))
-		for id, num := range inventoryChanges {
-			inventoryUpdated = append(inventoryUpdated, &game.Item{
-				Id:  id,
-				Num: num,
-			})
-		}
+	if inventoryResult != nil && len(inventoryResult.Updated) > 0 {
+		inventoryUpdated = inventoryResult.Updated
 	}
 
 	return &game.ClaimNotificationAttachmentsResponse{
 		Claimedcount:     claimedCount,
+		Reward:           mergedReward,
 		WalletUpdated:    walletSnapshot,
 		InventoryUpdated: inventoryUpdated,
 	}, nil

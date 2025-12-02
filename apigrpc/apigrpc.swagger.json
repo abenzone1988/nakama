@@ -1964,15 +1964,14 @@
         ]
       }
     },
-    "/v2/game/equip/update": {
+    "/v2/game/equip/crystaltech/upgrade": {
       "post": {
-        "summary": "==================== Equip ====================",
-        "operationId": "Nakama_UpdateEquipData",
+        "operationId": "Nakama_UpgradeCrystalTech",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/gameUpdateEquipDataResponse"
+              "$ref": "#/definitions/gameUpgradeCrystalTechResponse"
             }
           },
           "default": {
@@ -1988,7 +1987,40 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/gameUpdateEquipDataRequest"
+              "$ref": "#/definitions/gameUpgradeCrystalTechRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/equip/upgrade": {
+      "post": {
+        "summary": "==================== Equip ====================",
+        "operationId": "Nakama_UpgradeEquip",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeEquipResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeEquipRequest"
             }
           }
         ],
@@ -7234,9 +7266,12 @@
           "format": "int32",
           "description": "Claimed count."
         },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
+        "reward": {
+          "$ref": "#/definitions/gameReward",
           "description": "Latest wallet snapshot after claiming attachments."
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet"
         },
         "inventoryUpdated": {
           "type": "array",
@@ -8082,15 +8117,10 @@
         }
       }
     },
-    "gameUpdateEquipDataRequest": {
-      "type": "object",
-      "properties": {
-        "equipId": {
-          "type": "string"
-        }
-      }
+    "gameUpgradeCrystalTechRequest": {
+      "type": "object"
     },
-    "gameUpdateEquipDataResponse": {
+    "gameUpgradeCrystalTechResponse": {
       "type": "object",
       "properties": {
         "code": {
@@ -8100,8 +8130,48 @@
         "msg": {
           "type": "string"
         },
-        "equipData": {
-          "$ref": "#/definitions/gameEquipData"
+        "crystalTechTreeIndex": {
+          "type": "integer",
+          "format": "int32",
+          "title": "水晶科技树索引"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      }
+    },
+    "gameUpgradeEquipRequest": {
+      "type": "object",
+      "properties": {
+        "equipId": {
+          "type": "string"
+        }
+      }
+    },
+    "gameUpgradeEquipResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipId": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "format": "int32"
         },
         "walletUpdated": {
           "$ref": "#/definitions/gameWallet",

@@ -107,7 +107,7 @@ func UpdateInventories(ctx context.Context, logger *zap.Logger, db *sql.DB, upda
 		var updateErr error
 		results, updateErr = updateInventories(ctx, logger, tx, updates, updateLedger)
 		if updateErr != nil {
-			logger.Error("UpdateInventories: updateInventories执行失败", zap.Error(updateErr))
+			logger.Error("背包数量不足", zap.Error(updateErr))
 			return updateErr
 		}
 		return nil

@@ -440,14 +440,26 @@ message GetInventoryDataResponse{
   repeated Item items = 3;
 }
 
-message UpdateEquipDataRequest{
+message UpgradeEquipRequest{
   string equip_id = 1;
 }
 
-message UpdateEquipDataResponse{
+message UpgradeEquipResponse{
   int32 code = 1;
   string msg = 2;
-  EquipData equip_data = 3;
+  string equip_id = 3;
+  int32  level = 4;
+  Wallet wallet_updated = 5; // 钱包更新结果
+  repeated Item inventory_updated = 6; // 背包更新结果
+}
+
+message UpgradeCrystalTechRequest{
+}
+
+message UpgradeCrystalTechResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 crystal_tech_tree_index = 3; // 水晶科技树索引
   Wallet wallet_updated = 4; // 钱包更新结果
   repeated Item inventory_updated = 5; // 背包更新结果
 }
@@ -615,7 +627,8 @@ message ClaimNotificationAttachmentsResponse{
   // Claimed count.
   int32 claimedcount = 1;
     // Latest wallet snapshot after claiming attachments.
-  Wallet wallet_updated = 2;
+  Reward reward = 2;
+  Wallet wallet_updated = 3;
   // Aggregated inventory changes after claiming attachments.
-  repeated Item inventory_updated = 3;
+  repeated Item inventory_updated = 4;
 }

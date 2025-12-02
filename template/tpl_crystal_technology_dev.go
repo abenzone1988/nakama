@@ -12,17 +12,9 @@ type TplCrystalTechnologyDev struct {
 	CostItemID  string `json:"costItemID"`
 	CostItemNum int32  `json:"costItemNum"`
 	CostPayType int32  `json:"costPayType"`
-	Desc        string `json:"desc"`
-	Icon        string `json:"icon"`
 	ID          string `json:"id"`
-	Name        string `json:"name"`
 	PointIndex  int32  `json:"pointIndex"`
-	PretechID   string `json:"pretechID"`
 	Price       int32  `json:"price"`
-	PtType1     string `json:"pt_type1"`
-	PtValue1    int32  `json:"pt_value1"`
-	RogueID     string `json:"rogueId"`
-	RougeDesc   string `json:"rougeDesc"`
 }
 
 // ReadOnlyTplCrystalTechnologyDevSlice 只读TplCrystalTechnologyDev切片接口

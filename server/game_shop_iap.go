@@ -187,10 +187,10 @@ func convertToProtoChapterShop(data *ChapterShopData, tmpl TemplateManager) *gam
 		}
 
 		protoItems = append(protoItems, &game.ShopItem{
-			Id:          tplItem.ID,
-			ItemId:      tplItem.Reward,
-			PayType:     game.PayType_IAP,
-			Price:       tplItem.Price,
+			Id:      tplItem.ID,
+			ItemId:  tplItem.Reward,
+			PayType: game.PayType_IAP,
+			//Price:       tplItem.Price,
 			Discount:    0,
 			ItemCount:   1,
 			MaxBuyCount: tplItem.Count,
@@ -215,10 +215,10 @@ func convertToProtoGemShop(data *GemShopData, tmpl TemplateManager) *game.GemSho
 		}
 
 		protoItems = append(protoItems, &game.ShopItem{
-			Id:          tplItem.ID,
-			ItemId:      ItemID_Gem,
-			PayType:     game.PayType_IAP,
-			Price:       tplItem.Price,
+			Id:      tplItem.ID,
+			ItemId:  ItemID_Gem,
+			PayType: game.PayType_IAP,
+			//Price:       tplItem.Price,
 			Discount:    0,
 			ItemCount:   tplItem.Num,
 			MaxBuyCount: 0, // 无限制

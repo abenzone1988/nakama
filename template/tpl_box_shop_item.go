@@ -13,7 +13,6 @@ type TplBoxShopItem struct {
 	ID             string `json:"id"`
 	Level          int32  `json:"level"`
 	PayType        string `json:"payType"`
-	RefreshTime    int32  `json:"refreshTime"`
 	Res            string `json:"res"`
 	RetailPrice    int32  `json:"retailPrice"`
 	RewardInfo     string `json:"rewardInfo"`

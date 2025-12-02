@@ -1,8 +1,8 @@
 {
-"1":{"res":"GemBag/GemBag01","price":6,"num":60,"name":"一点钻石","id":"1","extraNum":60},
-"2":{"res":"GemBag/GemBag02","price":12,"num":132,"name":"一袋钻石","id":"2","extraNum":120},
-"3":{"res":"GemBag/GemBag03","price":30,"num":345,"name":"一箱钻石","id":"3","extraNum":300},
-"4":{"res":"GemBag/GemBag04","price":68,"num":816,"name":"一堆钻石","id":"4","extraNum":680},
-"5":{"res":"GemBag/GemBag05","price":98,"num":1225,"name":"一大袋钻石","id":"5","extraNum":980},
-"6":{"res":"GemBag/GemBag06","price":128,"num":1664,"name":"大量钻石","id":"6","extraNum":1280}
+"1":{"res":"GemBag/GemBag01","num":60,"name":"一点钻石","id":"1","payId":"shopGem_01","extraNum":60},
+"2":{"res":"GemBag/GemBag02","num":132,"name":"一袋钻石","id":"2","payId":"shopGem_02","extraNum":120},
+"3":{"res":"GemBag/GemBag03","num":345,"name":"一箱钻石","id":"3","payId":"shopGem_03","extraNum":300},
+"4":{"res":"GemBag/GemBag04","num":816,"name":"一堆钻石","id":"4","payId":"shopGem_04","extraNum":680},
+"5":{"res":"GemBag/GemBag05","num":1225,"name":"一大袋钻石","id":"5","payId":"shopGem_05","extraNum":980},
+"6":{"res":"GemBag/GemBag06","num":1664,"name":"大量钻石","id":"6","payId":"shopGem_06","extraNum":1280}
 }

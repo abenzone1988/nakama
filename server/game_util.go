@@ -115,6 +115,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 		convertedRandomCrystals := make(map[string]int32)
 		convertedRandomEquips := make(map[string]int32)
 		for _, item := range reward.Items {
+			logger.Info("处理道具奖励", zap.Any("item", item))
 			if item == nil || item.Num <= 0 {
 				continue
 			}
@@ -162,6 +163,7 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				// 检查是否是炮台装备（以EQ开头）
 				if strings.HasPrefix(item.Id, "EQ") {
 					// 炮台装备特殊处理
+					logger.Info("尝试解锁炮台", zap.String("equip_id", item.Id), zap.Int32("num", item.Num))
 					alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, db, metrics, storageIndex, item.Id)
 					if err != nil {
 						logger.Error("解锁炮台失败",
@@ -180,10 +182,26 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 							zap.String("debris_id", debrisId),
 							zap.Int32("debris_count", debrisCount))
 					} else {
-						// 炮台首次解锁成功，也发放炮台到背包
-						inventoryChangeset[item.Id] += int64(item.Num)
-						logger.Info("成功解锁新炮台",
-							zap.String("equip_id", item.Id))
+						// 炮台首次解锁成功，装备不发到背包，只解锁
+						if item.Num == 1 {
+							// 只有1个，只解锁，不发到背包
+							logger.Info("成功解锁新炮台",
+								zap.String("equip_id", item.Id),
+								zap.Int32("equip_count", 1))
+						} else {
+							// 数量大于1：第1个用于解锁（不发到背包），剩下的转换为碎片
+							remainingCount := item.Num - 1 // 剩下的装备数量
+							debrisId := strings.TrimPrefix(item.Id, "EQ")
+							debrisCount := remainingCount * 10 // 每个装备转换为10个碎片
+							inventoryChangeset[debrisId] += int64(debrisCount)
+
+							logger.Info("成功解锁新炮台，部分转换为碎片",
+								zap.String("equip_id", item.Id),
+								zap.Int32("equip_count", 1),
+								zap.Int32("remaining_count", remainingCount),
+								zap.String("debris_id", debrisId),
+								zap.Int32("debris_count", debrisCount))
+						}
 					}
 				} else {
 					// 普通道具直接进背包
@@ -565,6 +583,72 @@ func parseItems(itemsString string, logger *zap.Logger) []*game.Item {
 			Id:  id,
 			Num: int32(num),
 		})
+	}
+
+	return result
+}
+
+// MergeRewards 合并多个奖励为一个奖励
+// 将 wallet 的值相加，items 数组整合（相同 Id 的 Num 相加）
+func MergeRewards(rewards []*game.Reward) *game.Reward {
+	if len(rewards) == 0 {
+		return nil
+	}
+
+	mergedWallet := &game.Wallet{}
+	itemMap := make(map[string]int32)
+
+	for _, reward := range rewards {
+		if reward == nil {
+			continue
+		}
+
+		// 合并 wallet
+		if reward.Wallet != nil {
+			mergedWallet.Coin += reward.Wallet.Coin
+			mergedWallet.Gem += reward.Wallet.Gem
+			mergedWallet.Ad += reward.Wallet.Ad
+			mergedWallet.Stamina += reward.Wallet.Stamina
+		}
+
+		// 合并 items
+		if len(reward.Items) > 0 {
+			for _, item := range reward.Items {
+				if item != nil && item.Id != "" && item.Num > 0 {
+					itemMap[item.Id] += item.Num
+				}
+			}
+		}
+	}
+
+	// 检查是否有有效的 wallet 值
+	hasWallet := mergedWallet.Coin > 0 || mergedWallet.Gem > 0 || mergedWallet.Ad > 0 || mergedWallet.Stamina > 0
+
+	// 构建合并后的 items 数组
+	var mergedItems []*game.Item
+	if len(itemMap) > 0 {
+		mergedItems = make([]*game.Item, 0, len(itemMap))
+		for id, num := range itemMap {
+			if num > 0 {
+				mergedItems = append(mergedItems, &game.Item{
+					Id:  id,
+					Num: num,
+				})
+			}
+		}
+	}
+
+	// 如果既没有 wallet 也没有 items，返回 nil
+	if !hasWallet && len(mergedItems) == 0 {
+		return nil
+	}
+
+	result := &game.Reward{}
+	if hasWallet {
+		result.Wallet = mergedWallet
+	}
+	if len(mergedItems) > 0 {
+		result.Items = mergedItems
 	}
 
 	return result

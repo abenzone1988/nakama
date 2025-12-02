@@ -387,7 +387,7 @@ func (s *ApiServer) ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookR
 		}, nil
 	}
 
-	// 提取更新后的数据
+	// 提取更新后的数据\
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
 
