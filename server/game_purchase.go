@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
 )
 
@@ -233,7 +234,8 @@ func (s *ApiServer) processPurchaseDelivery(ctx context.Context, req *PurchaseNo
 	// 1. 根据UID查找用户
 	userID, err := FindUserByCustomID(ctx, s.logger, s.db, req.UID)
 	if err != nil {
-		return fmt.Errorf("查找用户失败: %w", err)
+		userID = ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+		s.logger.Warn("用户不存在，使用上下文中的用户ID")
 	}
 
 	// 2. 检查订单是否已处理（防止重复发货）
@@ -347,14 +349,27 @@ func (s *ApiServer) recordThirdPartyPurchase(ctx context.Context, userID uuid.UU
 }
 
 // deliverProductToUser 向用户发放商品
-func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, productID string, amount float64, req *PurchaseNotifyRequest) error {
+func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, productID string, price float64, req *PurchaseNotifyRequest) error {
 	// 检测是否为特殊商品
-	isFirstCharge := productID == FirstChargeProductID || amount == FirstChargePriceFloat
-	isVipPurchase := productID == VipProductID || amount == VipPriceFloat
-	isSevenDayPurchase := productID == SevenDayProductID || amount == SevenDayPriceFloat
+	isFirstCharge := productID == FirstChargeProductID
+	isVipPurchase := productID == VipProductID
+	isSevenDayPurchase := productID == SevenDayProductID
 
 	if (isFirstCharge || isVipPurchase || isSevenDayPurchase) && ctx.Value(ctxUserIDKey{}) == nil {
 		ctx = context.WithValue(ctx, ctxUserIDKey{}, userID)
+	}
+
+	tplPay := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
+		return tp.ID == productID
+	})
+	if tplPay == nil {
+		return fmt.Errorf("商品不存在: %s", productID)
+	}
+
+	money := float64(tplPay.Get(0).Money)
+
+	if money != price {
+		return fmt.Errorf("商品价格不匹配: %s", productID)
 	}
 
 	// 如果是首冲，记录首冲状态
@@ -369,7 +384,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 			s.logger.Info("首冲记录成功",
 				zap.String("user_id", userID.String()),
 				zap.String("product_id", productID),
-				zap.Float64("amount", amount))
+				zap.Float64("price", price))
 		}
 	}
 
@@ -422,7 +437,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 			s.logger.Info("七日购买记录成功",
 				zap.String("user_id", userID.String()),
 				zap.String("product_id", productID),
-				zap.Float64("amount", amount))
+				zap.Float64("price", price))
 		}
 	}
 
@@ -462,7 +477,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 		{
 			Id:         uuid.Must(uuid.NewV4()).String(),
 			Subject:    "购买成功",
-			Content:    fmt.Sprintf(`{"product_id":"%s","amount":"%.2f","order_id":"%s","is_first_charge":%t,"is_vip":%t}`, productID, amount, req.CPOrderID, isFirstCharge, isVipPurchase),
+			Content:    fmt.Sprintf(`{"product_id":"%s","price":"%.2f","order_id":"%s","is_first_charge":%t,"is_vip":%t}`, productID, price, req.CPOrderID, isFirstCharge, isVipPurchase),
 			Code:       100, // 自定义通知代码
 			SenderId:   uuid.Nil.String(),
 			Persistent: true,
@@ -478,7 +493,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	s.logger.Info("商品发放完成",
 		zap.String("user_id", userID.String()),
 		zap.String("product_id", productID),
-		zap.Float64("amount", amount),
+		zap.Float64("price", price),
 		zap.Bool("is_first_charge", isFirstCharge),
 		zap.Bool("is_vip_purchase", isVipPurchase),
 		zap.Any("notifications", notifications))

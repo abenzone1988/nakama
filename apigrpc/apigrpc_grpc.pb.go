@@ -166,6 +166,7 @@ const (
 	Nakama_CheckVipStatus_FullMethodName                    = "/nakama.api.Nakama/CheckVipStatus"
 	Nakama_GetSevenDayStatus_FullMethodName                 = "/nakama.api.Nakama/GetSevenDayStatus"
 	Nakama_ClaimSevenDayReward_FullMethodName               = "/nakama.api.Nakama/ClaimSevenDayReward"
+	Nakama_PurchaseTest_FullMethodName                      = "/nakama.api.Nakama/PurchaseTest"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -420,6 +421,7 @@ type NakamaClient interface {
 	// ==================== Seven Day Event ====================
 	GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayStatusRequest, opts ...grpc.CallOption) (*game.GetSevenDayStatusResponse, error)
 	ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest, opts ...grpc.CallOption) (*game.ClaimSevenDayRewardResponse, error)
+	PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error)
 }
 
 type nakamaClient struct {
@@ -1573,6 +1575,15 @@ func (c *nakamaClient) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSe
 	return out, nil
 }
 
+func (c *nakamaClient) PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error) {
+	out := new(game.PurchaseResponse)
+	err := c.cc.Invoke(ctx, Nakama_PurchaseTest_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1825,6 +1836,7 @@ type NakamaServer interface {
 	// ==================== Seven Day Event ====================
 	GetSevenDayStatus(context.Context, *game.GetSevenDayStatusRequest) (*game.GetSevenDayStatusResponse, error)
 	ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error)
+	PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2212,6 +2224,9 @@ func (UnimplementedNakamaServer) GetSevenDayStatus(context.Context, *game.GetSev
 }
 func (UnimplementedNakamaServer) ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimSevenDayReward not implemented")
+}
+func (UnimplementedNakamaServer) PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PurchaseTest not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -4512,6 +4527,24 @@ func _Nakama_ClaimSevenDayReward_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_PurchaseTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.PurchaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).PurchaseTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_PurchaseTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).PurchaseTest(ctx, req.(*game.PurchaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5026,6 +5059,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimSevenDayReward",
 			Handler:    _Nakama_ClaimSevenDayReward_Handler,
+		},
+		{
+			MethodName: "PurchaseTest",
+			Handler:    _Nakama_PurchaseTest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

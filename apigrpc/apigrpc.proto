@@ -1068,5 +1068,14 @@ service Nakama {
       body: "*"
     };
   }
+
+  //====================PurchaseTest====================
+
+  rpc PurchaseTest(game.PurchaseRequest) returns (game.PurchaseResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/purchase/test"
+      body: "*"
+    };
+  }
 }
 

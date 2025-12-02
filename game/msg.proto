@@ -635,5 +635,22 @@ message ClaimNotificationAttachmentsResponse{
 }
 
 message PurchaseRequest{
+  string site = 1;        // 应用 ID
+  string order_id = 2;    // 商户订单号
+  string uid = 3;         // 用户ID
+  string sid = 4;         // 服务器 ID
+  string cp_order_id = 5; // CP订单号
+  string roleid = 6;      // 角色ID
+  string rolename = 7;    // 角色名称
+  string order_money = 8; // 实际总价
+  string productid = 9;   // 商品ID
+  int32 pay_type = 10;    // 支付方式 1：苹果内购, 2：支付宝, 3和11：微信h5支付, 5：微信公众号支付, 13：微信虚拟内购
+  string ext = 11;        // 透传字段，由 CP 定义的字段
+  string time = 12;       // 时间戳 10位
+  string sign = 13;       // 签名
+}
 
+message PurchaseResponse{
+  int32 code = 1;
+  string msg = 2;
 }

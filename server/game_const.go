@@ -39,26 +39,12 @@ const (
 	CrystalID_4 = "30004"
 )
 
-// VIP相关常量
+// 直购ID
 const (
-	VipProductID  = "vip_card_68"          // VIP商品ID
-	VipPrice      = "68"                   // VIP价格（字符串表示）
-	VipPriceFloat = 68.0                   // VIP价格（浮点）
-	VipRewardID   = "ForeverAdvCardReward" // VIP额外奖励ID
-)
-
-// 首冲相关常量
-const (
-	FirstChargeProductID  = "first_charge_6" // 首冲商品ID
-	FirstChargePrice      = "6"              // 首冲价格（元）
-	FirstChargePriceFloat = 6.0              // 首冲价格（浮点数）
-)
-
-// 七日购买相关常量
-const (
-	SevenDayProductID  = "seven_day_68" // 七日购买商品ID
-	SevenDayPrice      = "68"           // 七日购买价格（元）
-	SevenDayPriceFloat = 68.0           // 七日购买价格（浮点数）
+	VipProductID         = "foreverAdvCard"       // VIP商品ID
+	FirstChargeProductID = "firstCharge"          // 首冲商品ID
+	SevenDayProductID    = "sevenDay"             // 七日购买商品ID
+	VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
 )
 
 // 每日签到相关常量

@@ -58,7 +58,10 @@ func (s *ApiServer) UpgradeEquip(ctx context.Context, in *game.UpgradeEquipReque
 
 	walletUpdateResult, inventoryUpdateResult, err := s.handleEquipUpgrade(ctx, userID, in.EquipId, levelUpEquip, equipData)
 	if err != nil {
-		return nil, err
+		return &game.UpgradeEquipResponse{
+			Code: 1,
+			Msg:  err.Error(),
+		}, nil
 	}
 
 	// 保存装备数据
@@ -175,7 +178,8 @@ func (s *ApiServer) handleEquipUpgrade(ctx context.Context, userID uuid.UUID, eq
 		},
 	}, true)
 	if err != nil {
-		return nil, nil, errors.New(fmt.Sprintf("背包数量 %s : %d 不足，需要 %d", costDebrisID, costDebrisNum, nextEquip.CostItemNum))
+		s.logger.Warn("材料不足", zap.String("equip", equipID), zap.Int32("拥有", costDebrisNum), zap.Int32("需要", nextEquip.CostItemNum))
+		return nil, nil, errors.New("材料不足")
 	}
 
 	var inventoryUpdateResult *game.InventoryUpdateResult
@@ -209,7 +213,7 @@ func (s *ApiServer) handleEquipUpgrade(ctx context.Context, userID uuid.UUID, eq
 		}, true)
 		if err != nil {
 			s.logger.Error("扣除费用失败", zap.Error(err))
-			return nil, nil, err
+			return nil, nil, errors.New("货币不足")
 		}
 		if len(results1) > 0 && results1[0] != nil {
 			walletUpdateResult = &game.WalletUpdateResult{

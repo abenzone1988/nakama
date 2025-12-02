@@ -34,21 +34,6 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}, nil
 	}
 
-	//扣除体力值
-	if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, BattleCostStamina); err != nil {
-		return &game.EndBattleResponse{
-			Code: 3,
-			Msg:  "体力扣除失败: " + err.Error(),
-		}, nil
-	}
-
-	if in.GetProgress() == 0 {
-		return &game.EndBattleResponse{
-			Code: 0,
-			Msg:  "通过成功",
-		}, nil
-	}
-
 	var rewardId string
 	var source string
 	var walletUpdateResult *game.WalletUpdateResult
@@ -66,6 +51,14 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		rewardId = levelInfo.WinRewards
 		source = "battle_normal_" + in.GetLevelId()
 
+		//扣除体力值
+		if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, levelInfo.Cost); err != nil {
+			return &game.EndBattleResponse{
+				Code: 3,
+				Msg:  "体力扣除失败: " + err.Error(),
+			}, nil
+		}
+
 	case game.BattleType_BATTLE_TYPE_GOLDEN:
 		activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(in.GetLevelId())
 		if !exist {
@@ -77,10 +70,25 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		rewardId = activityInfo.RewardID
 		source = "battle_golden_" + in.GetLevelId()
 
+		//扣除体力值
+		if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, activityInfo.Stamina); err != nil {
+			return &game.EndBattleResponse{
+				Code: 3,
+				Msg:  "体力扣除失败: " + err.Error(),
+			}, nil
+		}
+
 	default:
 		return &game.EndBattleResponse{
 			Code: 2,
 			Msg:  "关卡不存在",
+		}, nil
+	}
+
+	if in.GetProgress() == 0 {
+		return &game.EndBattleResponse{
+			Code: 0,
+			Msg:  "通过成功",
 		}, nil
 	}
 
