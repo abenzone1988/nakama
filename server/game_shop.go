@@ -617,6 +617,7 @@ func convertToProtoSingleShop(shop *ShopInfo) *game.SingleShopData {
 		Items:           protoItems,
 		CanRefresh:      shop.CanRefresh,
 		NextRefreshTime: shop.NextRefreshTime.Format(time.RFC3339),
+		RefreshCount:    shop.RefreshCount,
 	}
 
 	return protoShop
@@ -661,8 +662,6 @@ func parsePayType(payTypeStr string) game.PayType {
 		return game.PayType_GEM
 	case "ad":
 		return game.PayType_AD
-	case "iap":
-		return game.PayType_IAP
 	case "free":
 		return game.PayType_FREE
 	default:

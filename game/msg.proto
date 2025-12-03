@@ -163,6 +163,7 @@ message CheckVipStatusResponse {
   string signature = 2;
   // 当前领奖状态
   bool reward_claimed = 3;
+  string price = 4;
 }
 
 enum BattleType{
@@ -298,11 +299,12 @@ message GetFirstChargeStatusResponse{
   string charge_time = 4;              // 首冲时间
   repeated int32 claimed_days = 5;     // 已领取的天数列表
   int32 available_days = 6;            // 当前可领取的天数（例如第3天可以领1、2、3天的奖励）
+  string price = 7;  //人民币购买价格
 }
 
 // 领取首冲奖励请求
 message ClaimFirstChargeRewardRequest{
-  int32 day = 1; // 要领取的天数（1-7）
+  repeated int32 days = 1; // 要领取的天数（1-7）
 }
 
 // 领取首冲奖励响应
@@ -328,11 +330,12 @@ message GetSevenDayStatusResponse{
   repeated int32 claimed_days = 5;     // 已领取的天数列表
   int32 available_days = 6;            // 当前可领取的天数（例如第3天可以领0、1、2、3天的奖励）
   int32 total_purchases = 7;           // 总购买次数
+  string price = 8;  //人民币购买价格
 }
 
 // 领取七日奖励请求
 message ClaimSevenDayRewardRequest{
-  int32 day = 1; // 要领取的天数（0-7，0表示立即获得）
+  repeated int32 days = 1; //  要领取的天数（0-7，0表示立即获得）
 }
 
 // 领取七日奖励响应
@@ -470,7 +473,6 @@ enum PayType {
   COIN = 1;    // 金币
   GEM = 2;     // 钻石
   AD = 3;      // 广告
-  IAP = 4; // IAP 直购
 }
 
 // 商店商品（普通商店）
@@ -484,6 +486,26 @@ message ShopItem {
   int32 max_buy_count = 7;        // 最大购买次数（0表示无限制）
   int32 bought_count = 8;         // 已购买次数
   int32 index = 9;                // 通过index来购买
+}
+
+// 章节商店（IAP直购）
+message ShopChapterItem {
+  string id = 1;                  // 配置表ID
+  string level_id = 2;            // 章节id
+  string price = 3;               // 价格
+  string reward_id = 4;           // 奖励id
+  int32 max_buy_count = 5;        // 最大购买次数
+  int32 bought_count = 6;         // 已购买次数
+  int32 claimed_count = 7;        // 已领多少次
+}
+
+// 钻石商店（IAP直购）
+message ShopGemItem {
+  string id = 1;                  // 配置表ID
+  int32  num = 2;                 // 获得钻石数量
+  string price = 3;               // 价格
+  int32 bought_count = 4;         // 已购买次数
+  int32 claimed_count = 5;        // 已领多少次
 }
 
 // 单个商店数据（普通商店）
@@ -569,42 +591,42 @@ message BuyBoxItemResponse {
 
 // ==================== 章节商店（独立，IAP） ====================
 message ChapterShopData {
-  repeated ShopItem items = 1;    // 章节商品列表
+  repeated ShopChapterItem items = 1;    // 章节商品列表
 }
 
-// 购买章节商品请求
-message BuyChapterItemRequest {
+// 领取已购买章节商品请求
+message ClaimChapterItemRequest {
   string id = 1;              // 商品ID（唯一标识）
 }
 
 // 购买章节商品响应
-message BuyChapterItemResponse {
+message ClaimChapterItemResponse {
   int32 code = 1;
   string msg = 2;
   Reward reward = 3;
   Wallet wallet_updated = 4;
   repeated Item inventory_updated = 5;
-  ChapterShopData chapter_shop_data = 6;  // 更新后的章节商店
+  ShopChapterItem shop_item = 6;  // 领取的章节商品
 }
 
 // ==================== 钻石商店（独立，IAP） ====================
 message GemShopData {
-  repeated ShopItem items = 1;    // 钻石商品列表
+  repeated ShopGemItem items = 1;    // 钻石商品列表
 }
 
-// 购买钻石商品请求
-message BuyGemItemRequest {
+// 领取已购买钻石商品请求
+message ClaimGemItemRequest {
   string id = 1;              // 商品ID（唯一标识）
 }
 
 // 购买钻石商品响应
-message BuyGemItemResponse {
+message ClaimGemItemResponse {
   int32 code = 1;
   string msg = 2;
   Reward reward = 3;
   Wallet wallet_updated = 4;
   repeated Item inventory_updated = 5;
-  GemShopData gem_shop_data = 6;  // 更新后的钻石商店
+  ShopGemItem shop_item = 6;  // 领取的钻石商品
 }
 
 // Mark notifications as read.

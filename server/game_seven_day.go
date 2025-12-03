@@ -53,6 +53,14 @@ func (s *ApiServer) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayS
 		}
 	}
 
+	tplPays := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
+		return tp.ID == SevenDayProductID
+	})
+	if tplPays == nil {
+		return nil, fmt.Errorf("商品不存在: %s", SevenDayProductID)
+	}
+	tplPay := tplPays.Get(0)
+
 	return &game.GetSevenDayStatusResponse{
 		Code:           0,
 		Msg:            "Success",
@@ -61,19 +69,36 @@ func (s *ApiServer) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayS
 		ClaimedDays:    sevenDayData.ClaimedDays,
 		AvailableDays:  availableDays,
 		TotalPurchases: sevenDayData.TotalPurchases,
+		Price:          tplPay.Money,
 	}, nil
 }
 
-// ClaimSevenDayReward 领取七日奖励
+// ClaimSevenDayReward 领取七日奖励（支持批量领取）
 func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	// 验证天数参数 (0-7)
-	if in.Day < 0 || in.Day > 7 {
+	// 验证天数参数数组
+	if len(in.Days) == 0 {
 		return &game.ClaimSevenDayRewardResponse{
 			Code: 1,
-			Msg:  "无效的天数参数",
+			Msg:  "天数参数不能为空",
 		}, nil
+	}
+
+	// 验证所有天数参数 (0-7) 并去重
+	daySet := make(map[int32]struct{})
+	var validDays []int32
+	for _, day := range in.Days {
+		if day < 0 || day > 7 {
+			return &game.ClaimSevenDayRewardResponse{
+				Code: 1,
+				Msg:  fmt.Sprintf("无效的天数参数: %d（有效范围：0-7）", day),
+			}, nil
+		}
+		if _, exists := daySet[day]; !exists {
+			daySet[day] = struct{}{}
+			validDays = append(validDays, day)
+		}
 	}
 
 	// 从 storage 加载七日购买数据
@@ -112,53 +137,86 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 
 	daysPassed := int32(time.Since(purchaseTime).Hours() / 24)
 
-	// 检查是否已领取过该天的奖励
-	for _, claimedDay := range sevenDayData.ClaimedDays {
-		if claimedDay == in.Day {
-			return &game.ClaimSevenDayRewardResponse{
-				Code: 5,
-				Msg:  "该奖励已领取",
-			}, nil
-		}
-	}
-
 	// 计算当前可领取的天数
 	availableDays := daysPassed + 1
 	if availableDays > 7 {
 		availableDays = 7
 	}
 
-	// day 0 是购买后立即可领取，day 1-7 需要等相应天数
-	if in.Day > 0 && in.Day > availableDays {
+	// 构建已领取天数的集合，用于快速查找
+	claimedSet := make(map[int32]struct{}, len(sevenDayData.ClaimedDays))
+	for _, claimedDay := range sevenDayData.ClaimedDays {
+		claimedSet[claimedDay] = struct{}{}
+	}
+
+	// 验证所有天数是否可领取
+	var toClaimDays []int32
+	var alreadyClaimedDays []int32
+	for _, day := range validDays {
+		// 检查是否已领取
+		if _, claimed := claimedSet[day]; claimed {
+			alreadyClaimedDays = append(alreadyClaimedDays, day)
+			continue
+		}
+
+		// day 0 是购买后立即可领取，day 1-7 需要等相应天数
+		if day > 0 && day > availableDays {
+			return &game.ClaimSevenDayRewardResponse{
+				Code: 6,
+				Msg:  fmt.Sprintf("第%d天的奖励尚未解锁，当前只能领取第%d天及之前的奖励", day, availableDays),
+			}, nil
+		}
+
+		toClaimDays = append(toClaimDays, day)
+	}
+
+	// 如果所有天数都已领取
+	if len(toClaimDays) == 0 {
 		return &game.ClaimSevenDayRewardResponse{
-			Code: 6,
-			Msg:  fmt.Sprintf("当前只能领取第%d天及之前的奖励", availableDays),
+			Code: 5,
+			Msg:  fmt.Sprintf("这些奖励已领取: %v", alreadyClaimedDays),
 		}, nil
 	}
 
-	// 获取奖励配置
-	reward, err := s.getSevenDayReward(in.Day)
-	if err != nil {
-		s.logger.Error("获取七日奖励配置失败", zap.Error(err), zap.Int32("day", in.Day))
-		return &game.ClaimSevenDayRewardResponse{
-			Code: 7,
-			Msg:  "奖励配置不存在",
-		}, nil
+	// 收集所有有效的奖励配置
+	var allRewards []*game.Reward
+	for _, day := range toClaimDays {
+		reward, err := s.getSevenDayReward(day)
+		if err != nil {
+			s.logger.Error("获取七日奖励配置失败", zap.Error(err), zap.Int32("day", day))
+			return &game.ClaimSevenDayRewardResponse{
+				Code: 7,
+				Msg:  fmt.Sprintf("第%d天的奖励配置不存在", day),
+			}, nil
+		}
+		allRewards = append(allRewards, reward)
 	}
 
-	// 发放奖励
-	source := fmt.Sprintf("seven_day_reward_day_%d", in.Day)
-	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-	if err != nil {
-		s.logger.Error("发放七日奖励失败", zap.Error(err), zap.Int32("day", in.Day))
-		return &game.ClaimSevenDayRewardResponse{
-			Code: 8,
-			Msg:  "发放奖励失败",
-		}, nil
+	// 合并所有奖励
+	var mergedReward *game.Reward
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	if len(allRewards) > 0 {
+		mergedReward = MergeRewards(allRewards)
+		if mergedReward != nil {
+			// 发放奖励
+			source := fmt.Sprintf("seven_day_reward_merged:%v", toClaimDays)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
+			if err != nil {
+				s.logger.Error("发放七日奖励失败", zap.Error(err), zap.Int32s("days", toClaimDays))
+				return &game.ClaimSevenDayRewardResponse{
+					Code: 8,
+					Msg:  "发放奖励失败",
+				}, nil
+			}
+			walletUpdateResult = wResult
+			inventoryUpdateResult = iResult
+		}
 	}
 
 	// 更新已领取天数
-	sevenDayData.ClaimedDays = append(sevenDayData.ClaimedDays, in.Day)
+	sevenDayData.ClaimedDays = append(sevenDayData.ClaimedDays, toClaimDays...)
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
 		s.logger.Error("保存七日购买数据失败", zap.Error(err))
 		return &game.ClaimSevenDayRewardResponse{
@@ -171,21 +229,21 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
 
-	if walletResult != nil {
-		walletUpdated = walletResult.Updated
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
 	}
-	if inventoryResult != nil {
-		inventoryUpdated = inventoryResult.Updated
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
 	}
 
 	s.logger.Info("七日奖励领取成功",
 		zap.String("user_id", userID.String()),
-		zap.Int32("day", in.Day))
+		zap.Int32s("days", toClaimDays))
 
 	return &game.ClaimSevenDayRewardResponse{
 		Code:             0,
 		Msg:              "Success",
-		Reward:           reward,
+		Reward:           mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 		ClaimedDays:      sevenDayData.ClaimedDays,

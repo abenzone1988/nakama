@@ -2526,15 +2526,15 @@
         ]
       }
     },
-    "/v2/game/shop/chapter/buy": {
+    "/v2/game/shop/chapter/claim": {
       "post": {
-        "summary": "Buy item from chapter shop",
-        "operationId": "Nakama_BuyChapterItem",
+        "summary": "Claim chapter item from chapter shop",
+        "operationId": "Nakama_ClaimChapterItem",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/gameBuyChapterItemResponse"
+              "$ref": "#/definitions/gameClaimChapterItemResponse"
             }
           },
           "default": {
@@ -2550,7 +2550,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/gameBuyChapterItemRequest"
+              "$ref": "#/definitions/gameClaimChapterItemRequest"
             }
           }
         ],
@@ -2582,15 +2582,15 @@
         ]
       }
     },
-    "/v2/game/shop/gem/buy": {
+    "/v2/game/shop/gem/claim": {
       "post": {
-        "summary": "Buy item from gem shop",
-        "operationId": "Nakama_BuyGemItem",
+        "summary": "Claim gem item from gem shop",
+        "operationId": "Nakama_ClaimGemItem",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/gameBuyGemItemResponse"
+              "$ref": "#/definitions/gameClaimGemItemResponse"
             }
           },
           "default": {
@@ -2606,7 +2606,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/gameBuyGemItemRequest"
+              "$ref": "#/definitions/gameClaimGemItemRequest"
             }
           }
         ],
@@ -6895,84 +6895,6 @@
       },
       "title": "购买宝箱响应"
     },
-    "gameBuyChapterItemRequest": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "title": "商品ID（唯一标识）"
-        }
-      },
-      "title": "购买章节商品请求"
-    },
-    "gameBuyChapterItemResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "msg": {
-          "type": "string"
-        },
-        "reward": {
-          "$ref": "#/definitions/gameReward"
-        },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet"
-        },
-        "inventoryUpdated": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameItem"
-          }
-        },
-        "chapterShopData": {
-          "$ref": "#/definitions/gameChapterShopData",
-          "title": "更新后的章节商店"
-        }
-      },
-      "title": "购买章节商品响应"
-    },
-    "gameBuyGemItemRequest": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "title": "商品ID（唯一标识）"
-        }
-      },
-      "title": "购买钻石商品请求"
-    },
-    "gameBuyGemItemResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "msg": {
-          "type": "string"
-        },
-        "reward": {
-          "$ref": "#/definitions/gameReward"
-        },
-        "walletUpdated": {
-          "$ref": "#/definitions/gameWallet"
-        },
-        "inventoryUpdated": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/gameItem"
-          }
-        },
-        "gemShopData": {
-          "$ref": "#/definitions/gameGemShopData",
-          "title": "更新后的钻石商店"
-        }
-      },
-      "title": "购买钻石商品响应"
-    },
     "gameBuyShopItemRequest": {
       "type": "object",
       "properties": {
@@ -7030,7 +6952,7 @@
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/gameShopItem"
+            "$ref": "#/definitions/gameShopChapterItem"
           },
           "title": "章节商品列表"
         }
@@ -7052,6 +6974,9 @@
         "rewardClaimed": {
           "type": "boolean",
           "title": "当前领奖状态"
+        },
+        "price": {
+          "type": "string"
         }
       },
       "title": "VIP状态"
@@ -7088,12 +7013,54 @@
       },
       "title": "分享后领取战斗奖励响应"
     },
+    "gameClaimChapterItemRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "商品ID（唯一标识）"
+        }
+      },
+      "title": "领取已购买章节商品请求"
+    },
+    "gameClaimChapterItemResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
+        },
+        "shopItem": {
+          "$ref": "#/definitions/gameShopChapterItem",
+          "title": "领取的章节商品"
+        }
+      },
+      "title": "购买章节商品响应"
+    },
     "gameClaimFirstChargeRewardRequest": {
       "type": "object",
       "properties": {
-        "day": {
-          "type": "integer",
-          "format": "int32",
+        "days": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
           "title": "要领取的天数（1-7）"
         }
       },
@@ -7134,6 +7101,45 @@
         }
       },
       "title": "领取首冲奖励响应"
+    },
+    "gameClaimGemItemRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "商品ID（唯一标识）"
+        }
+      },
+      "title": "领取已购买钻石商品请求"
+    },
+    "gameClaimGemItemResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
+        },
+        "shopItem": {
+          "$ref": "#/definitions/gameShopGemItem",
+          "title": "领取的钻石商品"
+        }
+      },
+      "title": "购买钻石商品响应"
     },
     "gameClaimInviteRewardRequest": {
       "type": "object",
@@ -7358,9 +7364,12 @@
     "gameClaimSevenDayRewardRequest": {
       "type": "object",
       "properties": {
-        "day": {
-          "type": "integer",
-          "format": "int32",
+        "days": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
           "title": "要领取的天数（0-7，0表示立即获得）"
         }
       },
@@ -7607,7 +7616,7 @@
         "items": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/gameShopItem"
+            "$ref": "#/definitions/gameShopGemItem"
           },
           "title": "钻石商品列表"
         }
@@ -7644,6 +7653,10 @@
           "type": "integer",
           "format": "int32",
           "title": "当前可领取的天数（例如第3天可以领1、2、3天的奖励）"
+        },
+        "price": {
+          "type": "string",
+          "title": "人民币购买价格"
         }
       },
       "title": "获取首冲状态响应"
@@ -7710,6 +7723,10 @@
           "type": "integer",
           "format": "int32",
           "title": "总购买次数"
+        },
+        "price": {
+          "type": "string",
+          "title": "人民币购买价格"
         }
       },
       "title": "获取七日购买状态响应"
@@ -7962,11 +7979,10 @@
         "FREE",
         "COIN",
         "GEM",
-        "AD",
-        "IAP"
+        "AD"
       ],
       "default": "FREE",
-      "description": "- FREE: 免费\n - COIN: 金币\n - GEM: 钻石\n - AD: 广告\n - IAP: IAP 直购",
+      "description": "- FREE: 免费\n - COIN: 金币\n - GEM: 钻石\n - AD: 广告",
       "title": "商店相关消息定义"
     },
     "gamePurchaseRequest": {
@@ -8105,6 +8121,43 @@
       },
       "title": "奖励数据"
     },
+    "gameShopChapterItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "配置表ID"
+        },
+        "levelId": {
+          "type": "string",
+          "title": "章节id"
+        },
+        "price": {
+          "type": "string",
+          "title": "价格"
+        },
+        "rewardId": {
+          "type": "string",
+          "title": "奖励id"
+        },
+        "maxBuyCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "最大购买次数"
+        },
+        "boughtCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "已购买次数"
+        },
+        "claimedCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "已领多少次"
+        }
+      },
+      "title": "章节商店（IAP直购）"
+    },
     "gameShopData": {
       "type": "object",
       "properties": {
@@ -8117,6 +8170,35 @@
         }
       },
       "title": "完整商店数据"
+    },
+    "gameShopGemItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "配置表ID"
+        },
+        "num": {
+          "type": "integer",
+          "format": "int32",
+          "title": "获得钻石数量"
+        },
+        "price": {
+          "type": "string",
+          "title": "价格"
+        },
+        "boughtCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "已购买次数"
+        },
+        "claimedCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "已领多少次"
+        }
+      },
+      "title": "钻石商店（IAP直购）"
     },
     "gameShopItem": {
       "type": "object",

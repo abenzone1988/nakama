@@ -145,9 +145,9 @@ const (
 	Nakama_GetBoxShop_FullMethodName                        = "/nakama.api.Nakama/GetBoxShop"
 	Nakama_BuyBoxItem_FullMethodName                        = "/nakama.api.Nakama/BuyBoxItem"
 	Nakama_GetChapterShop_FullMethodName                    = "/nakama.api.Nakama/GetChapterShop"
-	Nakama_BuyChapterItem_FullMethodName                    = "/nakama.api.Nakama/BuyChapterItem"
+	Nakama_ClaimChapterItem_FullMethodName                  = "/nakama.api.Nakama/ClaimChapterItem"
 	Nakama_GetGemShop_FullMethodName                        = "/nakama.api.Nakama/GetGemShop"
-	Nakama_BuyGemItem_FullMethodName                        = "/nakama.api.Nakama/BuyGemItem"
+	Nakama_ClaimGemItem_FullMethodName                      = "/nakama.api.Nakama/ClaimGemItem"
 	Nakama_EndBattle_FullMethodName                         = "/nakama.api.Nakama/EndBattle"
 	Nakama_ClaimBattleRewardByShare_FullMethodName          = "/nakama.api.Nakama/ClaimBattleRewardByShare"
 	Nakama_ClaimMoppingReward_FullMethodName                = "/nakama.api.Nakama/ClaimMoppingReward"
@@ -387,13 +387,13 @@ type NakamaClient interface {
 	// ==================== Chapter Shop (独立, IAP) ====================
 	// Get chapter shop data
 	GetChapterShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ChapterShopData, error)
-	// Buy item from chapter shop
-	BuyChapterItem(ctx context.Context, in *game.BuyChapterItemRequest, opts ...grpc.CallOption) (*game.BuyChapterItemResponse, error)
+	// Claim chapter item from chapter shop
+	ClaimChapterItem(ctx context.Context, in *game.ClaimChapterItemRequest, opts ...grpc.CallOption) (*game.ClaimChapterItemResponse, error)
 	// ==================== Gem Shop (独立, IAP) ====================
 	// Get gem shop data
 	GetGemShop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GemShopData, error)
-	// Buy item from gem shop
-	BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest, opts ...grpc.CallOption) (*game.BuyGemItemResponse, error)
+	// Claim gem item from gem shop
+	ClaimGemItem(ctx context.Context, in *game.ClaimGemItemRequest, opts ...grpc.CallOption) (*game.ClaimGemItemResponse, error)
 	// ==================== Battle & AFK ====================
 	EndBattle(ctx context.Context, in *game.EndBattleRequest, opts ...grpc.CallOption) (*game.EndBattleResponse, error)
 	ClaimBattleRewardByShare(ctx context.Context, in *game.ClaimBattleRewardByShareRequest, opts ...grpc.CallOption) (*game.ClaimBattleRewardByShareResponse, error)
@@ -1386,9 +1386,9 @@ func (c *nakamaClient) GetChapterShop(ctx context.Context, in *emptypb.Empty, op
 	return out, nil
 }
 
-func (c *nakamaClient) BuyChapterItem(ctx context.Context, in *game.BuyChapterItemRequest, opts ...grpc.CallOption) (*game.BuyChapterItemResponse, error) {
-	out := new(game.BuyChapterItemResponse)
-	err := c.cc.Invoke(ctx, Nakama_BuyChapterItem_FullMethodName, in, out, opts...)
+func (c *nakamaClient) ClaimChapterItem(ctx context.Context, in *game.ClaimChapterItemRequest, opts ...grpc.CallOption) (*game.ClaimChapterItemResponse, error) {
+	out := new(game.ClaimChapterItemResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimChapterItem_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1404,9 +1404,9 @@ func (c *nakamaClient) GetGemShop(ctx context.Context, in *emptypb.Empty, opts .
 	return out, nil
 }
 
-func (c *nakamaClient) BuyGemItem(ctx context.Context, in *game.BuyGemItemRequest, opts ...grpc.CallOption) (*game.BuyGemItemResponse, error) {
-	out := new(game.BuyGemItemResponse)
-	err := c.cc.Invoke(ctx, Nakama_BuyGemItem_FullMethodName, in, out, opts...)
+func (c *nakamaClient) ClaimGemItem(ctx context.Context, in *game.ClaimGemItemRequest, opts ...grpc.CallOption) (*game.ClaimGemItemResponse, error) {
+	out := new(game.ClaimGemItemResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimGemItem_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1802,13 +1802,13 @@ type NakamaServer interface {
 	// ==================== Chapter Shop (独立, IAP) ====================
 	// Get chapter shop data
 	GetChapterShop(context.Context, *emptypb.Empty) (*game.ChapterShopData, error)
-	// Buy item from chapter shop
-	BuyChapterItem(context.Context, *game.BuyChapterItemRequest) (*game.BuyChapterItemResponse, error)
+	// Claim chapter item from chapter shop
+	ClaimChapterItem(context.Context, *game.ClaimChapterItemRequest) (*game.ClaimChapterItemResponse, error)
 	// ==================== Gem Shop (独立, IAP) ====================
 	// Get gem shop data
 	GetGemShop(context.Context, *emptypb.Empty) (*game.GemShopData, error)
-	// Buy item from gem shop
-	BuyGemItem(context.Context, *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error)
+	// Claim gem item from gem shop
+	ClaimGemItem(context.Context, *game.ClaimGemItemRequest) (*game.ClaimGemItemResponse, error)
 	// ==================== Battle & AFK ====================
 	EndBattle(context.Context, *game.EndBattleRequest) (*game.EndBattleResponse, error)
 	ClaimBattleRewardByShare(context.Context, *game.ClaimBattleRewardByShareRequest) (*game.ClaimBattleRewardByShareResponse, error)
@@ -2162,14 +2162,14 @@ func (UnimplementedNakamaServer) BuyBoxItem(context.Context, *game.BuyBoxItemReq
 func (UnimplementedNakamaServer) GetChapterShop(context.Context, *emptypb.Empty) (*game.ChapterShopData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChapterShop not implemented")
 }
-func (UnimplementedNakamaServer) BuyChapterItem(context.Context, *game.BuyChapterItemRequest) (*game.BuyChapterItemResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BuyChapterItem not implemented")
+func (UnimplementedNakamaServer) ClaimChapterItem(context.Context, *game.ClaimChapterItemRequest) (*game.ClaimChapterItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimChapterItem not implemented")
 }
 func (UnimplementedNakamaServer) GetGemShop(context.Context, *emptypb.Empty) (*game.GemShopData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGemShop not implemented")
 }
-func (UnimplementedNakamaServer) BuyGemItem(context.Context, *game.BuyGemItemRequest) (*game.BuyGemItemResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BuyGemItem not implemented")
+func (UnimplementedNakamaServer) ClaimGemItem(context.Context, *game.ClaimGemItemRequest) (*game.ClaimGemItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimGemItem not implemented")
 }
 func (UnimplementedNakamaServer) EndBattle(context.Context, *game.EndBattleRequest) (*game.EndBattleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EndBattle not implemented")
@@ -4149,20 +4149,20 @@ func _Nakama_GetChapterShop_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Nakama_BuyChapterItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(game.BuyChapterItemRequest)
+func _Nakama_ClaimChapterItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimChapterItemRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NakamaServer).BuyChapterItem(ctx, in)
+		return srv.(NakamaServer).ClaimChapterItem(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Nakama_BuyChapterItem_FullMethodName,
+		FullMethod: Nakama_ClaimChapterItem_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).BuyChapterItem(ctx, req.(*game.BuyChapterItemRequest))
+		return srv.(NakamaServer).ClaimChapterItem(ctx, req.(*game.ClaimChapterItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4185,20 +4185,20 @@ func _Nakama_GetGemShop_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Nakama_BuyGemItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(game.BuyGemItemRequest)
+func _Nakama_ClaimGemItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimGemItemRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NakamaServer).BuyGemItem(ctx, in)
+		return srv.(NakamaServer).ClaimGemItem(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Nakama_BuyGemItem_FullMethodName,
+		FullMethod: Nakama_ClaimGemItem_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NakamaServer).BuyGemItem(ctx, req.(*game.BuyGemItemRequest))
+		return srv.(NakamaServer).ClaimGemItem(ctx, req.(*game.ClaimGemItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4977,16 +4977,16 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Nakama_GetChapterShop_Handler,
 		},
 		{
-			MethodName: "BuyChapterItem",
-			Handler:    _Nakama_BuyChapterItem_Handler,
+			MethodName: "ClaimChapterItem",
+			Handler:    _Nakama_ClaimChapterItem_Handler,
 		},
 		{
 			MethodName: "GetGemShop",
 			Handler:    _Nakama_GetGemShop_Handler,
 		},
 		{
-			MethodName: "BuyGemItem",
-			Handler:    _Nakama_BuyGemItem_Handler,
+			MethodName: "ClaimGemItem",
+			Handler:    _Nakama_ClaimGemItem_Handler,
 		},
 		{
 			MethodName: "EndBattle",

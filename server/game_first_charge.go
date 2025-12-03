@@ -29,6 +29,14 @@ func (s *ApiServer) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstC
 		availableDays = calculateAvailableDays(firstChargeData.ChargeTime)
 	}
 
+	tplPays := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
+		return tp.ID == FirstChargeProductID
+	})
+	if tplPays == nil {
+		return nil, fmt.Errorf("商品不存在: %s", FirstChargeProductID)
+	}
+	tplPay := tplPays.Get(0)
+
 	return &game.GetFirstChargeStatusResponse{
 		Code:          0,
 		Msg:           "Success",
@@ -36,19 +44,36 @@ func (s *ApiServer) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstC
 		ChargeTime:    firstChargeData.ChargeTime,
 		ClaimedDays:   firstChargeData.ClaimedDays,
 		AvailableDays: availableDays,
+		Price:         tplPay.Money,
 	}, nil
 }
 
-// ClaimFirstChargeReward 领取首冲奖励
+// ClaimFirstChargeReward 领取首冲奖励（支持批量领取）
 func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFirstChargeRewardRequest) (*game.ClaimFirstChargeRewardResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	// 验证天数参数
-	if in.Day < 1 || in.Day > 3 {
+	// 验证天数参数数组
+	if len(in.Days) == 0 {
 		return &game.ClaimFirstChargeRewardResponse{
 			Code: 1,
-			Msg:  "无效的天数参数",
+			Msg:  "天数参数不能为空",
 		}, nil
+	}
+
+	// 验证所有天数参数 (1-3) 并去重
+	daySet := make(map[int32]struct{})
+	var validDays []int32
+	for _, day := range in.Days {
+		if day < 1 || day > 3 {
+			return &game.ClaimFirstChargeRewardResponse{
+				Code: 1,
+				Msg:  fmt.Sprintf("无效的天数参数: %d（有效范围：1-3）", day),
+			}, nil
+		}
+		if _, exists := daySet[day]; !exists {
+			daySet[day] = struct{}{}
+			validDays = append(validDays, day)
+		}
 	}
 
 	// 从 storage 加载首冲数据
@@ -66,48 +91,83 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 		}, nil
 	}
 
-	// 检查是否已领取过该天的奖励
+	// 计算当前可领取的天数
+	availableDays := calculateAvailableDays(firstChargeData.ChargeTime)
+
+	// 构建已领取天数的集合，用于快速查找
+	claimedSet := make(map[int32]struct{}, len(firstChargeData.ClaimedDays))
 	for _, claimedDay := range firstChargeData.ClaimedDays {
-		if claimedDay == in.Day {
+		claimedSet[claimedDay] = struct{}{}
+	}
+
+	// 验证所有天数是否可领取
+	var toClaimDays []int32
+	var alreadyClaimedDays []int32
+	for _, day := range validDays {
+		// 检查是否已领取
+		if _, claimed := claimedSet[day]; claimed {
+			alreadyClaimedDays = append(alreadyClaimedDays, day)
+			continue
+		}
+
+		// 检查是否在可领取范围内
+		if day > availableDays {
 			return &game.ClaimFirstChargeRewardResponse{
-				Code: 3,
-				Msg:  "该奖励已领取",
+				Code: 4,
+				Msg:  fmt.Sprintf("第%d天的奖励尚未解锁，当前只能领取第%d天及之前的奖励", day, availableDays),
 			}, nil
+		}
+
+		toClaimDays = append(toClaimDays, day)
+	}
+
+	// 如果所有天数都已领取
+	if len(toClaimDays) == 0 {
+		return &game.ClaimFirstChargeRewardResponse{
+			Code: 3,
+			Msg:  fmt.Sprintf("这些奖励已领取: %v", alreadyClaimedDays),
+		}, nil
+	}
+
+	// 收集所有有效的奖励配置
+	var allRewards []*game.Reward
+	for _, day := range toClaimDays {
+		reward, err := s.getFirstChargeReward(day)
+		if err != nil {
+			s.logger.Error("获取首冲奖励配置失败", zap.Error(err), zap.Int32("day", day))
+			return &game.ClaimFirstChargeRewardResponse{
+				Code: 5,
+				Msg:  fmt.Sprintf("第%d天的奖励配置不存在", day),
+			}, nil
+		}
+		allRewards = append(allRewards, reward)
+	}
+
+	// 合并所有奖励
+	var mergedReward *game.Reward
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	if len(allRewards) > 0 {
+		mergedReward = MergeRewards(allRewards)
+		if mergedReward != nil {
+			// 发放奖励
+			source := fmt.Sprintf("first_charge_merged:%v", toClaimDays)
+			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
+			if err != nil {
+				s.logger.Error("发放首冲奖励失败", zap.Error(err), zap.Int32s("days", toClaimDays))
+				return &game.ClaimFirstChargeRewardResponse{
+					Code: 6,
+					Msg:  "发放奖励失败",
+				}, nil
+			}
+			walletUpdateResult = wResult
+			inventoryUpdateResult = iResult
 		}
 	}
 
-	// 计算当前可领取的天数
-	availableDays := calculateAvailableDays(firstChargeData.ChargeTime)
-	if in.Day > availableDays {
-		return &game.ClaimFirstChargeRewardResponse{
-			Code: 4,
-			Msg:  fmt.Sprintf("当前只能领取第%d天及之前的奖励", availableDays),
-		}, nil
-	}
-
-	// 获取奖励配置
-	reward, err := s.getFirstChargeReward(in.Day)
-	if err != nil {
-		s.logger.Error("获取首冲奖励配置失败", zap.Error(err), zap.Int32("day", in.Day))
-		return &game.ClaimFirstChargeRewardResponse{
-			Code: 5,
-			Msg:  "奖励配置不存在",
-		}, nil
-	}
-
-	// 发放奖励
-	source := fmt.Sprintf("first_charge_day_%d", in.Day)
-	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-	if err != nil {
-		s.logger.Error("发放首冲奖励失败", zap.Error(err), zap.Int32("day", in.Day))
-		return &game.ClaimFirstChargeRewardResponse{
-			Code: 6,
-			Msg:  "发放奖励失败",
-		}, nil
-	}
-
 	// 更新已领取天数
-	firstChargeData.ClaimedDays = append(firstChargeData.ClaimedDays, in.Day)
+	firstChargeData.ClaimedDays = append(firstChargeData.ClaimedDays, toClaimDays...)
 	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, firstChargeData); err != nil {
 		s.logger.Error("保存首冲数据失败", zap.Error(err))
 		return &game.ClaimFirstChargeRewardResponse{
@@ -120,21 +180,21 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
 
-	if walletResult != nil {
-		walletUpdated = walletResult.Updated
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
 	}
-	if inventoryResult != nil {
-		inventoryUpdated = inventoryResult.Updated
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
 	}
 
 	s.logger.Info("首冲奖励领取成功",
 		zap.String("user_id", userID.String()),
-		zap.Int32("day", in.Day))
+		zap.Int32s("days", toClaimDays))
 
 	return &game.ClaimFirstChargeRewardResponse{
 		Code:             0,
 		Msg:              "Success",
-		Reward:           reward,
+		Reward:           mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 		ClaimedDays:      firstChargeData.ClaimedDays,

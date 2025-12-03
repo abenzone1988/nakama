@@ -9,11 +9,9 @@ import (
 )
 
 type TplPay struct {
-	Ext         string `json:"ext"`
 	ID          string `json:"id"`
-	Money       int32  `json:"money"`
+	Money       string `json:"money"`
 	ProductName string `json:"productName"`
-	ProductType int32  `json:"productType"`
 }
 
 // ReadOnlyTplPaySlice 只读TplPay切片接口

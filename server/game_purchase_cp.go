@@ -44,7 +44,7 @@ func (s *ApiServer) PurchaseTest(ctx context.Context, in *game.PurchaseRequest) 
 	}
 
 	// 返回成功
-	s.logger.Info("测试购买通知处理成功", zap.String("order_id", req.OrderID))
+	s.logger.Info("测试购买通知处理成功", zap.String("cp_order_id", req.CPOrderID))
 	return &game.PurchaseResponse{
 		Code: 0,
 		Msg:  "success",

@@ -6,14 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -254,19 +257,13 @@ func (s *ApiServer) processPurchaseDelivery(ctx context.Context, req *PurchaseNo
 		return nil
 	}
 
-	// 3. 将订单金额转换为整数（元）
-	orderMoneyFloat, err := strconv.ParseFloat(req.OrderMoney, 64)
-	if err != nil {
-		return fmt.Errorf("订单金额格式错误: %w", err)
-	}
-
 	// 4. 记录购买到数据库（复用现有的 upsertPurchases 函数）
 	if err := s.recordThirdPartyPurchase(ctx, userID, req); err != nil {
 		return fmt.Errorf("记录购买失败: %w", err)
 	}
 
 	// 5. 执行实际的发货逻辑
-	if err := s.deliverProductToUser(ctx, userID, req.ProductID, orderMoneyFloat, req); err != nil {
+	if err := s.deliverProductToUser(ctx, userID, req.ProductID, req.OrderMoney, req); err != nil {
 		// 发货失败，但购买记录已保存，可以通过后台补发
 		s.logger.Error("发货失败，需要人工处理",
 			zap.Error(err),
@@ -348,155 +345,307 @@ func (s *ApiServer) recordThirdPartyPurchase(ctx context.Context, userID uuid.UU
 	return nil
 }
 
+// 验证商品是否存在和价格是否匹配
+func (s *ApiServer) validateProduct(productID string, price string) (*template.TplPay, error) {
+	tplPays := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
+		return tp.ID == productID
+	})
+	if tplPays == nil {
+		return nil, fmt.Errorf("商品不存在: %s", productID)
+	}
+	tplPay := tplPays.Get(0)
+	expectedPrice, err1 := strconv.ParseFloat(tplPay.Money, 64)
+	actualPrice, err2 := strconv.ParseFloat(price, 64)
+	if err1 != nil || err2 != nil {
+		return nil, fmt.Errorf("商品价格解析失败: %s", productID)
+	}
+	// 允许浮点误差, 例如1分（0.01）以内认为相同
+	if math.Abs(expectedPrice-actualPrice) > 0.01 {
+		return nil, fmt.Errorf("商品价格不匹配: %s", productID)
+	}
+	return &tplPay, nil
+}
+
+// deliverFirstChargeProduct 处理首冲商品发货
+func (s *ApiServer) deliverFirstChargeProduct(ctx context.Context, userID uuid.UUID, productID string, price string) error {
+	if err := RecordFirstCharge(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID); err != nil {
+		s.logger.Error("记录首冲失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()),
+			zap.String("product_id", productID))
+		// 首冲记录失败不影响发货流程，继续处理
+	} else {
+		s.logger.Info("首冲记录成功",
+			zap.String("user_id", userID.String()),
+			zap.String("product_id", productID),
+			zap.String("price", price))
+	}
+	return nil
+}
+
+// deliverVipProduct 处理VIP购买发货
+func (s *ApiServer) deliverVipProduct(ctx context.Context, userID uuid.UUID, productID string) error {
+	username := userID.String()
+	users, err := GetUsers(ctx, s.logger, s.db, s.statusRegistry, []string{userID.String()}, nil, nil)
+	if err == nil && users != nil && len(users.Users) > 0 && users.Users[0] != nil && users.Users[0].Username != "" {
+		username = users.Users[0].Username
+	}
+
+	expiryTime := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC) // 视为永久
+	if _, err := VipAccountAdd(ctx, s.logger, s.db, userID, username, expiryTime); err != nil {
+		if err == ErrVipAccountAlreadyExists {
+			s.logger.Info("VIP账户已存在，刷新有效期",
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID))
+		} else {
+			s.logger.Error("记录VIP购买失败",
+				zap.Error(err),
+				zap.String("user_id", userID.String()),
+				zap.String("product_id", productID))
+		}
+	} else {
+		s.logger.Info("VIP购买记录成功",
+			zap.String("user_id", userID.String()),
+			zap.String("product_id", productID),
+			zap.Time("vip_expiry", expiryTime))
+	}
+
+	// 重置VIP奖励领取状态
+	vipRewardData := &VipRewardData{}
+	vipRewardData.Init()
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, vipRewardData); err != nil {
+		s.logger.Error("重置VIP奖励状态失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()))
+	}
+	return nil
+}
+
+// deliverSevenDayProduct 处理七日购买发货
+func (s *ApiServer) deliverSevenDayProduct(ctx context.Context, userID uuid.UUID, productID string, price string) error {
+	if err := s.RecordSevenDayPurchase(ctx, userID); err != nil {
+		s.logger.Error("记录七日购买失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()),
+			zap.String("product_id", productID))
+		// 记录失败不影响发货流程，继续处理
+	} else {
+		s.logger.Info("七日购买记录成功",
+			zap.String("user_id", userID.String()),
+			zap.String("product_id", productID),
+			zap.String("price", price))
+	}
+	return nil
+}
+
+// deliverShopGemProduct 处理钻石商店商品购买发货
+func (s *ApiServer) deliverShopGemProduct(ctx context.Context, userID uuid.UUID, productID string, price string) error {
+	// 通过 productID（TplPay.ID）找到对应的商店商品
+	gemItems := s.template.GetTplShopGemItem().FindByFilter(func(item template.TplShopGemItem) bool {
+		return item.PayID == productID
+	})
+
+	if gemItems == nil || gemItems.Len() == 0 {
+		s.logger.Warn("未找到对应的钻石商店商品",
+			zap.String("product_id", productID),
+			zap.String("user_id", userID.String()))
+		return fmt.Errorf("未找到对应的钻石商店商品: %s", productID)
+	}
+
+	// 获取第一个匹配的商品（通常应该只有一个）
+	tplGemItem := gemItems.Get(0)
+	shopItemID := tplGemItem.ID
+
+	// 加载钻石商店数据
+	gemShopData := &GemShopData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, gemShopData); err != nil {
+		s.logger.Error("加载钻石商店数据失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()))
+		gemShopData.Init()
+	}
+
+	// 确保 BoughtCounts 不为 nil
+	if gemShopData.BoughtCounts == nil {
+		gemShopData.BoughtCounts = make(map[string]int32)
+	}
+
+	// 增加购买次数
+	gemShopData.BoughtCounts[shopItemID] = gemShopData.BoughtCounts[shopItemID] + 1
+
+	// 保存商店数据
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, gemShopData); err != nil {
+		s.logger.Error("保存钻石商店数据失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()),
+			zap.String("shop_item_id", shopItemID))
+		return fmt.Errorf("保存钻石商店数据失败: %w", err)
+	}
+
+	s.logger.Info("钻石商店商品购买记录成功",
+		zap.String("user_id", userID.String()),
+		zap.String("product_id", productID),
+		zap.String("shop_item_id", shopItemID),
+		zap.String("price", price),
+		zap.Int32("bought_count", gemShopData.BoughtCounts[shopItemID]))
+
+	return nil
+}
+
+// deliverShopChapterProduct 处理章节商店商品购买发货
+func (s *ApiServer) deliverShopChapterProduct(ctx context.Context, userID uuid.UUID, productID string, price string) error {
+	// 通过 productID（TplPay.ID）找到对应的商店商品
+	chapterItems := s.template.GetTplShopChapterItem().FindByFilter(func(item template.TplShopChapterItem) bool {
+		return item.PayID == productID
+	})
+
+	if chapterItems == nil || chapterItems.Len() == 0 {
+		s.logger.Warn("未找到对应的章节商店商品",
+			zap.String("product_id", productID),
+			zap.String("user_id", userID.String()))
+		return fmt.Errorf("未找到对应的章节商店商品: %s", productID)
+	}
+
+	// 获取第一个匹配的商品（通常应该只有一个）
+	tplChapterItem := chapterItems.Get(0)
+	shopItemID := tplChapterItem.ID
+
+	// 加载章节商店数据
+	chapterShopData := &ChapterShopData{}
+	if err := LoadData(ctx, s.logger, s.db, userID, chapterShopData); err != nil {
+		s.logger.Error("加载章节商店数据失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()))
+		chapterShopData.Init()
+	}
+
+	// 确保 BoughtCounts 不为 nil
+	if chapterShopData.BoughtCounts == nil {
+		chapterShopData.BoughtCounts = make(map[string]int32)
+	}
+
+	// 增加购买次数
+	chapterShopData.BoughtCounts[shopItemID] = chapterShopData.BoughtCounts[shopItemID] + 1
+
+	// 保存商店数据
+	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, chapterShopData); err != nil {
+		s.logger.Error("保存章节商店数据失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()),
+			zap.String("shop_item_id", shopItemID))
+		return fmt.Errorf("保存章节商店数据失败: %w", err)
+	}
+
+	s.logger.Info("章节商店商品购买记录成功",
+		zap.String("user_id", userID.String()),
+		zap.String("product_id", productID),
+		zap.String("shop_item_id", shopItemID),
+		zap.String("price", price),
+		zap.Int32("bought_count", chapterShopData.BoughtCounts[shopItemID]))
+
+	return nil
+}
+
+// sendPurchaseNotification 发送购买成功通知给用户
+func (s *ApiServer) sendPurchaseNotification(ctx context.Context, userID uuid.UUID, productName string, price string, orderID string) error {
+	content := map[string]interface{}{
+		"description": fmt.Sprintf(`{"商品":"%s", "价格":"%s","订单id":"%s"}`, productName, price, orderID),
+	}
+
+	contentBytes, err := json.Marshal(content)
+	if err != nil {
+		s.logger.Error("序列化通知内容失败", zap.Error(err))
+		return err
+	}
+
+	// 创建通知
+	notification := &api.Notification{
+		Id:         uuid.Must(uuid.NewV4()).String(),
+		Subject:    "购买成功",
+		Content:    string(contentBytes),
+		Code:       NotificationSystemNotice,
+		SenderId:   uuid.Nil.String(),
+		CreateTime: timestamppb.Now(),
+		Persistent: true,
+	}
+
+	// 发送通知
+	notifications := make(map[uuid.UUID][]*api.Notification)
+	notifications[userID] = []*api.Notification{notification}
+
+	err = NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
+	if err != nil {
+		s.logger.Error("发送奖励通知失败",
+			zap.String("user_id", userID.String()),
+			zap.Any("notification", notification),
+			zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
 // deliverProductToUser 向用户发放商品
-func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, productID string, price float64, req *PurchaseNotifyRequest) error {
+func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, productID string, price string, req *PurchaseNotifyRequest) error {
 	// 检测是否为特殊商品
 	isFirstCharge := productID == FirstChargeProductID
 	isVipPurchase := productID == VipProductID
 	isSevenDayPurchase := productID == SevenDayProductID
+	isShopGem := strings.HasPrefix(productID, "shopGem")
+	isShopChapter := strings.HasPrefix(productID, "chapter")
 
-	if (isFirstCharge || isVipPurchase || isSevenDayPurchase) && ctx.Value(ctxUserIDKey{}) == nil {
+	if (isFirstCharge || isVipPurchase || isSevenDayPurchase || isShopGem || isShopChapter) && ctx.Value(ctxUserIDKey{}) == nil {
 		ctx = context.WithValue(ctx, ctxUserIDKey{}, userID)
 	}
 
-	tplPay := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
-		return tp.ID == productID
-	})
-	if tplPay == nil {
-		return fmt.Errorf("商品不存在: %s", productID)
+	// 验证商品
+	tplPay, err := s.validateProduct(productID, price)
+	if err != nil {
+		return err
 	}
 
-	money := float64(tplPay.Get(0).Money)
-
-	if money != price {
-		return fmt.Errorf("商品价格不匹配: %s", productID)
-	}
-
-	// 如果是首冲，记录首冲状态
+	// 根据商品类型执行不同的发货逻辑
 	if isFirstCharge {
-		if err := RecordFirstCharge(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID); err != nil {
-			s.logger.Error("记录首冲失败",
-				zap.Error(err),
-				zap.String("user_id", userID.String()),
-				zap.String("product_id", productID))
+		if err := s.deliverFirstChargeProduct(ctx, userID, productID, price); err != nil {
 			// 首冲记录失败不影响发货流程，继续处理
-		} else {
-			s.logger.Info("首冲记录成功",
-				zap.String("user_id", userID.String()),
-				zap.String("product_id", productID),
-				zap.Float64("price", price))
 		}
 	}
 
-	// 如果是VIP购买，记录VIP状态并解锁奖励
 	if isVipPurchase {
-		username := userID.String()
-		users, err := GetUsers(ctx, s.logger, s.db, s.statusRegistry, []string{userID.String()}, nil, nil)
-		if err == nil && users != nil && len(users.Users) > 0 && users.Users[0] != nil && users.Users[0].Username != "" {
-			username = users.Users[0].Username
-		}
-
-		expiryTime := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC) // 视为永久
-		if _, err := VipAccountAdd(ctx, s.logger, s.db, userID, username, expiryTime); err != nil {
-			if err == ErrVipAccountAlreadyExists {
-				s.logger.Info("VIP账户已存在，刷新有效期",
-					zap.String("user_id", userID.String()),
-					zap.String("product_id", productID))
-			} else {
-				s.logger.Error("记录VIP购买失败",
-					zap.Error(err),
-					zap.String("user_id", userID.String()),
-					zap.String("product_id", productID))
-			}
-		} else {
-			s.logger.Info("VIP购买记录成功",
-				zap.String("user_id", userID.String()),
-				zap.String("product_id", productID),
-				zap.Time("vip_expiry", expiryTime))
-		}
-
-		// 重置VIP奖励领取状态
-		vipRewardData := &VipRewardData{}
-		vipRewardData.Init()
-		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, vipRewardData); err != nil {
-			s.logger.Error("重置VIP奖励状态失败",
-				zap.Error(err),
-				zap.String("user_id", userID.String()))
+		if err := s.deliverVipProduct(ctx, userID, productID); err != nil {
+			// VIP购买记录失败不影响发货流程，继续处理
 		}
 	}
 
-	// 如果是七日购买，记录购买状态
 	if isSevenDayPurchase {
-		if err := s.RecordSevenDayPurchase(ctx, userID); err != nil {
-			s.logger.Error("记录七日购买失败",
-				zap.Error(err),
-				zap.String("user_id", userID.String()),
-				zap.String("product_id", productID))
-			// 记录失败不影响发货流程，继续处理
-		} else {
-			s.logger.Info("七日购买记录成功",
-				zap.String("user_id", userID.String()),
-				zap.String("product_id", productID),
-				zap.Float64("price", price))
+		if err := s.deliverSevenDayProduct(ctx, userID, productID, price); err != nil {
+			// 七日购买记录失败不影响发货流程，继续处理
 		}
 	}
 
-	// TODO: 根据实际业务逻辑实现其他发货
-	// 方式1: 通过钱包系统发放虚拟货币
-	// changeset := map[string]int64{
-	// 	"coins": int64(amount * 100), // 转换为游戏币
-	// }
-	// _, _, err := UpdateWallets(ctx, s.logger, s.db, userID, changeset, nil, true)
-	// if err != nil {
-	// 	return fmt.Errorf("更新钱包失败: %w", err)
-	// }
-
-	// 方式2: 通过存储系统发放道具
-	// ops := []*api.WriteStorageObject{
-	// 	{
-	// 		Collection: "purchases",
-	// 		Key:        req.CPOrderID,
-	// 		Value:      string(rawData),
-	// 		PermissionRead: 1,
-	// 		PermissionWrite: 0,
-	// 	},
-	// }
-	// _, _, err := StorageWriteObjects(ctx, s.logger, s.db, s.metrics, s.storageIndex, true, ops)
-	// if err != nil {
-	// 	return fmt.Errorf("写入存储失败: %w", err)
-	// }
-
-	// 方式3: 通过Runtime调用自定义发货逻辑
-	// if s.runtime != nil {
-	// 	// 调用Lua/Go模块中的自定义发货函数
-	// 	// result, err := s.runtime.InvokeFunction(...)
-	// }
-
-	// 方式4: 发送通知给用户
-	notifications := []*api.Notification{
-		{
-			Id:         uuid.Must(uuid.NewV4()).String(),
-			Subject:    "购买成功",
-			Content:    fmt.Sprintf(`{"product_id":"%s","price":"%.2f","order_id":"%s","is_first_charge":%t,"is_vip":%t}`, productID, price, req.CPOrderID, isFirstCharge, isVipPurchase),
-			Code:       100, // 自定义通知代码
-			SenderId:   uuid.Nil.String(),
-			Persistent: true,
-		},
+	if isShopGem {
+		if err := s.deliverShopGemProduct(ctx, userID, productID, price); err != nil {
+			// 钻石购买记录失败不影响发货流程，继续处理
+		}
 	}
 
-	// 发送通知（需要实现 NotificationSend 函数调用）
-	// err := NotificationSend(ctx, s.logger, s.db, s.messageRouter, notifications, userID)
-	// if err != nil {
-	// 	s.logger.Warn("发送通知失败", zap.Error(err))
-	// }
+	if isShopChapter {
+		if err := s.deliverShopChapterProduct(ctx, userID, productID, price); err != nil {
+			// 章节购买记录失败不影响发货流程，继续处理
+		}
+	}
+
+	// 发送通知给用户
+	if err := s.sendPurchaseNotification(ctx, userID, tplPay.ProductName, price, req.CPOrderID); err != nil {
+		// 通知发送失败不影响发货流程，记录日志即可
+	}
 
 	s.logger.Info("商品发放完成",
 		zap.String("user_id", userID.String()),
 		zap.String("product_id", productID),
-		zap.Float64("price", price),
+		zap.String("price", price),
 		zap.Bool("is_first_charge", isFirstCharge),
-		zap.Bool("is_vip_purchase", isVipPurchase),
-		zap.Any("notifications", notifications))
+		zap.Bool("is_vip_purchase", isVipPurchase))
 
 	return nil
 }

@@ -16,9 +16,11 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
+	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -45,6 +47,14 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 		return nil, status.Error(codes.Internal, "Failed to check VIP status.")
 	}
 
+	tplPays := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
+		return tp.ID == VipProductID
+	})
+	if tplPays == nil {
+		return nil, fmt.Errorf("商品不存在: %s", VipProductID)
+	}
+	tplPay := tplPays.Get(0)
+
 	response := &game.CheckVipStatusResponse{}
 
 	// 如果用户是VIP，添加签名
@@ -57,6 +67,7 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 			return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
 		}
 		response.RewardClaimed = vipRewardData.RewardClaimed
+		response.Price = tplPay.Money
 	}
 
 	return response, nil

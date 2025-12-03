@@ -233,7 +233,8 @@ func (d *ShopData) Init() {
 // ChapterShopData 章节商店数据
 type ChapterShopData struct {
 	BaseStorable
-	BoughtCounts map[string]int32 `json:"bought_counts"` // key: shopItemID, value: boughtCount
+	BoughtCounts  map[string]int32 `json:"bought_counts"`  // key: shopItemID, value: boughtCount
+	ClaimedCounts map[string]int32 `json:"claimed_counts"` // key: shopItemID, value: claimedCount
 }
 
 func (d *ChapterShopData) GetCollection() string {
@@ -246,13 +247,15 @@ func (d *ChapterShopData) GetKey() string {
 
 func (d *ChapterShopData) Init() {
 	d.BoughtCounts = make(map[string]int32)
+	d.ClaimedCounts = make(map[string]int32)
 	d.SetVersion("")
 }
 
 // GemShopData 钻石商店数据（独立存储，只保存购买次数）
 type GemShopData struct {
 	BaseStorable
-	BoughtCounts map[string]int32 `json:"bought_counts"` // key: shopItemID, value: boughtCount
+	BoughtCounts  map[string]int32 `json:"bought_counts"`  // key: shopItemID, value: boughtCount
+	ClaimedCounts map[string]int32 `json:"claimed_counts"` // key: shopItemID, value: claimedCount
 }
 
 func (d *GemShopData) GetCollection() string {
@@ -265,6 +268,7 @@ func (d *GemShopData) GetKey() string {
 
 func (d *GemShopData) Init() {
 	d.BoughtCounts = make(map[string]int32)
+	d.ClaimedCounts = make(map[string]int32)
 	d.SetVersion("")
 }
 

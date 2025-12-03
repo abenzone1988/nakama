@@ -927,10 +927,10 @@ service Nakama {
     option (google.api.http).get = "/v2/game/shop/chapter";
   }
 
-  // Buy item from chapter shop
-  rpc BuyChapterItem(game.BuyChapterItemRequest) returns (game.BuyChapterItemResponse) {
+  // Claim chapter item from chapter shop
+  rpc ClaimChapterItem(game.ClaimChapterItemRequest) returns (game.ClaimChapterItemResponse) {
     option (google.api.http) = {
-      post: "/v2/game/shop/chapter/buy"
+      post: "/v2/game/shop/chapter/claim"
       body: "*"
     };
   }
@@ -941,10 +941,10 @@ service Nakama {
     option (google.api.http).get = "/v2/game/shop/gem";
   }
 
-  // Buy item from gem shop
-  rpc BuyGemItem(game.BuyGemItemRequest) returns (game.BuyGemItemResponse) {
+  // Claim gem item from gem shop
+  rpc ClaimGemItem(game.ClaimGemItemRequest) returns (game.ClaimGemItemResponse) {
     option (google.api.http) = {
-      post: "/v2/game/shop/gem/buy"
+      post: "/v2/game/shop/gem/claim"
       body: "*"
     };
   }
