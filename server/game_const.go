@@ -47,6 +47,9 @@ const (
 	VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
 )
 
+// 邀请奖励id
+const InviteRewardID = "InviteReward"
+
 // 每日签到相关常量
 const (
 	DailySignInTotalDays = 30

@@ -60,7 +60,7 @@ func (s *ApiServer) GetGemShop(ctx context.Context, in *emptypb.Empty) (*game.Ge
 	return convertToProtoGemShop(gemShopData, s.template), nil
 }
 
-// BuyChapterItem 购买章节商品（独立接口，IAP）
+// 购买章节商品（独立接口，IAP）
 func (s *ApiServer) ClaimChapterItem(ctx context.Context, in *game.ClaimChapterItemRequest) (*game.ClaimChapterItemResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
@@ -153,7 +153,7 @@ func (s *ApiServer) ClaimChapterItem(ctx context.Context, in *game.ClaimChapterI
 	return response, nil
 }
 
-// BuyGemItem 购买钻石商品（独立接口，IAP）
+// 购买钻石商品（独立接口，IAP）
 func (s *ApiServer) ClaimGemItem(ctx context.Context, in *game.ClaimGemItemRequest) (*game.ClaimGemItemResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 

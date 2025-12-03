@@ -87,19 +87,19 @@ func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.L
 					continue
 				}
 				// todo 通关第一关的判断
-				//inviter := users.Users[0]
-				//inviterID, _ := uuid.FromString(inviter.Id)
+				inviter := users.Users[0]
+				inviterID, _ := uuid.FromString(inviter.Id)
 
-				// 加载关卡数据
-				//homeLevelData := &HomeLevelData{}
-				//err := LoadData(ctx, s.logger, s.db, inviterID, homeLevelData)
-				//if err != nil {
-				//	s.logger.Info("邀请人HomeLevelData 加载失败", zap.String("share_id", inviter.Id))
-				//	continue
-				//}
-				//if homeLevelData.MaxLevelId >= "L10011" {
-				//	resp.InviteeIds = append(resp.InviteeIds, v.Invitee)
-				//}
+				//加载关卡数据
+				homeLevelData := &HomeLevelData{}
+				err := LoadData(ctx, s.logger, s.db, inviterID, homeLevelData)
+				if err != nil {
+					s.logger.Info("邀请人HomeLevelData 加载失败", zap.String("share_id", inviter.Id))
+					continue
+				}
+				if homeLevelData.CurLevelId >= "L1001" {
+					resp.InviteeIds = append(resp.InviteeIds, v.Invitee)
+				}
 			}
 		}
 	}
@@ -113,13 +113,38 @@ func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteR
 		return nil, err
 	}
 
+	// 收集所有需要发放的奖励
+	var allRewards []*game.Reward
+	var validInviteeIds []string
+
 	for _, v := range in.InviteeIds {
 		entry, exists := inviterData.List[v]
 		if !exists {
 			return nil, fmt.Errorf("inviter ID %s does not exist in the list", v)
 		}
 		if !entry.RewardClaimed {
-			inviterData.List[v].RewardClaimed = true
+			// 获取邀请奖励配置
+			reward := GetReward(InviteRewardID, s.template.GetTplReward(), s.logger)
+			if reward != nil {
+				allRewards = append(allRewards, reward)
+				validInviteeIds = append(validInviteeIds, v)
+				inviterData.List[v].RewardClaimed = true
+			} else {
+				s.logger.Warn("邀请奖励配置不存在", zap.String("reward_id", InviteRewardID))
+			}
+		}
+	}
+
+	// 如果有有效的奖励，合并并发放
+	if len(allRewards) > 0 {
+		mergedReward := MergeRewards(allRewards)
+		if mergedReward != nil {
+			source := fmt.Sprintf("invite_reward_count_%d", len(validInviteeIds))
+			_, _, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
+			if err != nil {
+				s.logger.Error("发放邀请奖励失败", zap.Error(err), zap.Int("count", len(validInviteeIds)))
+				return nil, fmt.Errorf("发放邀请奖励失败: %w", err)
+			}
 		}
 	}
 

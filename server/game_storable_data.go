@@ -397,6 +397,24 @@ func (d *LevelBoxData) Init() {
 	d.SetVersion("")
 }
 
+//客户端的HomeLevel
+
+type HomeLevelData struct {
+	BaseStorable
+	CurLevelId string `json:"curLevelId"`
+}
+
+func (d *HomeLevelData) Init() {
+}
+
+func (d *HomeLevelData) GetCollection() string {
+	return "Home"
+}
+
+func (d *HomeLevelData) GetKey() string {
+	return "HomeData"
+}
+
 // ============================================================================
 // 邀请相关数据结构
 // ============================================================================
