@@ -532,6 +532,27 @@ func (f *ByteDirectPlay) Init() {
 	f.SetVersion("")
 }
 
+// ByteRewardData 抖音奖励数据
+type ByteRewardData struct {
+	BaseStorable
+	ShortcutRewardClaimed bool   `json:"shortcut_reward_claimed"` // 添加到桌面奖励是否已领取（仅一次）
+	EntryRewardLastDate   string `json:"entry_reward_last_date"`  // 入口有奖最后领取日期（YYYY-MM-DD）
+}
+
+func (f *ByteRewardData) GetCollection() string {
+	return "ByteGame"
+}
+
+func (f *ByteRewardData) GetKey() string {
+	return "Reward"
+}
+
+func (f *ByteRewardData) Init() {
+	f.ShortcutRewardClaimed = false
+	f.EntryRewardLastDate = ""
+	f.SetVersion("")
+}
+
 // ============================================================================
 // 家园相关数据结构
 // ============================================================================

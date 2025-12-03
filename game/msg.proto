@@ -386,6 +386,20 @@ message GetSignInRewardResponse{
   bool is_claimed_today = 4; // 今天是否已经领取了奖励
 }
 
+// 领取抖音奖励请求
+message ClaimByteRewardRequest{
+  string reward_id = 1; // 奖励ID：TTShortcutReword（添加到桌面）或 TTEntryReword（入口有奖）
+}
+
+// 领取抖音奖励响应
+message ClaimByteRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;                   // 奖励数据
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
 message OperateWalletRequest{
   enum Option {
     GAIN = 0;

@@ -821,6 +821,14 @@ service Nakama {
     };
   }
 
+  // Claim byte reward for a user (抖音奖励)
+  rpc ClaimByteReward (game.ClaimByteRewardRequest) returns (game.ClaimByteRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/byte/reward/claim"
+      body: "*"
+    };
+  }
+
   // Get Server Time
   rpc GetGameTime (google.protobuf.Empty) returns (game.GetGameTimeResponse) {
     option (google.api.http).get = "/v2/game/time";

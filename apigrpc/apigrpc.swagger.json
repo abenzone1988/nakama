@@ -1372,6 +1372,39 @@
         ]
       }
     },
+    "/v2/byte/reward/claim": {
+      "post": {
+        "summary": "Claim byte reward for a user (抖音奖励)",
+        "operationId": "Nakama_ClaimByteReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimByteRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimByteRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/channel/{channelId}": {
       "get": {
         "summary": "List a channel's message history.",
@@ -7012,6 +7045,44 @@
         }
       },
       "title": "分享后领取战斗奖励响应"
+    },
+    "gameClaimByteRewardRequest": {
+      "type": "object",
+      "properties": {
+        "rewardId": {
+          "type": "string",
+          "title": "奖励ID：TTShortcutReword（添加到桌面）或 TTEntryReword（入口有奖）"
+        }
+      },
+      "title": "领取抖音奖励请求"
+    },
+    "gameClaimByteRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取抖音奖励响应"
     },
     "gameClaimChapterItemRequest": {
       "type": "object",

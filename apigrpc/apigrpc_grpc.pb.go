@@ -129,6 +129,7 @@ const (
 	Nakama_SubmitBeInvited_FullMethodName                   = "/nakama.api.Nakama/SubmitBeInvited"
 	Nakama_ListInvitee_FullMethodName                       = "/nakama.api.Nakama/ListInvitee"
 	Nakama_ClaimInviteReward_FullMethodName                 = "/nakama.api.Nakama/ClaimInviteReward"
+	Nakama_ClaimByteReward_FullMethodName                   = "/nakama.api.Nakama/ClaimByteReward"
 	Nakama_GetGameTime_FullMethodName                       = "/nakama.api.Nakama/GetGameTime"
 	Nakama_ListPublishedAnnouncements_FullMethodName        = "/nakama.api.Nakama/ListPublishedAnnouncements"
 	Nakama_MarkNotificationsRead_FullMethodName             = "/nakama.api.Nakama/MarkNotificationsRead"
@@ -353,6 +354,8 @@ type NakamaClient interface {
 	ListInvitee(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ListInviteeResponse, error)
 	// Claim invite reward for a user.
 	ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Claim byte reward for a user (抖音奖励)
+	ClaimByteReward(ctx context.Context, in *game.ClaimByteRewardRequest, opts ...grpc.CallOption) (*game.ClaimByteRewardResponse, error)
 	// Get Server Time
 	GetGameTime(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetGameTimeResponse, error)
 	// List published announcements
@@ -1242,6 +1245,15 @@ func (c *nakamaClient) ClaimInviteReward(ctx context.Context, in *game.ClaimInvi
 	return out, nil
 }
 
+func (c *nakamaClient) ClaimByteReward(ctx context.Context, in *game.ClaimByteRewardRequest, opts ...grpc.CallOption) (*game.ClaimByteRewardResponse, error) {
+	out := new(game.ClaimByteRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimByteReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) GetGameTime(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetGameTimeResponse, error) {
 	out := new(game.GetGameTimeResponse)
 	err := c.cc.Invoke(ctx, Nakama_GetGameTime_FullMethodName, in, out, opts...)
@@ -1768,6 +1780,8 @@ type NakamaServer interface {
 	ListInvitee(context.Context, *emptypb.Empty) (*game.ListInviteeResponse, error)
 	// Claim invite reward for a user.
 	ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*emptypb.Empty, error)
+	// Claim byte reward for a user (抖音奖励)
+	ClaimByteReward(context.Context, *game.ClaimByteRewardRequest) (*game.ClaimByteRewardResponse, error)
 	// Get Server Time
 	GetGameTime(context.Context, *emptypb.Empty) (*game.GetGameTimeResponse, error)
 	// List published announcements
@@ -2113,6 +2127,9 @@ func (UnimplementedNakamaServer) ListInvitee(context.Context, *emptypb.Empty) (*
 }
 func (UnimplementedNakamaServer) ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimInviteReward not implemented")
+}
+func (UnimplementedNakamaServer) ClaimByteReward(context.Context, *game.ClaimByteRewardRequest) (*game.ClaimByteRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimByteReward not implemented")
 }
 func (UnimplementedNakamaServer) GetGameTime(context.Context, *emptypb.Empty) (*game.GetGameTimeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGameTime not implemented")
@@ -3861,6 +3878,24 @@ func _Nakama_ClaimInviteReward_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_ClaimByteReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimByteRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimByteReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimByteReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimByteReward(ctx, req.(*game.ClaimByteRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_GetGameTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -4911,6 +4946,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimInviteReward",
 			Handler:    _Nakama_ClaimInviteReward_Handler,
+		},
+		{
+			MethodName: "ClaimByteReward",
+			Handler:    _Nakama_ClaimByteReward_Handler,
 		},
 		{
 			MethodName: "GetGameTime",

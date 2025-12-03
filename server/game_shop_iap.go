@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
@@ -276,6 +278,28 @@ func convertToProtoChapterShop(data *ChapterShopData, tmpl TemplateManager, logg
 		})
 	}
 
+	// 按照商品ID由小到大排序（按数字大小排序，如果ID不是数字则按字符串排序）
+	sort.Slice(protoItems, func(i, j int) bool {
+		idI, errI := strconv.Atoi(protoItems[i].Id)
+		idJ, errJ := strconv.Atoi(protoItems[j].Id)
+
+		// 如果两个ID都是数字，按数字大小排序
+		if errI == nil && errJ == nil {
+			return idI < idJ
+		}
+
+		// 如果只有一个ID是数字，数字排在前面
+		if errI == nil {
+			return true
+		}
+		if errJ == nil {
+			return false
+		}
+
+		// 如果两个ID都不是数字，按字符串排序
+		return protoItems[i].Id < protoItems[j].Id
+	})
+
 	return &game.ChapterShopData{
 		Items: protoItems,
 	}
@@ -311,6 +335,28 @@ func convertToProtoGemShop(data *GemShopData, tmpl TemplateManager) *game.GemSho
 			ClaimedCount: claimedCount,
 		})
 	}
+
+	// 按照商品ID由小到大排序（按数字大小排序，如果ID不是数字则按字符串排序）
+	sort.Slice(protoItems, func(i, j int) bool {
+		idI, errI := strconv.Atoi(protoItems[i].Id)
+		idJ, errJ := strconv.Atoi(protoItems[j].Id)
+
+		// 如果两个ID都是数字，按数字大小排序
+		if errI == nil && errJ == nil {
+			return idI < idJ
+		}
+
+		// 如果只有一个ID是数字，数字排在前面
+		if errI == nil {
+			return true
+		}
+		if errJ == nil {
+			return false
+		}
+
+		// 如果两个ID都不是数字，按字符串排序
+		return protoItems[i].Id < protoItems[j].Id
+	})
 
 	return &game.GemShopData{
 		Items: protoItems,
