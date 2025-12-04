@@ -24,6 +24,16 @@ func compareLevelId(id1, id2 string) bool {
 }
 
 func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest) (*game.StartBattleResponse, error) {
+	// 保存战斗信息，用于后续再次领取奖励
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载战斗数据失败", zap.Error(err))
+	}
+
+	battleData.CurLevelId = in.GetLevelId()
+	battleData.BattleType = in.GetType()
+	battleData.BattleEnded = false
+
 	var staminaCost int32
 	var stamina *game.StaminaData
 
@@ -66,13 +76,6 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 		}, nil
 	}
 
-	// 保存战斗信息，用于后续再次领取奖励
-	battleData := &BattleData{}
-	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
-		s.logger.Error("加载战斗数据失败", zap.Error(err))
-	}
-	battleData.CurLevelId = in.GetLevelId()
-	battleData.BattleType = in.GetType()
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 		s.logger.Error("保存战斗数据失败", zap.Error(err))
 	}
@@ -112,6 +115,14 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}, nil
 	}
 
+	// 检查战斗是否已结束
+	if battleData.BattleEnded {
+		return &game.EndBattleResponse{
+			Code: 5,
+			Msg:  "战斗已结束，无法重复领取奖励",
+		}, nil
+	}
+
 	// 根据战斗类型获取奖励ID
 	var rewardId string
 	var source string
@@ -147,9 +158,10 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 
 	// 如果进度为0，直接返回成功（不发放奖励）
 	if progress == 0 {
-		// 重置分享奖励状态，清空奖励JSON
+		// 重置分享奖励状态，清空奖励JSON，标记战斗已结束
 		battleData.ShareRewardClaimed = false
 		battleData.RewardJSON = ""
+		battleData.BattleEnded = true
 		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 			s.logger.Error("保存战斗数据失败", zap.Error(err))
 		}
@@ -191,8 +203,9 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}
 	}
 
-	// 重置分享奖励状态
+	// 重置分享奖励状态，标记战斗已结束
 	battleData.ShareRewardClaimed = false
+	battleData.BattleEnded = true
 
 	// 更新关卡进度（仅对普通关卡）- 直接内联逻辑，避免多次保存
 	if battleData.BattleType == game.BattleType_BATTLE_TYPE_NORMAL {
@@ -273,6 +286,14 @@ func (s *ApiServer) ClaimBattleRewardByShare(ctx context.Context, in *game.Claim
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 2,
 			Msg:  "未完成战斗",
+		}, nil
+	}
+
+	// 检查战斗是否已结束（只有战斗结束后才能领取分享奖励）
+	if !battleData.BattleEnded {
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 6,
+			Msg:  "战斗尚未结束，无法领取分享奖励",
 		}, nil
 	}
 

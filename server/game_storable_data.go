@@ -659,6 +659,7 @@ type BattleData struct {
 	MaxLevelId             string           `json:"max_level_id"`               // 最大关卡ID
 	Progress               map[string]int32 `json:"progress_map"`               // key: level_id, value: progress
 	BattleType             game.BattleType  `json:"battle_type"`                // 最后一次战斗类型（0=普通，1=黄金）
+	BattleEnded            bool             `json:"battle_ended"`               // 战斗是否已结束（防止重复领取奖励）
 	ShareRewardClaimed     bool             `json:"share_reward_claimed"`       // 是否已领取分享奖励（每次战斗可重新领取一次）
 	RewardJSON             string           `json:"reward_json"`                // 保存的奖励 JSON 字符串
 	HasMoppingTimes        int32            `json:"has_mopping_times"`          // 第一阶段已使用次数（扣体力）
@@ -685,6 +686,7 @@ func (d *BattleData) Init() {
 	d.MaxLevelId = ""
 	d.Progress = make(map[string]int32)
 	d.BattleType = 0
+	d.BattleEnded = true
 	d.ShareRewardClaimed = false
 	d.RewardJSON = ""
 	d.HasMoppingTimes = 0
