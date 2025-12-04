@@ -203,13 +203,6 @@ func (s *ApiServer) HandleSceneList(w http.ResponseWriter, r *http.Request) {
 
 // queryUserScenes 查询用户场景列表
 func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scene, error) {
-	// 1. 通过openid查询userId
-	userID, err := FindUserByDeviceID(ctx, s.logger, s.db, openid)
-	if err != nil {
-		s.logger.Error("查询用户ID失败", zap.Error(err), zap.String("openid", openid))
-		return nil, err
-	}
-
 	scenes := make([]*Scene, 0)
 
 	// 如果启用测试模式，直接返回所有场景
@@ -231,7 +224,7 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 
 	// 读取 ByteDirectPlay 数据
 	directPlay := &ByteDirectPlay{}
-	if err := LoadData(ctx, s.logger, s.db, userID, directPlay); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, directPlay); err != nil {
 		s.logger.Error("读取 ByteDirectPlay 数据失败", zap.Error(err))
 		directPlay.Init()
 	}
@@ -240,14 +233,14 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 	currentDate := currentTime.Format("2006-01-02")
 
 	// 2. 查询离线收益数据
-	homeData := &HomeData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, homeData); err != nil {
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
 		s.logger.Error("读取Home数据失败", zap.Error(err))
 		return nil, err
 	}
 
 	// 解析lastGetOnHookTimestamp
-	lastGetTime, err := parseTime(homeData.LastGetOnHookTimestamp)
+	lastGetTime, err := parseTime(battleData.LastGetOnHookTimestamp)
 	if err != nil {
 		s.logger.Error("解析时间格式失败", zap.Error(err))
 		return nil, err
@@ -278,7 +271,7 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 	}
 
 	// 保存更新后的 ByteDirectPlay 数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, directPlay); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, directPlay); err != nil {
 		s.logger.Error("保存 ByteDirectPlay 数据失败", zap.Error(err))
 	}
 

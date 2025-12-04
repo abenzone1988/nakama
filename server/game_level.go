@@ -2,41 +2,15 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strconv"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 )
 
-// GetLevelData 获取关卡数据（返回 storage 结构）
-func GetLevelData(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex) (*LevelData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	levelData := &LevelData{}
-	if err := LoadData(ctx, logger, db, userID, levelData); err != nil {
-		logger.Error("加载关卡数据失败", zap.Error(err))
-		return nil, err
-	}
-
-	// 如果数据为空，初始化并保存
-	if levelData.CurLevelId == "" {
-		levelData.Init()
-		if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, levelData); err != nil {
-			logger.Error("保存初始化的关卡数据失败", zap.Error(err))
-			return nil, err
-		}
-	}
-
-	return levelData, nil
-}
-
 // 领取关卡宝箱奖励
 func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	// 验证参数
 	if in.GetLevelId() == "" {
 		return &game.ClaimLevelBoxResponse{
@@ -71,17 +45,14 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 		}, nil
 	}
 
-	// 获取关卡数据
-	levelData, err := GetLevelData(ctx, s.logger, s.db, s.metrics, s.storageIndex)
-	if err != nil {
-		return &game.ClaimLevelBoxResponse{
-			Code: 5,
-			Msg:  "获取关卡数据失败",
-		}, nil
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载关卡数据失败", zap.Error(err))
+		return nil, err
 	}
 
 	// 检查关卡是否已通过（当前关卡ID要小于等于已通过的关卡）
-	if !isLevelPassed(in.GetLevelId(), levelData.CurLevelId) {
+	if !isLevelPassed(in.GetLevelId(), battleData.MaxLevelId) {
 		return &game.ClaimLevelBoxResponse{
 			Code: 6,
 			Msg:  "关卡尚未通过",
@@ -90,7 +61,7 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 
 	// 加载宝箱数据
 	levelBoxData := &LevelBoxData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, levelBoxData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, levelBoxData); err != nil {
 		s.logger.Warn("加载宝箱数据失败，初始化新数据", zap.Error(err))
 		// 首次加载或数据不存在，初始化
 		levelBoxData.Init()
@@ -172,7 +143,7 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 	}
 
 	// 保存宝箱数据
-	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, levelBoxData)
+	err = SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, levelBoxData)
 	if err != nil {
 		s.logger.Error("保存宝箱数据失败", zap.Error(err))
 		return &game.ClaimLevelBoxResponse{

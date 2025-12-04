@@ -47,12 +47,14 @@ const (
 	VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
 )
 
-// 邀请奖励id
-const InviteRewardID = "InviteReward"
-
-// 抖音奖励id
-const TTShortcutRewardID = "TTShortcutReword" // 添加到桌面奖励（仅一次）
-const TTEntryRewardID = "TTEntryReword"       // 入口有奖（每天一次）
+const (
+	// 邀请奖励
+	InviteRewardID = "InviteReward"
+	// 加桌奖励
+	TTShortcutRewardID = "TTShortcutReword" // 添加到桌面奖励（仅一次）
+	// 入口有奖
+	TTEntryRewardID = "TTEntryReword" // 入口有奖（每天一次）
+)
 
 // 每日签到相关常量
 const (

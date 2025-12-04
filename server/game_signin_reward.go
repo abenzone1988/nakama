@@ -18,7 +18,7 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	signInData := &SignInData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, signInData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, signInData); err != nil {
 		s.logger.Error("加载签到数据失败", zap.Error(err))
 		signInData.Init()
 	}
@@ -67,7 +67,7 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 	// 更新签到数据：保存已领取的天数
 	signInData.ClaimedDay = nextDay
 	signInData.LastClaimDate = today
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, signInData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, signInData); err != nil {
 		s.logger.Error("保存签到数据失败", zap.Error(err))
 		return &game.ClaimSignInRewardResponse{
 			Code: 5,
@@ -99,10 +99,8 @@ func (s *ApiServer) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInR
 }
 
 func (s *ApiServer) GetSignInReward(ctx context.Context, in *emptypb.Empty) (*game.GetSignInRewardResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	signInData := &SignInData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, signInData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, signInData); err != nil {
 		s.logger.Error("加载签到数据失败", zap.Error(err))
 		signInData.Init()
 	}

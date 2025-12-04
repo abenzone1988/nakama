@@ -39,6 +39,41 @@ type Storable interface {
 	SetVersion(version string)
 }
 
+func LoadUserData(ctx context.Context, logger *zap.Logger, db *sql.DB, storable Storable) error {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	readOp := &api.ReadStorageObjectId{
+		Collection: storable.GetCollection(),
+		Key:        storable.GetKey(),
+		UserId:     userID.String(),
+	}
+
+	objectIDs := []*api.ReadStorageObjectId{readOp}
+
+	storageObjects, err := StorageReadObjects(ctx, logger, db, userID, objectIDs)
+	if err != nil {
+		logger.Error("无法从存储系统读取数据", zap.Error(err))
+		return err
+	}
+
+	if len(storageObjects.Objects) == 0 {
+		storable.Init()
+		storable.SetVersion("") // 新数据，version 为空
+		return nil
+	}
+
+	// 保存 version 用于后续的 OCC 写入
+	storageObject := storageObjects.Objects[0]
+	storable.SetVersion(storageObject.Version)
+
+	if err := json.Unmarshal([]byte(storageObject.Value), storable); err != nil {
+		logger.Error("无法反序列化数据", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
 func LoadData(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, storable Storable) error {
 	readOp := &api.ReadStorageObjectId{
 		Collection: storable.GetCollection(),
@@ -67,6 +102,39 @@ func LoadData(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.U
 	if err := json.Unmarshal([]byte(storageObject.Value), storable); err != nil {
 		logger.Error("无法反序列化数据", zap.Error(err))
 		return err
+	}
+
+	return nil
+}
+
+func SaveUserData(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, storable Storable) error {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	serializedData, err := json.Marshal(storable)
+	if err != nil {
+		logger.Error("无法序列化数据", zap.Error(err))
+		return err
+	}
+
+	// 使用保存的 version 进行 OCC 写入，防止并发覆盖
+	version := storable.GetVersion()
+	writeOp := CreateStorageOpWriteWithVersion(storable.GetCollection(), storable.GetKey(), string(serializedData), userID.String(), version)
+
+	ops := []*StorageOpWrite{writeOp}
+
+	acks, code, err := StorageWriteObjects(ctx, logger, db, metrics, storageIndex, true, ops)
+	if err != nil {
+		logger.Error("无法保存数据到存储系统", zap.Error(err))
+		return err
+	}
+
+	// 如果版本冲突，返回错误
+	if code != codes.OK {
+		return fmt.Errorf("存储写入被拒绝，可能由于版本冲突或权限问题")
+	}
+
+	// 更新 version 为新的版本号
+	if len(acks.Acks) > 0 {
+		storable.SetVersion(acks.Acks[0].Version)
 	}
 
 	return nil
@@ -554,31 +622,6 @@ func (f *ByteRewardData) Init() {
 }
 
 // ============================================================================
-// 家园相关数据结构
-// ============================================================================
-
-// HomeData 家园数据
-type HomeData struct {
-	BaseStorable
-	CurLevelId             string `json:"curLevelId"`
-	LastGetOnHookTimestamp string `json:"lastGetOnHookTimestamp"`
-}
-
-func (f *HomeData) GetCollection() string {
-	return "Home"
-}
-
-func (f *HomeData) GetKey() string {
-	return "HomeData"
-}
-
-func (f *HomeData) Init() {
-	f.CurLevelId = ""
-	f.LastGetOnHookTimestamp = ""
-	f.SetVersion("")
-}
-
-// ============================================================================
 // 装备相关数据结构
 // ============================================================================
 
@@ -606,32 +649,27 @@ func (d *EquipData) Init() {
 }
 
 // ============================================================================
-// 关卡相关数据结构
-// ============================================================================
-
-// LevelData 关卡数据存储结构
-type LevelData struct {
-	BaseStorable
-	CurLevelId             string `json:"cur_level_id"`               // 当前关卡ID
-	BestProgress           int32  `json:"best_progress"`              // 最佳进度
-	HasMoppingTimes        int32  `json:"has_mopping_times"`          // 第一阶段已使用次数（扣体力）
-	HasMoppingTimesForAdv  int32  `json:"has_mopping_times_for_adv"`  // 第二阶段已使用次数（扣体力+广告）
-	LastMoppingTimestamp   string `json:"last_mopping_timestamp"`     // 最后一次扫荡时间，ISO 8601 格式
-	LastGetOnHookTimestamp string `json:"last_get_on_hook_timestamp"` // 最后一次领取挂机奖励时间，ISO 8601 格式
-}
-
-// ============================================================================
 // 战斗奖励相关数据结构
 // ============================================================================
 
 // BattleData 战斗数据存储结构
 type BattleData struct {
 	BaseStorable
-	LevelId            string `json:"level_id"`             // 最后一次战斗的关卡ID
-	Progress           int32  `json:"progress"`             // 最后一次战斗的进度
-	BattleType         int32  `json:"battle_type"`          // 最后一次战斗类型（0=普通，1=黄金）
-	ShareRewardClaimed bool   `json:"share_reward_claimed"` // 是否已领取分享奖励（全局唯一一次）
-	RewardJSON         string `json:"reward_json"`          // 保存的奖励 JSON 字符串
+	CurLevelId             string           `json:"cur_level_id"`               // 当前正在战斗的关卡ID
+	MaxLevelId             string           `json:"max_level_id"`               // 最大关卡ID
+	Progress               map[string]int32 `json:"progress_map"`               // key: level_id, value: progress
+	BattleType             game.BattleType  `json:"battle_type"`                // 最后一次战斗类型（0=普通，1=黄金）
+	ShareRewardClaimed     bool             `json:"share_reward_claimed"`       // 是否已领取分享奖励（每次战斗可重新领取一次）
+	RewardJSON             string           `json:"reward_json"`                // 保存的奖励 JSON 字符串
+	HasMoppingTimes        int32            `json:"has_mopping_times"`          // 第一阶段已使用次数（扣体力）
+	HasMoppingTimesForAdv  int32            `json:"has_mopping_times_for_adv"`  // 第二阶段已使用次数（扣体力+广告）
+	LastMoppingTimestamp   string           `json:"last_mopping_timestamp"`     // 最后一次扫荡时间，ISO 8601 格式
+	LastGetOnHookTimestamp string           `json:"last_get_on_hook_timestamp"` // 最后一次领取挂机奖励时间，ISO 8601 格式
+}
+
+func (d *BattleData) resetMoppingTimes() {
+	d.HasMoppingTimes = 0
+	d.HasMoppingTimesForAdv = 0
 }
 
 func (d *BattleData) GetCollection() string {
@@ -643,25 +681,12 @@ func (d *BattleData) GetKey() string {
 }
 
 func (d *BattleData) Init() {
-	d.LevelId = ""
-	d.Progress = 0
+	d.CurLevelId = ""
+	d.MaxLevelId = ""
+	d.Progress = make(map[string]int32)
 	d.BattleType = 0
 	d.ShareRewardClaimed = false
 	d.RewardJSON = ""
-	d.SetVersion("")
-}
-
-func (d *LevelData) GetCollection() string {
-	return "level"
-}
-
-func (d *LevelData) GetKey() string {
-	return "data"
-}
-
-func (d *LevelData) Init() {
-	d.CurLevelId = ZeroLevelId // "L1000"
-	d.BestProgress = 0
 	d.HasMoppingTimes = 0
 	d.HasMoppingTimesForAdv = 0
 	d.SetVersion("")

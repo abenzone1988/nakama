@@ -63,7 +63,7 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 		response.Signature = signature
 		response.ExpireTime = vipAccount.ExpiryTime.AsTime().Unix()
 		vipRewardData := &VipRewardData{}
-		if err := LoadData(ctx, s.logger, s.db, userIDUUID, vipRewardData); err != nil {
+		if err := LoadUserData(ctx, s.logger, s.db, vipRewardData); err != nil {
 			return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
 		}
 		response.RewardClaimed = vipRewardData.RewardClaimed
@@ -99,7 +99,7 @@ func (s *ApiServer) ClaimVipReward(ctx context.Context, in *game.ClaimVipRewardR
 
 	// 加载VIP奖励领取数据
 	vipRewardData := &VipRewardData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, vipRewardData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, vipRewardData); err != nil {
 		return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
 	}
 
@@ -133,7 +133,7 @@ func (s *ApiServer) ClaimVipReward(ctx context.Context, in *game.ClaimVipRewardR
 
 	// 更新领取状态
 	vipRewardData.RewardClaimed = true
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, vipRewardData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, vipRewardData); err != nil {
 		s.logger.Error("保存VIP奖励状态失败", zap.String("user_id", userID.String()), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to save VIP reward state.")
 	}

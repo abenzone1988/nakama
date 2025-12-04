@@ -31,7 +31,7 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 	}
 
 	boxShopData := &BoxShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, boxShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, boxShopData); err != nil {
 		s.logger.Error("加载宝箱商店数据失败", zap.Error(err))
 		// 首次初始化
 		boxShopData.Init()
@@ -174,7 +174,7 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 	}
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, boxShopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, boxShopData); err != nil {
 		s.logger.Error("保存宝箱商店数据失败", zap.Error(err))
 		return &game.BuyBoxItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
 	}
@@ -210,10 +210,8 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 
 // GetBoxShop RPC获取宝箱商店数据（独立）
 func (s *ApiServer) GetBoxShop(ctx context.Context, in *emptypb.Empty) (*game.BoxShopData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	boxShopData := &BoxShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, boxShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, boxShopData); err != nil {
 		s.logger.Error("加载宝箱商店数据失败", zap.Error(err))
 		// 首次初始化
 		boxShopData.Init()
@@ -223,7 +221,7 @@ func (s *ApiServer) GetBoxShop(ctx context.Context, in *emptypb.Empty) (*game.Bo
 	s.initBoxShopStandalone(boxShopData)
 	boxShopData.RefreshFreeAdState()
 
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, boxShopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, boxShopData); err != nil {
 		s.logger.Error("保存宝箱商店数据失败", zap.Error(err))
 		return nil, err
 	}

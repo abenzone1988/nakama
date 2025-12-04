@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 
 	"time"
@@ -12,9 +11,8 @@ import (
 )
 
 func (s *ApiServer) RedeemGift(ctx context.Context, in *game.RedeemGiftRequest) (*game.RedeemGiftResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	redeemHistory := &RedeemHistory{}
-	err := LoadData(ctx, s.logger, s.db, userID, redeemHistory)
+	err := LoadUserData(ctx, s.logger, s.db, redeemHistory)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +35,7 @@ func (s *ApiServer) RedeemGift(ctx context.Context, in *game.RedeemGiftRequest) 
 	}
 
 	// 保存更新后的领取历史记录
-	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, redeemHistory)
+	err = SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, redeemHistory)
 	if err != nil {
 		return nil, err
 	}

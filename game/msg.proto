@@ -171,11 +171,22 @@ enum BattleType{
   BATTLE_TYPE_GOLDEN = 1;
 }
 
-//结束战斗
-message EndBattleRequest{
+
+//开始战斗
+message StartBattleRequest{
   BattleType type = 1;
   string level_id = 2;
-  int32 progress = 3;
+}
+
+message StartBattleResponse{
+  int32 code = 1;
+  string msg = 2;
+  StaminaData stamina = 3;
+}
+
+//结束战斗
+message EndBattleRequest{
+  int32 progress = 1;
 }
 
 message EndBattleResponse{
@@ -214,6 +225,7 @@ message ClaimMoppingRewardResponse{
   repeated Item inventory_updated = 5; // 背包更新结果
   int32 has_mopping_times = 6; // 第一阶段已使用次数
   int32 has_mopping_times_for_adv = 7; // 第二阶段已使用次数
+  StaminaData stamina = 8; //扫荡需要扣体力
 }
 
 // 领取挂机奖励请求

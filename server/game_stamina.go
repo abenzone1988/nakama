@@ -120,127 +120,65 @@ func GetCurrentStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, stat
 }
 
 // ConsumeStamina 消耗体力
-func ConsumeStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, amount int32) error {
+func ConsumeStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, amount int32) (*game.StaminaData, error) {
 	if amount <= 0 {
-		return errors.New("invalid stamina amount")
+		return nil, errors.New("invalid stamina amount")
 	}
 
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	// 从钱包读取体力值
-	wallet, exists, err := GetWallet(ctx, logger, db, userID)
+	// 先调用 GetCurrentStamina 获取当前体力（已包含恢复计算）
+	staminaData, err := GetCurrentStamina(ctx, logger, db, statusRegistry)
 	if err != nil {
-		logger.Error("读取钱包数据失败", zap.Error(err))
-		return err
-	}
-	if !exists {
-		return errors.New("用户不存在")
+		return nil, err
 	}
 
-	// 从 UserMeta 读取刷新时间
-	userMeta, _, err := LoadUserMeta(ctx, logger, db, statusRegistry, userID)
-	if err != nil {
-		logger.Error("读取 UserMeta 失败", zap.Error(err))
-		return err
-	}
-
-	currentStamina := int32(wallet["stamina"])
-	lastRefreshTime := userMeta.StaminaLastRefreshTime
-
-	// 如果体力为0且刷新时间为空，初始化但不扣除本次消耗
-	if currentStamina == 0 && lastRefreshTime == "" {
-		currentStamina = MaxStamina
-		lastRefreshTime = time.Now().Format(time.RFC3339)
-
-		metadata, _ := json.Marshal(map[string]interface{}{
-			"source": "stamina_init",
-		})
-		walletUpdates := []*walletUpdate{{
-			UserID:    userID,
-			Changeset: map[string]int64{"stamina": int64(MaxStamina)},
-			Metadata:  string(metadata),
-		}}
-		if _, err := UpdateWallets(ctx, logger, db, walletUpdates, true); err != nil {
-			logger.Error("初始化钱包体力失败", zap.Error(err))
-			return err
-		}
-
-		userMeta.StaminaLastRefreshTime = lastRefreshTime
-		if err := SaveUserMeta(ctx, logger, db, userID, userMeta); err != nil {
-			logger.Error("保存初始化的刷新时间失败", zap.Error(err))
-			return err
-		}
-
-		logger.Info("体力首次初始化，本次不扣除",
-			zap.Int32("stamina", MaxStamina),
-			zap.Int32("skip_amount", amount))
-		return nil
-	}
-
-	// 计算自然恢复后的体力
-	oldStamina := currentStamina
-	newStamina, newRefreshTime := calculateRecoveredStamina(currentStamina, lastRefreshTime)
+	currentStamina := staminaData.Stamina
+	lastRefreshTime := staminaData.LastRefreshTime
 
 	// 检查体力是否足够
-	if newStamina < amount {
-		logger.Warn("Insufficient stamina", zap.Int32("required", amount), zap.Int32("current", newStamina))
-		return errors.New("insufficient stamina")
+	if currentStamina < amount {
+		logger.Warn("Insufficient stamina", zap.Int32("required", amount), zap.Int32("current", currentStamina))
+		return nil, errors.New("insufficient stamina")
 	}
 
-	// 扣除体力（如果有恢复，先更新恢复的体力，再扣除）
-	changesetAmount := -int64(amount)
-	if newStamina != oldStamina {
-		// 体力有恢复，需要先加上恢复的体力，再扣除消耗的体力
-		changesetAmount = int64(newStamina - oldStamina - amount)
-	}
-
+	// 扣除体力
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	metadata, _ := json.Marshal(map[string]interface{}{
 		"source": "stamina_consume",
 	})
 	walletUpdates := []*walletUpdate{{
 		UserID:    userID,
-		Changeset: map[string]int64{"stamina": changesetAmount},
+		Changeset: map[string]int64{"stamina": -int64(amount)},
 		Metadata:  string(metadata),
 	}}
 	if _, err := UpdateWallets(ctx, logger, db, walletUpdates, true); err != nil {
 		logger.Error("扣除体力失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 
-	// 更新刷新时间（如果体力有恢复）
-	if newStamina != oldStamina {
-		userMeta.StaminaLastRefreshTime = newRefreshTime
-		if err := SaveUserMeta(ctx, logger, db, userID, userMeta); err != nil {
-			logger.Error("保存刷新时间失败", zap.Error(err))
-			return err
-		}
-	}
-
-	logger.Info("Stamina consumed", zap.Int32("amount", amount), zap.Int32("remaining", newStamina-amount))
-	return nil
+	logger.Info("Stamina consumed", zap.Int32("amount", amount), zap.Int32("remaining", currentStamina-amount))
+	return &game.StaminaData{
+		Stamina:         currentStamina - amount,
+		LastRefreshTime: lastRefreshTime,
+	}, nil
 }
 
-// RefillStamina 补充体力（通过道具或购买）
-func RefillStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, amount int32) error {
+// 补充体力（通过道具或购买）
+func RefillStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, amount int32) (*game.StaminaData, error) {
 	if amount <= 0 {
-		return errors.New("invalid stamina amount")
+		return nil, errors.New("invalid stamina amount")
 	}
 
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	// 从钱包读取体力值
-	wallet, exists, err := GetWallet(ctx, logger, db, userID)
+	// 先调用 GetCurrentStamina 获取当前体力（已包含恢复计算）
+	staminaData, err := GetCurrentStamina(ctx, logger, db, statusRegistry)
 	if err != nil {
-		logger.Error("读取钱包数据失败", zap.Error(err))
-		return err
-	}
-	if !exists {
-		return errors.New("用户不存在")
+		return nil, err
 	}
 
-	oldStamina := int32(wallet["stamina"])
+	oldStamina := staminaData.Stamina
+	lastRefreshTime := staminaData.LastRefreshTime
 
 	// 补充体力（不设上限，可以超过最大值）
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	metadata, _ := json.Marshal(map[string]interface{}{
 		"source": "stamina_refill",
 	})
@@ -251,25 +189,28 @@ func RefillStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRe
 	}}
 	if _, err := UpdateWallets(ctx, logger, db, walletUpdates, true); err != nil {
 		logger.Error("补充体力失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	logger.Info("Stamina refilled", zap.Int32("amount", amount), zap.Int32("old", oldStamina), zap.Int32("new", oldStamina+amount))
-	return nil
+	return &game.StaminaData{
+		Stamina:         oldStamina + amount,
+		LastRefreshTime: lastRefreshTime,
+	}, nil
 }
 
-// ResetStamina 重置体力到最大值（用于测试或管理员操作）
-func ResetStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry) error {
+// 重置体力到最大值（用于测试或管理员操作）
+func ResetStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry) (*game.StaminaData, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	// 从钱包读取当前体力值
 	wallet, exists, err := GetWallet(ctx, logger, db, userID)
 	if err != nil {
 		logger.Error("读取钱包数据失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 	if !exists {
-		return errors.New("用户不存在")
+		return nil, errors.New("用户不存在")
 	}
 
 	currentStamina := int32(wallet["stamina"])
@@ -286,26 +227,30 @@ func ResetStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusReg
 	}}
 	if _, err := UpdateWallets(ctx, logger, db, walletUpdates, true); err != nil {
 		logger.Error("重置体力失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	// 更新 UserMeta 刷新时间
 	userMeta, _, err := LoadUserMeta(ctx, logger, db, statusRegistry, userID)
 	if err != nil {
 		logger.Error("读取 UserMeta 失败", zap.Error(err))
-		return err
+		return nil, err
 	}
-	userMeta.StaminaLastRefreshTime = time.Now().Format(time.RFC3339)
+	lastRefreshTime := time.Now().Format(time.RFC3339)
+	userMeta.StaminaLastRefreshTime = lastRefreshTime
 	if err := SaveUserMeta(ctx, logger, db, userID, userMeta); err != nil {
 		logger.Error("保存重置后的刷新时间失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	logger.Info("Stamina reset", zap.Int32("stamina", MaxStamina))
-	return nil
+	return &game.StaminaData{
+		Stamina:         MaxStamina,
+		LastRefreshTime: lastRefreshTime,
+	}, nil
 }
 
-// GetTimeToFullStamina 计算体力恢复到满需要的时间
+// 计算体力恢复到满需要的时间
 func GetTimeToFullStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry) (time.Duration, error) {
 	stamina, err := GetCurrentStamina(ctx, logger, db, statusRegistry)
 	if err != nil || stamina.Stamina >= MaxStamina {
@@ -314,7 +259,7 @@ func GetTimeToFullStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, s
 	return time.Duration(MaxStamina-stamina.Stamina) * StaminaRecoveryRate, nil
 }
 
-// calculateRecoveredStamina 计算自然恢复后的体力值
+// 计算自然恢复后的体力值
 // 返回：新体力值、新刷新时间
 func calculateRecoveredStamina(currentStamina int32, lastRefreshTime string) (int32, string) {
 	if currentStamina >= MaxStamina {

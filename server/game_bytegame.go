@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 )
 
 // ClaimByteReward 领取抖音奖励
 func (s *ApiServer) ClaimByteReward(ctx context.Context, in *game.ClaimByteRewardRequest) (*game.ClaimByteRewardResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	rewardID := in.GetRewardId()
 
 	// 验证奖励ID
@@ -25,7 +23,7 @@ func (s *ApiServer) ClaimByteReward(ctx context.Context, in *game.ClaimByteRewar
 
 	// 加载抖音奖励数据
 	rewardData := &ByteRewardData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, rewardData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, rewardData); err != nil {
 		s.logger.Warn("加载抖音奖励数据失败，初始化新数据", zap.Error(err))
 		rewardData.Init()
 	}
@@ -76,7 +74,7 @@ func (s *ApiServer) ClaimByteReward(ctx context.Context, in *game.ClaimByteRewar
 	}
 
 	// 保存数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, rewardData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, rewardData); err != nil {
 		s.logger.Error("保存抖音奖励数据失败", zap.Error(err))
 		return &game.ClaimByteRewardResponse{
 			Code: 6,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -12,10 +11,8 @@ import (
 const MaxFeedbackRecords = 10
 
 func (s *ApiServer) Feedback(ctx context.Context, in *game.FeedbackRequest) (*emptypb.Empty, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	feedbackHistory := &FeedbackHistory{}
-	err := LoadData(ctx, s.logger, s.db, userID, feedbackHistory)
+	err := LoadUserData(ctx, s.logger, s.db, feedbackHistory)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +33,7 @@ func (s *ApiServer) Feedback(ctx context.Context, in *game.FeedbackRequest) (*em
 	feedbackHistory.List = append(feedbackHistory.List, feedbackRecord)
 
 	// 保存更新的反馈记录
-	err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, feedbackHistory)
+	err = SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, feedbackHistory)
 	if err != nil {
 		return nil, err
 	}

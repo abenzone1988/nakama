@@ -348,11 +348,10 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 // tryUnlockEquipment 尝试解锁炮台装备
 // 返回值：alreadyUnlocked（是否已解锁）, error（错误）
 func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, equipID string) (bool, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	// 加载装备数据
 	equipData := &EquipData{}
-	if err := LoadData(ctx, logger, db, userID, equipData); err != nil {
+	if err := LoadUserData(ctx, logger, db, equipData); err != nil {
 		logger.Error("加载装备数据失败", zap.Error(err))
 		return false, fmt.Errorf("加载装备数据失败")
 	}
@@ -368,7 +367,7 @@ func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, met
 	equipData.UnlockEquips[equipID] = 1
 
 	// 保存装备数据
-	if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, equipData); err != nil {
+	if err := SaveUserData(ctx, logger, db, metrics, storageIndex, equipData); err != nil {
 		logger.Error("保存装备数据失败",
 			zap.Error(err),
 			zap.String("equip_id", equipID))
@@ -392,7 +391,7 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 
 	// 直接加载装备数据（不需要保存，所以传入 nil）
 	equipData := &EquipData{}
-	if err := LoadData(ctx, logger, db, userID, equipData); err != nil {
+	if err := LoadUserData(ctx, logger, db, equipData); err != nil {
 		logger.Error("加载装备数据失败", zap.Error(err))
 		return nil, err
 	}

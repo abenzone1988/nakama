@@ -21,7 +21,7 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	shopData := &ShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, shopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, shopData); err != nil {
 		s.logger.Error("加载商店数据失败", zap.Error(err))
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (s *ApiServer) GetShopData(ctx context.Context, in *emptypb.Empty) (*game.S
 	s.initCommonShop(ctx, userID, shopData.Shops, game.ShopType_SHOP_COIN, "Coin")
 	s.initCommonShop(ctx, userID, shopData.Shops, game.ShopType_SHOP_STRENGTH, "Strength")
 
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, shopData); err != nil {
 		s.logger.Error("保存商店数据失败", zap.Error(err))
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (s *ApiServer) addRandomShopItems(ctx context.Context, userID uuid.UUID, sh
 
 	// 加载玩家装备数据，用于过滤已拥有装备的碎片
 	equipData := &EquipData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, equipData); err != nil {
 		s.logger.Warn("加载装备数据失败，跳过碎片过滤", zap.Error(err))
 		equipData = nil
 	}
@@ -404,11 +404,9 @@ func parseDiscountRate(discountInfo string) int32 {
 
 // BuyShopItem 统一的商店购买接口
 func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest) (*game.BuyShopItemResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	// 加载商店数据
 	shopData := &ShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, shopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, shopData); err != nil {
 		s.logger.Error("加载商店数据失败", zap.Error(err))
 		return &game.BuyShopItemResponse{Code: -1, Msg: "加载商店数据失败"}, nil
 	}
@@ -463,7 +461,7 @@ func (s *ApiServer) BuyShopItem(ctx context.Context, in *game.BuyShopItemRequest
 	item.BoughtCount++
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, shopData); err != nil {
 		s.logger.Error("保存商店数据失败", zap.Error(err))
 		return &game.BuyShopItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
 	}
@@ -492,7 +490,7 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 
 	// 加载商店数据
 	shopData := &ShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, shopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, shopData); err != nil {
 		s.logger.Error("加载商店数据失败", zap.Error(err))
 		return &game.RefreshShopResponse{Code: -1, Msg: "加载商店数据失败"}, nil
 	}
@@ -525,7 +523,7 @@ func (s *ApiServer) RefreshShop(ctx context.Context, in *game.RefreshShopRequest
 	shop.RefreshCount--
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, shopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, shopData); err != nil {
 		s.logger.Error("保存商店数据失败", zap.Error(err))
 		return &game.RefreshShopResponse{Code: 6, Msg: "保存商店数据失败"}, nil
 	}

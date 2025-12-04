@@ -2,10 +2,8 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"strconv"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -25,23 +23,101 @@ func compareLevelId(id1, id2 string) bool {
 	return num1 > num2
 }
 
-// 结束战斗领取奖励 扣除体力
+func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest) (*game.StartBattleResponse, error) {
+	var staminaCost int32
+	var stamina *game.StaminaData
+
+	switch in.GetType() {
+	case game.BattleType_BATTLE_TYPE_NORMAL:
+		levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(in.GetLevelId())
+		if !exist {
+			return &game.StartBattleResponse{
+				Code: 2,
+				Msg:  "关卡不存在",
+			}, nil
+		}
+		staminaCost = levelInfo.Cost
+
+	case game.BattleType_BATTLE_TYPE_GOLDEN:
+		activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(in.GetLevelId())
+		if !exist {
+			return &game.StartBattleResponse{
+				Code: 2,
+				Msg:  "关卡不存在",
+			}, nil
+		}
+		staminaCost = activityInfo.Stamina
+
+	default:
+		return &game.StartBattleResponse{
+			Code: 2,
+			Msg:  "无效的战斗类型",
+		}, nil
+	}
+
+	// 扣除体力值
+	var err error
+	stamina, err = ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, staminaCost)
+	if err != nil {
+		return &game.StartBattleResponse{
+			Code:    3,
+			Msg:     "体力扣除失败: " + err.Error(),
+			Stamina: stamina,
+		}, nil
+	}
+
+	// 保存战斗信息，用于后续再次领取奖励
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载战斗数据失败", zap.Error(err))
+	}
+	battleData.CurLevelId = in.GetLevelId()
+	battleData.BattleType = in.GetType()
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+		s.logger.Error("保存战斗数据失败", zap.Error(err))
+	}
+	return &game.StartBattleResponse{
+		Code:    0,
+		Msg:     "通过成功",
+		Stamina: stamina,
+	}, nil
+}
+
+// 结束战斗领取奖励
 func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*game.EndBattleResponse, error) {
-	if in.GetProgress() > 100 || in.GetProgress() < 0 {
+	// 验证进度值
+	progress := in.GetProgress()
+	if progress > 100 || progress < 0 {
 		return &game.EndBattleResponse{
 			Code: 1,
 			Msg:  "进度错误",
 		}, nil
 	}
 
+	// 从开始战斗时保存的数据中获取关卡ID
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载战斗数据失败", zap.Error(err))
+		return &game.EndBattleResponse{
+			Code: 2,
+			Msg:  "加载战斗数据失败",
+		}, nil
+	}
+
+	// 验证是否有有效的战斗数据
+	if battleData.CurLevelId == "" {
+		return &game.EndBattleResponse{
+			Code: 2,
+			Msg:  "未找到战斗记录，请先开始战斗",
+		}, nil
+	}
+
+	// 根据战斗类型获取奖励ID
 	var rewardId string
 	var source string
-	var walletUpdateResult *game.WalletUpdateResult
-	var inventoryUpdateResult *game.InventoryUpdateResult
-
-	switch in.GetType() {
+	switch battleData.BattleType {
 	case game.BattleType_BATTLE_TYPE_NORMAL:
-		levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(in.GetLevelId())
+		levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(battleData.CurLevelId)
 		if !exist {
 			return &game.EndBattleResponse{
 				Code: 2,
@@ -49,18 +125,10 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 			}, nil
 		}
 		rewardId = levelInfo.WinRewards
-		source = "battle_normal_" + in.GetLevelId()
-
-		//扣除体力值
-		if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, levelInfo.Cost); err != nil {
-			return &game.EndBattleResponse{
-				Code: 3,
-				Msg:  "体力扣除失败: " + err.Error(),
-			}, nil
-		}
+		source = "battle_normal_" + battleData.CurLevelId
 
 	case game.BattleType_BATTLE_TYPE_GOLDEN:
-		activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(in.GetLevelId())
+		activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(battleData.CurLevelId)
 		if !exist {
 			return &game.EndBattleResponse{
 				Code: 2,
@@ -68,40 +136,44 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 			}, nil
 		}
 		rewardId = activityInfo.RewardID
-		source = "battle_golden_" + in.GetLevelId()
-
-		//扣除体力值
-		if err := ConsumeStamina(ctx, s.logger, s.db, s.statusRegistry, activityInfo.Stamina); err != nil {
-			return &game.EndBattleResponse{
-				Code: 3,
-				Msg:  "体力扣除失败: " + err.Error(),
-			}, nil
-		}
+		source = "battle_golden_" + battleData.CurLevelId
 
 	default:
 		return &game.EndBattleResponse{
 			Code: 2,
-			Msg:  "关卡不存在",
+			Msg:  "无效的战斗类型",
 		}, nil
 	}
 
-	if in.GetProgress() == 0 {
+	// 如果进度为0，直接返回成功（不发放奖励）
+	if progress == 0 {
+		// 重置分享奖励状态，清空奖励JSON
+		battleData.ShareRewardClaimed = false
+		battleData.RewardJSON = ""
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+			s.logger.Error("保存战斗数据失败", zap.Error(err))
+		}
 		return &game.EndBattleResponse{
 			Code: 0,
 			Msg:  "通过成功",
 		}, nil
 	}
 
-	reward := GetReward(rewardId, s.template.GetTplReward(), s.logger)
+	// 获取奖励并应用进度折扣
+	var reward *game.Reward
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	reward = GetReward(rewardId, s.template.GetTplReward(), s.logger)
 	if reward != nil {
 		// 应用进度折扣
-		applyProgressToReward(reward, in.GetProgress())
+		applyProgressToReward(reward, progress)
 
-		// 使用统一的奖励发放函数（支持特殊道具处理）
+		// 发放奖励
 		var err error
 		walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-
 		if err != nil {
+			s.logger.Error("奖励发放失败", zap.Error(err))
 			return &game.EndBattleResponse{
 				Code: 4,
 				Msg:  "奖励发放失败: " + err.Error(),
@@ -109,53 +181,68 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}
 	}
 
-	// 更新关卡进度（仅对普通关卡）
-	if in.GetType() == game.BattleType_BATTLE_TYPE_NORMAL {
-		if err := updateLevelProgress(ctx, s.logger, s.db, s.metrics, s.storageIndex, in.GetLevelId(), in.GetProgress()); err != nil {
-			s.logger.Error("更新关卡进度失败",
-				zap.Error(err),
-				zap.String("level_id", in.GetLevelId()),
-				zap.Int32("progress", in.GetProgress()))
-			// 不影响战斗结算，仅记录错误
+	// 保存奖励JSON（用于分享后再次领取相同奖励）
+	if reward != nil {
+		rewardJSON, err := protojson.Marshal(reward)
+		if err != nil {
+			s.logger.Error("序列化奖励失败", zap.Error(err))
+		} else {
+			battleData.RewardJSON = string(rewardJSON)
 		}
 	}
 
-	// 保存战斗信息，用于后续再次领取奖励
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-	battleData := &BattleData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, battleData); err != nil {
-		s.logger.Error("加载战斗奖励数据失败", zap.Error(err))
-		// 不影响战斗结算，仅记录错误
-	} else {
-		battleData.LevelId = in.GetLevelId()
-		battleData.Progress = in.GetProgress()
-		battleData.BattleType = int32(in.GetType())
-		battleData.ShareRewardClaimed = false // 重置再次领取状态
+	// 重置分享奖励状态
+	battleData.ShareRewardClaimed = false
 
-		// 保存奖励 JSON（用于分享后再次领取相同奖励）
-		if reward != nil {
-			rewardJSON, err := protojson.Marshal(reward)
-			if err != nil {
-				s.logger.Error("序列化奖励失败", zap.Error(err))
+	// 更新关卡进度（仅对普通关卡）- 直接内联逻辑，避免多次保存
+	if battleData.BattleType == game.BattleType_BATTLE_TYPE_NORMAL {
+		// 初始化 Progress map（如果为 nil）
+		if battleData.Progress == nil {
+			battleData.Progress = make(map[string]int32)
+		}
+
+		levelId := battleData.CurLevelId
+		currentProgress, exists := battleData.Progress[levelId]
+
+		// 更新最大关卡ID（如果新关卡更大）
+		if battleData.MaxLevelId == "" || compareLevelId(levelId, battleData.MaxLevelId) {
+			oldLevelId := battleData.MaxLevelId
+			battleData.MaxLevelId = levelId
+			s.logger.Info("更新最大关卡",
+				zap.String("old_level_id", oldLevelId),
+				zap.String("new_level_id", levelId))
+		}
+
+		// 更新 Progress map（如果进度更好）
+		if !exists || progress > currentProgress {
+			if exists {
+				oldProgress := currentProgress
+				battleData.Progress[levelId] = progress
+				s.logger.Info("更新关卡进度",
+					zap.String("level_id", levelId),
+					zap.Int32("old_progress", oldProgress),
+					zap.Int32("new_progress", progress))
 			} else {
-				battleData.RewardJSON = string(rewardJSON)
+				battleData.Progress[levelId] = progress
+				s.logger.Info("添加新关卡进度",
+					zap.String("level_id", levelId),
+					zap.Int32("progress", progress))
 			}
 		}
+	}
 
-		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, battleData); err != nil {
-			s.logger.Error("保存战斗奖励数据失败", zap.Error(err))
-			// 不影响战斗结算，仅记录错误
-		}
+	// 统一保存战斗数据（包含进度更新）
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+		s.logger.Error("保存战斗数据失败", zap.Error(err))
+		// 不影响战斗结算，仅记录错误
 	}
 
 	// 提取更新后的数据
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
-
 	if walletUpdateResult != nil {
 		walletUpdated = walletUpdateResult.Updated
 	}
-
 	if inventoryUpdateResult != nil {
 		inventoryUpdated = inventoryUpdateResult.Updated
 	}
@@ -171,25 +258,25 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 
 // 分享后领取战斗奖励（每场战斗一次）
 func (s *ApiServer) ClaimBattleRewardByShare(ctx context.Context, in *game.ClaimBattleRewardByShareRequest) (*game.ClaimBattleRewardByShareResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	// 加载战斗奖励数据
+	// 加载战斗数据
 	battleData := &BattleData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, battleData); err != nil {
-		s.logger.Error("加载战斗奖励数据失败", zap.Error(err))
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载战斗数据失败", zap.Error(err))
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 1,
 			Msg:  "加载数据失败",
 		}, nil
 	}
 
-	if battleData.LevelId == "" {
+	// 验证是否有战斗记录
+	if battleData.CurLevelId == "" {
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 2,
 			Msg:  "未完成战斗",
 		}, nil
 	}
 
+	// 检查是否已领取
 	if battleData.ShareRewardClaimed {
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 3,
@@ -197,32 +284,31 @@ func (s *ApiServer) ClaimBattleRewardByShare(ctx context.Context, in *game.Claim
 		}, nil
 	}
 
-	// 从保存的奖励 JSON 中恢复奖励
-	var reward *game.Reward
-	if battleData.RewardJSON != "" {
-		reward = &game.Reward{}
-		if err := protojson.Unmarshal([]byte(battleData.RewardJSON), reward); err != nil {
-			s.logger.Error("反序列化奖励失败", zap.Error(err))
-			return &game.ClaimBattleRewardByShareResponse{
-				Code: 4,
-				Msg:  "奖励数据错误",
-			}, nil
-		}
-	} else {
+	// 验证是否有保存的奖励数据
+	if battleData.RewardJSON == "" {
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 4,
 			Msg:  "未找到保存的奖励数据",
 		}, nil
 	}
 
+	// 从保存的奖励 JSON 中恢复奖励
+	reward := &game.Reward{}
+	if err := protojson.Unmarshal([]byte(battleData.RewardJSON), reward); err != nil {
+		s.logger.Error("反序列化奖励失败", zap.Error(err))
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 4,
+			Msg:  "奖励数据错误",
+		}, nil
+	}
+
 	// 根据战斗类型确定 source
 	var source string
-	battleType := game.BattleType(battleData.BattleType)
-	switch battleType {
+	switch battleData.BattleType {
 	case game.BattleType_BATTLE_TYPE_NORMAL:
-		source = "battle_normal_share_" + battleData.LevelId
+		source = "battle_normal_share_" + battleData.CurLevelId
 	case game.BattleType_BATTLE_TYPE_GOLDEN:
-		source = "battle_golden_share_" + battleData.LevelId
+		source = "battle_golden_share_" + battleData.CurLevelId
 	default:
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 4,
@@ -233,27 +319,26 @@ func (s *ApiServer) ClaimBattleRewardByShare(ctx context.Context, in *game.Claim
 	// 发放奖励
 	walletUpdateResult, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
 	if err != nil {
+		s.logger.Error("奖励发放失败", zap.Error(err))
 		return &game.ClaimBattleRewardByShareResponse{
-			Code: 6,
+			Code: 5,
 			Msg:  "奖励发放失败: " + err.Error(),
 		}, nil
 	}
 
-	// 标记为已领取（全局唯一一次）
+	// 标记为已领取
 	battleData.ShareRewardClaimed = true
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, battleData); err != nil {
-		s.logger.Error("保存战斗奖励数据失败", zap.Error(err))
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+		s.logger.Error("保存战斗数据失败", zap.Error(err))
 		// 不影响奖励发放，仅记录错误
 	}
 
 	// 提取更新后的数据
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
-
 	if walletUpdateResult != nil {
 		walletUpdated = walletUpdateResult.Updated
 	}
-
 	if inventoryUpdateResult != nil {
 		inventoryUpdated = inventoryUpdateResult.Updated
 	}
@@ -288,52 +373,4 @@ func applyProgressToReward(reward *game.Reward, progress int32) {
 			}
 		}
 	}
-}
-
-// updateLevelProgress 更新关卡进度到 storage
-func updateLevelProgress(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, levelId string, progress int32) error {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
-	// 加载关卡数据
-	levelData, err := GetLevelData(ctx, logger, db, metrics, storageIndex)
-	if err != nil {
-		logger.Error("加载关卡数据失败", zap.Error(err))
-		return err
-	}
-
-	// 更新最大关卡
-	needUpdate := false
-	if compareLevelId(levelId, levelData.CurLevelId) {
-		// 新关卡更大，更新关卡和进度
-		oldLevelId := levelData.CurLevelId
-		levelData.CurLevelId = levelId
-		levelData.BestProgress = progress
-		needUpdate = true
-		logger.Info("更新最大关卡",
-			zap.String("old_level_id", oldLevelId),
-			zap.String("new_level_id", levelId),
-			zap.Int32("progress", progress))
-	} else if levelId == levelData.CurLevelId && progress > levelData.BestProgress {
-		// 同一关卡，更新最好进度
-		oldProgress := levelData.BestProgress
-		levelData.BestProgress = progress
-		needUpdate = true
-		logger.Info("更新最好进度",
-			zap.String("level_id", levelId),
-			zap.Int32("old_progress", oldProgress),
-			zap.Int32("new_progress", progress))
-	}
-
-	if needUpdate {
-		// 保存更新的关卡数据
-		if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, levelData); err != nil {
-			logger.Error("保存关卡数据失败", zap.Error(err))
-			return err
-		}
-		logger.Info("关卡进度已更新",
-			zap.String("cur_level_id", levelData.CurLevelId),
-			zap.Int32("best_progress", levelData.BestProgress))
-	}
-
-	return nil
 }

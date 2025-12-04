@@ -16,7 +16,7 @@ func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game
 
 	// 加载任务数据
 	taskData := &TaskData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, taskData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, taskData); err != nil {
 		s.logger.Warn("加载任务数据失败，初始化新数据", zap.Error(err))
 		return nil, fmt.Errorf("加载任务数据失败")
 	}
@@ -27,7 +27,7 @@ func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game
 		taskData.Init()
 
 		// 保存重置后的数据
-		err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, taskData)
+		err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, taskData)
 		if err != nil {
 			s.logger.Error("保存任务数据失败", zap.Error(err))
 		}
@@ -57,7 +57,7 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 
 	// 加载任务数据
 	taskData := &TaskData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, taskData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, taskData); err != nil {
 		s.logger.Warn("加载任务数据失败，初始化新数据", zap.Error(err))
 		taskData.Init()
 	}
@@ -153,7 +153,7 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 	taskData.ClaimedTasks = append(taskData.ClaimedTasks, validTaskIDs...)
 
 	// 保存任务数据
-	err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, taskData)
+	err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, taskData)
 	if err != nil {
 		s.logger.Error("保存任务数据失败", zap.Error(err))
 		return &game.ClaimTaskRewardResponse{
@@ -203,7 +203,7 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 
 	// 加载任务数据
 	taskData := &TaskData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, taskData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, taskData); err != nil {
 		s.logger.Warn("加载任务数据失败", zap.Error(err))
 		return &game.ClaimLivenessRewardResponse{
 			Code: 3,
@@ -308,7 +308,7 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 	taskData.ClaimedLivenessRewards = append(taskData.ClaimedLivenessRewards, validRewardIDs...)
 
 	// 保存任务数据
-	err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, taskData)
+	err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, taskData)
 	if err != nil {
 		s.logger.Error("保存任务数据失败", zap.Error(err))
 		return &game.ClaimLivenessRewardResponse{

@@ -413,7 +413,7 @@ func (s *ApiServer) deliverVipProduct(ctx context.Context, userID uuid.UUID, pro
 	// 重置VIP奖励领取状态
 	vipRewardData := &VipRewardData{}
 	vipRewardData.Init()
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, vipRewardData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, vipRewardData); err != nil {
 		s.logger.Error("重置VIP奖励状态失败",
 			zap.Error(err),
 			zap.String("user_id", userID.String()))
@@ -458,7 +458,7 @@ func (s *ApiServer) deliverShopGemProduct(ctx context.Context, userID uuid.UUID,
 
 	// 加载钻石商店数据
 	gemShopData := &GemShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, gemShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, gemShopData); err != nil {
 		s.logger.Error("加载钻石商店数据失败",
 			zap.Error(err),
 			zap.String("user_id", userID.String()))
@@ -474,7 +474,7 @@ func (s *ApiServer) deliverShopGemProduct(ctx context.Context, userID uuid.UUID,
 	gemShopData.BoughtCounts[shopItemID] = gemShopData.BoughtCounts[shopItemID] + 1
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, gemShopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, gemShopData); err != nil {
 		s.logger.Error("保存钻石商店数据失败",
 			zap.Error(err),
 			zap.String("user_id", userID.String()),
@@ -512,7 +512,7 @@ func (s *ApiServer) deliverShopChapterProduct(ctx context.Context, userID uuid.U
 
 	// 加载章节商店数据
 	chapterShopData := &ChapterShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, chapterShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, chapterShopData); err != nil {
 		s.logger.Error("加载章节商店数据失败",
 			zap.Error(err),
 			zap.String("user_id", userID.String()))
@@ -528,7 +528,7 @@ func (s *ApiServer) deliverShopChapterProduct(ctx context.Context, userID uuid.U
 	chapterShopData.BoughtCounts[shopItemID] = chapterShopData.BoughtCounts[shopItemID] + 1
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, chapterShopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, chapterShopData); err != nil {
 		s.logger.Error("保存章节商店数据失败",
 			zap.Error(err),
 			zap.String("user_id", userID.String()),

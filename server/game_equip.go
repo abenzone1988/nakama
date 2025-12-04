@@ -14,11 +14,9 @@ import (
 )
 
 func (s *ApiServer) GetEquipData(ctx context.Context, in *emptypb.Empty) (*game.EquipData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	// 加载装备数据
 	equipData := &EquipData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, equipData); err != nil {
 		s.logger.Error("加载装备数据失败", zap.Error(err))
 		return nil, err
 	}
@@ -26,7 +24,7 @@ func (s *ApiServer) GetEquipData(ctx context.Context, in *emptypb.Empty) (*game.
 	// 如果数据为空，初始化装备数据
 	if len(equipData.UnlockEquips) == 0 {
 		initializeEquipData(equipData, s.template)
-		if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, equipData); err != nil {
 			s.logger.Error("保存初始化的装备数据失败", zap.Error(err))
 			return nil, err
 		}
@@ -44,7 +42,7 @@ func (s *ApiServer) UpgradeEquip(ctx context.Context, in *game.UpgradeEquipReque
 
 	// 加载实际的 EquipData 结构用于修改
 	equipData := &EquipData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, equipData); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +63,7 @@ func (s *ApiServer) UpgradeEquip(ctx context.Context, in *game.UpgradeEquipReque
 	}
 
 	// 保存装备数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, equipData); err != nil {
 		return nil, err
 	}
 
@@ -96,7 +94,7 @@ func (s *ApiServer) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrys
 
 	// 加载实际的 EquipData 结构用于修改
 	equipData := &EquipData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, equipData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, equipData); err != nil {
 		return nil, err
 	}
 
@@ -109,7 +107,7 @@ func (s *ApiServer) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrys
 	}
 
 	// 保存装备数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, equipData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, equipData); err != nil {
 		return nil, err
 	}
 

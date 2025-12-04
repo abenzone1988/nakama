@@ -21,7 +21,7 @@ func (s *ApiServer) GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayS
 
 	// 从 storage 加载七日购买数据
 	sevenDayData := &SevenDayData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, sevenDayData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, sevenDayData); err != nil {
 		s.logger.Error("加载七日购买数据失败", zap.Error(err))
 		sevenDayData.Init()
 	}
@@ -103,7 +103,7 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 
 	// 从 storage 加载七日购买数据
 	sevenDayData := &SevenDayData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, sevenDayData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, sevenDayData); err != nil {
 		s.logger.Error("加载七日购买数据失败", zap.Error(err))
 		sevenDayData.Init()
 	}
@@ -217,7 +217,7 @@ func (s *ApiServer) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSeven
 
 	// 更新已领取天数
 	sevenDayData.ClaimedDays = append(sevenDayData.ClaimedDays, toClaimDays...)
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, sevenDayData); err != nil {
 		s.logger.Error("保存七日购买数据失败", zap.Error(err))
 		return &game.ClaimSevenDayRewardResponse{
 			Code: 9,
@@ -276,7 +276,7 @@ func (s *ApiServer) getSevenDayReward(day int32) (*game.Reward, error) {
 func (s *ApiServer) RecordSevenDayPurchase(ctx context.Context, userID uuid.UUID) error {
 	// 从 storage 加载七日购买数据
 	sevenDayData := &SevenDayData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, sevenDayData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, sevenDayData); err != nil {
 		s.logger.Error("加载七日购买数据失败", zap.Error(err))
 		sevenDayData.Init()
 	}
@@ -290,7 +290,7 @@ func (s *ApiServer) RecordSevenDayPurchase(ctx context.Context, userID uuid.UUID
 	sevenDayData.ClaimedDays = []int32{} // 重置领取记录
 	sevenDayData.TotalPurchases++        // 增加购买次数
 
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, sevenDayData); err != nil {
 		return fmt.Errorf("保存七日购买数据失败: %w", err)
 	}
 
@@ -310,7 +310,7 @@ func (s *ApiServer) handleSevenDayExpiration(ctx context.Context, userID uuid.UU
 	purchaseTime, err := time.Parse(time.RFC3339, sevenDayData.LastPurchaseTime)
 	if err != nil {
 		sevenDayData.Init()
-		return false, SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData)
+		return false, SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, sevenDayData)
 	}
 
 	if time.Since(purchaseTime) < 7*24*time.Hour {
@@ -326,7 +326,7 @@ func (s *ApiServer) handleSevenDayExpiration(ctx context.Context, userID uuid.UU
 
 	sevenDayData.LastPurchaseTime = ""
 	sevenDayData.ClaimedDays = []int32{}
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, sevenDayData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, sevenDayData); err != nil {
 		return false, err
 	}
 

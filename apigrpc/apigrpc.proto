@@ -965,6 +965,13 @@ service Nakama {
     };
   }
 
+  rpc StartBattle(game.StartBattleRequest) returns (game.StartBattleResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/battle/start"
+      body: "*"
+    };
+  }
+
   rpc ClaimBattleRewardByShare(game.ClaimBattleRewardByShareRequest) returns (game.ClaimBattleRewardByShareResponse) {
     option (google.api.http) = {
       post: "/v2/game/battle/reward/share"

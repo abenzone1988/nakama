@@ -1974,6 +1974,38 @@
         ]
       }
     },
+    "/v2/game/battle/start": {
+      "post": {
+        "operationId": "Nakama_StartBattle",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameStartBattleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameStartBattleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/equip": {
       "get": {
         "summary": "Get equip data",
@@ -7354,6 +7386,10 @@
           "type": "integer",
           "format": "int32",
           "title": "第二阶段已使用次数"
+        },
+        "stamina": {
+          "$ref": "#/definitions/gameStaminaData",
+          "title": "扫荡需要扣体力"
         }
       },
       "title": "扫荡奖励响应"
@@ -7607,12 +7643,6 @@
     "gameEndBattleRequest": {
       "type": "object",
       "properties": {
-        "type": {
-          "$ref": "#/definitions/gameBattleType"
-        },
-        "levelId": {
-          "type": "string"
-        },
         "progress": {
           "type": "integer",
           "format": "int32"
@@ -8373,6 +8403,33 @@
         }
       },
       "title": "体力数据"
+    },
+    "gameStartBattleRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/gameBattleType"
+        },
+        "levelId": {
+          "type": "string"
+        }
+      },
+      "title": "开始战斗"
+    },
+    "gameStartBattleResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "stamina": {
+          "$ref": "#/definitions/gameStaminaData"
+        }
+      }
     },
     "gameSubmitBeInvitedRequest": {
       "type": "object",

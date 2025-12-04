@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -14,10 +13,8 @@ import (
 
 // GetChapterShop RPC获取章节商店数据（IAP）
 func (s *ApiServer) GetChapterShop(ctx context.Context, in *emptypb.Empty) (*game.ChapterShopData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	chapterShopData := &ChapterShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, chapterShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, chapterShopData); err != nil {
 		s.logger.Error("加载章节商店数据失败", zap.Error(err))
 		// 首次初始化
 		chapterShopData.Init()
@@ -39,10 +36,8 @@ func (s *ApiServer) GetChapterShop(ctx context.Context, in *emptypb.Empty) (*gam
 
 // GetGemShop RPC获取钻石商店数据（IAP）
 func (s *ApiServer) GetGemShop(ctx context.Context, in *emptypb.Empty) (*game.GemShopData, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	gemShopData := &GemShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, gemShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, gemShopData); err != nil {
 		s.logger.Error("加载钻石商店数据失败", zap.Error(err))
 		// 首次初始化
 		gemShopData.Init()
@@ -64,10 +59,8 @@ func (s *ApiServer) GetGemShop(ctx context.Context, in *emptypb.Empty) (*game.Ge
 
 // 购买章节商品（独立接口，IAP）
 func (s *ApiServer) ClaimChapterItem(ctx context.Context, in *game.ClaimChapterItemRequest) (*game.ClaimChapterItemResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	chapterShopData := &ChapterShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, chapterShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, chapterShopData); err != nil {
 		s.logger.Error("加载章节商店数据失败", zap.Error(err))
 		return &game.ClaimChapterItemResponse{Code: -1, Msg: "加载商店数据失败"}, nil
 	}
@@ -117,7 +110,7 @@ func (s *ApiServer) ClaimChapterItem(ctx context.Context, in *game.ClaimChapterI
 	chapterShopData.ClaimedCounts[shopItemID] = claimedCount + 1
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, chapterShopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, chapterShopData); err != nil {
 		s.logger.Error("保存章节商店数据失败", zap.Error(err))
 		return &game.ClaimChapterItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
 	}
@@ -157,10 +150,8 @@ func (s *ApiServer) ClaimChapterItem(ctx context.Context, in *game.ClaimChapterI
 
 // 购买钻石商品（独立接口，IAP）
 func (s *ApiServer) ClaimGemItem(ctx context.Context, in *game.ClaimGemItemRequest) (*game.ClaimGemItemResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	gemShopData := &GemShopData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, gemShopData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, gemShopData); err != nil {
 		s.logger.Error("加载钻石商店数据失败", zap.Error(err))
 		return &game.ClaimGemItemResponse{Code: -1, Msg: "加载商店数据失败"}, nil
 	}
@@ -210,7 +201,7 @@ func (s *ApiServer) ClaimGemItem(ctx context.Context, in *game.ClaimGemItemReque
 	gemShopData.ClaimedCounts[shopItemID] = claimedCount + 1
 
 	// 保存商店数据
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, gemShopData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, gemShopData); err != nil {
 		s.logger.Error("保存钻石商店数据失败", zap.Error(err))
 		return &game.ClaimGemItemResponse{Code: 6, Msg: "保存商店数据失败"}, nil
 	}

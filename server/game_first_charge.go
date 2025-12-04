@@ -14,11 +14,9 @@ import (
 
 // GetFirstChargeStatus 获取首冲状态
 func (s *ApiServer) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
-
 	// 从 storage 加载首冲数据
 	firstChargeData := &FirstChargeData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, firstChargeData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, firstChargeData); err != nil {
 		s.logger.Error("加载首冲数据失败", zap.Error(err))
 		firstChargeData.Init()
 	}
@@ -78,7 +76,7 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 
 	// 从 storage 加载首冲数据
 	firstChargeData := &FirstChargeData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, firstChargeData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, firstChargeData); err != nil {
 		s.logger.Error("加载首冲数据失败", zap.Error(err))
 		firstChargeData.Init()
 	}
@@ -168,7 +166,7 @@ func (s *ApiServer) ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFi
 
 	// 更新已领取天数
 	firstChargeData.ClaimedDays = append(firstChargeData.ClaimedDays, toClaimDays...)
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, firstChargeData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, firstChargeData); err != nil {
 		s.logger.Error("保存首冲数据失败", zap.Error(err))
 		return &game.ClaimFirstChargeRewardResponse{
 			Code: 7,

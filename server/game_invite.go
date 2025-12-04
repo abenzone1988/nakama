@@ -12,7 +12,6 @@ import (
 )
 
 func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvitedRequest) (*emptypb.Empty, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	userName := ctx.Value(ctxUsernameKey{}).(string)
 
 	owners, err := GetUsers(ctx, s.logger, s.db, s.statusRegistry, nil, []string{userName}, nil)
@@ -29,7 +28,7 @@ func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvite
 	}
 
 	inviteeData := &InviteData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, inviteeData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, inviteeData); err != nil {
 		return nil, err
 	}
 
@@ -62,7 +61,7 @@ func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvite
 
 	inviteeData.BeInvited = true
 	inviteeData.Inviter = inviter.Username
-	if err = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, inviteeData); err != nil {
+	if err = SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, inviteeData); err != nil {
 		return nil, err
 	}
 
@@ -70,9 +69,8 @@ func (s *ApiServer) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvite
 }
 
 func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.ListInviteeResponse, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	inviterData := &InviteData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, inviterData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, inviterData); err != nil {
 		return nil, err
 	}
 
@@ -107,9 +105,8 @@ func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.L
 }
 
 func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest) (*emptypb.Empty, error) {
-	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	inviterData := &InviteData{}
-	if err := LoadData(ctx, s.logger, s.db, userID, inviterData); err != nil {
+	if err := LoadUserData(ctx, s.logger, s.db, inviterData); err != nil {
 		return nil, err
 	}
 
@@ -148,7 +145,7 @@ func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteR
 		}
 	}
 
-	if err := SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, inviterData); err != nil {
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, inviterData); err != nil {
 		return nil, err
 	}
 
