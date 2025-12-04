@@ -354,7 +354,7 @@ type NakamaClient interface {
 	// List invitee information for a user.
 	ListInvitee(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.ListInviteeResponse, error)
 	// Claim invite reward for a user.
-	ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*game.ClaimInviteRewardResponse, error)
 	// Claim byte reward for a user (抖音奖励)
 	ClaimByteReward(ctx context.Context, in *game.ClaimByteRewardRequest, opts ...grpc.CallOption) (*game.ClaimByteRewardResponse, error)
 	// Get Server Time
@@ -1238,8 +1238,8 @@ func (c *nakamaClient) ListInvitee(ctx context.Context, in *emptypb.Empty, opts 
 	return out, nil
 }
 
-func (c *nakamaClient) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *nakamaClient) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest, opts ...grpc.CallOption) (*game.ClaimInviteRewardResponse, error) {
+	out := new(game.ClaimInviteRewardResponse)
 	err := c.cc.Invoke(ctx, Nakama_ClaimInviteReward_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1790,7 +1790,7 @@ type NakamaServer interface {
 	// List invitee information for a user.
 	ListInvitee(context.Context, *emptypb.Empty) (*game.ListInviteeResponse, error)
 	// Claim invite reward for a user.
-	ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*emptypb.Empty, error)
+	ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*game.ClaimInviteRewardResponse, error)
 	// Claim byte reward for a user (抖音奖励)
 	ClaimByteReward(context.Context, *game.ClaimByteRewardRequest) (*game.ClaimByteRewardResponse, error)
 	// Get Server Time
@@ -2137,7 +2137,7 @@ func (UnimplementedNakamaServer) SubmitBeInvited(context.Context, *game.SubmitBe
 func (UnimplementedNakamaServer) ListInvitee(context.Context, *emptypb.Empty) (*game.ListInviteeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListInvitee not implemented")
 }
-func (UnimplementedNakamaServer) ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*emptypb.Empty, error) {
+func (UnimplementedNakamaServer) ClaimInviteReward(context.Context, *game.ClaimInviteRewardRequest) (*game.ClaimInviteRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimInviteReward not implemented")
 }
 func (UnimplementedNakamaServer) ClaimByteReward(context.Context, *game.ClaimByteRewardRequest) (*game.ClaimByteRewardResponse, error) {

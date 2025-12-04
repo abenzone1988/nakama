@@ -48,6 +48,14 @@ message ClaimInviteRewardRequest{
   repeated string invitee_ids = 1;
 }
 
+message ClaimInviteRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3; // 奖励数据
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
 message GetGameTimeResponse{
   google.protobuf.Timestamp game_time = 1;
 }
@@ -532,6 +540,7 @@ message ShopGemItem {
   string price = 3;               // 价格
   int32 bought_count = 4;         // 已购买次数
   int32 claimed_count = 5;        // 已领多少次
+  int32 extra = 6;               // 首次额外奖励
 }
 
 // 单个商店数据（普通商店）

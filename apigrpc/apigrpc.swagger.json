@@ -3766,8 +3766,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
-              "properties": {}
+              "$ref": "#/definitions/gameClaimInviteRewardResponse"
             }
           },
           "default": {
@@ -7255,6 +7254,33 @@
         }
       }
     },
+    "gameClaimInviteRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      }
+    },
     "gameClaimLevelBoxRequest": {
       "type": "object",
       "properties": {
@@ -8297,6 +8323,11 @@
           "type": "integer",
           "format": "int32",
           "title": "已领多少次"
+        },
+        "extra": {
+          "type": "integer",
+          "format": "int32",
+          "title": "首次额外奖励"
         }
       },
       "title": "钻石商店（IAP直购）"

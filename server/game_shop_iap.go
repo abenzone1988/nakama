@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// GetChapterShop RPC获取章节商店数据（IAP）
+// RPC获取章节商店数据（IAP）
 func (s *ApiServer) GetChapterShop(ctx context.Context, in *emptypb.Empty) (*game.ChapterShopData, error) {
 	chapterShopData := &ChapterShopData{}
 	if err := LoadUserData(ctx, s.logger, s.db, chapterShopData); err != nil {
@@ -34,7 +34,7 @@ func (s *ApiServer) GetChapterShop(ctx context.Context, in *emptypb.Empty) (*gam
 	return convertToProtoChapterShop(chapterShopData, s.template, s.logger), nil
 }
 
-// GetGemShop RPC获取钻石商店数据（IAP）
+// RPC获取钻石商店数据（IAP）
 func (s *ApiServer) GetGemShop(ctx context.Context, in *emptypb.Empty) (*game.GemShopData, error) {
 	gemShopData := &GemShopData{}
 	if err := LoadUserData(ctx, s.logger, s.db, gemShopData); err != nil {
@@ -324,6 +324,7 @@ func convertToProtoGemShop(data *GemShopData, tmpl TemplateManager) *game.GemSho
 			Price:        price,
 			BoughtCount:  boughtCount,
 			ClaimedCount: claimedCount,
+			Extra:        tplItem.ExtraNum,
 		})
 	}
 

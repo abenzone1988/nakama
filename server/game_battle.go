@@ -76,6 +76,15 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 		}, nil
 	}
 
+	// 更新最大关卡ID（如果新关卡更大）
+	if battleData.MaxLevelId == "" || compareLevelId(in.GetLevelId(), battleData.MaxLevelId) {
+		oldLevelId := battleData.MaxLevelId
+		battleData.MaxLevelId = in.GetLevelId()
+		s.logger.Info("更新最大关卡",
+			zap.String("old_level_id", oldLevelId),
+			zap.String("new_level_id", in.GetLevelId()))
+	}
+
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 		s.logger.Error("保存战斗数据失败", zap.Error(err))
 	}
@@ -216,15 +225,6 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 
 		levelId := battleData.CurLevelId
 		currentProgress, exists := battleData.Progress[levelId]
-
-		// 更新最大关卡ID（如果新关卡更大）
-		if battleData.MaxLevelId == "" || compareLevelId(levelId, battleData.MaxLevelId) {
-			oldLevelId := battleData.MaxLevelId
-			battleData.MaxLevelId = levelId
-			s.logger.Info("更新最大关卡",
-				zap.String("old_level_id", oldLevelId),
-				zap.String("new_level_id", levelId))
-		}
 
 		// 更新 Progress map（如果进度更好）
 		if !exists || progress > currentProgress {

@@ -104,7 +104,7 @@ func (s *ApiServer) ListInvitee(ctx context.Context, in *emptypb.Empty) (*game.L
 	return resp, nil
 }
 
-func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest) (*emptypb.Empty, error) {
+func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteRewardRequest) (*game.ClaimInviteRewardResponse, error) {
 	inviterData := &InviteData{}
 	if err := LoadUserData(ctx, s.logger, s.db, inviterData); err != nil {
 		return nil, err
@@ -112,6 +112,7 @@ func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteR
 
 	// 收集所有需要发放的奖励
 	var allRewards []*game.Reward
+	var mergedReward *game.Reward
 	var validInviteeIds []string
 
 	for _, v := range in.InviteeIds {
@@ -131,23 +132,28 @@ func (s *ApiServer) ClaimInviteReward(ctx context.Context, in *game.ClaimInviteR
 			}
 		}
 	}
-
 	// 如果有有效的奖励，合并并发放
 	if len(allRewards) > 0 {
-		mergedReward := MergeRewards(allRewards)
-		if mergedReward != nil {
-			source := fmt.Sprintf("invite_reward_count_%d", len(validInviteeIds))
-			_, _, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
-			if err != nil {
-				s.logger.Error("发放邀请奖励失败", zap.Error(err), zap.Int("count", len(validInviteeIds)))
-				return nil, fmt.Errorf("发放邀请奖励失败: %w", err)
-			}
+		mergedReward = MergeRewards(allRewards)
+		source := fmt.Sprintf("invite_reward_count_%d", len(validInviteeIds))
+		walletUpdateResult, inventoryUpdateResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, mergedReward, source)
+		if err != nil {
+			s.logger.Error("发放邀请奖励失败", zap.Error(err), zap.Int("count", len(validInviteeIds)))
+			return nil, fmt.Errorf("发放邀请奖励失败: %w", err)
 		}
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, inviterData); err != nil {
+			return nil, err
+		}
+		return &game.ClaimInviteRewardResponse{
+			Code:             0,
+			Msg:              "success",
+			Reward:           mergedReward,
+			WalletUpdated:    walletUpdateResult.Updated,
+			InventoryUpdated: inventoryUpdateResult.Updated,
+		}, nil
 	}
 
-	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, inviterData); err != nil {
-		return nil, err
-	}
-
-	return &emptypb.Empty{}, nil
+	return &game.ClaimInviteRewardResponse{
+		Code: 0,
+		Msg:  "success"}, nil
 }

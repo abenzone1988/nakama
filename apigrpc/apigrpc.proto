@@ -814,7 +814,7 @@ service Nakama {
   }
 
   // Claim invite reward for a user.
-  rpc ClaimInviteReward (game.ClaimInviteRewardRequest) returns (google.protobuf.Empty) {
+  rpc ClaimInviteReward (game.ClaimInviteRewardRequest) returns (game.ClaimInviteRewardResponse) {
     option (google.api.http) = {
       post: "/v2/invite/claim"
       body: "*"
