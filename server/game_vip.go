@@ -55,7 +55,9 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 	}
 	tplPay := tplPays.Get(0)
 
-	response := &game.CheckVipStatusResponse{}
+	response := &game.CheckVipStatusResponse{
+		Price: tplPay.Money,
+	}
 
 	// 如果用户是VIP，添加签名
 	if isVip && vipAccount.ExpiryTime != nil {
@@ -67,7 +69,6 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 			return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")
 		}
 		response.RewardClaimed = vipRewardData.RewardClaimed
-		response.Price = tplPay.Money
 	}
 
 	return response, nil

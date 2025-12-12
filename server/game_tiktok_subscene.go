@@ -223,7 +223,7 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 	}
 
 	// 读取 ByteDirectPlay 数据
-	directPlay := &ByteDirectPlay{}
+	directPlay := &ByteRewardData{}
 	if err := LoadUserData(ctx, s.logger, s.db, directPlay); err != nil {
 		s.logger.Error("读取 ByteDirectPlay 数据失败", zap.Error(err))
 		directPlay.Init()
@@ -248,26 +248,43 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 
 	// 判断是否超过8小时且今天未返回过该场景
 	if time.Since(lastGetTime).Hours() >= 8 {
-		lastSceneTime := directPlay.SceneTimestamps[1]
-		if lastSceneTime == "" || !strings.HasPrefix(lastSceneTime, currentDate) {
+		lastSceneTime := directPlay.SceneTimestamps[ContentOfflineIncome]
+		isSameDay := false
+		if lastSceneTime != "" {
+			lastTime, err := parseTime(lastSceneTime)
+			if err == nil {
+				lastDate := lastTime.UTC().Format("2006-01-02")
+				isSameDay = lastDate == currentDate
+			}
+		}
+		if !isSameDay {
 			scenes = append(scenes, &Scene{
 				Scene:      1,
 				ContentIDs: []string{ContentOfflineIncome},
 				Extra:      "",
 			})
-			directPlay.SceneTimestamps[1] = currentTime.Format(time.RFC3339)
+			directPlay.SceneTimestamps[ContentOfflineIncome] = currentTime.Format(time.RFC3339)
 		}
 	}
 
 	// 检查重新进入关卡场景
-	lastReFightTime := directPlay.SceneTimestamps[3]
-	if lastReFightTime == "" || !strings.HasPrefix(lastReFightTime, currentDate) {
+	lastReFightTime := directPlay.SceneTimestamps[ContentReFight]
+	isSameDay := false
+	if lastReFightTime != "" {
+		lastTime, err := parseTime(lastReFightTime)
+		if err == nil {
+			lastDate := lastTime.UTC().Format("2006-01-02")
+			isSameDay = lastDate == currentDate
+		}
+	}
+	if !isSameDay {
 		scenes = append(scenes, &Scene{
 			Scene:      3,
 			ContentIDs: []string{ContentReFight},
 			Extra:      "",
 		})
-		directPlay.SceneTimestamps[3] = currentTime.Format(time.RFC3339)
+		directPlay.SceneTimestamps[ContentReFight] = currentTime.Format(time.RFC3339)
+		directPlay.GetDirectPlayReward = false
 	}
 
 	// 保存更新后的 ByteDirectPlay 数据

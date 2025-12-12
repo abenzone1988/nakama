@@ -185,6 +185,8 @@ func (s *ApiServer) verifyOrderAmount(orderMoney, productID string) bool {
 		return false
 	}
 
+	s.logger.Info("verifyOrderAmount", zap.String("order_money", orderMoney), zap.String("product_id", productID))
+
 	return true
 }
 

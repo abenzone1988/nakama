@@ -14,7 +14,7 @@ func (s *ApiServer) ClaimByteReward(ctx context.Context, in *game.ClaimByteRewar
 	rewardID := in.GetRewardId()
 
 	// 验证奖励ID
-	if rewardID != TTShortcutRewardID && rewardID != TTEntryRewardID {
+	if rewardID != TTShortcutRewardID && rewardID != TTEntryRewardID && rewardID != TTDirectPlayRewardID {
 		return &game.ClaimByteRewardResponse{
 			Code: 1,
 			Msg:  "无效的奖励ID",
@@ -50,6 +50,15 @@ func (s *ApiServer) ClaimByteReward(ctx context.Context, in *game.ClaimByteRewar
 			}, nil
 		}
 		rewardData.EntryRewardLastDate = today
+	}
+
+	if rewardID == TTDirectPlayRewardID && rewardData.GetDirectPlayReward {
+		return &game.ClaimByteRewardResponse{
+			Code: 4,
+			Msg:  "今天已经领取过了，请明天再来领取",
+		}, nil
+	} else if rewardID == TTDirectPlayRewardID {
+		rewardData.GetDirectPlayReward = true
 	}
 
 	// 获取奖励配置

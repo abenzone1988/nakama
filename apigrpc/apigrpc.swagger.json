@@ -2272,6 +2272,38 @@
         ]
       }
     },
+    "/v2/game/level/box/get": {
+      "post": {
+        "operationId": "Nakama_GetLevelBox",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetLevelBoxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGetLevelBoxRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/mopping/claim": {
       "post": {
         "operationId": "Nakama_ClaimMoppingReward",
@@ -7815,6 +7847,39 @@
         }
       }
     },
+    "gameGetLevelBoxRequest": {
+      "type": "object",
+      "properties": {
+        "levelIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "关卡ID列表，如 [\"L1001\", \"L1002\"]"
+        }
+      },
+      "title": "获取关卡宝箱请求"
+    },
+    "gameGetLevelBoxResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "claimedBoxes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/gameLevelBoxInfo"
+          },
+          "title": "key: level_id, value: 已领取的宝箱ID列表"
+        }
+      },
+      "title": "获取关卡宝箱响应"
+    },
     "gameGetSevenDayStatusResponse": {
       "type": "object",
       "properties": {
@@ -7938,6 +8003,20 @@
         }
       },
       "title": "道具"
+    },
+    "gameLevelBoxInfo": {
+      "type": "object",
+      "properties": {
+        "claimedBoxIds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "已领取的宝箱ID列表"
+        }
+      },
+      "title": "关卡宝箱信息"
     },
     "gameListInviteeResponse": {
       "type": "object",

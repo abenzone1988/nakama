@@ -579,32 +579,13 @@ func (f *RedeemHistory) Init() {
 // 抖音小游戏相关数据结构
 // ============================================================================
 
-// ByteDirectPlay 字节跳动直玩数据
-type ByteDirectPlay struct {
-	BaseStorable
-	SceneTimestamps map[int64]string `json:"scene_timestamps"` // 记录每个场景的最后返回时间
-}
-
-func (f *ByteDirectPlay) GetCollection() string {
-	return "ByteGame"
-}
-
-func (f *ByteDirectPlay) GetKey() string {
-	return "DirectPlay"
-}
-
-func (f *ByteDirectPlay) Init() {
-	if f.SceneTimestamps == nil {
-		f.SceneTimestamps = make(map[int64]string)
-	}
-	f.SetVersion("")
-}
-
 // ByteRewardData 抖音奖励数据
 type ByteRewardData struct {
 	BaseStorable
-	ShortcutRewardClaimed bool   `json:"shortcut_reward_claimed"` // 添加到桌面奖励是否已领取（仅一次）
-	EntryRewardLastDate   string `json:"entry_reward_last_date"`  // 入口有奖最后领取日期（YYYY-MM-DD）
+	ShortcutRewardClaimed bool              `json:"shortcut_reward_claimed"` // 添加到桌面奖励是否已领取（仅一次）
+	EntryRewardLastDate   string            `json:"entry_reward_last_date"`  // 入口有奖最后领取日期（YYYY-MM-DD）
+	SceneTimestamps       map[string]string `json:"scene_timestamps"`        // 记录每个场景的最后返回时间
+	GetDirectPlayReward   bool              `json:"get_direct_play_reward"`  // 记录是否领取直玩显示礼包
 }
 
 func (f *ByteRewardData) GetCollection() string {
@@ -618,6 +599,8 @@ func (f *ByteRewardData) GetKey() string {
 func (f *ByteRewardData) Init() {
 	f.ShortcutRewardClaimed = false
 	f.EntryRewardLastDate = ""
+	f.SceneTimestamps = make(map[string]string)
+	f.GetDirectPlayReward = false
 	f.SetVersion("")
 }
 

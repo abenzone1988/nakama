@@ -54,6 +54,8 @@ const (
 	TTShortcutRewardID = "TTShortcutReword" // 添加到桌面奖励（仅一次）
 	// 入口有奖
 	TTEntryRewardID = "TTEntryReword" // 入口有奖（每天一次）
+
+	TTDirectPlayRewardID = "LimitedTimePackageReword" // 直玩显示礼包
 )
 
 // 每日签到相关常量

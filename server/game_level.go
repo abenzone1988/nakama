@@ -177,6 +177,49 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 	}, nil
 }
 
+func (s *ApiServer) GetLevelBox(ctx context.Context, in *game.GetLevelBoxRequest) (*game.GetLevelBoxResponse, error) {
+	// 加载宝箱数据
+	levelBoxData := &LevelBoxData{}
+	if err := LoadUserData(ctx, s.logger, s.db, levelBoxData); err != nil {
+		s.logger.Warn("加载宝箱数据失败，初始化新数据", zap.Error(err))
+		// 首次加载或数据不存在，初始化
+		levelBoxData.Init()
+	}
+
+	// 只返回请求的关卡ID对应的宝箱数据
+	claimedBoxes := make(map[string]*game.LevelBoxInfo)
+	requestedLevelIds := in.GetLevelIds()
+
+	if len(requestedLevelIds) == 0 {
+		// 如果没有指定关卡ID，返回空数据
+		return &game.GetLevelBoxResponse{
+			Code:         0,
+			Msg:          "获取成功",
+			ClaimedBoxes: claimedBoxes,
+		}, nil
+	}
+
+	// 只返回请求的关卡ID对应的数据
+	for _, levelId := range requestedLevelIds {
+		if boxIds, exists := levelBoxData.ClaimedBoxes[levelId]; exists {
+			claimedBoxes[levelId] = &game.LevelBoxInfo{
+				ClaimedBoxIds: boxIds,
+			}
+		} else {
+			// 如果关卡没有领取记录，返回空列表
+			claimedBoxes[levelId] = &game.LevelBoxInfo{
+				ClaimedBoxIds: []int32{},
+			}
+		}
+	}
+
+	return &game.GetLevelBoxResponse{
+		Code:         0,
+		Msg:          "获取成功",
+		ClaimedBoxes: claimedBoxes,
+	}, nil
+}
+
 // isLevelPassed 检查关卡是否已通过
 func isLevelPassed(targetLevelId, currentLevelId string) bool {
 	// 将 "L1001" 转换为 1001 进行比较

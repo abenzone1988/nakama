@@ -1016,6 +1016,13 @@ service Nakama {
     };
   }
 
+  rpc GetLevelBox(game.GetLevelBoxRequest) returns (game.GetLevelBoxResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/level/box/get"
+      body: "*"
+    };
+  }
+
   // ==================== Sign In ====================
   rpc ClaimSignInReward(game.ClaimSignInRewardRequest) returns (game.ClaimSignInRewardResponse) {
     option (google.api.http) = {

@@ -56,6 +56,23 @@ message ClaimInviteRewardResponse{
   repeated Item inventory_updated = 5; // 背包更新结果
 }
 
+// 关卡宝箱信息
+message LevelBoxInfo {
+  repeated int32 claimed_box_ids = 1; // 已领取的宝箱ID列表
+}
+
+// 获取关卡宝箱请求
+message GetLevelBoxRequest {
+  repeated string level_ids = 1; // 关卡ID列表，如 ["L1001", "L1002"]
+}
+
+// 获取关卡宝箱响应
+message GetLevelBoxResponse {
+  int32 code = 1;
+  string msg = 2;
+  map<string, LevelBoxInfo> claimed_boxes = 3; // key: level_id, value: 已领取的宝箱ID列表
+}
+
 message GetGameTimeResponse{
   google.protobuf.Timestamp game_time = 1;
 }

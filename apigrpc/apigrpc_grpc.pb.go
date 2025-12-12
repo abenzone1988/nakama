@@ -157,6 +157,7 @@ const (
 	Nakama_UpgradeEquip_FullMethodName                      = "/nakama.api.Nakama/UpgradeEquip"
 	Nakama_UpgradeCrystalTech_FullMethodName                = "/nakama.api.Nakama/UpgradeCrystalTech"
 	Nakama_ClaimLevelBox_FullMethodName                     = "/nakama.api.Nakama/ClaimLevelBox"
+	Nakama_GetLevelBox_FullMethodName                       = "/nakama.api.Nakama/GetLevelBox"
 	Nakama_ClaimSignInReward_FullMethodName                 = "/nakama.api.Nakama/ClaimSignInReward"
 	Nakama_GetSignInReward_FullMethodName                   = "/nakama.api.Nakama/GetSignInReward"
 	Nakama_GetFirstChargeStatus_FullMethodName              = "/nakama.api.Nakama/GetFirstChargeStatus"
@@ -409,6 +410,7 @@ type NakamaClient interface {
 	UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrystalTechRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalTechResponse, error)
 	// ==================== Level ====================
 	ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error)
+	GetLevelBox(ctx context.Context, in *game.GetLevelBoxRequest, opts ...grpc.CallOption) (*game.GetLevelBoxResponse, error)
 	// ==================== Sign In ====================
 	ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest, opts ...grpc.CallOption) (*game.ClaimSignInRewardResponse, error)
 	GetSignInReward(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetSignInRewardResponse, error)
@@ -1499,6 +1501,15 @@ func (c *nakamaClient) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBox
 	return out, nil
 }
 
+func (c *nakamaClient) GetLevelBox(ctx context.Context, in *game.GetLevelBoxRequest, opts ...grpc.CallOption) (*game.GetLevelBoxResponse, error) {
+	out := new(game.GetLevelBoxResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetLevelBox_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest, opts ...grpc.CallOption) (*game.ClaimSignInRewardResponse, error) {
 	out := new(game.ClaimSignInRewardResponse)
 	err := c.cc.Invoke(ctx, Nakama_ClaimSignInReward_FullMethodName, in, out, opts...)
@@ -1845,6 +1856,7 @@ type NakamaServer interface {
 	UpgradeCrystalTech(context.Context, *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error)
 	// ==================== Level ====================
 	ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error)
+	GetLevelBox(context.Context, *game.GetLevelBoxRequest) (*game.GetLevelBoxResponse, error)
 	// ==================== Sign In ====================
 	ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error)
 	GetSignInReward(context.Context, *emptypb.Empty) (*game.GetSignInRewardResponse, error)
@@ -2223,6 +2235,9 @@ func (UnimplementedNakamaServer) UpgradeCrystalTech(context.Context, *game.Upgra
 }
 func (UnimplementedNakamaServer) ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimLevelBox not implemented")
+}
+func (UnimplementedNakamaServer) GetLevelBox(context.Context, *game.GetLevelBoxRequest) (*game.GetLevelBoxResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLevelBox not implemented")
 }
 func (UnimplementedNakamaServer) ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimSignInReward not implemented")
@@ -4397,6 +4412,24 @@ func _Nakama_ClaimLevelBox_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetLevelBox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetLevelBoxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetLevelBox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetLevelBox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetLevelBox(ctx, req.(*game.GetLevelBoxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_ClaimSignInReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.ClaimSignInRewardRequest)
 	if err := dec(in); err != nil {
@@ -5091,6 +5124,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimLevelBox",
 			Handler:    _Nakama_ClaimLevelBox_Handler,
+		},
+		{
+			MethodName: "GetLevelBox",
+			Handler:    _Nakama_GetLevelBox_Handler,
 		},
 		{
 			MethodName: "ClaimSignInReward",

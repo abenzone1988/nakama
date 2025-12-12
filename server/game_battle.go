@@ -5,9 +5,12 @@ import (
 	"strconv"
 
 	"github.com/heroiclabs/nakama/v3/game"
+	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 )
+
+const unlockConditionTypeLevel = 1
 
 // compareLevelId 比较两个关卡 ID 的大小，返回 true 表示 id1 > id2
 func compareLevelId(id1, id2 string) bool {
@@ -240,6 +243,29 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 				s.logger.Info("添加新关卡进度",
 					zap.String("level_id", levelId),
 					zap.Int32("progress", progress))
+			}
+		}
+	}
+
+	if progress >= 100 {
+		// 章节满进度时尝试解锁对应炮台
+		if battleData.BattleType == game.BattleType_BATTLE_TYPE_NORMAL {
+			unlockEquips := s.template.GetTplUnlock().FindByFilter(func(unlock template.TplUnlock) bool {
+				return unlock.Type == UnlockType_Equipment &&
+					unlock.ConditionType == unlockConditionTypeLevel &&
+					unlock.ConditionParameter == battleData.CurLevelId
+			}).ToSlice()
+
+			for _, unlock := range unlockEquips {
+				if unlock.Parameter == "" {
+					continue
+				}
+				if _, err := tryUnlockEquipment(ctx, s.logger, s.db, s.metrics, s.storageIndex, unlock.Parameter); err != nil {
+					s.logger.Error("章节解锁炮台失败",
+						zap.Error(err),
+						zap.String("level_id", battleData.CurLevelId),
+						zap.String("equip_id", unlock.Parameter))
+				}
 			}
 		}
 	}
