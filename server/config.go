@@ -1113,24 +1113,6 @@ func (c *SocialConfigAlipay) GetAlipayPublicKey() string {
 	return c.AlipayPublicKey
 }
 
-type SocialConfigAlipay struct {
-	AppId           string `yaml:"app_id"`
-	PrivateKey      string `yaml:"private_key"`
-	AlipayPublicKey string `yaml:"alipay_public_key"`
-}
-
-func (c *SocialConfigAlipay) GetAppId() string {
-	return c.AppId
-}
-
-func (c *SocialConfigAlipay) GetPrivateKey() string {
-	return c.PrivateKey
-}
-
-func (c *SocialConfigAlipay) GetAlipayPublicKey() string {
-	return c.AlipayPublicKey
-}
-
 var _ runtime.SocialConfigFacebookInstantGame = &SocialConfigFacebookInstantGame{}
 
 // SocialConfigFacebookInstantGame is configuration relevant to Facebook Instant Games.

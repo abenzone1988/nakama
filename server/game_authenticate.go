@@ -146,6 +146,7 @@ type AlipayOAuthResponse struct {
 		SubCode     string `json:"sub_code,omitempty"`
 		SubMsg      string `json:"sub_msg,omitempty"`
 		UserID      string `json:"user_id"`
+		OpenID      string `json:"open_id"`
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 	} `json:"alipay_system_oauth_token_response"`
@@ -165,32 +166,38 @@ func getAlipayUserID(ctx context.Context, logger *zap.Logger, cfg Config, code s
 		return "", fmt.Errorf("Alipay app_id or private_key is not configured")
 	}
 
-	// 解析私钥
+	// 解析私钥（支持PEM格式和直接Base64字符串）
+	var privateKeyBytes []byte
 	block, _ := pem.Decode([]byte(privateKey))
-	if block == nil {
-		return "", fmt.Errorf("failed to parse PEM block containing the private key")
+	if block != nil {
+		// PEM格式（有头尾标记）
+		privateKeyBytes = block.Bytes
+	} else {
+		// 直接Base64字符串（没有PEM头尾），尝试解码
+		var decodeErr error
+		privateKeyBytes, decodeErr = base64.StdEncoding.DecodeString(strings.TrimSpace(privateKey))
+		if decodeErr != nil {
+			// 如果Base64解码失败，尝试直接使用原始字符串
+			privateKeyBytes = []byte(privateKey)
+		}
 	}
 
 	var privateKeyParsed *rsa.PrivateKey
 	var err error
-	if block.Type == "RSA PRIVATE KEY" {
-		privateKeyParsed, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	} else if block.Type == "PRIVATE KEY" {
-		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return "", fmt.Errorf("failed to parse private key: %v", err)
-		}
+
+	// 尝试解析PKCS8格式
+	if key, parseErr := x509.ParsePKCS8PrivateKey(privateKeyBytes); parseErr == nil {
 		var ok bool
 		privateKeyParsed, ok = key.(*rsa.PrivateKey)
 		if !ok {
 			return "", fmt.Errorf("not an RSA private key")
 		}
 	} else {
-		return "", fmt.Errorf("unsupported private key type: %s", block.Type)
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("failed to parse RSA private key: %v", err)
+		// 尝试解析PKCS1格式
+		privateKeyParsed, err = x509.ParsePKCS1PrivateKey(privateKeyBytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse RSA private key (tried PKCS8 and PKCS1): %v", err)
+		}
 	}
 
 	// 准备请求参数
@@ -265,21 +272,11 @@ func getAlipayUserID(ctx context.Context, logger *zap.Logger, cfg Config, code s
 		return "", err
 	}
 
-	// 检查支付宝 API 返回的错误码
-	if alipayResp.AlipaySystemOauthTokenResponse.Code != "10000" {
-		logger.Warn("Alipay API returned an error",
-			zap.String("code", alipayResp.AlipaySystemOauthTokenResponse.Code),
-			zap.String("msg", alipayResp.AlipaySystemOauthTokenResponse.Msg),
-			zap.String("sub_code", alipayResp.AlipaySystemOauthTokenResponse.SubCode),
-			zap.String("sub_msg", alipayResp.AlipaySystemOauthTokenResponse.SubMsg))
-		return "", fmt.Errorf("Alipay API error: %s (code: %s)", alipayResp.AlipaySystemOauthTokenResponse.Msg, alipayResp.AlipaySystemOauthTokenResponse.Code)
+	if alipayResp.AlipaySystemOauthTokenResponse.OpenID == "" {
+		return "", fmt.Errorf("Alipay API returned empty openid")
 	}
 
-	if alipayResp.AlipaySystemOauthTokenResponse.UserID == "" {
-		return "", fmt.Errorf("Alipay API returned empty user_id")
-	}
-
-	return alipayResp.AlipaySystemOauthTokenResponse.UserID, nil
+	return alipayResp.AlipaySystemOauthTokenResponse.OpenID, nil
 }
 
 // buildSignString 构建签名字符串（按字典序排序并拼接）

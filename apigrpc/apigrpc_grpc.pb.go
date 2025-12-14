@@ -126,6 +126,7 @@ const (
 	Nakama_Feedback_FullMethodName                          = "/nakama.api.Nakama/Feedback"
 	Nakama_AuthenticateWechat_FullMethodName                = "/nakama.api.Nakama/AuthenticateWechat"
 	Nakama_AuthenticateTikTok_FullMethodName                = "/nakama.api.Nakama/AuthenticateTikTok"
+	Nakama_AuthenticateAlipay_FullMethodName                = "/nakama.api.Nakama/AuthenticateAlipay"
 	Nakama_SubmitBeInvited_FullMethodName                   = "/nakama.api.Nakama/SubmitBeInvited"
 	Nakama_ListInvitee_FullMethodName                       = "/nakama.api.Nakama/ListInvitee"
 	Nakama_ClaimInviteReward_FullMethodName                 = "/nakama.api.Nakama/ClaimInviteReward"
@@ -322,6 +323,8 @@ type NakamaClient interface {
 	AuthenticateWechat(ctx context.Context, in *game.AuthenticateWechatRequest, opts ...grpc.CallOption) (*api.Session, error)
 	// Authenticate a user with TikTok code.
 	AuthenticateTikTok(ctx context.Context, in *game.AuthenticateTiktokRequest, opts ...grpc.CallOption) (*api.Session, error)
+	// Authenticate a user with Alipay code.
+	AuthenticateAlipay(ctx context.Context, in *game.AuthenticateAlipayRequest, opts ...grpc.CallOption) (*api.Session, error)
 	// Submit an invitation request.
 	SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvitedRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// List invitee information for a user.
@@ -1147,6 +1150,15 @@ func (c *nakamaClient) AuthenticateTikTok(ctx context.Context, in *game.Authenti
 	return out, nil
 }
 
+func (c *nakamaClient) AuthenticateAlipay(ctx context.Context, in *game.AuthenticateAlipayRequest, opts ...grpc.CallOption) (*api.Session, error) {
+	out := new(api.Session)
+	err := c.cc.Invoke(ctx, Nakama_AuthenticateAlipay_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) SubmitBeInvited(ctx context.Context, in *game.SubmitBeInvitedRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Nakama_SubmitBeInvited_FullMethodName, in, out, opts...)
@@ -1469,6 +1481,8 @@ type NakamaServer interface {
 	AuthenticateWechat(context.Context, *game.AuthenticateWechatRequest) (*api.Session, error)
 	// Authenticate a user with TikTok code.
 	AuthenticateTikTok(context.Context, *game.AuthenticateTiktokRequest) (*api.Session, error)
+	// Authenticate a user with Alipay code.
+	AuthenticateAlipay(context.Context, *game.AuthenticateAlipayRequest) (*api.Session, error)
 	// Submit an invitation request.
 	SubmitBeInvited(context.Context, *game.SubmitBeInvitedRequest) (*emptypb.Empty, error)
 	// List invitee information for a user.
@@ -1768,6 +1782,9 @@ func (UnimplementedNakamaServer) AuthenticateWechat(context.Context, *game.Authe
 }
 func (UnimplementedNakamaServer) AuthenticateTikTok(context.Context, *game.AuthenticateTiktokRequest) (*api.Session, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateTikTok not implemented")
+}
+func (UnimplementedNakamaServer) AuthenticateAlipay(context.Context, *game.AuthenticateAlipayRequest) (*api.Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateAlipay not implemented")
 }
 func (UnimplementedNakamaServer) SubmitBeInvited(context.Context, *game.SubmitBeInvitedRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitBeInvited not implemented")
@@ -3396,6 +3413,24 @@ func _Nakama_AuthenticateTikTok_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_AuthenticateAlipay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.AuthenticateAlipayRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).AuthenticateAlipay(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_AuthenticateAlipay_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).AuthenticateAlipay(ctx, req.(*game.AuthenticateAlipayRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_SubmitBeInvited_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.SubmitBeInvitedRequest)
 	if err := dec(in); err != nil {
@@ -4038,6 +4073,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AuthenticateTikTok",
 			Handler:    _Nakama_AuthenticateTikTok_Handler,
+		},
+		{
+			MethodName: "AuthenticateAlipay",
+			Handler:    _Nakama_AuthenticateAlipay_Handler,
 		},
 		{
 			MethodName: "SubmitBeInvited",

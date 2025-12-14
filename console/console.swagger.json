@@ -3717,7 +3717,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "A list of messages."
@@ -3767,7 +3766,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The Friend objects."
@@ -3843,7 +3841,6 @@
         "group_users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "User-role pairs for a group."
@@ -3923,7 +3920,6 @@
         "records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of leaderboard records."
@@ -3931,7 +3927,6 @@
         "owner_records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of leaderboard records belonging to specified owners."
@@ -3958,7 +3953,6 @@
         "validated_purchases": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedPurchase"
           },
           "description": "Stored validated purchases."
@@ -4081,7 +4075,6 @@
         "validated_subscriptions": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedSubscription"
           },
           "description": "Stored validated subscriptions."
@@ -4103,7 +4096,6 @@
         "user_groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/UserGroupListUserGroup"
           },
           "description": "Group-role pairs for a user."
@@ -4241,7 +4233,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The user's storage."
@@ -4249,7 +4240,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The user's friends."
@@ -4257,7 +4247,6 @@
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "The user's groups."
@@ -4265,7 +4254,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "The user's chat messages."
@@ -4273,7 +4261,6 @@
         "leaderboard_records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "The user's leaderboard records."
@@ -4281,7 +4268,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaapiNotification"
           },
           "description": "The user's notifications."
@@ -4289,7 +4275,6 @@
         "wallet_ledgers": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "The user's wallet ledger items."
@@ -4303,7 +4288,6 @@
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaapiUser"
           },
           "description": "A list of users."
@@ -4373,7 +4357,6 @@
         "success_accounts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleVipAccount"
           },
           "title": "Successfully added VIP accounts"
@@ -4381,7 +4364,6 @@
         "failed_accounts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleVipAccountError"
           },
           "title": "Failed username mappings"
@@ -4444,7 +4426,6 @@
         "announcements": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleAnnouncement"
           },
           "title": "Announcement list"
@@ -4478,14 +4459,12 @@
         "endpoints": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         },
         "rpc_endpoints": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         }
@@ -4623,7 +4602,6 @@
         "warnings": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/ConfigWarning"
           },
           "description": "Any warnings about the current config."
@@ -4729,7 +4707,6 @@
         "templates": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleChallengeTemplate"
           },
           "title": "Challenge template list"
@@ -4746,7 +4723,6 @@
         "members": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "The group's list of members."
@@ -4770,7 +4746,6 @@
         "logs": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consolePersonalNotificationLog"
           },
           "title": "Log list"
@@ -4796,7 +4771,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleSystemNotice"
           },
           "title": "Notification list"
@@ -4835,7 +4809,6 @@
         "presences": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/realtimeUserPresence"
           },
           "description": "Presence list."
@@ -4862,7 +4835,6 @@
         "rewards": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameReward"
           },
           "title": "Reward items"
@@ -4945,7 +4917,6 @@
         "go_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Go loaded modules"
@@ -4953,7 +4924,6 @@
         "lua_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Lua loaded modules"
@@ -4961,7 +4931,6 @@
         "js_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "JavaScript loaded modules"
@@ -4985,7 +4954,6 @@
         "nodes": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleStatusListStatus"
           },
           "description": "List of nodes and their stats."
@@ -5070,7 +5038,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleStorageListObject"
           },
           "description": "List of storage objects matching list/filter operation."
@@ -5178,7 +5145,6 @@
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleUserListUser"
           },
           "description": "A list of users."
@@ -5279,7 +5245,6 @@
         "accounts": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleVipAccount"
           },
           "title": "VIP account list"
@@ -5350,7 +5315,6 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "A list of wallet ledger items."
@@ -5388,7 +5352,6 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         }
@@ -5426,7 +5389,6 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -5450,7 +5412,6 @@
         "devices": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiAccountDevice"
           },
           "description": "The devices which belong to the user's account."
@@ -5652,7 +5613,6 @@
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "A list of groups."
@@ -5783,7 +5743,6 @@
         "leaderboards": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaconsoleLeaderboard"
           },
           "description": "The list of leaderboards returned."
@@ -5806,7 +5765,6 @@
         "matches": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleMatchListMatch"
           }
         }
@@ -5868,7 +5826,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaconsoleNotification"
           },
           "description": "List of notifications."
