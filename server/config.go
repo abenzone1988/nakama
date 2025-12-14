@@ -983,6 +983,7 @@ type SocialConfig struct {
 	Apple                *SocialConfigApple                `yaml:"apple" json:"apple" usage:"Apple Sign In configuration."`
 	Wechat               *SocialConfigWeChat               `yaml:"wechat" json:"wechat" usage:"Wechat configuration."`
 	TikTok               *SocialConfigTikTok               `yaml:"tiktok" json:"tiktok" usage:"TikTok configuration."`
+	Alipay               *SocialConfigAlipay               `yaml:"alipay" json:"alipay" usage:"Alipay configuration."`
 }
 
 func (cfg *SocialConfig) GetWechat() runtime.SocialConfigWechat {
@@ -1009,6 +1010,10 @@ func (cfg *SocialConfig) GetApple() runtime.SocialConfigApple {
 	return cfg.Apple
 }
 
+func (cfg *SocialConfig) GetAlipay() runtime.SocialConfigAlipay {
+	return cfg.Alipay
+}
+
 func (cfg *SocialConfig) Clone() *SocialConfig {
 	if cfg == nil {
 		return nil
@@ -1031,6 +1036,18 @@ func (cfg *SocialConfig) Clone() *SocialConfig {
 	if cfg.Apple != nil {
 		c := *(cfg.Apple)
 		cfgCopy.Apple = &c
+	}
+	if cfg.Wechat != nil {
+		c := *(cfg.Wechat)
+		cfgCopy.Wechat = &c
+	}
+	if cfg.TikTok != nil {
+		c := *(cfg.TikTok)
+		cfgCopy.TikTok = &c
+	}
+	if cfg.Alipay != nil {
+		c := *(cfg.Alipay)
+		cfgCopy.Alipay = &c
 	}
 
 	return &cfgCopy
@@ -1076,6 +1093,42 @@ func (c *SocialConfigTikTok) GetAppId() string {
 
 func (c *SocialConfigTikTok) GetAppSecret() string {
 	return c.AppSecret
+}
+
+type SocialConfigAlipay struct {
+	AppId           string `yaml:"app_id"`
+	PrivateKey      string `yaml:"private_key"`
+	AlipayPublicKey string `yaml:"alipay_public_key"`
+}
+
+func (c *SocialConfigAlipay) GetAppId() string {
+	return c.AppId
+}
+
+func (c *SocialConfigAlipay) GetPrivateKey() string {
+	return c.PrivateKey
+}
+
+func (c *SocialConfigAlipay) GetAlipayPublicKey() string {
+	return c.AlipayPublicKey
+}
+
+type SocialConfigAlipay struct {
+	AppId           string `yaml:"app_id"`
+	PrivateKey      string `yaml:"private_key"`
+	AlipayPublicKey string `yaml:"alipay_public_key"`
+}
+
+func (c *SocialConfigAlipay) GetAppId() string {
+	return c.AppId
+}
+
+func (c *SocialConfigAlipay) GetPrivateKey() string {
+	return c.PrivateKey
+}
+
+func (c *SocialConfigAlipay) GetAlipayPublicKey() string {
+	return c.AlipayPublicKey
 }
 
 var _ runtime.SocialConfigFacebookInstantGame = &SocialConfigFacebookInstantGame{}

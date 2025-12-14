@@ -61,6 +61,7 @@ type SocialConfig interface {
 	GetApple() SocialConfigApple
 	GetTikTok() SocialConfigTikTok
 	GetWechat() SocialConfigWechat
+	GetAlipay() SocialConfigAlipay
 }
 
 type SocialConfigTikTok interface {
@@ -71,6 +72,12 @@ type SocialConfigTikTok interface {
 type SocialConfigWechat interface {
 	GetAppId() string
 	GetAppSecret() string
+}
+
+type SocialConfigAlipay interface {
+	GetAppId() string
+	GetPrivateKey() string
+	GetAlipayPublicKey() string
 }
 
 // SocialConfigSteam is configuration relevant to Steam.

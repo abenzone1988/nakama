@@ -800,6 +800,21 @@ service Nakama {
     };
   }
 
+  // Authenticate a user with Alipay code.
+  rpc AuthenticateAlipay(game.AuthenticateAlipayRequest) returns (api.Session) {
+    option (google.api.http) = {
+      post: "/v2/account/authenticate/alipay",
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {
+        security_requirement: {
+          key: "BasicAuth";
+          value: {};
+        }
+      }
+    };
+  }
+
   // Submit an invitation request.
   rpc SubmitBeInvited (game.SubmitBeInvitedRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {

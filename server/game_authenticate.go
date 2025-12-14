@@ -2,15 +2,25 @@ package server
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"net/http"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
+
 	credential "github.com/bytedance/douyin-openapi-credential-go/client"
 	openApiSdkClient "github.com/bytedance/douyin-openapi-sdk-go/client"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -126,6 +136,184 @@ func (s *ApiServer) AuthenticateTikTok(ctx context.Context, in *game.Authenticat
 		return nil, err
 	}
 	return s.createSession(ctx, openID)
+}
+
+// AlipayOAuthResponse 支付宝 OAuth 响应结构
+type AlipayOAuthResponse struct {
+	AlipaySystemOauthTokenResponse struct {
+		Code        string `json:"code"`
+		Msg         string `json:"msg"`
+		SubCode     string `json:"sub_code,omitempty"`
+		SubMsg      string `json:"sub_msg,omitempty"`
+		UserID      string `json:"user_id"`
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
+	} `json:"alipay_system_oauth_token_response"`
+	Sign string `json:"sign"`
+}
+
+// getAlipayUserID 获取支付宝用户的 UserID
+func getAlipayUserID(ctx context.Context, logger *zap.Logger, cfg Config, code string) (string, error) {
+	alipayCfg := cfg.GetSocial().GetAlipay()
+	if alipayCfg == nil {
+		return "", fmt.Errorf("Alipay configuration is not set")
+	}
+
+	appID := alipayCfg.GetAppId()
+	privateKey := alipayCfg.GetPrivateKey()
+	if appID == "" || privateKey == "" {
+		return "", fmt.Errorf("Alipay app_id or private_key is not configured")
+	}
+
+	// 解析私钥
+	block, _ := pem.Decode([]byte(privateKey))
+	if block == nil {
+		return "", fmt.Errorf("failed to parse PEM block containing the private key")
+	}
+
+	var privateKeyParsed *rsa.PrivateKey
+	var err error
+	if block.Type == "RSA PRIVATE KEY" {
+		privateKeyParsed, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	} else if block.Type == "PRIVATE KEY" {
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse private key: %v", err)
+		}
+		var ok bool
+		privateKeyParsed, ok = key.(*rsa.PrivateKey)
+		if !ok {
+			return "", fmt.Errorf("not an RSA private key")
+		}
+	} else {
+		return "", fmt.Errorf("unsupported private key type: %s", block.Type)
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("failed to parse RSA private key: %v", err)
+	}
+
+	// 准备请求参数
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	params := map[string]string{
+		"app_id":     appID,
+		"method":     "alipay.system.oauth.token",
+		"format":     "JSON",
+		"charset":    "utf-8",
+		"sign_type":  "RSA2",
+		"timestamp":  timestamp,
+		"version":    "1.0",
+		"code":       code,
+		"grant_type": "authorization_code",
+	}
+
+	// 生成签名字符串
+	signStr := buildSignString(params)
+
+	// 使用 RSA2 签名
+	hashed := sha256.Sum256([]byte(signStr))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKeyParsed, crypto.SHA256, hashed[:])
+	if err != nil {
+		logger.Error("failed to sign Alipay request", zap.Error(err))
+		return "", fmt.Errorf("failed to sign request: %v", err)
+	}
+
+	// Base64 编码签名
+	signatureBase64 := base64.StdEncoding.EncodeToString(signature)
+	params["sign"] = signatureBase64
+
+	// 构建请求 URL
+	apiURL := "https://openapi.alipay.com/gateway.do"
+	values := url.Values{}
+	for k, v := range params {
+		values.Add(k, v)
+	}
+	requestURL := fmt.Sprintf("%s?%s", apiURL, values.Encode())
+
+	// 创建 HTTP 请求
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		logger.Error("failed to create HTTP request", zap.Error(err))
+		return "", err
+	}
+
+	// 发起请求
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Error("failed to request Alipay API", zap.Error(err))
+		return "", err
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logger.Warn("failed to close response body", zap.Error(err))
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error("received non-OK response from Alipay API", zap.Int("status_code", resp.StatusCode))
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// 解析响应体
+	var alipayResp AlipayOAuthResponse
+	if err := json.NewDecoder(resp.Body).Decode(&alipayResp); err != nil {
+		logger.Error("failed to decode response from Alipay API", zap.Error(err))
+		return "", err
+	}
+
+	// 检查支付宝 API 返回的错误码
+	if alipayResp.AlipaySystemOauthTokenResponse.Code != "10000" {
+		logger.Warn("Alipay API returned an error",
+			zap.String("code", alipayResp.AlipaySystemOauthTokenResponse.Code),
+			zap.String("msg", alipayResp.AlipaySystemOauthTokenResponse.Msg),
+			zap.String("sub_code", alipayResp.AlipaySystemOauthTokenResponse.SubCode),
+			zap.String("sub_msg", alipayResp.AlipaySystemOauthTokenResponse.SubMsg))
+		return "", fmt.Errorf("Alipay API error: %s (code: %s)", alipayResp.AlipaySystemOauthTokenResponse.Msg, alipayResp.AlipaySystemOauthTokenResponse.Code)
+	}
+
+	if alipayResp.AlipaySystemOauthTokenResponse.UserID == "" {
+		return "", fmt.Errorf("Alipay API returned empty user_id")
+	}
+
+	return alipayResp.AlipaySystemOauthTokenResponse.UserID, nil
+}
+
+// buildSignString 构建签名字符串（按字典序排序并拼接）
+func buildSignString(params map[string]string) string {
+	// 排除 sign 和空值
+	filteredParams := make(map[string]string)
+	for k, v := range params {
+		if k != "sign" && v != "" {
+			filteredParams[k] = v
+		}
+	}
+
+	// 排序
+	keys := make([]string, 0, len(filteredParams))
+	for k := range filteredParams {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// 拼接
+	var parts []string
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, filteredParams[k]))
+	}
+
+	return strings.Join(parts, "&")
+}
+
+func (s *ApiServer) AuthenticateAlipay(ctx context.Context, in *game.AuthenticateAlipayRequest) (*api.Session, error) {
+	userID, err := getAlipayUserID(ctx, s.logger, s.config, in.Code)
+	if err != nil || userID == "" {
+		return nil, err
+	}
+	return s.createSession(ctx, userID)
 }
 
 // Common function to create a session

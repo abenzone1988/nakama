@@ -35,6 +35,14 @@ message AuthenticateTiktokRequest{
   string anonymous_code = 2;
 }
 
+message AuthenticateAlipayRequest{
+  string code = 1;
+}
+
+message AuthenticateAlipayRequest{
+  string code = 1;
+}
+
 message SubmitBeInvitedRequest {
   string inviter_id = 1;
 }
