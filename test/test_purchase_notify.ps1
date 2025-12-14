@@ -9,7 +9,7 @@ param(
     [string]$Platform = "all",
 
     [Parameter(Mandatory=$false)]
-    [string]$Url = "http://127.0.0.1:7350/v2/tiktok/purchase/notify"
+    [string]$Url = "https://starhold.jvplay.cn:6000/v2/tiktok/purchase/notify"
 )
 
 # Platform configurations
@@ -18,13 +18,13 @@ $platforms = @{
         Site = "xjsmdyapp_android"
         Key = "0c373fedcec01cff88aacdb8d2e28dc2"
         DisplayName = "Android"
-        PayType = 2  # 支付宝
+        PayType = 2
     }
     "ios" = @{
         Site = "xjsmdyapp_ios"
         Key = "234c4ec9c31af40a9a0239b868f10dd8"
         DisplayName = "iOS"
-        PayType = 1  # 苹果内购
+        PayType = 1
     }
 }
 
@@ -35,7 +35,7 @@ function Test-Platform {
     )
 
     $config = $platforms[$PlatformKey]
-    $timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
+    $timestamp = [int](Get-Date -UFormat "%s")
 
     # Test data
     $site = $config.Site
