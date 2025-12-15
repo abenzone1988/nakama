@@ -157,7 +157,7 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		// 累加每次奖励的背包更新
 		if invResult != nil && invResult.Updated != nil {
 			for _, item := range invResult.Updated {
-				allInventoryUpdates[item.Id] += int64(item.Num)
+				allInventoryUpdates[item.Id] = int64(item.Num)
 			}
 		}
 
@@ -203,6 +203,7 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 	// 返回合并后的背包更新（包含钥匙扣除和奖励）
 	if len(allInventoryUpdates) > 0 {
 		response.InventoryUpdated = convertMapInt64ToItems(allInventoryUpdates)
+		s.logger.Info("合并后的背包更新", zap.Any("inventory_updated", response.InventoryUpdated))
 	}
 
 	return response, nil
