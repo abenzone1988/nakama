@@ -157,7 +157,7 @@ func (s *ApiServer) BuyBoxItem(ctx context.Context, in *game.BuyBoxItemRequest) 
 		// 累加每次奖励的背包更新
 		if invResult != nil && invResult.Updated != nil {
 			for _, item := range invResult.Updated {
-				allInventoryUpdates[item.Id] = int64(item.Num)
+				allInventoryUpdates[item.Id] += int64(item.Num)
 			}
 		}
 
