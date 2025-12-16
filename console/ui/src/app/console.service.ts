@@ -1215,6 +1215,13 @@ export class ConsoleService {
     return this.httpClient.get<Config>(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
   }
 
+  /** Reload BiliGame configuration from config file. */
+  reloadBiliGameConfig(auth_token: string): Observable<any> {
+    const urlPath = `/v2/console/config/biligame/reload`;
+    let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
+    return this.httpClient.post(this.config.host + urlPath, { params: params, headers: this.getTokenAuthHeaders(auth_token) })
+  }
+
   /** List (and optionally filter) groups. */
   listGroups(auth_token: string, filter?: string, cursor?: string): Observable<GroupList> {
     const urlPath = `/v2/console/group`;

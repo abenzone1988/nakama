@@ -242,6 +242,11 @@ service Console {
     option (google.api.http).get = "/v2/console/config";
   }
 
+  // Reload BiliGame configuration from config file.
+  rpc ReloadBiliGameConfig (google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http).post = "/v2/console/config/biligame/reload";
+  }
+
   // Get a user's list of friend relationships.
   rpc GetFriends (AccountId) returns (api.FriendList) {
     option (google.api.http).get = "/v2/console/account/{id}/friend";

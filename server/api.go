@@ -389,6 +389,8 @@ func securityInterceptorFunc(logger *zap.Logger, config Config, sessionCache Ses
 		fallthrough
 	case "/nakama.api.Nakama/AuthenticateTikTok":
 		fallthrough
+	case "/nakama.api.Nakama/AuthenticateBiliGame":
+		fallthrough
 	case "/nakama.api.Nakama/AuthenticateSteam":
 		// Session refresh and authentication functions only require server key.
 		md, ok := metadata.FromIncomingContext(ctx)

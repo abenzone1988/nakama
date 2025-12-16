@@ -2,7 +2,7 @@ name: nakama-node-xjsm
 
 database:
   address:
-    - "root@118.145.200.91:26258/nakama"
+    - "root@192.168.102.223:26257/nakama"
 logger:
   level: "debug"
 
@@ -26,6 +26,14 @@ social:
   tiktok:
     app_id: "tte8269e9b77120eb407"
     app_secret: "54a13ecae262f25237f57cfafb20a4a454087edd"
+  biligame:
+    apps:
+      # 星际使命
+      biligamec8b121817a51265a: f399f976f85e5c538a1bf3d141fc7cbc
+      # 这就是塔防
+      biligamee028590c925b6c31: 183ab5c1ef9bf980c08d606c07917688
+      # 深空远征
+      biligamefbf1ab48cefbeaa0: 979acea808c8a995b4eebefa94c8065b
 
 console:
   port: 7351

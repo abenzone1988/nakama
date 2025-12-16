@@ -35,6 +35,11 @@ message AuthenticateTiktokRequest{
   string anonymous_code = 2;
 }
 
+message AuthenticateBiliGameRequest{
+  string code = 1;
+  string appid = 2;
+}
+
 message SubmitBeInvitedRequest {
   string inviter_id = 1;
 }

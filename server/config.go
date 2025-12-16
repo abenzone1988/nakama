@@ -947,6 +947,7 @@ type SocialConfig struct {
 	Apple                *SocialConfigApple                `yaml:"apple" json:"apple" usage:"Apple Sign In configuration."`
 	Wechat               *SocialConfigWeChat               `yaml:"wechat" json:"wechat" usage:"Wechat configuration."`
 	TikTok               *SocialConfigTikTok               `yaml:"tiktok" json:"tiktok" usage:"TikTok configuration."`
+	BiliGame             *SocialConfigBiliGame             `yaml:"biligame" json:"biligame" usage:"BiliGame configuration."`
 }
 
 func (cfg *SocialConfig) GetWechat() runtime.SocialConfigWechat {
@@ -955,6 +956,10 @@ func (cfg *SocialConfig) GetWechat() runtime.SocialConfigWechat {
 
 func (cfg *SocialConfig) GetTikTok() runtime.SocialConfigTikTok {
 	return cfg.TikTok
+}
+
+func (cfg *SocialConfig) GetBiliGame() *SocialConfigBiliGame {
+	return cfg.BiliGame
 }
 
 func (cfg *SocialConfig) GetSteam() runtime.SocialConfigSteam {
@@ -1040,6 +1045,24 @@ func (c *SocialConfigTikTok) GetAppId() string {
 
 func (c *SocialConfigTikTok) GetAppSecret() string {
 	return c.AppSecret
+}
+
+type SocialConfigBiliGame struct {
+	Apps map[string]string `yaml:"apps" json:"apps"` // key: app_id, value: secret
+}
+
+func (c *SocialConfigBiliGame) GetSecret(appId string) string {
+	if c == nil || c.Apps == nil {
+		return ""
+	}
+	return c.Apps[appId]
+}
+
+func (c *SocialConfigBiliGame) GetApps() map[string]string {
+	if c == nil {
+		return nil
+	}
+	return c.Apps
 }
 
 var _ runtime.SocialConfigFacebookInstantGame = &SocialConfigFacebookInstantGame{}

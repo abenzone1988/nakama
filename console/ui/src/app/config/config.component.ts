@@ -41,6 +41,9 @@ export class ConfigComponent implements OnInit, OnDestroy {
   public uploadSuccess = false;
   public deleteSuccess = false;
   public deleting = false;
+  public reloadSuccess = false;
+  public reloading = false;
+  public reloadError = '';
   public confirmDeleteForm: UntypedFormGroup;
 
   private apiConfig: ConfigParams;
@@ -170,6 +173,34 @@ export class ConfigComponent implements OnInit, OnDestroy {
 
   get f(): any {
     return this.confirmDeleteForm.controls;
+  }
+
+  public reloadBiliGameConfig(): void {
+    this.reloadError = '';
+    this.reloadSuccess = false;
+    this.reloading = true;
+    this.consoleService.reloadBiliGameConfig('').pipe(delay(1000)).subscribe(
+      () => {
+        this.reloading = false;
+        this.reloadError = '';
+        this.reloadSuccess = true;
+        // 重新加载配置以显示最新值
+        this.route.data.subscribe(
+          d => {
+            const json = JSON.parse(d[0].config);
+            this.jsonConfig = json;
+            this.flatConfig = this.flattenConfig(json);
+          },
+          err => {
+            this.configError = err;
+          }
+        );
+      },
+      err => {
+        this.reloading = false;
+        this.reloadError = err;
+      }
+    );
   }
 
   ngOnDestroy(): void {

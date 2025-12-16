@@ -65,6 +65,7 @@ const (
 	Console_ExportGroup_FullMethodName               = "/nakama.console.Console/ExportGroup"
 	Console_GetAccount_FullMethodName                = "/nakama.console.Console/GetAccount"
 	Console_GetConfig_FullMethodName                 = "/nakama.console.Console/GetConfig"
+	Console_ReloadBiliGameConfig_FullMethodName      = "/nakama.console.Console/ReloadBiliGameConfig"
 	Console_GetFriends_FullMethodName                = "/nakama.console.Console/GetFriends"
 	Console_GetGroup_FullMethodName                  = "/nakama.console.Console/GetGroup"
 	Console_GetMembers_FullMethodName                = "/nakama.console.Console/GetMembers"
@@ -167,6 +168,8 @@ type ConsoleClient interface {
 	GetAccount(ctx context.Context, in *AccountId, opts ...grpc.CallOption) (*Account, error)
 	// Get server config and configuration warnings.
 	GetConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Config, error)
+	// Reload BiliGame configuration from config file.
+	ReloadBiliGameConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Get a user's list of friend relationships.
 	GetFriends(ctx context.Context, in *AccountId, opts ...grpc.CallOption) (*api.FriendList, error)
 	// Get detailed group information.
@@ -498,6 +501,15 @@ func (c *consoleClient) GetAccount(ctx context.Context, in *AccountId, opts ...g
 func (c *consoleClient) GetConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Config, error) {
 	out := new(Config)
 	err := c.cc.Invoke(ctx, Console_GetConfig_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ReloadBiliGameConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_ReloadBiliGameConfig_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -940,6 +952,8 @@ type ConsoleServer interface {
 	GetAccount(context.Context, *AccountId) (*Account, error)
 	// Get server config and configuration warnings.
 	GetConfig(context.Context, *emptypb.Empty) (*Config, error)
+	// Reload BiliGame configuration from config file.
+	ReloadBiliGameConfig(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Get a user's list of friend relationships.
 	GetFriends(context.Context, *AccountId) (*api.FriendList, error)
 	// Get detailed group information.
@@ -1111,6 +1125,9 @@ func (UnimplementedConsoleServer) GetAccount(context.Context, *AccountId) (*Acco
 }
 func (UnimplementedConsoleServer) GetConfig(context.Context, *emptypb.Empty) (*Config, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConfig not implemented")
+}
+func (UnimplementedConsoleServer) ReloadBiliGameConfig(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReloadBiliGameConfig not implemented")
 }
 func (UnimplementedConsoleServer) GetFriends(context.Context, *AccountId) (*api.FriendList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFriends not implemented")
@@ -1733,6 +1750,24 @@ func _Console_GetConfig_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).GetConfig(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ReloadBiliGameConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ReloadBiliGameConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ReloadBiliGameConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ReloadBiliGameConfig(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2607,6 +2642,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConfig",
 			Handler:    _Console_GetConfig_Handler,
+		},
+		{
+			MethodName: "ReloadBiliGameConfig",
+			Handler:    _Console_ReloadBiliGameConfig_Handler,
 		},
 		{
 			MethodName: "GetFriends",
