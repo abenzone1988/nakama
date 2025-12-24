@@ -10,6 +10,7 @@ import (
 
 type TplLevelInfo struct {
 	LevelMonsterDev    string `json:"LevelMonsterDev"`
+	Chapter            int32  `json:"chapter"`
 	Condition01        int32  `json:"condition01"`
 	Condition02        int32  `json:"condition02"`
 	Condition03        int32  `json:"condition03"`
@@ -21,10 +22,12 @@ type TplLevelInfo struct {
 	MonsterLevel       int32  `json:"monsterLevel"`
 	MonsterWaveGroupID string `json:"monsterWaveGroupId"`
 	MoppingReward      string `json:"moppingReward"`
+	Name               string `json:"name"`
 	OnHookRewardID     string `json:"onHookRewardID"`
 	Reward01           string `json:"reward01"`
 	Reward02           string `json:"reward02"`
 	Reward03           string `json:"reward03"`
+	Subsection         int32  `json:"subsection"`
 	WinRewards         string `json:"winRewards"`
 }
 

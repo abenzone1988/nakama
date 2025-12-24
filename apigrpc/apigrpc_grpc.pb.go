@@ -170,6 +170,8 @@ const (
 	Nakama_GetSevenDayStatus_FullMethodName                 = "/nakama.api.Nakama/GetSevenDayStatus"
 	Nakama_ClaimSevenDayReward_FullMethodName               = "/nakama.api.Nakama/ClaimSevenDayReward"
 	Nakama_PurchaseTest_FullMethodName                      = "/nakama.api.Nakama/PurchaseTest"
+	Nakama_GetPlayerLevelData_FullMethodName                = "/nakama.api.Nakama/GetPlayerLevelData"
+	Nakama_UpgradePlayerLevel_FullMethodName                = "/nakama.api.Nakama/UpgradePlayerLevel"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -429,6 +431,11 @@ type NakamaClient interface {
 	GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayStatusRequest, opts ...grpc.CallOption) (*game.GetSevenDayStatusResponse, error)
 	ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest, opts ...grpc.CallOption) (*game.ClaimSevenDayRewardResponse, error)
 	PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error)
+	// ==================== Player Level ====================
+	// Get player level data
+	GetPlayerLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.PlayerLevelData, error)
+	// Upgrade player level
+	UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlayerLevelRequest, opts ...grpc.CallOption) (*game.UpgradePlayerLevelResponse, error)
 }
 
 type nakamaClient struct {
@@ -1618,6 +1625,24 @@ func (c *nakamaClient) PurchaseTest(ctx context.Context, in *game.PurchaseReques
 	return out, nil
 }
 
+func (c *nakamaClient) GetPlayerLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.PlayerLevelData, error) {
+	out := new(game.PlayerLevelData)
+	err := c.cc.Invoke(ctx, Nakama_GetPlayerLevelData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlayerLevelRequest, opts ...grpc.CallOption) (*game.UpgradePlayerLevelResponse, error) {
+	out := new(game.UpgradePlayerLevelResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpgradePlayerLevel_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1875,6 +1900,11 @@ type NakamaServer interface {
 	GetSevenDayStatus(context.Context, *game.GetSevenDayStatusRequest) (*game.GetSevenDayStatusResponse, error)
 	ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error)
 	PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error)
+	// ==================== Player Level ====================
+	// Get player level data
+	GetPlayerLevelData(context.Context, *emptypb.Empty) (*game.PlayerLevelData, error)
+	// Upgrade player level
+	UpgradePlayerLevel(context.Context, *game.UpgradePlayerLevelRequest) (*game.UpgradePlayerLevelResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2274,6 +2304,12 @@ func (UnimplementedNakamaServer) ClaimSevenDayReward(context.Context, *game.Clai
 }
 func (UnimplementedNakamaServer) PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PurchaseTest not implemented")
+}
+func (UnimplementedNakamaServer) GetPlayerLevelData(context.Context, *emptypb.Empty) (*game.PlayerLevelData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerLevelData not implemented")
+}
+func (UnimplementedNakamaServer) UpgradePlayerLevel(context.Context, *game.UpgradePlayerLevelRequest) (*game.UpgradePlayerLevelResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradePlayerLevel not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -4646,6 +4682,42 @@ func _Nakama_PurchaseTest_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetPlayerLevelData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetPlayerLevelData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetPlayerLevelData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetPlayerLevelData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UpgradePlayerLevel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpgradePlayerLevelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UpgradePlayerLevel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UpgradePlayerLevel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UpgradePlayerLevel(ctx, req.(*game.UpgradePlayerLevelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5176,6 +5248,14 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PurchaseTest",
 			Handler:    _Nakama_PurchaseTest_Handler,
+		},
+		{
+			MethodName: "GetPlayerLevelData",
+			Handler:    _Nakama_GetPlayerLevelData_Handler,
+		},
+		{
+			MethodName: "UpgradePlayerLevel",
+			Handler:    _Nakama_UpgradePlayerLevel_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

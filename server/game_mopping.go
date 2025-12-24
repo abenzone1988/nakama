@@ -92,6 +92,12 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 		}, nil
 	}
 
+	// 增加经验值
+	if err := AddExp(ctx, s.logger, s.db, s.metrics, s.storageIndex, s.template, MoppingCostStamina); err != nil {
+		s.logger.Error("增加经验值失败", zap.Error(err))
+		// 不影响扫荡流程，仅记录错误
+	}
+
 	// 第二阶段且未观看广告，需要扣除 ad 值
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult

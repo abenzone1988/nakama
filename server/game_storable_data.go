@@ -676,3 +676,30 @@ func (d *BattleData) Init() {
 	d.HasMoppingTimesForAdv = 0
 	d.SetVersion("")
 }
+
+// ============================================================================
+// 玩家等级相关数据结构
+// ============================================================================
+
+// PlayerLevelData 玩家等级数据存储结构
+type PlayerLevelData struct {
+	BaseStorable
+	Level    int32 `json:"level"`     // 当前等级
+	Exp      int32 `json:"exp"`       // 当前经验值
+	TotalExp int32 `json:"total_exp"` // 总获得的经验值
+}
+
+func (d *PlayerLevelData) GetCollection() string {
+	return "player_level"
+}
+
+func (d *PlayerLevelData) GetKey() string {
+	return "data"
+}
+
+func (d *PlayerLevelData) Init() {
+	d.Level = 1
+	d.Exp = 0
+	d.TotalExp = 0
+	d.SetVersion("")
+}

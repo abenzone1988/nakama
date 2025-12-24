@@ -79,6 +79,12 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 		}, nil
 	}
 
+	// 增加经验值
+	if err := AddExp(ctx, s.logger, s.db, s.metrics, s.storageIndex, s.template, staminaCost); err != nil {
+		s.logger.Error("增加经验值失败", zap.Error(err))
+		// 不影响战斗流程，仅记录错误
+	}
+
 	// 更新最大关卡ID（如果新关卡更大）
 	if battleData.MaxLevelId == "" || compareLevelId(in.GetLevelId(), battleData.MaxLevelId) {
 		oldLevelId := battleData.MaxLevelId
@@ -93,7 +99,7 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 	}
 	return &game.StartBattleResponse{
 		Code:    0,
-		Msg:     "通过成功",
+		Msg:     "开始成功",
 		Stamina: stamina,
 	}, nil
 }

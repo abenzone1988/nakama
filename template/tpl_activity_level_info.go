@@ -10,6 +10,7 @@ import (
 
 type TplActivityLevelInfo struct {
 	ActivityID         string `json:"activityId"`
+	FirstRewards       string `json:"firstRewards"`
 	ID                 string `json:"id"`
 	LevelMonsterDev    string `json:"levelMonsterDev"`
 	MainlevelProgress  string `json:"mainlevelProgress"`
@@ -17,7 +18,6 @@ type TplActivityLevelInfo struct {
 	MonsterWaveGroupID string `json:"monsterWaveGroupId"`
 	RewardID           string `json:"rewardId"`
 	Stamina            int32  `json:"stamina"`
-	UnlockLevel        string `json:"unlockLevel"`
 }
 
 // ReadOnlyTplActivityLevelInfoSlice 只读TplActivityLevelInfo切片接口

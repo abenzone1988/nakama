@@ -68,3 +68,8 @@ const (
 const (
 	EquipID_Crystal = "EQ1999"
 )
+
+// 玩家等级相关常量
+const (
+	ExpPerStamina = 6 // 每消耗1个体力获得6个经验值
+)

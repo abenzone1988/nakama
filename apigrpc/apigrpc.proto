@@ -1099,5 +1099,19 @@ service Nakama {
       body: "*"
     };
   }
+
+  // ==================== Player Level ====================
+  // Get player level data
+  rpc GetPlayerLevelData(google.protobuf.Empty) returns (game.PlayerLevelData) {
+    option (google.api.http).get = "/v2/game/player/level";
+  }
+
+  // Upgrade player level
+  rpc UpgradePlayerLevel(game.UpgradePlayerLevelRequest) returns (game.UpgradePlayerLevelResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/player/level/upgrade"
+      body: "*"
+    };
+  }
 }
 

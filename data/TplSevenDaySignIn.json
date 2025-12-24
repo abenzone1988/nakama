@@ -1,0 +1,9 @@
+{
+"10001":{"reward":"SevenDaySignInReward001","name":"第1天","id":"10001","day":1,"gem":10},
+"10002":{"reward":"SevenDaySignInReward002","name":"第2天","id":"10002","day":2,"gem":10},
+"10003":{"reward":"SevenDaySignInReward003","name":"第3天","id":"10003","day":3,"gem":10},
+"10004":{"reward":"SevenDaySignInReward004","name":"第4天","id":"10004","day":4,"gem":10},
+"10005":{"reward":"SevenDaySignInReward005","name":"第5天","id":"10005","day":5,"gem":10},
+"10006":{"reward":"SevenDaySignInReward006","name":"第6天","id":"10006","day":6,"gem":10},
+"10007":{"reward":"SevenDaySignInReward007","name":"第7天","id":"10007","day":7,"gem":10}
+}

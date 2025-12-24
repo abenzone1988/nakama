@@ -1,6 +1,11 @@
 {
-"20001":{"reward":"DailyTask001","needValue":20,"id":"20001","type":2},
-"20002":{"reward":"DailyTask002","needValue":40,"id":"20002","type":2},
-"20003":{"reward":"DailyTask003","needValue":60,"id":"20003","type":2},
-"20004":{"reward":"DailyTask004","needValue":100,"id":"20004","type":2}
+"20001":{"reward":"daily1","needValue":30,"id":"20001","type":2},
+"20002":{"reward":"daily2","needValue":60,"id":"20002","type":2},
+"20003":{"reward":"daily3","needValue":90,"id":"20003","type":2},
+"20004":{"reward":"daily4","needValue":120,"id":"20004","type":2},
+"30001":{"reward":"weekly1","needValue":40,"id":"30001","type":3},
+"30002":{"reward":"weekly2","needValue":80,"id":"30002","type":3},
+"30003":{"reward":"weekly3","needValue":120,"id":"30003","type":3},
+"30004":{"reward":"weekly4","needValue":160,"id":"30004","type":3},
+"30005":{"reward":"weekly5","needValue":200,"id":"30005","type":3}
 }

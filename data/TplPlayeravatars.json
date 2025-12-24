@@ -1,0 +1,11 @@
+{
+"1001":{"unlock_type":1,"unlock_condition":"0","name":"默认男头像","id":1001,"url":"男01","nail_url":"男01","order":1},
+"2001":{"unlock_type":1,"unlock_condition":"0","name":"默认女头像","id":2001,"url":"女01","nail_url":"女01","order":2},
+"1002":{"unlock_type":3,"unlock_condition":"","name":"男2","id":1002,"url":"男02","nail_url":"男02","order":3},
+"1003":{"unlock_type":3,"unlock_condition":"","name":"男3","id":1003,"url":"男03","nail_url":"男03","order":4},
+"1004":{"unlock_type":3,"unlock_condition":"","name":"男4","id":1004,"url":"男04","nail_url":"男04","order":5},
+"2002":{"unlock_type":3,"unlock_condition":"","name":"女2","id":2002,"url":"女02","nail_url":"女02","order":6},
+"2003":{"unlock_type":3,"unlock_condition":"","name":"女3","id":2003,"url":"女03","nail_url":"女03","order":7},
+"2004":{"unlock_type":3,"unlock_condition":"","name":"女4","id":2004,"url":"女04","nail_url":"女04","order":8},
+"2005":{"unlock_type":3,"unlock_condition":"","name":"女5","id":2005,"url":"女05","nail_url":"女05","order":9}
+}

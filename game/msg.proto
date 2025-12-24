@@ -112,6 +112,13 @@ message EquipData{
   int32 crystal_tech_tree_index = 3;
 }
 
+// 玩家等级数据
+message PlayerLevelData{
+  int32 level = 1;      // 当前等级
+  int32 exp = 2;        // 当前经验值
+  int32 total_exp = 3;  // 总获得的经验值
+}
+
 message LevelData{
   string cur_level_id = 1;
   int32 best_progress = 2;
@@ -727,4 +734,30 @@ message PurchaseRequest{
 message PurchaseResponse{
   int32 code = 1;
   string msg = 2;
+}
+
+// 获取玩家等级数据请求
+message GetPlayerLevelDataRequest{
+}
+
+// 获取玩家等级数据响应
+message GetPlayerLevelDataResponse{
+  int32 code = 1;
+  string msg = 2;
+  PlayerLevelData data = 3;
+}
+
+// 升级玩家等级请求
+message UpgradePlayerLevelRequest{
+}
+
+// 升级玩家等级响应
+message UpgradePlayerLevelResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 level = 3;                    // 升级后的等级
+  int32 exp = 4;                      // 升级后剩余的经验值
+  Reward reward = 5;                  // 升级奖励
+  Wallet wallet_updated = 6;          // 钱包更新结果
+  repeated Item inventory_updated = 7; // 背包更新结果
 }

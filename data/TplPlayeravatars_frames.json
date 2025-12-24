@@ -1,0 +1,8 @@
+{
+"1001":{"unlock_type":1,"unlock_condition":"0","duration_type":1,"name":"默认头像框","duration_time":0,"id":1001,"url":"头像框01","order":1},
+"1002":{"unlock_type":3,"unlock_condition":"1","duration_type":1,"name":"头像框2","duration_time":0,"id":1002,"url":"头像框02","order":2},
+"1003":{"unlock_type":3,"unlock_condition":"2","duration_type":1,"name":"头像框3","duration_time":0,"id":1003,"url":"头像框03","order":3},
+"1004":{"unlock_type":3,"unlock_condition":"3","duration_type":1,"name":"头像框4","duration_time":0,"id":1004,"url":"头像框04","order":4},
+"1005":{"unlock_type":3,"unlock_condition":"4","duration_type":1,"name":"头像框5","duration_time":0,"id":1005,"url":"头像框05","order":5},
+"1006":{"unlock_type":3,"unlock_condition":"5","duration_type":1,"name":"头像框6","duration_time":0,"id":1006,"url":"头像框06","order":6}
+}

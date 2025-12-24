@@ -228,7 +228,8 @@ func (s *ApiServer) handleEquipUpgrade(ctx context.Context, userID uuid.UUID, eq
 func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UUID, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	targetIndex := equipData.CrystalTechTreeIndex + 1
 	crystalTechs := s.template.GetTplCrystalTechnologyDev().FindByFilter(func(dev template.TplCrystalTechnologyDev) bool {
-		return dev.PointIndex == targetIndex
+		return dev.CostItemNum == targetIndex
+		// Toto 错误
 	})
 	if crystalTechs == nil || crystalTechs.Len() == 0 {
 		return nil, nil, errors.New("crystal tech data not found")

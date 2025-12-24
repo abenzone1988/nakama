@@ -2368,6 +2368,62 @@
         ]
       }
     },
+    "/v2/game/player/level": {
+      "get": {
+        "summary": "==================== Player Level ====================\nGet player level data",
+        "operationId": "Nakama_GetPlayerLevelData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gamePlayerLevelData"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/player/level/upgrade": {
+      "post": {
+        "summary": "Upgrade player level",
+        "operationId": "Nakama_UpgradePlayerLevel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUpgradePlayerLevelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUpgradePlayerLevelRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/purchase/test": {
       "post": {
         "operationId": "Nakama_PurchaseTest",
@@ -8191,6 +8247,27 @@
       "description": "- FREE: 免费\n - COIN: 金币\n - GEM: 钻石\n - AD: 广告",
       "title": "商店相关消息定义"
     },
+    "gamePlayerLevelData": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前等级"
+        },
+        "exp": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前经验值"
+        },
+        "totalExp": {
+          "type": "integer",
+          "format": "int32",
+          "title": "总获得的经验值"
+        }
+      },
+      "title": "玩家等级数据"
+    },
     "gamePurchaseRequest": {
       "type": "object",
       "properties": {
@@ -8617,6 +8694,48 @@
           "title": "背包更新结果"
         }
       }
+    },
+    "gameUpgradePlayerLevelRequest": {
+      "type": "object",
+      "title": "升级玩家等级请求"
+    },
+    "gameUpgradePlayerLevelResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "format": "int32",
+          "title": "升级后的等级"
+        },
+        "exp": {
+          "type": "integer",
+          "format": "int32",
+          "title": "升级后剩余的经验值"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "升级奖励"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "升级玩家等级响应"
     },
     "gameWallet": {
       "type": "object",

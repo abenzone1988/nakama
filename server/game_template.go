@@ -37,6 +37,7 @@ type TemplateManager interface {
 	GetTplSevenDay() *TableTplSevenDay
 	GetTplDailySignIn() *TableTplDailySignIn
 	GetTplPay() *TableTplPay
+	GetTplPlayerLevel() *TableTplPlayerLevel
 }
 
 type LocalTemplateManager struct {
@@ -64,6 +65,7 @@ type LocalTemplateManager struct {
 	tableTplSevenDay          *TableTplSevenDay
 	tableTplDailySignIn       *TableTplDailySignIn
 	tableTplPay               *TableTplPay
+	tableTplPlayerLevel       *TableTplPlayerLevel
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -92,6 +94,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplSevenDay:          NewTableTplSevenDay(logger, jsonPath),
 		tableTplDailySignIn:       NewTableTplDailySignIn(logger, jsonPath),
 		tableTplPay:               NewTableTplPay(logger, jsonPath),
+		tableTplPlayerLevel:       NewTableTplPlayerLevel(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -122,6 +125,13 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplSevenDay.LoadData(t.StorageReadTpl("TplSevenDay"))
 	t.tableTplDailySignIn.LoadData(t.StorageReadTpl("TplDailySignIn"))
 	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
+	t.tableTplPlayerLevel.LoadData(t.StorageReadTpl("TplPlayerLevel"))
+}
+
+func (t *LocalTemplateManager) GetTplPlayerLevel() *TableTplPlayerLevel {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplPlayerLevel
 }
 
 func (t *LocalTemplateManager) GetTplFirstCharge() *TableTplFirstCharge {
