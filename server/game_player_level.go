@@ -33,8 +33,7 @@ func AddExp(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics
 	logger.Info("玩家获得经验值",
 		zap.Int32("stamina_consumed", staminaAmount),
 		zap.Int32("exp_gained", expGained),
-		zap.Int32("total_exp", playerLevelData.TotalExp),
-		zap.Int32("current_exp", playerLevelData.Exp))
+		zap.Int32("total_exp", playerLevelData.TotalExp))
 
 	return nil
 }
@@ -49,7 +48,6 @@ func (s *ApiServer) GetPlayerLevelData(ctx context.Context, in *emptypb.Empty) (
 
 	return &game.PlayerLevelData{
 		Level:    playerLevelData.Level,
-		Exp:      playerLevelData.Exp,
 		TotalExp: playerLevelData.TotalExp,
 	}, nil
 }
@@ -82,15 +80,18 @@ func (s *ApiServer) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlay
 	// 检查总经验值是否足够（ExpRequire 是升级到该等级所需的总经验值）
 	if totalExp < levelInfo.ExpRequire {
 		return &game.UpgradePlayerLevelResponse{
-			Code: 3,
-			Msg:  "经验值不足",
+			Code:             3,
+			Msg:              "经验值不足，需要 " + strconv.FormatInt(int64(levelInfo.ExpRequire-totalExp), 10) + " 点经验值",
+			TotalExp:         playerLevelData.TotalExp,
+			Level:            playerLevelData.Level,
+			Reward:           nil,
+			WalletUpdated:    nil,
+			InventoryUpdated: nil,
 		}, nil
 	}
 
 	// 升级（不需要扣除经验值，因为 TotalExp 是累计值）
 	playerLevelData.Level = nextLevel
-	// Exp 更新为当前等级的经验值（总经验值减去当前等级所需的总经验值）
-	playerLevelData.Exp = totalExp - levelInfo.ExpRequire
 
 	// 发放升级奖励
 	var reward *game.Reward
@@ -131,14 +132,13 @@ func (s *ApiServer) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlay
 
 	s.logger.Info("玩家升级成功",
 		zap.Int32("old_level", currentLevel),
-		zap.Int32("new_level", nextLevel),
-		zap.Int32("remaining_exp", playerLevelData.Exp))
+		zap.Int32("new_level", nextLevel))
 
 	return &game.UpgradePlayerLevelResponse{
 		Code:             0,
 		Msg:              "升级成功",
 		Level:            nextLevel,
-		Exp:              playerLevelData.Exp,
+		TotalExp:         playerLevelData.TotalExp,
 		Reward:           reward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,

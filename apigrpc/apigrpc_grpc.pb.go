@@ -151,6 +151,7 @@ const (
 	Nakama_ClaimGemItem_FullMethodName                      = "/nakama.api.Nakama/ClaimGemItem"
 	Nakama_EndBattle_FullMethodName                         = "/nakama.api.Nakama/EndBattle"
 	Nakama_StartBattle_FullMethodName                       = "/nakama.api.Nakama/StartBattle"
+	Nakama_QuickBattle_FullMethodName                       = "/nakama.api.Nakama/QuickBattle"
 	Nakama_ClaimBattleRewardByShare_FullMethodName          = "/nakama.api.Nakama/ClaimBattleRewardByShare"
 	Nakama_ClaimMoppingReward_FullMethodName                = "/nakama.api.Nakama/ClaimMoppingReward"
 	Nakama_ClaimOnHookReward_FullMethodName                 = "/nakama.api.Nakama/ClaimOnHookReward"
@@ -404,6 +405,7 @@ type NakamaClient interface {
 	// ==================== Battle & AFK ====================
 	EndBattle(ctx context.Context, in *game.EndBattleRequest, opts ...grpc.CallOption) (*game.EndBattleResponse, error)
 	StartBattle(ctx context.Context, in *game.StartBattleRequest, opts ...grpc.CallOption) (*game.StartBattleResponse, error)
+	QuickBattle(ctx context.Context, in *game.QuickBattleRequest, opts ...grpc.CallOption) (*game.QuickBattleResponse, error)
 	ClaimBattleRewardByShare(ctx context.Context, in *game.ClaimBattleRewardByShareRequest, opts ...grpc.CallOption) (*game.ClaimBattleRewardByShareResponse, error)
 	ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppingRewardRequest, opts ...grpc.CallOption) (*game.ClaimMoppingRewardResponse, error)
 	ClaimOnHookReward(ctx context.Context, in *game.ClaimOnHookRewardRequest, opts ...grpc.CallOption) (*game.ClaimOnHookRewardResponse, error)
@@ -1454,6 +1456,15 @@ func (c *nakamaClient) StartBattle(ctx context.Context, in *game.StartBattleRequ
 	return out, nil
 }
 
+func (c *nakamaClient) QuickBattle(ctx context.Context, in *game.QuickBattleRequest, opts ...grpc.CallOption) (*game.QuickBattleResponse, error) {
+	out := new(game.QuickBattleResponse)
+	err := c.cc.Invoke(ctx, Nakama_QuickBattle_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) ClaimBattleRewardByShare(ctx context.Context, in *game.ClaimBattleRewardByShareRequest, opts ...grpc.CallOption) (*game.ClaimBattleRewardByShareResponse, error) {
 	out := new(game.ClaimBattleRewardByShareResponse)
 	err := c.cc.Invoke(ctx, Nakama_ClaimBattleRewardByShare_FullMethodName, in, out, opts...)
@@ -1873,6 +1884,7 @@ type NakamaServer interface {
 	// ==================== Battle & AFK ====================
 	EndBattle(context.Context, *game.EndBattleRequest) (*game.EndBattleResponse, error)
 	StartBattle(context.Context, *game.StartBattleRequest) (*game.StartBattleResponse, error)
+	QuickBattle(context.Context, *game.QuickBattleRequest) (*game.QuickBattleResponse, error)
 	ClaimBattleRewardByShare(context.Context, *game.ClaimBattleRewardByShareRequest) (*game.ClaimBattleRewardByShareResponse, error)
 	ClaimMoppingReward(context.Context, *game.ClaimMoppingRewardRequest) (*game.ClaimMoppingRewardResponse, error)
 	ClaimOnHookReward(context.Context, *game.ClaimOnHookRewardRequest) (*game.ClaimOnHookRewardResponse, error)
@@ -2247,6 +2259,9 @@ func (UnimplementedNakamaServer) EndBattle(context.Context, *game.EndBattleReque
 }
 func (UnimplementedNakamaServer) StartBattle(context.Context, *game.StartBattleRequest) (*game.StartBattleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartBattle not implemented")
+}
+func (UnimplementedNakamaServer) QuickBattle(context.Context, *game.QuickBattleRequest) (*game.QuickBattleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QuickBattle not implemented")
 }
 func (UnimplementedNakamaServer) ClaimBattleRewardByShare(context.Context, *game.ClaimBattleRewardByShareRequest) (*game.ClaimBattleRewardByShareResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimBattleRewardByShare not implemented")
@@ -4340,6 +4355,24 @@ func _Nakama_StartBattle_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_QuickBattle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.QuickBattleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).QuickBattle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_QuickBattle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).QuickBattle(ctx, req.(*game.QuickBattleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_ClaimBattleRewardByShare_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.ClaimBattleRewardByShareRequest)
 	if err := dec(in); err != nil {
@@ -5172,6 +5205,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StartBattle",
 			Handler:    _Nakama_StartBattle_Handler,
+		},
+		{
+			MethodName: "QuickBattle",
+			Handler:    _Nakama_QuickBattle_Handler,
 		},
 		{
 			MethodName: "ClaimBattleRewardByShare",

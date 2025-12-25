@@ -10,11 +10,9 @@ import (
 
 type TplItem struct {
 	Gain       []interface{} `json:"gain"`
-	IconScale  string        `json:"iconScale"`
 	ID         string        `json:"id"`
 	ItemType   int32         `json:"itemType"`
 	Level      int32         `json:"level"`
-	Name       string        `json:"name"`
 	OnlyOne    int32         `json:"onlyOne"`
 	OrderIndex int32         `json:"orderIndex"`
 	Quality    int32         `json:"quality"`

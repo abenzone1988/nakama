@@ -695,3 +695,28 @@ func MergeRewards(rewards []*game.Reward) *game.Reward {
 
 	return result
 }
+
+// GrantMergedRewards 通用奖励发放函数
+// 接收多个已处理的 game.Reward，合并后一次性发放
+// rewards: 奖励列表（调用方已完成GetReward转换、进度折扣等业务逻辑处理）
+// source: 奖励来源标识
+// 返回: 合并后的奖励、钱包更新结果、背包更新结果、错误信息
+func GrantMergedRewards(ctx context.Context, logger *zap.Logger, db *sql.DB, template TemplateManager, metrics Metrics, storageIndex StorageIndex, rewards []*game.Reward, source string) (*game.Reward, *game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+	if len(rewards) == 0 {
+		return nil, nil, nil, nil
+	}
+
+	// 合并所有奖励
+	mergedReward := MergeRewards(rewards)
+	if mergedReward == nil {
+		return nil, nil, nil, nil
+	}
+
+	// 发放合并后的奖励
+	walletUpdateResult, inventoryUpdateResult, err := GrantReward(ctx, logger, db, template, metrics, storageIndex, mergedReward, source)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return mergedReward, walletUpdateResult, inventoryUpdateResult, nil
+}

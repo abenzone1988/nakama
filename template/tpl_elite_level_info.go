@@ -19,6 +19,7 @@ type TplEliteLevelInfo struct {
 	MonsterBuffList    []string `json:"monsterBuffList"`
 	MonsterLevel       int32    `json:"monsterLevel"`
 	MonsterWaveGroupID string   `json:"monsterWaveGroupId"`
+	WinRewards         string   `json:"winRewards"`
 }
 
 // ReadOnlyTplEliteLevelInfoSlice 只读TplEliteLevelInfo切片接口

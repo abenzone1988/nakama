@@ -14,6 +14,7 @@ type TplCrystalEquipmentRefinementAffix struct {
 	MinValue       int32  `json:"minValue"`
 	NeedEequipType int32  `json:"needEequipType"`
 	NeedQuality    int32  `json:"needQuality"`
+	Quality        int32  `json:"quality"`
 	Weight         int32  `json:"weight"`
 }
 

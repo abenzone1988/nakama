@@ -38,6 +38,8 @@ type TemplateManager interface {
 	GetTplDailySignIn() *TableTplDailySignIn
 	GetTplPay() *TableTplPay
 	GetTplPlayerLevel() *TableTplPlayerLevel
+	GetTplEliteLevelInfo() *TableTplEliteLevelInfo
+	GetTplEliteLevelDrop() *TableTplEliteLevelDrop
 }
 
 type LocalTemplateManager struct {
@@ -66,6 +68,8 @@ type LocalTemplateManager struct {
 	tableTplDailySignIn       *TableTplDailySignIn
 	tableTplPay               *TableTplPay
 	tableTplPlayerLevel       *TableTplPlayerLevel
+	tableTplEliteLevelInfo    *TableTplEliteLevelInfo
+	tableTplEliteLevelDrop    *TableTplEliteLevelDrop
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -95,6 +99,8 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplDailySignIn:       NewTableTplDailySignIn(logger, jsonPath),
 		tableTplPay:               NewTableTplPay(logger, jsonPath),
 		tableTplPlayerLevel:       NewTableTplPlayerLevel(logger, jsonPath),
+		tableTplEliteLevelInfo:    NewTableTplEliteLevelInfo(logger, jsonPath),
+		tableTplEliteLevelDrop:    NewTableTplEliteLevelDrop(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -126,6 +132,20 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplDailySignIn.LoadData(t.StorageReadTpl("TplDailySignIn"))
 	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
 	t.tableTplPlayerLevel.LoadData(t.StorageReadTpl("TplPlayerLevel"))
+	t.tableTplEliteLevelInfo.LoadData(t.StorageReadTpl("TplEliteLevelInfo"))
+	t.tableTplEliteLevelDrop.LoadData(t.StorageReadTpl("TplEliteLevelDrop"))
+}
+
+func (t *LocalTemplateManager) GetTplEliteLevelInfo() *TableTplEliteLevelInfo {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplEliteLevelInfo
+}
+
+func (t *LocalTemplateManager) GetTplEliteLevelDrop() *TableTplEliteLevelDrop {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplEliteLevelDrop
 }
 
 func (t *LocalTemplateManager) GetTplPlayerLevel() *TableTplPlayerLevel {

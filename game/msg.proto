@@ -201,6 +201,7 @@ message CheckVipStatusResponse {
 enum BattleType{
   BATTLE_TYPE_NORMAL = 0;
   BATTLE_TYPE_GOLDEN = 1;
+  BATTLE_TYPE_ELITE = 2;
 }
 
 
@@ -229,6 +230,20 @@ message EndBattleResponse{
   repeated Item inventory_updated = 5; // 背包更新结果
 }
 
+// 快速通过战斗（直接扣体力发放奖励）
+message QuickBattleRequest{
+  BattleType type = 1;
+  string level_id = 2;
+}
+
+message QuickBattleResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3; // 奖励数据
+  StaminaData stamina = 4; // 体力数据
+  Wallet wallet_updated = 5; // 钱包更新结果
+  repeated Item inventory_updated = 6; // 背包更新结果
+}
 
 // 分享后领取战斗奖励请求
 message ClaimBattleRewardByShareRequest{
@@ -756,7 +771,7 @@ message UpgradePlayerLevelResponse{
   int32 code = 1;
   string msg = 2;
   int32 level = 3;                    // 升级后的等级
-  int32 exp = 4;                      // 升级后剩余的经验值
+  int32 total_exp = 4;                // 总获得的经验值
   Reward reward = 5;                  // 升级奖励
   Wallet wallet_updated = 6;          // 钱包更新结果
   repeated Item inventory_updated = 7; // 背包更新结果

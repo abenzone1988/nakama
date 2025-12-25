@@ -1942,6 +1942,38 @@
         ]
       }
     },
+    "/v2/game/battle/quick": {
+      "post": {
+        "operationId": "Nakama_QuickBattle",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameQuickBattleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameQuickBattleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/battle/reward/share": {
       "post": {
         "operationId": "Nakama_ClaimBattleRewardByShare",
@@ -6955,7 +6987,8 @@
       "type": "string",
       "enum": [
         "BATTLE_TYPE_NORMAL",
-        "BATTLE_TYPE_GOLDEN"
+        "BATTLE_TYPE_GOLDEN",
+        "BATTLE_TYPE_ELITE"
       ],
       "default": "BATTLE_TYPE_NORMAL"
     },
@@ -8338,6 +8371,49 @@
         }
       }
     },
+    "gameQuickBattleRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/gameBattleType"
+        },
+        "levelId": {
+          "type": "string"
+        }
+      },
+      "title": "快速通过战斗（直接扣体力发放奖励）"
+    },
+    "gameQuickBattleResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "stamina": {
+          "$ref": "#/definitions/gameStaminaData",
+          "title": "体力数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      }
+    },
     "gameRedeemGiftRequest": {
       "type": "object",
       "properties": {
@@ -8714,10 +8790,10 @@
           "format": "int32",
           "title": "升级后的等级"
         },
-        "exp": {
+        "totalExp": {
           "type": "integer",
           "format": "int32",
-          "title": "升级后剩余的经验值"
+          "title": "总获得的经验值"
         },
         "reward": {
           "$ref": "#/definitions/gameReward",
