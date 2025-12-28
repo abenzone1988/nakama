@@ -703,3 +703,36 @@ func (d *PlayerLevelData) Init() {
 	d.TotalExp = 0
 	d.SetVersion("")
 }
+
+// ============================================================================
+// 挖矿相关数据结构
+// ============================================================================
+
+// MineData 挖矿数据存储结构
+type MineData struct {
+	BaseStorable
+	DailyMineCount    int32  `json:"daily_mine_count"`    // 每日剩余挖矿次数
+	LastRefreshDate   string `json:"last_refresh_date"`   // 最后刷新日期（YYYY-MM-DD）
+	CurrentLevel      int32  `json:"current_level"`       // 当前矿产等级
+	CurrentMinedCount int32  `json:"current_mined_count"` // 当前矿产已挖出的数量
+	IsCompleted       bool   `json:"is_completed"`        // 当前矿产是否已挖完
+	BuyCount          int32  `json:"buy_count"`           // 今日已购买次数
+}
+
+func (d *MineData) GetCollection() string {
+	return "mine"
+}
+
+func (d *MineData) GetKey() string {
+	return "data"
+}
+
+func (d *MineData) Init() {
+	d.DailyMineCount = 30 // DailyMineCount 常量已移到 game_mine.go
+	d.LastRefreshDate = ""
+	d.CurrentLevel = 1
+	d.CurrentMinedCount = 0
+	d.IsCompleted = false
+	d.BuyCount = 0
+	d.SetVersion("")
+}

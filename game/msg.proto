@@ -776,3 +776,66 @@ message UpgradePlayerLevelResponse{
   Wallet wallet_updated = 6;          // 钱包更新结果
   repeated Item inventory_updated = 7; // 背包更新结果
 }
+
+// 获取挖矿数据请求
+message GetMineDataRequest{
+}
+
+// 获取挖矿数据响应
+message GetMineDataResponse{
+  int32 code = 1;
+  string msg = 2;
+  MineData data = 3;
+}
+
+// 挖矿数据
+message MineData{
+  int32 daily_mine_count = 1;         // 每日剩余挖矿次数
+  string last_refresh_date = 2;       // 最后刷新日期
+  int32 current_level = 3;            // 当前矿产等级
+  int32 current_mined_count = 4;      // 当前矿产已挖数量
+  bool is_completed = 5;              // 当前矿产是否已挖完
+  int32 buy_count = 6;                // 今日已购买次数
+}
+
+// 挖矿请求
+message DoMineRequest{
+}
+
+// 挖矿响应
+message DoMineResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 gained = 3;                   // 本次挖到的数量
+  bool is_crit = 4;                   // 是否暴击
+  int32 current_mined_count = 5;      // 当前矿产已挖数量
+  int32 remaining_count = 6;          // 剩余挖矿次数
+  bool is_completed = 7;              // 当前矿产是否已挖完
+  Reward reward = 8;                  // 奖励
+  Wallet wallet_updated = 9;          // 钱包更新结果
+  repeated Item inventory_updated = 10; // 背包更新结果
+}
+
+// 升级矿产请求
+message UpgradeMineRequest{
+}
+
+// 升级矿产响应
+message UpgradeMineResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 level = 3;                    // 升级后的矿产等级
+}
+
+// 购买挖矿次数请求
+message BuyMineCountRequest{
+}
+
+// 购买挖矿次数响应
+message BuyMineCountResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 buy_count = 3;                // 今日已购买次数
+  int32 daily_mine_count = 4;         // 每日剩余挖矿次数
+  Wallet wallet_updated = 5;          // 钱包更新结果
+}

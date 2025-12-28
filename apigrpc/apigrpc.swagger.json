@@ -2336,6 +2336,138 @@
         ]
       }
     },
+    "/v2/game/mine/buy": {
+      "post": {
+        "summary": "Buy mine count",
+        "operationId": "Nakama_BuyMineCount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameBuyMineCountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameBuyMineCountRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/mine/data": {
+      "post": {
+        "summary": "==================== Mine ====================\nGet mine data",
+        "operationId": "Nakama_GetMineData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetMineDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGetMineDataRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/mine/do": {
+      "post": {
+        "summary": "Do mine",
+        "operationId": "Nakama_DoMine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameDoMineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameDoMineRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/mine/upgrade": {
+      "post": {
+        "summary": "Upgrade mine",
+        "operationId": "Nakama_UpgradeMine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeMineResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeMineRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/mopping/claim": {
       "post": {
         "operationId": "Nakama_ClaimMoppingReward",
@@ -7080,6 +7212,37 @@
       },
       "title": "购买宝箱响应"
     },
+    "gameBuyMineCountRequest": {
+      "type": "object",
+      "title": "购买挖矿次数请求"
+    },
+    "gameBuyMineCountResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "buyCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "今日已购买次数"
+        },
+        "dailyMineCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "每日剩余挖矿次数"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        }
+      },
+      "title": "购买挖矿次数响应"
+    },
     "gameBuyShopItemRequest": {
       "type": "object",
       "properties": {
@@ -7787,6 +7950,61 @@
       },
       "title": "领取VIP奖励响应"
     },
+    "gameDoMineRequest": {
+      "type": "object",
+      "title": "挖矿请求"
+    },
+    "gameDoMineResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "gained": {
+          "type": "integer",
+          "format": "int32",
+          "title": "本次挖到的数量"
+        },
+        "isCrit": {
+          "type": "boolean",
+          "title": "是否暴击"
+        },
+        "currentMinedCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前矿产已挖数量"
+        },
+        "remainingCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "剩余挖矿次数"
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "title": "当前矿产是否已挖完"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "挖矿响应"
+    },
     "gameEndBattleRequest": {
       "type": "object",
       "properties": {
@@ -7968,6 +8186,26 @@
         }
       },
       "title": "获取关卡宝箱响应"
+    },
+    "gameGetMineDataRequest": {
+      "type": "object",
+      "title": "获取挖矿数据请求"
+    },
+    "gameGetMineDataResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/gameMineData"
+        }
+      },
+      "title": "获取挖矿数据响应"
     },
     "gameGetSevenDayStatusResponse": {
       "type": "object",
@@ -8162,6 +8400,40 @@
           "description": "Marked count."
         }
       }
+    },
+    "gameMineData": {
+      "type": "object",
+      "properties": {
+        "dailyMineCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "每日剩余挖矿次数"
+        },
+        "lastRefreshDate": {
+          "type": "string",
+          "title": "最后刷新日期"
+        },
+        "currentLevel": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前矿产等级"
+        },
+        "currentMinedCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前矿产已挖数量"
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "title": "当前矿产是否已挖完"
+        },
+        "buyCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "今日已购买次数"
+        }
+      },
+      "title": "挖矿数据"
     },
     "gameOperateInventoryRequest": {
       "type": "object",
@@ -8770,6 +9042,28 @@
           "title": "背包更新结果"
         }
       }
+    },
+    "gameUpgradeMineRequest": {
+      "type": "object",
+      "title": "升级矿产请求"
+    },
+    "gameUpgradeMineResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "format": "int32",
+          "title": "升级后的矿产等级"
+        }
+      },
+      "title": "升级矿产响应"
     },
     "gameUpgradePlayerLevelRequest": {
       "type": "object",

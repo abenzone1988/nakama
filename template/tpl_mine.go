@@ -14,9 +14,9 @@ type TplMine struct {
 	Crit       int32  `json:"crit"`
 	Critcount  int32  `json:"critcount"`
 	ID         string `json:"id"`
+	Level      int32  `json:"level"`
 	Maxcount   int32  `json:"maxcount"`
 	Name       string `json:"name"`
-	NextID     string `json:"nextID"`
 }
 
 // ReadOnlyTplMineSlice 只读TplMine切片接口

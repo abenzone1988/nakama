@@ -173,6 +173,10 @@ const (
 	Nakama_PurchaseTest_FullMethodName                      = "/nakama.api.Nakama/PurchaseTest"
 	Nakama_GetPlayerLevelData_FullMethodName                = "/nakama.api.Nakama/GetPlayerLevelData"
 	Nakama_UpgradePlayerLevel_FullMethodName                = "/nakama.api.Nakama/UpgradePlayerLevel"
+	Nakama_GetMineData_FullMethodName                       = "/nakama.api.Nakama/GetMineData"
+	Nakama_DoMine_FullMethodName                            = "/nakama.api.Nakama/DoMine"
+	Nakama_UpgradeMine_FullMethodName                       = "/nakama.api.Nakama/UpgradeMine"
+	Nakama_BuyMineCount_FullMethodName                      = "/nakama.api.Nakama/BuyMineCount"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -438,6 +442,15 @@ type NakamaClient interface {
 	GetPlayerLevelData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.PlayerLevelData, error)
 	// Upgrade player level
 	UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlayerLevelRequest, opts ...grpc.CallOption) (*game.UpgradePlayerLevelResponse, error)
+	// ==================== Mine ====================
+	// Get mine data
+	GetMineData(ctx context.Context, in *game.GetMineDataRequest, opts ...grpc.CallOption) (*game.GetMineDataResponse, error)
+	// Do mine
+	DoMine(ctx context.Context, in *game.DoMineRequest, opts ...grpc.CallOption) (*game.DoMineResponse, error)
+	// Upgrade mine
+	UpgradeMine(ctx context.Context, in *game.UpgradeMineRequest, opts ...grpc.CallOption) (*game.UpgradeMineResponse, error)
+	// Buy mine count
+	BuyMineCount(ctx context.Context, in *game.BuyMineCountRequest, opts ...grpc.CallOption) (*game.BuyMineCountResponse, error)
 }
 
 type nakamaClient struct {
@@ -1654,6 +1667,42 @@ func (c *nakamaClient) UpgradePlayerLevel(ctx context.Context, in *game.UpgradeP
 	return out, nil
 }
 
+func (c *nakamaClient) GetMineData(ctx context.Context, in *game.GetMineDataRequest, opts ...grpc.CallOption) (*game.GetMineDataResponse, error) {
+	out := new(game.GetMineDataResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetMineData_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) DoMine(ctx context.Context, in *game.DoMineRequest, opts ...grpc.CallOption) (*game.DoMineResponse, error) {
+	out := new(game.DoMineResponse)
+	err := c.cc.Invoke(ctx, Nakama_DoMine_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UpgradeMine(ctx context.Context, in *game.UpgradeMineRequest, opts ...grpc.CallOption) (*game.UpgradeMineResponse, error) {
+	out := new(game.UpgradeMineResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpgradeMine_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) BuyMineCount(ctx context.Context, in *game.BuyMineCountRequest, opts ...grpc.CallOption) (*game.BuyMineCountResponse, error) {
+	out := new(game.BuyMineCountResponse)
+	err := c.cc.Invoke(ctx, Nakama_BuyMineCount_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1917,6 +1966,15 @@ type NakamaServer interface {
 	GetPlayerLevelData(context.Context, *emptypb.Empty) (*game.PlayerLevelData, error)
 	// Upgrade player level
 	UpgradePlayerLevel(context.Context, *game.UpgradePlayerLevelRequest) (*game.UpgradePlayerLevelResponse, error)
+	// ==================== Mine ====================
+	// Get mine data
+	GetMineData(context.Context, *game.GetMineDataRequest) (*game.GetMineDataResponse, error)
+	// Do mine
+	DoMine(context.Context, *game.DoMineRequest) (*game.DoMineResponse, error)
+	// Upgrade mine
+	UpgradeMine(context.Context, *game.UpgradeMineRequest) (*game.UpgradeMineResponse, error)
+	// Buy mine count
+	BuyMineCount(context.Context, *game.BuyMineCountRequest) (*game.BuyMineCountResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2325,6 +2383,18 @@ func (UnimplementedNakamaServer) GetPlayerLevelData(context.Context, *emptypb.Em
 }
 func (UnimplementedNakamaServer) UpgradePlayerLevel(context.Context, *game.UpgradePlayerLevelRequest) (*game.UpgradePlayerLevelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpgradePlayerLevel not implemented")
+}
+func (UnimplementedNakamaServer) GetMineData(context.Context, *game.GetMineDataRequest) (*game.GetMineDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMineData not implemented")
+}
+func (UnimplementedNakamaServer) DoMine(context.Context, *game.DoMineRequest) (*game.DoMineResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DoMine not implemented")
+}
+func (UnimplementedNakamaServer) UpgradeMine(context.Context, *game.UpgradeMineRequest) (*game.UpgradeMineResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradeMine not implemented")
+}
+func (UnimplementedNakamaServer) BuyMineCount(context.Context, *game.BuyMineCountRequest) (*game.BuyMineCountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuyMineCount not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -4751,6 +4821,78 @@ func _Nakama_UpgradePlayerLevel_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetMineData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetMineDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetMineData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetMineData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetMineData(ctx, req.(*game.GetMineDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_DoMine_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.DoMineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).DoMine(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_DoMine_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).DoMine(ctx, req.(*game.DoMineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UpgradeMine_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpgradeMineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UpgradeMine(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UpgradeMine_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UpgradeMine(ctx, req.(*game.UpgradeMineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_BuyMineCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.BuyMineCountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).BuyMineCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_BuyMineCount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).BuyMineCount(ctx, req.(*game.BuyMineCountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5293,6 +5435,22 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpgradePlayerLevel",
 			Handler:    _Nakama_UpgradePlayerLevel_Handler,
+		},
+		{
+			MethodName: "GetMineData",
+			Handler:    _Nakama_GetMineData_Handler,
+		},
+		{
+			MethodName: "DoMine",
+			Handler:    _Nakama_DoMine_Handler,
+		},
+		{
+			MethodName: "UpgradeMine",
+			Handler:    _Nakama_UpgradeMine_Handler,
+		},
+		{
+			MethodName: "BuyMineCount",
+			Handler:    _Nakama_BuyMineCount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

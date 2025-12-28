@@ -40,6 +40,7 @@ type TemplateManager interface {
 	GetTplPlayerLevel() *TableTplPlayerLevel
 	GetTplEliteLevelInfo() *TableTplEliteLevelInfo
 	GetTplEliteLevelDrop() *TableTplEliteLevelDrop
+	GetTplMine() *TableTplMine
 }
 
 type LocalTemplateManager struct {
@@ -70,6 +71,7 @@ type LocalTemplateManager struct {
 	tableTplPlayerLevel       *TableTplPlayerLevel
 	tableTplEliteLevelInfo    *TableTplEliteLevelInfo
 	tableTplEliteLevelDrop    *TableTplEliteLevelDrop
+	tableTplMine              *TableTplMine
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -101,6 +103,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplPlayerLevel:       NewTableTplPlayerLevel(logger, jsonPath),
 		tableTplEliteLevelInfo:    NewTableTplEliteLevelInfo(logger, jsonPath),
 		tableTplEliteLevelDrop:    NewTableTplEliteLevelDrop(logger, jsonPath),
+		tableTplMine:              NewTableTplMine(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -134,6 +137,7 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplPlayerLevel.LoadData(t.StorageReadTpl("TplPlayerLevel"))
 	t.tableTplEliteLevelInfo.LoadData(t.StorageReadTpl("TplEliteLevelInfo"))
 	t.tableTplEliteLevelDrop.LoadData(t.StorageReadTpl("TplEliteLevelDrop"))
+	t.tableTplMine.LoadData(t.StorageReadTpl("TplMine"))
 }
 
 func (t *LocalTemplateManager) GetTplEliteLevelInfo() *TableTplEliteLevelInfo {
@@ -284,6 +288,12 @@ func (t *LocalTemplateManager) GetTplProgressReward() *TableTplProgressReward {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplProgressReward
+}
+
+func (t *LocalTemplateManager) GetTplMine() *TableTplMine {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplMine
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
