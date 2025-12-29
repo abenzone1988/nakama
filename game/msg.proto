@@ -152,6 +152,8 @@ message SignInData{
 message UserMeta{
   int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
   string stamina_last_refresh_time = 2; // 体力最后刷新时间，ISO 8601 格式
+  int32 rest_station_stamina = 3; // 休息站存储的体力数量
+  string rest_station_last_grant_time = 4; // 休息站最后一次补充时间，ISO 8601 格式
   // StaminaData、EquipData 和 LevelData 已迁移到独立的 storage 存储
 }
 
@@ -312,9 +314,13 @@ message GetTaskRequest{
 message GetTaskResponse{
   int32 code = 1;
   string msg = 2;
-  int32 current_liveness = 3;              // 当前活跃度
-  repeated string claimed_tasks = 4;       // 已领取的任务ID列表
-  repeated string claimed_liveness_rewards = 5; // 已领取的活跃度奖励ID列表
+  int32 daily_liveness = 3;                      // 每日活跃度
+  int32 weekly_liveness = 4;                     // 每周活跃度
+  repeated string claimed_daily_tasks = 5;       // 已领取的每日任务ID列表（taskType 2）
+  repeated string claimed_weekly_tasks = 6;      // 已领取的每周任务ID列表（taskType 3）
+  repeated string claimed_main_tasks = 7;        // 已领取的主线任务ID列表（taskType 1）
+  repeated string claimed_daily_liveness_rewards = 8;  // 已领取的每日活跃度奖励ID列表
+  repeated string claimed_weekly_liveness_rewards = 9; // 已领取的每周活跃度奖励ID列表
 }
 
 // 领取任务奖励请求
@@ -838,4 +844,37 @@ message BuyMineCountResponse{
   int32 buy_count = 3;                // 今日已购买次数
   int32 daily_mine_count = 4;         // 每日剩余挖矿次数
   Wallet wallet_updated = 5;          // 钱包更新结果
+}
+
+// ===== 休息站相关消息 =====
+
+// 休息站数据
+message RestStationData{
+  int32 stamina_count = 1;            // 当前存储的体力数量
+  string next_grant_time = 2;         // 下次补充体力的时间（UTC时间字符串，ISO 8601 格式）
+  StaminaData current_stamina = 3;    // 玩家当前体力数据
+}
+
+// 获取休息站状态请求
+message GetRestStationRequest{
+}
+
+// 获取休息站状态响应
+message GetRestStationResponse{
+  int32 code = 1;
+  string msg = 2;
+  RestStationData data = 3;
+}
+
+// 领取休息站体力请求
+message ClaimRestStationStaminaRequest{
+  int32 count = 1;                    // 领取数量，0表示一键领取
+}
+
+// 领取休息站体力响应
+message ClaimRestStationStaminaResponse{
+  int32 code = 1;
+  string msg = 2;
+  RestStationData rest_station = 3;   // 更新后的休息站数据
+  StaminaData stamina = 4;            // 更新后的体力数据
 }

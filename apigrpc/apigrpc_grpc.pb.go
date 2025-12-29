@@ -177,6 +177,8 @@ const (
 	Nakama_DoMine_FullMethodName                            = "/nakama.api.Nakama/DoMine"
 	Nakama_UpgradeMine_FullMethodName                       = "/nakama.api.Nakama/UpgradeMine"
 	Nakama_BuyMineCount_FullMethodName                      = "/nakama.api.Nakama/BuyMineCount"
+	Nakama_GetRestStation_FullMethodName                    = "/nakama.api.Nakama/GetRestStation"
+	Nakama_ClaimRestStationStamina_FullMethodName           = "/nakama.api.Nakama/ClaimRestStationStamina"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -451,6 +453,11 @@ type NakamaClient interface {
 	UpgradeMine(ctx context.Context, in *game.UpgradeMineRequest, opts ...grpc.CallOption) (*game.UpgradeMineResponse, error)
 	// Buy mine count
 	BuyMineCount(ctx context.Context, in *game.BuyMineCountRequest, opts ...grpc.CallOption) (*game.BuyMineCountResponse, error)
+	// ==================== Rest Station ====================
+	// Get rest station status
+	GetRestStation(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetRestStationResponse, error)
+	// Claim rest station stamina
+	ClaimRestStationStamina(ctx context.Context, in *game.ClaimRestStationStaminaRequest, opts ...grpc.CallOption) (*game.ClaimRestStationStaminaResponse, error)
 }
 
 type nakamaClient struct {
@@ -1703,6 +1710,24 @@ func (c *nakamaClient) BuyMineCount(ctx context.Context, in *game.BuyMineCountRe
 	return out, nil
 }
 
+func (c *nakamaClient) GetRestStation(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetRestStationResponse, error) {
+	out := new(game.GetRestStationResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetRestStation_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimRestStationStamina(ctx context.Context, in *game.ClaimRestStationStaminaRequest, opts ...grpc.CallOption) (*game.ClaimRestStationStaminaResponse, error) {
+	out := new(game.ClaimRestStationStaminaResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimRestStationStamina_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1975,6 +2000,11 @@ type NakamaServer interface {
 	UpgradeMine(context.Context, *game.UpgradeMineRequest) (*game.UpgradeMineResponse, error)
 	// Buy mine count
 	BuyMineCount(context.Context, *game.BuyMineCountRequest) (*game.BuyMineCountResponse, error)
+	// ==================== Rest Station ====================
+	// Get rest station status
+	GetRestStation(context.Context, *emptypb.Empty) (*game.GetRestStationResponse, error)
+	// Claim rest station stamina
+	ClaimRestStationStamina(context.Context, *game.ClaimRestStationStaminaRequest) (*game.ClaimRestStationStaminaResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2395,6 +2425,12 @@ func (UnimplementedNakamaServer) UpgradeMine(context.Context, *game.UpgradeMineR
 }
 func (UnimplementedNakamaServer) BuyMineCount(context.Context, *game.BuyMineCountRequest) (*game.BuyMineCountResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BuyMineCount not implemented")
+}
+func (UnimplementedNakamaServer) GetRestStation(context.Context, *emptypb.Empty) (*game.GetRestStationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRestStation not implemented")
+}
+func (UnimplementedNakamaServer) ClaimRestStationStamina(context.Context, *game.ClaimRestStationStaminaRequest) (*game.ClaimRestStationStaminaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimRestStationStamina not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -4893,6 +4929,42 @@ func _Nakama_BuyMineCount_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetRestStation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetRestStation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetRestStation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetRestStation(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimRestStationStamina_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimRestStationStaminaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimRestStationStamina(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimRestStationStamina_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimRestStationStamina(ctx, req.(*game.ClaimRestStationStaminaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5451,6 +5523,14 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BuyMineCount",
 			Handler:    _Nakama_BuyMineCount_Handler,
+		},
+		{
+			MethodName: "GetRestStation",
+			Handler:    _Nakama_GetRestStation_Handler,
+		},
+		{
+			MethodName: "ClaimRestStationStamina",
+			Handler:    _Nakama_ClaimRestStationStamina_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

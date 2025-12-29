@@ -420,10 +420,15 @@ func (v *VipRewardData) Init() {
 // TaskData 任务数据
 type TaskData struct {
 	BaseStorable
-	DateTime               time.Time `json:"date_time"`                // 最后更新时间
-	ClaimedTasks           []string  `json:"claimed_tasks"`            // 已领取的任务ID列表
-	ClaimedLivenessRewards []string  `json:"claimed_liveness_rewards"` // 已领取的活跃度奖励ID列表
-	CurrentLiveness        int32     `json:"current_liveness"`         // 当前活跃度
+	DateTime                     time.Time `json:"date_time"`                       // 最后更新时间（每日重置）
+	WeeklyResetTime              time.Time `json:"weekly_reset_time"`               // 每周重置时间
+	ClaimedDailyTasks            []string  `json:"claimed_daily_tasks"`             // 已领取的每日任务ID列表（taskType 2）
+	ClaimedWeeklyTasks           []string  `json:"claimed_weekly_tasks"`            // 已领取的每周任务ID列表（taskType 3）
+	ClaimedMainTasks             []string  `json:"claimed_main_tasks"`              // 已领取的主线任务ID列表（taskType 1，永久）
+	ClaimedDailyLivenessRewards  []string  `json:"claimed_daily_liveness_rewards"`  // 已领取的每日活跃度奖励ID列表
+	ClaimedWeeklyLivenessRewards []string  `json:"claimed_weekly_liveness_rewards"` // 已领取的每周活跃度奖励ID列表
+	DailyLiveness                int32     `json:"daily_liveness"`                  // 每日活跃度
+	WeeklyLiveness               int32     `json:"weekly_liveness"`                 // 每周活跃度
 }
 
 func (d *TaskData) GetCollection() string {
@@ -436,9 +441,21 @@ func (d *TaskData) GetKey() string {
 
 func (d *TaskData) Init() {
 	d.DateTime = time.Now().UTC()
-	d.ClaimedTasks = []string{}
-	d.ClaimedLivenessRewards = []string{}
-	d.CurrentLiveness = 0
+	// 计算本周开始时间（周一 00:00 UTC）
+	now := time.Now().UTC()
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	daysFromMonday := weekday - 1
+	d.WeeklyResetTime = now.Truncate(24*time.Hour).AddDate(0, 0, -daysFromMonday)
+	d.ClaimedDailyTasks = []string{}
+	d.ClaimedWeeklyTasks = []string{}
+	d.ClaimedMainTasks = []string{}
+	d.ClaimedDailyLivenessRewards = []string{}
+	d.ClaimedWeeklyLivenessRewards = []string{}
+	d.DailyLiveness = 0
+	d.WeeklyLiveness = 0
 	d.SetVersion("")
 }
 

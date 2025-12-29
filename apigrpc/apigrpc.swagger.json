@@ -2653,6 +2653,62 @@
         ]
       }
     },
+    "/v2/game/reststation": {
+      "get": {
+        "summary": "==================== Rest Station ====================\nGet rest station status",
+        "operationId": "Nakama_GetRestStation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetRestStationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/reststation/claim": {
+      "post": {
+        "summary": "Claim rest station stamina",
+        "operationId": "Nakama_ClaimRestStationStamina",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimRestStationStaminaResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimRestStationStaminaRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/sevenday/claim": {
       "post": {
         "operationId": "Nakama_ClaimSevenDayReward",
@@ -7778,6 +7834,38 @@
       },
       "title": "领取挂机奖励响应"
     },
+    "gameClaimRestStationStaminaRequest": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "领取数量，0表示一键领取"
+        }
+      },
+      "title": "领取休息站体力请求"
+    },
+    "gameClaimRestStationStaminaResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "restStation": {
+          "$ref": "#/definitions/gameRestStationData",
+          "title": "更新后的休息站数据"
+        },
+        "stamina": {
+          "$ref": "#/definitions/gameStaminaData",
+          "title": "更新后的体力数据"
+        }
+      },
+      "title": "领取休息站体力响应"
+    },
     "gameClaimSevenDayRewardRequest": {
       "type": "object",
       "properties": {
@@ -8207,6 +8295,22 @@
       },
       "title": "获取挖矿数据响应"
     },
+    "gameGetRestStationResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/gameRestStationData"
+        }
+      },
+      "title": "获取休息站状态响应"
+    },
     "gameGetSevenDayStatusResponse": {
       "type": "object",
       "properties": {
@@ -8281,24 +8385,50 @@
         "msg": {
           "type": "string"
         },
-        "currentLiveness": {
+        "dailyLiveness": {
           "type": "integer",
           "format": "int32",
-          "title": "当前活跃度"
+          "title": "每日活跃度"
         },
-        "claimedTasks": {
+        "weeklyLiveness": {
+          "type": "integer",
+          "format": "int32",
+          "title": "每周活跃度"
+        },
+        "claimedDailyTasks": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "title": "已领取的任务ID列表"
+          "title": "已领取的每日任务ID列表（taskType 2）"
         },
-        "claimedLivenessRewards": {
+        "claimedWeeklyTasks": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "title": "已领取的活跃度奖励ID列表"
+          "title": "已领取的每周任务ID列表（taskType 3）"
+        },
+        "claimedMainTasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "已领取的主线任务ID列表（taskType 1）"
+        },
+        "claimedDailyLivenessRewards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "已领取的每日活跃度奖励ID列表"
+        },
+        "claimedWeeklyLivenessRewards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "已领取的每周活跃度奖励ID列表"
         }
       },
       "title": "获取任务状态响应"
@@ -8736,6 +8866,25 @@
         }
       },
       "title": "手动刷新商店响应"
+    },
+    "gameRestStationData": {
+      "type": "object",
+      "properties": {
+        "staminaCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前存储的体力数量"
+        },
+        "nextGrantTime": {
+          "type": "string",
+          "title": "下次补充体力的时间（UTC时间字符串，ISO 8601 格式）"
+        },
+        "currentStamina": {
+          "$ref": "#/definitions/gameStaminaData",
+          "title": "玩家当前体力数据"
+        }
+      },
+      "title": "休息站数据"
     },
     "gameReward": {
       "type": "object",

@@ -1153,5 +1153,19 @@ service Nakama {
       body: "*"
     };
   }
+
+  // ==================== Rest Station ====================
+  // Get rest station status
+  rpc GetRestStation(google.protobuf.Empty) returns (game.GetRestStationResponse) {
+    option (google.api.http).get = "/v2/game/reststation";
+  }
+
+  // Claim rest station stamina
+  rpc ClaimRestStationStamina(game.ClaimRestStationStaminaRequest) returns (game.ClaimRestStationStaminaResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/reststation/claim"
+      body: "*"
+    };
+  }
 }
 

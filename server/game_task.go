@@ -22,9 +22,19 @@ func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game
 	}
 
 	// 检查是否需要每日重置
-	if needsDailyReset(taskData.DateTime) {
-		s.logger.Info("任务数据每日重置", zap.String("user_id", userID.String()))
-		taskData.Init()
+	needsDaily := needsDailyReset(taskData.DateTime)
+	// 检查是否需要每周重置
+	needsWeekly := needsWeeklyReset(taskData.WeeklyResetTime)
+
+	if needsDaily || needsWeekly {
+		if needsDaily {
+			s.logger.Info("任务数据每日重置", zap.String("user_id", userID.String()))
+			resetDailyTasks(taskData)
+		}
+		if needsWeekly {
+			s.logger.Info("任务数据每周重置", zap.String("user_id", userID.String()))
+			resetWeeklyTasks(taskData)
+		}
 
 		// 保存重置后的数据
 		err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, taskData)
@@ -34,11 +44,15 @@ func (s *ApiServer) GetTask(ctx context.Context, in *game.GetTaskRequest) (*game
 	}
 
 	return &game.GetTaskResponse{
-		Code:                   0,
-		Msg:                    "获取成功",
-		CurrentLiveness:        taskData.CurrentLiveness,
-		ClaimedTasks:           taskData.ClaimedTasks,
-		ClaimedLivenessRewards: taskData.ClaimedLivenessRewards,
+		Code:                         0,
+		Msg:                          "获取成功",
+		DailyLiveness:                taskData.DailyLiveness,
+		WeeklyLiveness:               taskData.WeeklyLiveness,
+		ClaimedDailyTasks:            taskData.ClaimedDailyTasks,
+		ClaimedWeeklyTasks:           taskData.ClaimedWeeklyTasks,
+		ClaimedMainTasks:             taskData.ClaimedMainTasks,
+		ClaimedDailyLivenessRewards:  taskData.ClaimedDailyLivenessRewards,
+		ClaimedWeeklyLivenessRewards: taskData.ClaimedWeeklyLivenessRewards,
 	}, nil
 }
 
@@ -63,22 +77,45 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 	}
 
 	// 检查是否需要每日重置
-	if needsDailyReset(taskData.DateTime) {
+	needsDaily := needsDailyReset(taskData.DateTime)
+	// 检查是否需要每周重置
+	needsWeekly := needsWeeklyReset(taskData.WeeklyResetTime)
+
+	if needsDaily {
 		s.logger.Info("任务数据每日重置", zap.String("user_id", userID.String()))
-		taskData.Init()
+		resetDailyTasks(taskData)
+	}
+	if needsWeekly {
+		s.logger.Info("任务数据每周重置", zap.String("user_id", userID.String()))
+		resetWeeklyTasks(taskData)
 	}
 
-	// 分离已领取和未领取的任务
+	// 分离已领取和未领取的任务（根据任务类型判断）
 	var toClaimTaskIDs []string
-	var alreadyClaimedTaskIDs []string
 
 	for _, taskID := range taskIDs {
 		if taskID == "" {
 			continue
 		}
-		if containsString(taskData.ClaimedTasks, taskID) {
-			alreadyClaimedTaskIDs = append(alreadyClaimedTaskIDs, taskID)
-		} else {
+
+		// 获取任务配置以确定任务类型
+		taskConfig, exist := s.template.GetTplTasks().FindByKey(taskID)
+		if !exist {
+			continue
+		}
+
+		// 根据任务类型判断是否已领取
+		isClaimed := false
+		switch taskConfig.TaskType {
+		case 1: // 主线任务
+			isClaimed = containsString(taskData.ClaimedMainTasks, taskID)
+		case 2: // 每日任务
+			isClaimed = containsString(taskData.ClaimedDailyTasks, taskID)
+		case 3: // 每周任务
+			isClaimed = containsString(taskData.ClaimedWeeklyTasks, taskID)
+		}
+
+		if !isClaimed {
 			toClaimTaskIDs = append(toClaimTaskIDs, taskID)
 		}
 	}
@@ -146,11 +183,30 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 		}
 	}
 
-	// 增加活跃度
-	taskData.CurrentLiveness += totalLiveness
+	// 根据任务类型标记已领取并增加对应活跃度
+	for _, taskID := range validTaskIDs {
+		taskConfig, exist := s.template.GetTplTasks().FindByKey(taskID)
+		if !exist {
+			continue
+		}
 
-	// 标记所有任务已领取
-	taskData.ClaimedTasks = append(taskData.ClaimedTasks, validTaskIDs...)
+		switch taskConfig.TaskType {
+		case 1: // 主线任务（不增加活跃度）
+			if !containsString(taskData.ClaimedMainTasks, taskID) {
+				taskData.ClaimedMainTasks = append(taskData.ClaimedMainTasks, taskID)
+			}
+		case 2: // 每日任务（增加每日活跃度）
+			if !containsString(taskData.ClaimedDailyTasks, taskID) {
+				taskData.ClaimedDailyTasks = append(taskData.ClaimedDailyTasks, taskID)
+				taskData.DailyLiveness += taskConfig.Liveness
+			}
+		case 3: // 每周任务（增加每周活跃度）
+			if !containsString(taskData.ClaimedWeeklyTasks, taskID) {
+				taskData.ClaimedWeeklyTasks = append(taskData.ClaimedWeeklyTasks, taskID)
+				taskData.WeeklyLiveness += taskConfig.Liveness
+			}
+		}
+	}
 
 	// 保存任务数据
 	err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, taskData)
@@ -177,7 +233,8 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 	s.logger.Info("任务奖励领取成功",
 		zap.Strings("task_ids", validTaskIDs),
 		zap.Int32("total_liveness", totalLiveness),
-		zap.Int32("current_liveness", taskData.CurrentLiveness))
+		zap.Int32("daily_liveness", taskData.DailyLiveness),
+		zap.Int32("weekly_liveness", taskData.WeeklyLiveness))
 
 	return &game.ClaimTaskRewardResponse{
 		Code:             0,
@@ -212,27 +269,49 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 	}
 
 	// 检查是否需要每日重置
-	if needsDailyReset(taskData.DateTime) {
+	needsDaily := needsDailyReset(taskData.DateTime)
+	// 检查是否需要每周重置
+	needsWeekly := needsWeeklyReset(taskData.WeeklyResetTime)
+
+	if needsDaily {
 		s.logger.Info("任务数据每日重置", zap.String("user_id", userID.String()))
-		taskData.Init()
-		// 重置后活跃度为0，无法领取奖励
+		resetDailyTasks(taskData)
+		// 重置后每日活跃度为0，无法领取每日奖励
 		return &game.ClaimLivenessRewardResponse{
 			Code: 4,
 			Msg:  "活跃度不足",
 		}, nil
 	}
 
-	// 分离已领取和未领取的奖励
+	if needsWeekly {
+		s.logger.Info("任务数据每周重置", zap.String("user_id", userID.String()))
+		resetWeeklyTasks(taskData)
+	}
+
+	// 分离已领取和未领取的奖励（根据奖励类型判断）
 	var toClaimRewardIDs []string
-	var alreadyClaimedRewardIDs []string
 
 	for _, rewardID := range rewardIDs {
 		if rewardID == "" {
 			continue
 		}
-		if containsString(taskData.ClaimedLivenessRewards, rewardID) {
-			alreadyClaimedRewardIDs = append(alreadyClaimedRewardIDs, rewardID)
-		} else {
+
+		// 获取奖励配置以确定奖励类型
+		rewardConfig, exist := s.template.GetTplProgressReward().FindByKey(rewardID)
+		if !exist {
+			continue
+		}
+
+		// 根据奖励类型判断是否已领取
+		isClaimed := false
+		switch rewardConfig.Type {
+		case 1: // 每日活跃度奖励
+			isClaimed = containsString(taskData.ClaimedDailyLivenessRewards, rewardID)
+		case 2: // 每周活跃度奖励
+			isClaimed = containsString(taskData.ClaimedWeeklyLivenessRewards, rewardID)
+		}
+
+		if !isClaimed {
 			toClaimRewardIDs = append(toClaimRewardIDs, rewardID)
 		}
 	}
@@ -256,9 +335,24 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 			continue
 		}
 
-		// 检查活跃度是否足够
-		if taskData.CurrentLiveness < rewardConfig.NeedValue {
-			s.logger.Warn("活跃度不足，跳过奖励", zap.String("reward_id", rewardID), zap.Int32("need_liveness", rewardConfig.NeedValue), zap.Int32("current_liveness", taskData.CurrentLiveness))
+		// 根据奖励类型检查对应的活跃度是否足够
+		var currentLiveness int32
+		switch rewardConfig.Type {
+		case 1: // 每日活跃度奖励
+			currentLiveness = taskData.DailyLiveness
+		case 2: // 每周活跃度奖励
+			currentLiveness = taskData.WeeklyLiveness
+		default:
+			s.logger.Warn("未知的活跃度奖励类型", zap.String("reward_id", rewardID), zap.Int32("type", rewardConfig.Type))
+			continue
+		}
+
+		if currentLiveness < rewardConfig.NeedValue {
+			s.logger.Warn("活跃度不足，跳过奖励",
+				zap.String("reward_id", rewardID),
+				zap.Int32("type", rewardConfig.Type),
+				zap.Int32("need_value", rewardConfig.NeedValue),
+				zap.Int32("current_liveness", currentLiveness))
 			continue
 		}
 
@@ -304,8 +398,24 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		}
 	}
 
-	// 标记所有奖励已领取
-	taskData.ClaimedLivenessRewards = append(taskData.ClaimedLivenessRewards, validRewardIDs...)
+	// 根据奖励类型标记已领取
+	for _, rewardID := range validRewardIDs {
+		rewardConfig, exist := s.template.GetTplProgressReward().FindByKey(rewardID)
+		if !exist {
+			continue
+		}
+
+		switch rewardConfig.Type {
+		case 1: // 每日活跃度奖励
+			if !containsString(taskData.ClaimedDailyLivenessRewards, rewardID) {
+				taskData.ClaimedDailyLivenessRewards = append(taskData.ClaimedDailyLivenessRewards, rewardID)
+			}
+		case 2: // 每周活跃度奖励
+			if !containsString(taskData.ClaimedWeeklyLivenessRewards, rewardID) {
+				taskData.ClaimedWeeklyLivenessRewards = append(taskData.ClaimedWeeklyLivenessRewards, rewardID)
+			}
+		}
+	}
 
 	// 保存任务数据
 	err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, taskData)
@@ -331,7 +441,8 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 
 	s.logger.Info("活跃度奖励领取成功",
 		zap.Strings("reward_ids", validRewardIDs),
-		zap.Int32("current_liveness", taskData.CurrentLiveness))
+		zap.Int32("daily_liveness", taskData.DailyLiveness),
+		zap.Int32("weekly_liveness", taskData.WeeklyLiveness))
 
 	return &game.ClaimLivenessRewardResponse{
 		Code:             0,
@@ -353,4 +464,43 @@ func needsDailyReset(lastUpdateTime time.Time) bool {
 	today := now.Truncate(24 * time.Hour)
 
 	return today.After(lastDay)
+}
+
+// needsWeeklyReset 检查是否需要每周重置
+func needsWeeklyReset(lastResetTime time.Time) bool {
+	if lastResetTime.IsZero() {
+		return true
+	}
+
+	now := time.Now().UTC()
+	currentWeekStart := getWeekStart(now)
+	lastWeekStart := getWeekStart(lastResetTime)
+
+	return currentWeekStart.After(lastWeekStart)
+}
+
+// getWeekStart 获取本周开始时间（周一 00:00 UTC）
+func getWeekStart(t time.Time) time.Time {
+	weekday := int(t.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	daysFromMonday := weekday - 1
+	return t.Truncate(24*time.Hour).AddDate(0, 0, -daysFromMonday)
+}
+
+// resetDailyTasks 重置每日任务相关数据
+func resetDailyTasks(taskData *TaskData) {
+	taskData.DateTime = time.Now().UTC()
+	taskData.ClaimedDailyTasks = []string{}
+	taskData.ClaimedDailyLivenessRewards = []string{}
+	taskData.DailyLiveness = 0
+}
+
+// resetWeeklyTasks 重置每周任务相关数据
+func resetWeeklyTasks(taskData *TaskData) {
+	taskData.WeeklyResetTime = getWeekStart(time.Now().UTC())
+	taskData.ClaimedWeeklyTasks = []string{}
+	taskData.ClaimedWeeklyLivenessRewards = []string{}
+	taskData.WeeklyLiveness = 0
 }

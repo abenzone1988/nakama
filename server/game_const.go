@@ -75,3 +75,12 @@ const (
 const (
 	ExpPerStamina = 6 // 每消耗1个体力获得6个经验值
 )
+
+// 休息站配置常量
+const (
+	RestStationEveryStamina int32 = 30 // 每次领取的体力数量
+	RestStationMaxCount     int32 = 60 // 休息站最多存储的体力个数上限
+)
+
+// 每日领取体力的时间点（小时）
+var RestStationDailyTimes = []int{9, 12, 18, 21}
