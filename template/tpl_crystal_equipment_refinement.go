@@ -9,14 +9,17 @@ import (
 )
 
 type TplCrystalEquipmentRefinement struct {
-	CostItem           string `json:"costItem"`
-	Entrynum           int32  `json:"entrynum"`
-	ID                 string `json:"id"`
-	Level              int32  `json:"level"`
-	Maxratio           int32  `json:"maxratio"`
-	Quality            int32  `json:"quality"`
-	Rareentrynum       int32  `json:"rareentrynum"`
-	Rareentrynumweight int32  `json:"rareentrynumweight"`
+	CostItemInfo      string `json:"costItemInfo"`
+	EntryNum          int32  `json:"entryNum"`
+	Guaranteetime     int32  `json:"guaranteetime"`
+	ID                string `json:"id"`
+	Level             int32  `json:"level"`
+	Lock1CostItemInfo string `json:"lock1_costItemInfo"`
+	Lock2CostItemInfo string `json:"lock2_costItemInfo"`
+	MaxRatio          int32  `json:"maxRatio"`
+	Quality           int32  `json:"quality"`
+	RareEntryNum      int32  `json:"rareEntryNum"`
+	RareEntryWeight   int32  `json:"rareEntryWeight"`
 }
 
 // ReadOnlyTplCrystalEquipmentRefinementSlice 只读TplCrystalEquipmentRefinement切片接口

@@ -29,11 +29,10 @@ func (s *ApiServer) GetEquipData(ctx context.Context, in *emptypb.Empty) (*game.
 			return nil, err
 		}
 	}
-	// 转换为 proto 格式返回
 	return &game.EquipData{
-		BattleEquips:         equipData.BattleEquips,
-		UnlockEquips:         equipData.UnlockEquips,
-		CrystalTechTreeIndex: equipData.CrystalTechTreeIndex,
+		BattleEquips:           equipData.BattleEquips,
+		UnlockEquips:           equipData.UnlockEquips,
+		UnlockedCrystalTechIds: equipData.UnlockedCrystalTechIDs,
 	}, nil
 }
 
@@ -92,7 +91,13 @@ func (s *ApiServer) UpgradeEquip(ctx context.Context, in *game.UpgradeEquipReque
 func (s *ApiServer) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
-	// 加载实际的 EquipData 结构用于修改
+	if in.TechId == "" {
+		return &game.UpgradeCrystalTechResponse{
+			Code: 1,
+			Msg:  "tech_id is required",
+		}, nil
+	}
+
 	equipData := &EquipData{}
 	if err := LoadUserData(ctx, s.logger, s.db, equipData); err != nil {
 		return nil, err
@@ -101,17 +106,18 @@ func (s *ApiServer) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrys
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	walletUpdateResult, inventoryUpdateResult, err := s.handleCrystalTechUpgrade(ctx, userID, equipData)
+	walletUpdateResult, inventoryUpdateResult, err := s.handleCrystalTechUpgrade(ctx, userID, in.TechId, equipData)
 	if err != nil {
-		return nil, err
+		return &game.UpgradeCrystalTechResponse{
+			Code: 1,
+			Msg:  err.Error(),
+		}, nil
 	}
 
-	// 保存装备数据
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, equipData); err != nil {
 		return nil, err
 	}
 
-	// 提取更新后的数据
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
 
@@ -124,11 +130,11 @@ func (s *ApiServer) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrys
 	}
 
 	return &game.UpgradeCrystalTechResponse{
-		Code:                 0,
-		Msg:                  "Success",
-		CrystalTechTreeIndex: equipData.CrystalTechTreeIndex,
-		WalletUpdated:        walletUpdated,
-		InventoryUpdated:     inventoryUpdated,
+		Code:                   0,
+		Msg:                    "Success",
+		UnlockedCrystalTechIds: equipData.UnlockedCrystalTechIDs,
+		WalletUpdated:          walletUpdated,
+		InventoryUpdated:       inventoryUpdated,
 	}, nil
 
 }
@@ -149,7 +155,7 @@ func initializeEquipData(equipData *EquipData, table TemplateManager) {
 
 	equipData.BattleEquips = battleEquips
 	equipData.UnlockEquips = unlockEquips
-	equipData.CrystalTechTreeIndex = 0
+	equipData.UnlockedCrystalTechIDs = []string{}
 }
 
 func (s *ApiServer) handleEquipUpgrade(ctx context.Context, userID uuid.UUID, equipID string, currentLevel int32, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
@@ -225,18 +231,39 @@ func (s *ApiServer) handleEquipUpgrade(ctx context.Context, userID uuid.UUID, eq
 	return walletUpdateResult, inventoryUpdateResult, nil
 }
 
-func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UUID, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
-	targetIndex := equipData.CrystalTechTreeIndex + 1
-	crystalTechs := s.template.GetTplCrystalTechnologyDev().FindByFilter(func(dev template.TplCrystalTechnologyDev) bool {
-		return dev.CostItemNum == targetIndex
-		// Toto 错误
-	})
-	if crystalTechs == nil || crystalTechs.Len() == 0 {
-		return nil, nil, errors.New("crystal tech data not found")
+func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UUID, techID string, equipData *EquipData) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+	techData, ok := s.template.GetTplCrystalTechnologyDev().FindByKey(techID)
+	if !ok {
+		return nil, nil, errors.New("crystal tech not found")
 	}
-	nextTech := crystalTechs.Get(0)
 
-	if nextTech.CostItemID == "" || nextTech.CostItemNum <= 0 {
+	for _, unlockedID := range equipData.UnlockedCrystalTechIDs {
+		if unlockedID == techID {
+			return nil, nil, errors.New("crystal tech already unlocked")
+		}
+	}
+
+	if techData.PretechID != "" {
+		pretechIDs := strings.Split(techData.PretechID, ",")
+		for _, pretechID := range pretechIDs {
+			pretechID = strings.TrimSpace(pretechID)
+			if pretechID == "" {
+				continue
+			}
+			found := false
+			for _, unlockedID := range equipData.UnlockedCrystalTechIDs {
+				if unlockedID == pretechID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil, nil, errors.New("pretech not unlocked: " + pretechID)
+			}
+		}
+	}
+
+	if techData.CostItemID == "" || techData.CostItemNum <= 0 {
 		return nil, nil, errors.New("invalid crystal tech cost config")
 	}
 
@@ -245,7 +272,7 @@ func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UU
 		{
 			UserID: userID,
 			Changeset: map[string]int64{
-				nextTech.CostItemID: -int64(nextTech.CostItemNum),
+				techData.CostItemID: -int64(techData.CostItemNum),
 			},
 			Metadata: metadata,
 		},
@@ -263,15 +290,15 @@ func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UU
 	}
 
 	var walletUpdateResult *game.WalletUpdateResult
-	if nextTech.Price > 0 {
+	if techData.Price > 0 {
 		changeset := make(map[string]int64)
-		switch nextTech.CostPayType {
+		switch techData.CostPayType {
 		case PayType_Coin:
-			changeset["coin"] = -int64(nextTech.Price)
+			changeset["coin"] = -int64(techData.Price)
 		case PayType_Gem:
-			changeset["gem"] = -int64(nextTech.Price)
+			changeset["gem"] = -int64(techData.Price)
 		case PayType_Ad:
-			changeset["ad"] = -int64(nextTech.Price)
+			changeset["ad"] = -int64(techData.Price)
 		default:
 			return nil, nil, errors.New("invalid cost pay type")
 		}
@@ -285,12 +312,11 @@ func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UU
 				},
 			}, true)
 			if err != nil {
-				// 回滚背包扣除
 				_, rollbackErr := UpdateInventories(ctx, s.logger, s.db, []*inventoryUpdate{
 					{
 						UserID: userID,
 						Changeset: map[string]int64{
-							nextTech.CostItemID: int64(nextTech.CostItemNum),
+							techData.CostItemID: int64(techData.CostItemNum),
 						},
 						Metadata: buildEquipLevelUpRollbackMetadata(EquipID_Crystal),
 					},
@@ -309,7 +335,7 @@ func (s *ApiServer) handleCrystalTechUpgrade(ctx context.Context, userID uuid.UU
 		}
 	}
 
-	equipData.CrystalTechTreeIndex = targetIndex
+	equipData.UnlockedCrystalTechIDs = append(equipData.UnlockedCrystalTechIDs, techID)
 
 	return walletUpdateResult, inventoryUpdateResult, nil
 }

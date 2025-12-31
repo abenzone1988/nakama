@@ -14,7 +14,7 @@ import (
 const DailyMineCount = 30  // 每天挖矿次数
 const MaxBuyMineCount = 5  // 最大购买挖矿次数
 const MineCountPerBuy = 10 // 每次购买挖矿次数
-const BuyMineCostGem = 10  // 每次购买挖矿消耗的宝石数量
+const BuyMineCostGem = 100 // 每次购买挖矿消耗的宝石数量
 
 // RefreshDailyMineCount 刷新每日挖矿次数
 func RefreshDailyMineCount(ctx context.Context, logger *zap.Logger, s *ApiServer, mineData *MineData) bool {

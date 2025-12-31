@@ -13,6 +13,7 @@ type TplCrystalTechnologyDev struct {
 	CostItemNum int32  `json:"costItemNum"`
 	CostPayType int32  `json:"costPayType"`
 	ID          string `json:"id"`
+	PretechID   string `json:"pretechID"`
 	Price       int32  `json:"price"`
 }
 

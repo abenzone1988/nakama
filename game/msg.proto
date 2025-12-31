@@ -109,7 +109,7 @@ message StaminaData{
 message EquipData{
   repeated string battle_equips = 1;
   map<string, int32> unlock_equips = 2;
-  int32 crystal_tech_tree_index = 3;
+  repeated string unlocked_crystal_tech_ids = 3;
 }
 
 // 玩家等级数据
@@ -227,9 +227,10 @@ message EndBattleRequest{
 message EndBattleResponse{
   int32 code = 1;
   string msg = 2;
-  Reward reward = 3; // 奖励数据
-  Wallet wallet_updated = 4; // 钱包更新结果
-  repeated Item inventory_updated = 5; // 背包更新结果
+  Reward reward = 3;
+  Wallet wallet_updated = 4;
+  repeated Item inventory_updated = 5;
+  int32 exp_gained = 6;
 }
 
 // 快速通过战斗（直接扣体力发放奖励）
@@ -241,10 +242,11 @@ message QuickBattleRequest{
 message QuickBattleResponse{
   int32 code = 1;
   string msg = 2;
-  Reward reward = 3; // 奖励数据
-  StaminaData stamina = 4; // 体力数据
-  Wallet wallet_updated = 5; // 钱包更新结果
-  repeated Item inventory_updated = 6; // 背包更新结果
+  Reward reward = 3;
+  StaminaData stamina = 4;
+  Wallet wallet_updated = 5;
+  repeated Item inventory_updated = 6;
+  int32 exp_gained = 7;
 }
 
 // 分享后领取战斗奖励请求
@@ -269,12 +271,13 @@ message ClaimMoppingRewardRequest{
 message ClaimMoppingRewardResponse{
   int32 code = 1;
   string msg = 2;
-  Reward reward = 3; // 奖励数据
-  Wallet wallet_updated = 4; // 钱包更新结果
-  repeated Item inventory_updated = 5; // 背包更新结果
-  int32 has_mopping_times = 6; // 第一阶段已使用次数
-  int32 has_mopping_times_for_adv = 7; // 第二阶段已使用次数
-  StaminaData stamina = 8; //扫荡需要扣体力
+  Reward reward = 3;
+  Wallet wallet_updated = 4;
+  repeated Item inventory_updated = 5;
+  int32 has_mopping_times = 6;
+  int32 has_mopping_times_for_adv = 7;
+  StaminaData stamina = 8;
+  int32 exp_gained = 9;
 }
 
 // 领取挂机奖励请求
@@ -451,6 +454,32 @@ message GetSignInRewardResponse{
   bool is_claimed_today = 4; // 今天是否已经领取了奖励
 }
 
+// 获取7天登录奖励信息请求
+message GetSevenDaySignInRequest{
+}
+
+// 获取7天登录奖励信息响应
+message GetSevenDaySignInResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 claimed_day = 3;     // 已领取到第几天（0-7，0表示未领取）
+  string last_claim_date = 4; // 最后一次领取日期（YYYY-MM-DD）
+}
+
+// 领取7天登录奖励请求
+message ClaimSevenDaySignInRequest{
+}
+
+// 领取7天登录奖励响应
+message ClaimSevenDaySignInResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 day = 3;                       // 本次领取的天数
+  Reward reward = 4;                   // 奖励数据
+  Wallet wallet_updated = 5;           // 钱包更新结果
+  repeated Item inventory_updated = 6; // 背包更新结果
+}
+
 // 领取抖音奖励请求
 message ClaimByteRewardRequest{
   string reward_id = 1; // 奖励ID：TTShortcutReword（添加到桌面）或 TTEntryReword（入口有奖）
@@ -536,14 +565,15 @@ message UpgradeEquipResponse{
 }
 
 message UpgradeCrystalTechRequest{
+  string tech_id = 1;
 }
 
 message UpgradeCrystalTechResponse{
   int32 code = 1;
   string msg = 2;
-  int32 crystal_tech_tree_index = 3; // 水晶科技树索引
-  Wallet wallet_updated = 4; // 钱包更新结果
-  repeated Item inventory_updated = 5; // 背包更新结果
+  repeated string unlocked_crystal_tech_ids = 3;
+  Wallet wallet_updated = 4;
+  repeated Item inventory_updated = 5;
 }
 
 // 商店相关消息定义
@@ -852,7 +882,6 @@ message BuyMineCountResponse{
 message RestStationData{
   int32 stamina_count = 1;            // 当前存储的体力数量
   string next_grant_time = 2;         // 下次补充体力的时间（UTC时间字符串，ISO 8601 格式）
-  StaminaData current_stamina = 3;    // 玩家当前体力数据
 }
 
 // 获取休息站状态请求

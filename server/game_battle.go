@@ -12,6 +12,37 @@ import (
 
 const unlockConditionTypeLevel = 1
 
+func (s *ApiServer) addExpForBattle(ctx context.Context, battleType game.BattleType, levelId string) int32 {
+	var staminaCost int32
+
+	switch battleType {
+	case game.BattleType_BATTLE_TYPE_NORMAL:
+		if levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(levelId); exist {
+			staminaCost = levelInfo.Cost
+		}
+	case game.BattleType_BATTLE_TYPE_GOLDEN:
+		if activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(levelId); exist {
+			staminaCost = activityInfo.Stamina
+		}
+	case game.BattleType_BATTLE_TYPE_ELITE:
+		if eliteInfo, exist := s.template.GetTplEliteLevelInfo().FindByKey(levelId); exist {
+			staminaCost = eliteInfo.Cost
+		}
+	}
+
+	if staminaCost == 0 {
+		return 0
+	}
+
+	expGained, err := AddExp(ctx, s.logger, s.db, s.metrics, s.storageIndex, s.template, staminaCost)
+	if err != nil {
+		s.logger.Error("增加经验值失败", zap.Error(err))
+		return 0
+	}
+
+	return expGained
+}
+
 // compareLevelId 比较两个关卡 ID 的大小，返回 true 表示 id1 > id2
 func compareLevelId(id1, id2 string) bool {
 	// 解析两个 ID 的数字部分进行比较
@@ -88,12 +119,6 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 		}, nil
 	}
 
-	// 增加经验值
-	if err := AddExp(ctx, s.logger, s.db, s.metrics, s.storageIndex, s.template, staminaCost); err != nil {
-		s.logger.Error("增加经验值失败", zap.Error(err))
-		// 不影响战斗流程，仅记录错误
-	}
-
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 		s.logger.Error("保存战斗数据失败", zap.Error(err))
 	}
@@ -141,18 +166,21 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}, nil
 	}
 
-	// 如果进度为0，直接返回成功（不发放奖励）
+	// 如果进度为0，直接返回成功（不发放奖励，但给经验值）
 	if progress == 0 {
-		// 重置分享奖励状态，清空奖励JSON，标记战斗已结束
 		battleData.ShareRewardClaimed = false
 		battleData.RewardJSON = ""
 		battleData.BattleEnded = true
 		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 			s.logger.Error("保存战斗数据失败", zap.Error(err))
 		}
+
+		expGained := s.addExpForBattle(ctx, battleData.BattleType, battleData.CurLevelId)
+
 		return &game.EndBattleResponse{
-			Code: 0,
-			Msg:  "通过成功",
+			Code:      0,
+			Msg:       "通过成功",
+			ExpGained: expGained,
 		}, nil
 	}
 
@@ -317,8 +345,9 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	// 统一保存战斗数据（包含进度更新）
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 		s.logger.Error("保存战斗数据失败", zap.Error(err))
-		// 不影响战斗结算，仅记录错误
 	}
+
+	expGained := s.addExpForBattle(ctx, battleData.BattleType, battleData.CurLevelId)
 
 	// 提取更新后的数据
 	var walletUpdated *game.Wallet
@@ -336,6 +365,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		Reward:           mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
+		ExpGained:        expGained,
 	}, nil
 }
 
@@ -403,11 +433,7 @@ func (s *ApiServer) QuickBattle(ctx context.Context, in *game.QuickBattleRequest
 		}, nil
 	}
 
-	// 增加经验值
-	if err := AddExp(ctx, s.logger, s.db, s.metrics, s.storageIndex, s.template, staminaCost); err != nil {
-		s.logger.Error("增加经验值失败", zap.Error(err))
-		// 不影响战斗流程，仅记录错误
-	}
+	expGained := s.addExpForBattle(ctx, battleType, levelId)
 
 	// 加载战斗数据以检查关卡是否已通关
 	battleData := &BattleData{}
@@ -483,6 +509,7 @@ func (s *ApiServer) QuickBattle(ctx context.Context, in *game.QuickBattleRequest
 		Stamina:          stamina,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
+		ExpGained:        expGained,
 	}, nil
 }
 

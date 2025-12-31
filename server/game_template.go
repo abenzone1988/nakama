@@ -36,6 +36,7 @@ type TemplateManager interface {
 	GetTplFirstCharge() *TableTplFirstCharge
 	GetTplSevenDay() *TableTplSevenDay
 	GetTplDailySignIn() *TableTplDailySignIn
+	GetTplSevenDaySignIn() *TableTplSevenDaySignIn
 	GetTplPay() *TableTplPay
 	GetTplPlayerLevel() *TableTplPlayerLevel
 	GetTplEliteLevelInfo() *TableTplEliteLevelInfo
@@ -67,6 +68,7 @@ type LocalTemplateManager struct {
 	tableTplFirstCharge       *TableTplFirstCharge
 	tableTplSevenDay          *TableTplSevenDay
 	tableTplDailySignIn       *TableTplDailySignIn
+	tableTplSevenDaySignIn    *TableTplSevenDaySignIn
 	tableTplPay               *TableTplPay
 	tableTplPlayerLevel       *TableTplPlayerLevel
 	tableTplEliteLevelInfo    *TableTplEliteLevelInfo
@@ -99,6 +101,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplFirstCharge:       NewTableTplFirstCharge(logger, jsonPath),
 		tableTplSevenDay:          NewTableTplSevenDay(logger, jsonPath),
 		tableTplDailySignIn:       NewTableTplDailySignIn(logger, jsonPath),
+		tableTplSevenDaySignIn:    NewTableTplSevenDaySignIn(logger, jsonPath),
 		tableTplPay:               NewTableTplPay(logger, jsonPath),
 		tableTplPlayerLevel:       NewTableTplPlayerLevel(logger, jsonPath),
 		tableTplEliteLevelInfo:    NewTableTplEliteLevelInfo(logger, jsonPath),
@@ -133,6 +136,7 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplFirstCharge.LoadData(t.StorageReadTpl("TplFirstCharge"))
 	t.tableTplSevenDay.LoadData(t.StorageReadTpl("TplSevenDay"))
 	t.tableTplDailySignIn.LoadData(t.StorageReadTpl("TplDailySignIn"))
+	t.tableTplSevenDaySignIn.LoadData(t.StorageReadTpl("TplSevenDaySignIn"))
 	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
 	t.tableTplPlayerLevel.LoadData(t.StorageReadTpl("TplPlayerLevel"))
 	t.tableTplEliteLevelInfo.LoadData(t.StorageReadTpl("TplEliteLevelInfo"))
@@ -180,6 +184,12 @@ func (t *LocalTemplateManager) GetTplDailySignIn() *TableTplDailySignIn {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplDailySignIn
+}
+
+func (t *LocalTemplateManager) GetTplSevenDaySignIn() *TableTplSevenDaySignIn {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplSevenDaySignIn
 }
 
 func (t *LocalTemplateManager) GetTplRedemptionInfo() *TableTplRedemption {

@@ -65,6 +65,12 @@ const (
 	DailySignInBaseID    = 10000
 )
 
+// 7天登录奖励相关常量
+const (
+	SevenDaySignInTotalDays = 7
+	SevenDaySignInBaseID    = 10000
+)
+
 // 装备相关常量
 const (
 	EquipID_Crystal    = "EQ1999"
@@ -78,7 +84,7 @@ const (
 
 // 休息站配置常量
 const (
-	RestStationEveryStamina int32 = 30 // 每次领取的体力数量
+	RestStationEveryStamina int32 = 15 // 每次领取的体力数量
 	RestStationMaxCount     int32 = 60 // 休息站最多存储的体力个数上限
 )
 

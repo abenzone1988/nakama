@@ -147,3 +147,132 @@ func (s *ApiServer) getDailySignInReward(day int32) (*game.Reward, error) {
 
 	return reward, nil
 }
+
+// GetSevenDaySignIn 获取7天登录奖励信息
+func (s *ApiServer) GetSevenDaySignIn(ctx context.Context, in *game.GetSevenDaySignInRequest) (*game.GetSevenDaySignInResponse, error) {
+	sevenDayData := &SevenDaySignInData{}
+	if err := LoadUserData(ctx, s.logger, s.db, sevenDayData); err != nil {
+		s.logger.Error("加载7天登录数据失败", zap.Error(err))
+		sevenDayData.Init()
+	}
+
+	return &game.GetSevenDaySignInResponse{
+		Code:          0,
+		Msg:           "Success",
+		ClaimedDay:    sevenDayData.ClaimedDay,
+		LastClaimDate: sevenDayData.LastClaimDate,
+	}, nil
+}
+
+// ClaimSevenDaySignIn 领取7天登录奖励
+func (s *ApiServer) ClaimSevenDaySignIn(ctx context.Context, in *game.ClaimSevenDaySignInRequest) (*game.ClaimSevenDaySignInResponse, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	sevenDayData := &SevenDaySignInData{}
+	if err := LoadUserData(ctx, s.logger, s.db, sevenDayData); err != nil {
+		s.logger.Error("加载7天登录数据失败", zap.Error(err))
+		sevenDayData.Init()
+	}
+
+	today := time.Now().Format(signInDateLayout)
+
+	// 检查今日是否已领取
+	if sevenDayData.LastClaimDate != "" && sevenDayData.LastClaimDate == today {
+		return &game.ClaimSevenDaySignInResponse{
+			Code: 2,
+			Msg:  "今日已领取",
+		}, nil
+	}
+
+	// 检查是否已经领取完7天
+	if sevenDayData.ClaimedDay >= SevenDaySignInTotalDays {
+		return &game.ClaimSevenDaySignInResponse{
+			Code: 3,
+			Msg:  "已领取完所有奖励",
+		}, nil
+	}
+
+	// 计算本次要领取的天数（累加）
+	nextDay := sevenDayData.ClaimedDay + 1
+
+	// 获取奖励配置
+	reward, err := s.getSevenDaySignInReward(nextDay)
+	if err != nil {
+		s.logger.Error("获取7天登录奖励失败", zap.Error(err), zap.Int32("day", nextDay))
+		return &game.ClaimSevenDaySignInResponse{
+			Code: 4,
+			Msg:  "奖励配置不存在",
+		}, nil
+	}
+
+	// 发放奖励
+	source := fmt.Sprintf("seven_day_sign_in_day_%d", nextDay)
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
+	if err != nil {
+		s.logger.Error("发放7天登录奖励失败", zap.Error(err), zap.Int32("day", nextDay))
+		return &game.ClaimSevenDaySignInResponse{
+			Code: 5,
+			Msg:  "发放奖励失败",
+		}, nil
+	}
+
+	// 双重检查，防止并发
+	if sevenDayData.LastClaimDate != "" && sevenDayData.LastClaimDate == today {
+		return &game.ClaimSevenDaySignInResponse{
+			Code: 2,
+			Msg:  "今日已领取",
+		}, nil
+	}
+
+	// 更新数据：累加天数
+	sevenDayData.ClaimedDay = nextDay
+	sevenDayData.LastClaimDate = today
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, sevenDayData); err != nil {
+		s.logger.Error("保存7天登录数据失败", zap.Error(err))
+		return &game.ClaimSevenDaySignInResponse{
+			Code: 6,
+			Msg:  "更新数据失败",
+		}, nil
+	}
+
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+	if walletResult != nil {
+		walletUpdated = walletResult.Updated
+	}
+	if inventoryResult != nil {
+		inventoryUpdated = inventoryResult.Updated
+	}
+
+	s.logger.Info("7天登录奖励领取成功",
+		zap.String("user_id", userID.String()),
+		zap.Int32("day", nextDay))
+
+	return &game.ClaimSevenDaySignInResponse{
+		Code:             0,
+		Msg:              "Success",
+		Day:              nextDay,
+		Reward:           reward,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
+	}, nil
+}
+
+func (s *ApiServer) getSevenDaySignInReward(day int32) (*game.Reward, error) {
+	if day < 1 || day > SevenDaySignInTotalDays {
+		return nil, fmt.Errorf("invalid day %d", day)
+	}
+
+	id := fmt.Sprintf("%d", SevenDaySignInBaseID+day)
+	entry, ok := s.template.GetTplSevenDaySignIn().FindByKey(id)
+	if !ok {
+		return nil, fmt.Errorf("7天登录奖励配置不存在, id=%s", id)
+	}
+
+	reward := GetReward(entry.Reward, s.template.GetTplReward(), s.logger)
+	if reward == nil {
+		return nil, fmt.Errorf("解析7天登录奖励失败, reward_id=%s", entry.Reward)
+	}
+
+	return reward, nil
+}

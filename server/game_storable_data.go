@@ -238,10 +238,31 @@ func (d *SignInData) GetCollection() string {
 }
 
 func (d *SignInData) GetKey() string {
-	return "data"
+	return "day"
 }
 
 func (d *SignInData) Init() {
+	d.ClaimedDay = 0
+	d.LastClaimDate = ""
+	d.SetVersion("")
+}
+
+// SevenDaySignInData 7天登录奖励数据存储结构
+type SevenDaySignInData struct {
+	BaseStorable
+	ClaimedDay    int32  `json:"claimed_day"`     // 当前已领取到的天数（1-7）
+	LastClaimDate string `json:"last_claim_date"` // 最后一次领取日期（YYYY-MM-DD）
+}
+
+func (d *SevenDaySignInData) GetCollection() string {
+	return "sign_in"
+}
+
+func (d *SevenDaySignInData) GetKey() string {
+	return "seven_day"
+}
+
+func (d *SevenDaySignInData) Init() {
 	d.ClaimedDay = 0
 	d.LastClaimDate = ""
 	d.SetVersion("")
@@ -628,9 +649,9 @@ func (f *ByteRewardData) Init() {
 // EquipData 装备数据存储结构
 type EquipData struct {
 	BaseStorable
-	BattleEquips         []string         `json:"battle_equips"`           // 战斗装备列表
-	UnlockEquips         map[string]int32 `json:"unlock_equips"`           // 已解锁装备及其等级
-	CrystalTechTreeIndex int32            `json:"crystal_tech_tree_index"` // 水晶科技树索引
+	BattleEquips           []string         `json:"battle_equips"`
+	UnlockEquips           map[string]int32 `json:"unlock_equips"`
+	UnlockedCrystalTechIDs []string         `json:"unlocked_crystal_tech_ids"`
 }
 
 func (d *EquipData) GetCollection() string {
@@ -644,7 +665,7 @@ func (d *EquipData) GetKey() string {
 func (d *EquipData) Init() {
 	d.BattleEquips = []string{}
 	d.UnlockEquips = make(map[string]int32)
-	d.CrystalTechTreeIndex = 0
+	d.UnlockedCrystalTechIDs = []string{}
 	d.SetVersion("")
 }
 

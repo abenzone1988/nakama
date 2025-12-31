@@ -10,10 +10,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// AddExp 增加经验值（消耗体力时调用）
-func AddExp(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, template TemplateManager, staminaAmount int32) error {
+func AddExp(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, storageIndex StorageIndex, template TemplateManager, staminaAmount int32) (int32, error) {
 	if staminaAmount <= 0 {
-		return nil
+		return 0, nil
 	}
 
 	expGained := staminaAmount * ExpPerStamina
@@ -21,13 +20,13 @@ func AddExp(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics
 	playerLevelData := &PlayerLevelData{}
 	if err := LoadUserData(ctx, logger, db, playerLevelData); err != nil {
 		logger.Error("加载玩家等级数据失败", zap.Error(err))
-		return err
+		return 0, err
 	}
 
 	playerLevelData.TotalExp += expGained
 	if err := SaveUserData(ctx, logger, db, metrics, storageIndex, playerLevelData); err != nil {
 		logger.Error("保存玩家等级数据失败", zap.Error(err))
-		return err
+		return 0, err
 	}
 
 	logger.Info("玩家获得经验值",
@@ -35,7 +34,7 @@ func AddExp(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics
 		zap.Int32("exp_gained", expGained),
 		zap.Int32("total_exp", playerLevelData.TotalExp))
 
-	return nil
+	return expGained, nil
 }
 
 // GetPlayerLevelData 获取玩家等级数据

@@ -2764,6 +2764,61 @@
         ]
       }
     },
+    "/v2/game/sevendaysignin": {
+      "get": {
+        "summary": "==================== Seven Day Sign In ====================",
+        "operationId": "Nakama_GetSevenDaySignIn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetSevenDaySignInResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/sevendaysignin/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimSevenDaySignIn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimSevenDaySignInResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimSevenDaySignInRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/shop": {
       "get": {
         "summary": "Get common shop data (only TplShop based: daily, coin, strength)",
@@ -7729,33 +7784,31 @@
           "type": "string"
         },
         "reward": {
-          "$ref": "#/definitions/gameReward",
-          "title": "奖励数据"
+          "$ref": "#/definitions/gameReward"
         },
         "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "钱包更新结果"
+          "$ref": "#/definitions/gameWallet"
         },
         "inventoryUpdated": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/gameItem"
-          },
-          "title": "背包更新结果"
+          }
         },
         "hasMoppingTimes": {
           "type": "integer",
-          "format": "int32",
-          "title": "第一阶段已使用次数"
+          "format": "int32"
         },
         "hasMoppingTimesForAdv": {
           "type": "integer",
-          "format": "int32",
-          "title": "第二阶段已使用次数"
+          "format": "int32"
         },
         "stamina": {
-          "$ref": "#/definitions/gameStaminaData",
-          "title": "扫荡需要扣体力"
+          "$ref": "#/definitions/gameStaminaData"
+        },
+        "expGained": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "title": "扫荡奖励响应"
@@ -7915,6 +7968,43 @@
         }
       },
       "title": "领取七日奖励响应"
+    },
+    "gameClaimSevenDaySignInRequest": {
+      "type": "object",
+      "title": "领取7天登录奖励请求"
+    },
+    "gameClaimSevenDaySignInResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "title": "本次领取的天数"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取7天登录奖励响应"
     },
     "gameClaimSignInRewardRequest": {
       "type": "object",
@@ -8114,19 +8204,20 @@
           "type": "string"
         },
         "reward": {
-          "$ref": "#/definitions/gameReward",
-          "title": "奖励数据"
+          "$ref": "#/definitions/gameReward"
         },
         "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "钱包更新结果"
+          "$ref": "#/definitions/gameWallet"
         },
         "inventoryUpdated": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/gameItem"
-          },
-          "title": "背包更新结果"
+          }
+        },
+        "expGained": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -8146,9 +8237,11 @@
             "format": "int32"
           }
         },
-        "crystalTechTreeIndex": {
-          "type": "integer",
-          "format": "int32"
+        "unlockedCrystalTechIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -8310,6 +8403,28 @@
         }
       },
       "title": "获取休息站状态响应"
+    },
+    "gameGetSevenDaySignInResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "claimedDay": {
+          "type": "integer",
+          "format": "int32",
+          "title": "已领取到第几天（0-7，0表示未领取）"
+        },
+        "lastClaimDate": {
+          "type": "string",
+          "title": "最后一次领取日期（YYYY-MM-DD）"
+        }
+      },
+      "title": "获取7天登录奖励信息响应"
     },
     "gameGetSevenDayStatusResponse": {
       "type": "object",
@@ -8796,23 +8911,23 @@
           "type": "string"
         },
         "reward": {
-          "$ref": "#/definitions/gameReward",
-          "title": "奖励数据"
+          "$ref": "#/definitions/gameReward"
         },
         "stamina": {
-          "$ref": "#/definitions/gameStaminaData",
-          "title": "体力数据"
+          "$ref": "#/definitions/gameStaminaData"
         },
         "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "钱包更新结果"
+          "$ref": "#/definitions/gameWallet"
         },
         "inventoryUpdated": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/gameItem"
-          },
-          "title": "背包更新结果"
+          }
+        },
+        "expGained": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -8878,10 +8993,6 @@
         "nextGrantTime": {
           "type": "string",
           "title": "下次补充体力的时间（UTC时间字符串，ISO 8601 格式）"
-        },
-        "currentStamina": {
-          "$ref": "#/definitions/gameStaminaData",
-          "title": "玩家当前体力数据"
         }
       },
       "title": "休息站数据"
@@ -9124,7 +9235,12 @@
       }
     },
     "gameUpgradeCrystalTechRequest": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "techId": {
+          "type": "string"
+        }
+      }
     },
     "gameUpgradeCrystalTechResponse": {
       "type": "object",
@@ -9136,21 +9252,20 @@
         "msg": {
           "type": "string"
         },
-        "crystalTechTreeIndex": {
-          "type": "integer",
-          "format": "int32",
-          "title": "水晶科技树索引"
+        "unlockedCrystalTechIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "walletUpdated": {
-          "$ref": "#/definitions/gameWallet",
-          "title": "钱包更新结果"
+          "$ref": "#/definitions/gameWallet"
         },
         "inventoryUpdated": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/gameItem"
-          },
-          "title": "背包更新结果"
+          }
         }
       }
     },

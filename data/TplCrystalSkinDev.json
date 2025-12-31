@@ -1,0 +1,14 @@
+{
+"1":{"skinID":"SKIN10001","id":"1","starLevel":0,"costItemInfo":"80001_1"},
+"2":{"skinID":"SKIN10001","id":"2","starLevel":1,"costItemInfo":"80001_1"},
+"3":{"skinID":"SKIN10001","id":"3","starLevel":2,"costItemInfo":"80001_1"},
+"4":{"skinID":"SKIN10001","id":"4","starLevel":3,"costItemInfo":"80001_1"},
+"5":{"skinID":"SKIN10001","id":"5","starLevel":4,"costItemInfo":"80001_1"},
+"6":{"skinID":"SKIN10001","id":"6","starLevel":5,"costItemInfo":""},
+"7":{"skinID":"SKIN10002","id":"7","starLevel":0,"costItemInfo":"80002_1"},
+"8":{"skinID":"SKIN10002","id":"8","starLevel":1,"costItemInfo":"80002_1"},
+"9":{"skinID":"SKIN10002","id":"9","starLevel":2,"costItemInfo":"80002_1"},
+"10":{"skinID":"SKIN10002","id":"10","starLevel":3,"costItemInfo":"80002_1"},
+"11":{"skinID":"SKIN10002","id":"11","starLevel":4,"costItemInfo":"80002_1"},
+"12":{"skinID":"SKIN10002","id":"12","starLevel":5,"costItemInfo":""}
+}

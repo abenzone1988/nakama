@@ -130,7 +130,8 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 
 	// 验证所有任务配置是否存在
 	var allRewards []*game.Reward
-	var totalLiveness int32
+	var addedDailyLiveness int32  // 本次增加的每日活跃度
+	var addedWeeklyLiveness int32 // 本次增加的每周活跃度
 	var validTaskIDs []string
 
 	for _, taskID := range toClaimTaskIDs {
@@ -141,7 +142,14 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 		}
 
 		validTaskIDs = append(validTaskIDs, taskID)
-		totalLiveness += taskConfig.Liveness
+
+		// 统计本次增加的活跃度（按任务类型分类）
+		switch taskConfig.TaskType {
+		case 2: // 每日任务
+			addedDailyLiveness += taskConfig.Liveness
+		case 3: // 每周任务
+			addedWeeklyLiveness += taskConfig.Liveness
+		}
 
 		// 获取任务奖励
 		if taskConfig.Reward != "" {
@@ -232,9 +240,10 @@ func (s *ApiServer) ClaimTaskReward(ctx context.Context, in *game.ClaimTaskRewar
 
 	s.logger.Info("任务奖励领取成功",
 		zap.Strings("task_ids", validTaskIDs),
-		zap.Int32("total_liveness", totalLiveness),
-		zap.Int32("daily_liveness", taskData.DailyLiveness),
-		zap.Int32("weekly_liveness", taskData.WeeklyLiveness))
+		zap.Int32("added_daily_liveness", addedDailyLiveness),
+		zap.Int32("added_weekly_liveness", addedWeeklyLiveness),
+		zap.Int32("total_daily_liveness", taskData.DailyLiveness),
+		zap.Int32("total_weekly_liveness", taskData.WeeklyLiveness))
 
 	return &game.ClaimTaskRewardResponse{
 		Code:             0,
@@ -305,9 +314,9 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		// 根据奖励类型判断是否已领取
 		isClaimed := false
 		switch rewardConfig.Type {
-		case 1: // 每日活跃度奖励
+		case 2: // 每日活跃度奖励
 			isClaimed = containsString(taskData.ClaimedDailyLivenessRewards, rewardID)
-		case 2: // 每周活跃度奖励
+		case 3: // 每周活跃度奖励
 			isClaimed = containsString(taskData.ClaimedWeeklyLivenessRewards, rewardID)
 		}
 
@@ -338,9 +347,9 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		// 根据奖励类型检查对应的活跃度是否足够
 		var currentLiveness int32
 		switch rewardConfig.Type {
-		case 1: // 每日活跃度奖励
+		case 2: // 每日活跃度奖励
 			currentLiveness = taskData.DailyLiveness
-		case 2: // 每周活跃度奖励
+		case 3: // 每周活跃度奖励
 			currentLiveness = taskData.WeeklyLiveness
 		default:
 			s.logger.Warn("未知的活跃度奖励类型", zap.String("reward_id", rewardID), zap.Int32("type", rewardConfig.Type))
@@ -406,11 +415,11 @@ func (s *ApiServer) ClaimLivenessReward(ctx context.Context, in *game.ClaimLiven
 		}
 
 		switch rewardConfig.Type {
-		case 1: // 每日活跃度奖励
+		case 2: // 每日活跃度奖励
 			if !containsString(taskData.ClaimedDailyLivenessRewards, rewardID) {
 				taskData.ClaimedDailyLivenessRewards = append(taskData.ClaimedDailyLivenessRewards, rewardID)
 			}
-		case 2: // 每周活跃度奖励
+		case 3: // 每周活跃度奖励
 			if !containsString(taskData.ClaimedWeeklyLivenessRewards, rewardID) {
 				taskData.ClaimedWeeklyLivenessRewards = append(taskData.ClaimedWeeklyLivenessRewards, rewardID)
 			}

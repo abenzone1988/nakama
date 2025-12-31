@@ -1042,6 +1042,18 @@ service Nakama {
     option (google.api.http).get = "/v2/game/signin";
   }
 
+  // ==================== Seven Day Sign In ====================
+  rpc GetSevenDaySignIn(game.GetSevenDaySignInRequest) returns (game.GetSevenDaySignInResponse) {
+    option (google.api.http).get = "/v2/game/sevendaysignin";
+  }
+
+  rpc ClaimSevenDaySignIn(game.ClaimSevenDaySignInRequest) returns (game.ClaimSevenDaySignInResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/sevendaysignin/claim"
+      body: "*"
+    };
+  }
+
   // ==================== First Charge ====================
   rpc GetFirstChargeStatus(game.GetFirstChargeStatusRequest) returns (game.GetFirstChargeStatusResponse) {
     option (google.api.http).get = "/v2/game/firstcharge/status";

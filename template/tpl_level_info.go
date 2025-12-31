@@ -18,6 +18,7 @@ type TplLevelInfo struct {
 	ConditionType02    int32  `json:"conditionType02"`
 	ConditionType03    int32  `json:"conditionType03"`
 	Cost               int32  `json:"cost"`
+	DropID             string `json:"dropId"`
 	ID                 string `json:"id"`
 	MonsterLevel       int32  `json:"monsterLevel"`
 	MonsterWaveGroupID string `json:"monsterWaveGroupId"`

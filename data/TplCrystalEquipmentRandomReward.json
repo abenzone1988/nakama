@@ -1,0 +1,12 @@
+{
+"EL1001":{"quality2weight":3500,"quality5weight":0,"quality4weight":0,"id":"EL1001","dropmin":1,"dropmax":2,"quality3weight":0,"quality1weight":6500},
+"EL1002":{"quality2weight":3500,"quality5weight":0,"quality4weight":0,"id":"EL1002","dropmin":1,"dropmax":2,"quality3weight":3000,"quality1weight":3500},
+"EL1003":{"quality2weight":4000,"quality5weight":0,"quality4weight":0,"id":"EL1003","dropmin":2,"dropmax":3,"quality3weight":3500,"quality1weight":2500},
+"EL1004":{"quality2weight":4000,"quality5weight":0,"quality4weight":500,"id":"EL1004","dropmin":2,"dropmax":3,"quality3weight":3500,"quality1weight":2000},
+"EL1005":{"quality2weight":4000,"quality5weight":0,"quality4weight":1000,"id":"EL1005","dropmin":2,"dropmax":4,"quality3weight":3500,"quality1weight":1500},
+"EL1006":{"quality2weight":3500,"quality5weight":0,"quality4weight":1500,"id":"EL1006","dropmin":2,"dropmax":4,"quality3weight":4000,"quality1weight":1000},
+"EL1007":{"quality2weight":3000,"quality5weight":700,"quality4weight":2000,"id":"EL1007","dropmin":2,"dropmax":4,"quality3weight":4300,"quality1weight":0},
+"EL1008":{"quality2weight":2500,"quality5weight":800,"quality4weight":2200,"id":"EL1008","dropmin":2,"dropmax":5,"quality3weight":4500,"quality1weight":0},
+"EL1009":{"quality2weight":2300,"quality5weight":900,"quality4weight":2500,"id":"EL1009","dropmin":2,"dropmax":5,"quality3weight":4250,"quality1weight":0},
+"EL1010":{"quality2weight":2000,"quality5weight":1000,"quality4weight":3000,"id":"EL1010","dropmin":2,"dropmax":5,"quality3weight":4000,"quality1weight":0}
+}

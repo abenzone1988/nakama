@@ -161,6 +161,8 @@ const (
 	Nakama_GetLevelBox_FullMethodName                       = "/nakama.api.Nakama/GetLevelBox"
 	Nakama_ClaimSignInReward_FullMethodName                 = "/nakama.api.Nakama/ClaimSignInReward"
 	Nakama_GetSignInReward_FullMethodName                   = "/nakama.api.Nakama/GetSignInReward"
+	Nakama_GetSevenDaySignIn_FullMethodName                 = "/nakama.api.Nakama/GetSevenDaySignIn"
+	Nakama_ClaimSevenDaySignIn_FullMethodName               = "/nakama.api.Nakama/ClaimSevenDaySignIn"
 	Nakama_GetFirstChargeStatus_FullMethodName              = "/nakama.api.Nakama/GetFirstChargeStatus"
 	Nakama_ClaimFirstChargeReward_FullMethodName            = "/nakama.api.Nakama/ClaimFirstChargeReward"
 	Nakama_GetTask_FullMethodName                           = "/nakama.api.Nakama/GetTask"
@@ -424,6 +426,9 @@ type NakamaClient interface {
 	// ==================== Sign In ====================
 	ClaimSignInReward(ctx context.Context, in *game.ClaimSignInRewardRequest, opts ...grpc.CallOption) (*game.ClaimSignInRewardResponse, error)
 	GetSignInReward(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetSignInRewardResponse, error)
+	// ==================== Seven Day Sign In ====================
+	GetSevenDaySignIn(ctx context.Context, in *game.GetSevenDaySignInRequest, opts ...grpc.CallOption) (*game.GetSevenDaySignInResponse, error)
+	ClaimSevenDaySignIn(ctx context.Context, in *game.ClaimSevenDaySignInRequest, opts ...grpc.CallOption) (*game.ClaimSevenDaySignInResponse, error)
 	// ==================== First Charge ====================
 	GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest, opts ...grpc.CallOption) (*game.GetFirstChargeStatusResponse, error)
 	ClaimFirstChargeReward(ctx context.Context, in *game.ClaimFirstChargeRewardRequest, opts ...grpc.CallOption) (*game.ClaimFirstChargeRewardResponse, error)
@@ -1566,6 +1571,24 @@ func (c *nakamaClient) GetSignInReward(ctx context.Context, in *emptypb.Empty, o
 	return out, nil
 }
 
+func (c *nakamaClient) GetSevenDaySignIn(ctx context.Context, in *game.GetSevenDaySignInRequest, opts ...grpc.CallOption) (*game.GetSevenDaySignInResponse, error) {
+	out := new(game.GetSevenDaySignInResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetSevenDaySignIn_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ClaimSevenDaySignIn(ctx context.Context, in *game.ClaimSevenDaySignInRequest, opts ...grpc.CallOption) (*game.ClaimSevenDaySignInResponse, error) {
+	out := new(game.ClaimSevenDaySignInResponse)
+	err := c.cc.Invoke(ctx, Nakama_ClaimSevenDaySignIn_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) GetFirstChargeStatus(ctx context.Context, in *game.GetFirstChargeStatusRequest, opts ...grpc.CallOption) (*game.GetFirstChargeStatusResponse, error) {
 	out := new(game.GetFirstChargeStatusResponse)
 	err := c.cc.Invoke(ctx, Nakama_GetFirstChargeStatus_FullMethodName, in, out, opts...)
@@ -1971,6 +1994,9 @@ type NakamaServer interface {
 	// ==================== Sign In ====================
 	ClaimSignInReward(context.Context, *game.ClaimSignInRewardRequest) (*game.ClaimSignInRewardResponse, error)
 	GetSignInReward(context.Context, *emptypb.Empty) (*game.GetSignInRewardResponse, error)
+	// ==================== Seven Day Sign In ====================
+	GetSevenDaySignIn(context.Context, *game.GetSevenDaySignInRequest) (*game.GetSevenDaySignInResponse, error)
+	ClaimSevenDaySignIn(context.Context, *game.ClaimSevenDaySignInRequest) (*game.ClaimSevenDaySignInResponse, error)
 	// ==================== First Charge ====================
 	GetFirstChargeStatus(context.Context, *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error)
 	ClaimFirstChargeReward(context.Context, *game.ClaimFirstChargeRewardRequest) (*game.ClaimFirstChargeRewardResponse, error)
@@ -2377,6 +2403,12 @@ func (UnimplementedNakamaServer) ClaimSignInReward(context.Context, *game.ClaimS
 }
 func (UnimplementedNakamaServer) GetSignInReward(context.Context, *emptypb.Empty) (*game.GetSignInRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSignInReward not implemented")
+}
+func (UnimplementedNakamaServer) GetSevenDaySignIn(context.Context, *game.GetSevenDaySignInRequest) (*game.GetSevenDaySignInResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSevenDaySignIn not implemented")
+}
+func (UnimplementedNakamaServer) ClaimSevenDaySignIn(context.Context, *game.ClaimSevenDaySignInRequest) (*game.ClaimSevenDaySignInResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimSevenDaySignIn not implemented")
 }
 func (UnimplementedNakamaServer) GetFirstChargeStatus(context.Context, *game.GetFirstChargeStatusRequest) (*game.GetFirstChargeStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFirstChargeStatus not implemented")
@@ -4641,6 +4673,42 @@ func _Nakama_GetSignInReward_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetSevenDaySignIn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetSevenDaySignInRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetSevenDaySignIn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetSevenDaySignIn_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetSevenDaySignIn(ctx, req.(*game.GetSevenDaySignInRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ClaimSevenDaySignIn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ClaimSevenDaySignInRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ClaimSevenDaySignIn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ClaimSevenDaySignIn_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ClaimSevenDaySignIn(ctx, req.(*game.ClaimSevenDaySignInRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_GetFirstChargeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.GetFirstChargeStatusRequest)
 	if err := dec(in); err != nil {
@@ -5459,6 +5527,14 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSignInReward",
 			Handler:    _Nakama_GetSignInReward_Handler,
+		},
+		{
+			MethodName: "GetSevenDaySignIn",
+			Handler:    _Nakama_GetSevenDaySignIn_Handler,
+		},
+		{
+			MethodName: "ClaimSevenDaySignIn",
+			Handler:    _Nakama_ClaimSevenDaySignIn_Handler,
 		},
 		{
 			MethodName: "GetFirstChargeStatus",
