@@ -1,0 +1,7 @@
+{
+"EQ2100":{"secondary":"EQ1101","id":"EQ2100","primary":"EQ1100"},
+"EQ2101":{"secondary":"EQ1103","id":"EQ2101","primary":"EQ1108"},
+"EQ2102":{"secondary":"EQ1104","id":"EQ2102","primary":"EQ1109"},
+"EQ2103":{"secondary":"EQ1102","id":"EQ2103","primary":"EQ1105"},
+"EQ2104":{"secondary":"EQ1106","id":"EQ2104","primary":"EQ1107"}
+}
