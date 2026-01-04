@@ -2,16 +2,13 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (s *ApiServer) updatePlayerWalletWithID(ctx context.Context, coinChange, gemChange, adChange int64, record string, externalID *uuid.UUID) ([]*runtime.WalletUpdateResult, error) {
@@ -65,48 +62,6 @@ func (s *ApiServer) updatePlayerInventoryWithID(ctx context.Context, changeset m
 	}
 
 	return results, nil
-}
-
-// 发送作弊警告邮件
-func (s *ApiServer) sendCheatWarningEmail(ctx context.Context, userID uuid.UUID) error {
-	// 邮件内容
-	emailContent := map[string]interface{}{
-		"description": "经技术排查，您的账号涉及篡改数据，现已将您账号的货币重置。请阁下遵守游戏规则，勿通过任何渠道篡改游戏数据或使用外挂！",
-	}
-
-	contentBytes, err := json.Marshal(emailContent)
-	if err != nil {
-		s.logger.Error("序列化邮件内容失败", zap.Error(err))
-		return err
-	}
-
-	// 创建通知
-	notification := &api.Notification{
-		Id:         uuid.Must(uuid.NewV4()).String(),
-		Subject:    "篡改数据处理通知",
-		Content:    string(contentBytes),
-		Code:       0, // 系统通知
-		SenderId:   uuid.Nil.String(),
-		CreateTime: timestamppb.Now(),
-		Persistent: true,
-	}
-
-	// 发送通知
-	notifications := make(map[uuid.UUID][]*api.Notification)
-	notifications[userID] = []*api.Notification{notification}
-
-	err = NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
-	if err != nil {
-		s.logger.Error("发送作弊警告邮件失败",
-			zap.String("user_id", userID.String()),
-			zap.Error(err))
-		return err
-	}
-
-	s.logger.Info("成功发送作弊警告邮件",
-		zap.String("user_id", userID.String()))
-
-	return nil
 }
 
 func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletRequest) (*game.OperateWalletResponse, error) {
@@ -225,10 +180,6 @@ func (s *ApiServer) OperateInventory(ctx context.Context, in *game.OperateInvent
 	}
 	changeset := make(map[string]int64)
 	switch in.GetOption() {
-	case game.OperateInventoryRequest_ADD:
-		for _, item := range in.GetItems() {
-			changeset[item.Id] = int64(item.Num)
-		}
 	case game.OperateInventoryRequest_SUBTRACT:
 		for _, item := range in.GetItems() {
 			changeset[item.Id] = -int64(item.Num)
