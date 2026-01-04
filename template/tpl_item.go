@@ -13,7 +13,6 @@ type TplItem struct {
 	ID         string        `json:"id"`
 	ItemType   int32         `json:"itemType"`
 	Level      int32         `json:"level"`
-	OnlyOne    int32         `json:"onlyOne"`
 	OrderIndex int32         `json:"orderIndex"`
 	Quality    int32         `json:"quality"`
 }

@@ -2038,6 +2038,39 @@
         ]
       }
     },
+    "/v2/game/crystal/slot/upgrade": {
+      "post": {
+        "summary": "==================== Crystal Slot ====================",
+        "operationId": "Nakama_UpgradeCrystalSlot",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeCrystalSlotResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeCrystalSlotRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/equip": {
       "get": {
         "summary": "Get equip data",
@@ -8242,6 +8275,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "crystalSlots": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          }
         }
       }
     },
@@ -9231,6 +9271,44 @@
       "properties": {
         "inviterId": {
           "type": "string"
+        }
+      }
+    },
+    "gameUpgradeCrystalSlotRequest": {
+      "type": "object",
+      "properties": {
+        "equipType": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "gameUpgradeCrystalSlotResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipType": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "level": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          }
         }
       }
     },

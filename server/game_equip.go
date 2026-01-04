@@ -29,10 +29,20 @@ func (s *ApiServer) GetEquipData(ctx context.Context, in *emptypb.Empty) (*game.
 			return nil, err
 		}
 	}
+
+	// 初始化水晶槽位数据
+	if len(equipData.CrystalSlots) == 0 {
+		initializeCrystalSlots(equipData)
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, equipData); err != nil {
+			s.logger.Error("保存初始化的水晶槽位数据失败", zap.Error(err))
+		}
+	}
+
 	return &game.EquipData{
 		BattleEquips:           equipData.BattleEquips,
 		UnlockEquips:           equipData.UnlockEquips,
 		UnlockedCrystalTechIds: equipData.UnlockedCrystalTechIDs,
+		CrystalSlots:           equipData.CrystalSlots,
 	}, nil
 }
 

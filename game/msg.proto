@@ -110,6 +110,7 @@ message EquipData{
   repeated string battle_equips = 1;
   map<string, int32> unlock_equips = 2;
   repeated string unlocked_crystal_tech_ids = 3;
+  map<int32, int32> crystal_slots = 4;
 }
 
 // 玩家等级数据
@@ -562,6 +563,19 @@ message UpgradeEquipResponse{
   int32  level = 4;
   Wallet wallet_updated = 5; // 钱包更新结果
   repeated Item inventory_updated = 6; // 背包更新结果
+}
+
+message UpgradeCrystalSlotRequest{
+  int32 equip_type = 1;
+}
+
+message UpgradeCrystalSlotResponse{
+  int32 code = 1;
+  string msg = 2;
+  int32 equip_type = 3;
+  int32 level = 4;
+  Wallet wallet_updated = 5;
+  repeated Item inventory_updated = 6;
 }
 
 message UpgradeCrystalTechRequest{

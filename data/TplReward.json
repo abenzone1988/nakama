@@ -54,6 +54,8 @@
 "FirstchargeReward002":{"coupon":0,"name":"首充第2天奖励","id":"FirstchargeReward002","items":"1999_2","gem":0,"coin":3000},
 "FirstchargeReward003":{"coupon":0,"name":"首充第3天奖励","id":"FirstchargeReward003","items":"20001_10","gem":0,"coin":5000},
 "ForeverAdvCardReward":{"coupon":0,"name":"终身免广告券额外获得的奖励","id":"ForeverAdvCardReward","items":"","gem":980,"coin":0},
+"MonthlyPassReward00":{"coupon":0,"name":"月卡额外获得的奖励","id":"MonthlyPassReward00","items":"","gem":300,"coin":0},
+"MonthlyPassReward01":{"coupon":0,"name":"月卡每日可获得的奖励","id":"MonthlyPassReward01","items":"20001_1","gem":300,"coin":0},
 "ChapterReward005":{"coupon":0,"name":"第5关奖励","id":"ChapterReward005","items":"20001_10,60000_15","gem":0,"coin":500},
 "ChapterReward010":{"coupon":0,"name":"第10关奖励","id":"ChapterReward010","items":"1109_30,30004_100","gem":0,"coin":1000},
 "ChapterReward015":{"coupon":0,"name":"第15关奖励","id":"ChapterReward015","items":"1103_30,30003_100","gem":0,"coin":1000},

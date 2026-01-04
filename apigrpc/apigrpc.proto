@@ -1015,6 +1015,14 @@ service Nakama {
     };
   }
 
+  // ==================== Crystal Slot ====================
+  rpc UpgradeCrystalSlot(game.UpgradeCrystalSlotRequest) returns (game.UpgradeCrystalSlotResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/slot/upgrade"
+      body: "*"
+    };
+  }
+
   // ==================== Level ====================
   rpc ClaimLevelBox(game.ClaimLevelBoxRequest) returns (game.ClaimLevelBoxResponse) {
     option (google.api.http) = {

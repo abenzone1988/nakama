@@ -720,3 +720,123 @@ func GrantMergedRewards(ctx context.Context, logger *zap.Logger, db *sql.DB, tem
 
 	return mergedReward, walletUpdateResult, inventoryUpdateResult, nil
 }
+
+// ConsumeCostItems 通用的消耗道具函数
+// 解析 costItem 字符串（格式："itemId_count,itemId_count"），根据道具类型从钱包或背包中扣除
+// source: 消耗来源标识（如 "crystal_slot_upgrade", "equip_upgrade" 等）
+// 返回：钱包更新结果、背包更新结果、错误信息
+func ConsumeCostItems(ctx context.Context, logger *zap.Logger, db *sql.DB, costItemStr string, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+	if costItemStr == "" {
+		return nil, nil, nil
+	}
+
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	walletChangeset := make(map[string]int64)
+	inventoryChangeset := make(map[string]int64)
+
+	items := strings.Split(costItemStr, ",")
+	for _, item := range items {
+		parts := strings.Split(strings.TrimSpace(item), "_")
+		if len(parts) != 2 {
+			logger.Warn("无效的 costItem 格式", zap.String("item", item))
+			continue
+		}
+
+		itemID := strings.TrimSpace(parts[0])
+		count, err := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64)
+		if err != nil || count <= 0 {
+			logger.Warn("无效的道具数量", zap.String("item", item), zap.Error(err))
+			continue
+		}
+
+		// 根据 itemID 判断是钱包类型还是背包道具
+		switch itemID {
+		case ItemID_Coin: // 金币
+			walletChangeset["coin"] -= count
+		case ItemID_Gem: // 钻石
+			walletChangeset["gem"] -= count
+		case ItemID_Stamina: // 体力
+			walletChangeset["stamina"] -= count
+		case ItemID_AdTicket: // 广告券
+			walletChangeset["ad"] -= count
+		default:
+			// 其他道具从背包扣除
+			inventoryChangeset[itemID] -= count
+		}
+	}
+
+	metadata, _ := json.Marshal(map[string]interface{}{
+		"source": source,
+	})
+	metadataStr := string(metadata)
+
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+
+	// 扣除钱包资源
+	if len(walletChangeset) > 0 {
+		results, err := UpdateWallets(ctx, logger, db, []*walletUpdate{
+			{
+				UserID:    userID,
+				Changeset: walletChangeset,
+				Metadata:  metadataStr,
+			},
+		}, true)
+		if err != nil {
+			logger.Error("扣除钱包资源失败", zap.Error(err))
+			return nil, nil, err
+		}
+
+		if len(results) > 0 && results[0] != nil {
+			walletUpdateResult = &game.WalletUpdateResult{
+				Previous: convertMapInt64ToWallet(results[0].Previous),
+				Updated:  convertMapInt64ToWallet(results[0].Updated),
+			}
+		}
+	}
+
+	// 扣除背包道具
+	if len(inventoryChangeset) > 0 {
+		results, err := UpdateInventories(ctx, logger, db, []*inventoryUpdate{
+			{
+				UserID:    userID,
+				Changeset: inventoryChangeset,
+				Metadata:  metadataStr,
+			},
+		}, true)
+		if err != nil {
+			logger.Error("扣除背包道具失败", zap.Error(err))
+			// 如果背包扣除失败且已经扣除了钱包，需要回滚钱包
+			if len(walletChangeset) > 0 {
+				rollbackMetadata, _ := json.Marshal(map[string]interface{}{
+					"source": source + "_rollback",
+				})
+				rollbackChangeset := make(map[string]int64)
+				for key, value := range walletChangeset {
+					rollbackChangeset[key] = -value
+				}
+				_, rollbackErr := UpdateWallets(ctx, logger, db, []*walletUpdate{
+					{
+						UserID:    userID,
+						Changeset: rollbackChangeset,
+						Metadata:  string(rollbackMetadata),
+					},
+				}, true)
+				if rollbackErr != nil {
+					logger.Error("回滚钱包失败", zap.Error(rollbackErr))
+				}
+			}
+			return nil, nil, err
+		}
+
+		if len(results) > 0 && results[0] != nil {
+			inventoryUpdateResult = &game.InventoryUpdateResult{
+				Previous: convertMapInt64ToItems(results[0].Previous),
+				Updated:  convertMapInt64ToItems(results[0].Updated),
+			}
+		}
+	}
+
+	return walletUpdateResult, inventoryUpdateResult, nil
+}

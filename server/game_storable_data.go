@@ -652,6 +652,7 @@ type EquipData struct {
 	BattleEquips           []string         `json:"battle_equips"`
 	UnlockEquips           map[string]int32 `json:"unlock_equips"`
 	UnlockedCrystalTechIDs []string         `json:"unlocked_crystal_tech_ids"`
+	CrystalSlots           map[int32]int32  `json:"crystal_slots"`
 }
 
 func (d *EquipData) GetCollection() string {

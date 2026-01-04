@@ -99,7 +99,7 @@
 "98":{"level":97,"equipType":1,"costItem":"50001_462,10000_14500","id":"98"},
 "99":{"level":98,"equipType":1,"costItem":"50001_471,10000_14500","id":"99"},
 "100":{"level":99,"equipType":1,"costItem":"50001_480,10000_14500","id":"100"},
-"101":{"level":100,"equipType":1,"costItem":"50001_489,10000_14500","id":"101"},
+"101":{"level":100,"equipType":1,"costItem":"","id":"101"},
 "102":{"level":0,"equipType":2,"costItem":"50002_5,10000_1000","id":"102"},
 "103":{"level":1,"equipType":2,"costItem":"50002_5,10000_1000","id":"103"},
 "104":{"level":2,"equipType":2,"costItem":"50002_8,10000_1000","id":"104"},
@@ -200,7 +200,7 @@
 "199":{"level":97,"equipType":2,"costItem":"50002_462,10000_14500","id":"199"},
 "200":{"level":98,"equipType":2,"costItem":"50002_471,10000_14500","id":"200"},
 "201":{"level":99,"equipType":2,"costItem":"50002_480,10000_14500","id":"201"},
-"202":{"level":100,"equipType":2,"costItem":"50002_489,10000_14500","id":"202"},
+"202":{"level":100,"equipType":2,"costItem":"","id":"202"},
 "203":{"level":0,"equipType":4,"costItem":"50003_5,10000_1000","id":"203"},
 "204":{"level":1,"equipType":4,"costItem":"50003_5,10000_1000","id":"204"},
 "205":{"level":2,"equipType":4,"costItem":"50003_8,10000_1000","id":"205"},
@@ -301,7 +301,7 @@
 "300":{"level":97,"equipType":4,"costItem":"50003_462,10000_14500","id":"300"},
 "301":{"level":98,"equipType":4,"costItem":"50003_471,10000_14500","id":"301"},
 "302":{"level":99,"equipType":4,"costItem":"50003_480,10000_14500","id":"302"},
-"303":{"level":100,"equipType":4,"costItem":"50003_489,10000_14500","id":"303"},
+"303":{"level":100,"equipType":4,"costItem":"","id":"303"},
 "304":{"level":0,"equipType":8,"costItem":"50004_5,10000_1000","id":"304"},
 "305":{"level":1,"equipType":8,"costItem":"50004_5,10000_1000","id":"305"},
 "306":{"level":2,"equipType":8,"costItem":"50004_8,10000_1000","id":"306"},
@@ -402,5 +402,5 @@
 "401":{"level":97,"equipType":8,"costItem":"50004_462,10000_14500","id":"401"},
 "402":{"level":98,"equipType":8,"costItem":"50004_471,10000_14500","id":"402"},
 "403":{"level":99,"equipType":8,"costItem":"50004_480,10000_14500","id":"403"},
-"404":{"level":100,"equipType":8,"costItem":"50004_489,10000_14500","id":"404"}
+"404":{"level":100,"equipType":8,"costItem":"","id":"404"}
 }

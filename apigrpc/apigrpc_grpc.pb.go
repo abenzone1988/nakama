@@ -157,6 +157,7 @@ const (
 	Nakama_ClaimOnHookReward_FullMethodName                 = "/nakama.api.Nakama/ClaimOnHookReward"
 	Nakama_UpgradeEquip_FullMethodName                      = "/nakama.api.Nakama/UpgradeEquip"
 	Nakama_UpgradeCrystalTech_FullMethodName                = "/nakama.api.Nakama/UpgradeCrystalTech"
+	Nakama_UpgradeCrystalSlot_FullMethodName                = "/nakama.api.Nakama/UpgradeCrystalSlot"
 	Nakama_ClaimLevelBox_FullMethodName                     = "/nakama.api.Nakama/ClaimLevelBox"
 	Nakama_GetLevelBox_FullMethodName                       = "/nakama.api.Nakama/GetLevelBox"
 	Nakama_ClaimSignInReward_FullMethodName                 = "/nakama.api.Nakama/ClaimSignInReward"
@@ -420,6 +421,8 @@ type NakamaClient interface {
 	// ==================== Equip ====================
 	UpgradeEquip(ctx context.Context, in *game.UpgradeEquipRequest, opts ...grpc.CallOption) (*game.UpgradeEquipResponse, error)
 	UpgradeCrystalTech(ctx context.Context, in *game.UpgradeCrystalTechRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalTechResponse, error)
+	// ==================== Crystal Slot ====================
+	UpgradeCrystalSlot(ctx context.Context, in *game.UpgradeCrystalSlotRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalSlotResponse, error)
 	// ==================== Level ====================
 	ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error)
 	GetLevelBox(ctx context.Context, in *game.GetLevelBoxRequest, opts ...grpc.CallOption) (*game.GetLevelBoxResponse, error)
@@ -1535,6 +1538,15 @@ func (c *nakamaClient) UpgradeCrystalTech(ctx context.Context, in *game.UpgradeC
 	return out, nil
 }
 
+func (c *nakamaClient) UpgradeCrystalSlot(ctx context.Context, in *game.UpgradeCrystalSlotRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalSlotResponse, error) {
+	out := new(game.UpgradeCrystalSlotResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpgradeCrystalSlot_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxRequest, opts ...grpc.CallOption) (*game.ClaimLevelBoxResponse, error) {
 	out := new(game.ClaimLevelBoxResponse)
 	err := c.cc.Invoke(ctx, Nakama_ClaimLevelBox_FullMethodName, in, out, opts...)
@@ -1988,6 +2000,8 @@ type NakamaServer interface {
 	// ==================== Equip ====================
 	UpgradeEquip(context.Context, *game.UpgradeEquipRequest) (*game.UpgradeEquipResponse, error)
 	UpgradeCrystalTech(context.Context, *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error)
+	// ==================== Crystal Slot ====================
+	UpgradeCrystalSlot(context.Context, *game.UpgradeCrystalSlotRequest) (*game.UpgradeCrystalSlotResponse, error)
 	// ==================== Level ====================
 	ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error)
 	GetLevelBox(context.Context, *game.GetLevelBoxRequest) (*game.GetLevelBoxResponse, error)
@@ -2391,6 +2405,9 @@ func (UnimplementedNakamaServer) UpgradeEquip(context.Context, *game.UpgradeEqui
 }
 func (UnimplementedNakamaServer) UpgradeCrystalTech(context.Context, *game.UpgradeCrystalTechRequest) (*game.UpgradeCrystalTechResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpgradeCrystalTech not implemented")
+}
+func (UnimplementedNakamaServer) UpgradeCrystalSlot(context.Context, *game.UpgradeCrystalSlotRequest) (*game.UpgradeCrystalSlotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradeCrystalSlot not implemented")
 }
 func (UnimplementedNakamaServer) ClaimLevelBox(context.Context, *game.ClaimLevelBoxRequest) (*game.ClaimLevelBoxResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimLevelBox not implemented")
@@ -4601,6 +4618,24 @@ func _Nakama_UpgradeCrystalTech_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_UpgradeCrystalSlot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpgradeCrystalSlotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UpgradeCrystalSlot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UpgradeCrystalSlot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UpgradeCrystalSlot(ctx, req.(*game.UpgradeCrystalSlotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_ClaimLevelBox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.ClaimLevelBoxRequest)
 	if err := dec(in); err != nil {
@@ -5511,6 +5546,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpgradeCrystalTech",
 			Handler:    _Nakama_UpgradeCrystalTech_Handler,
+		},
+		{
+			MethodName: "UpgradeCrystalSlot",
+			Handler:    _Nakama_UpgradeCrystalSlot_Handler,
 		},
 		{
 			MethodName: "ClaimLevelBox",
