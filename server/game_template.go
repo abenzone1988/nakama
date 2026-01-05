@@ -47,6 +47,7 @@ type TemplateManager interface {
 	GetTplCrystalEquipment() *TableTplCrystalEquipment
 	GetTplCrystalEquipmentRefinement() *TableTplCrystalEquipmentRefinement
 	GetTplCrystalEquipmentRefinementAffix() *TableTplCrystalEquipmentRefinementAffix
+	GetTplCrystalEquipmentRandomReward() *TableTplCrystalEquipmentRandomReward
 }
 
 type LocalTemplateManager struct {
@@ -84,6 +85,7 @@ type LocalTemplateManager struct {
 	tableTplCrystalEquipment                *TableTplCrystalEquipment
 	tableTplCrystalEquipmentRefinement      *TableTplCrystalEquipmentRefinement
 	tableTplCrystalEquipmentRefinementAffix *TableTplCrystalEquipmentRefinementAffix
+	tableTplCrystalEquipmentRandomReward    *TableTplCrystalEquipmentRandomReward
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -122,6 +124,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplCrystalEquipment:                NewTableTplCrystalEquipment(logger, jsonPath),
 		tableTplCrystalEquipmentRefinement:      NewTableTplCrystalEquipmentRefinement(logger, jsonPath),
 		tableTplCrystalEquipmentRefinementAffix: NewTableTplCrystalEquipmentRefinementAffix(logger, jsonPath),
+		tableTplCrystalEquipmentRandomReward:    NewTableTplCrystalEquipmentRandomReward(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -162,6 +165,13 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplCrystalEquipment.LoadData(t.StorageReadTpl("TplCrystalEquipment"))
 	t.tableTplCrystalEquipmentRefinement.LoadData(t.StorageReadTpl("TplCrystalEquipmentRefinement"))
 	t.tableTplCrystalEquipmentRefinementAffix.LoadData(t.StorageReadTpl("TplCrystalEquipmentRefinementAffix"))
+	t.tableTplCrystalEquipmentRandomReward.LoadData(t.StorageReadTpl("TplCrystalEquipmentRandomReward"))
+}
+
+func (t *LocalTemplateManager) GetTplCrystalEquipmentRandomReward() *TableTplCrystalEquipmentRandomReward {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalEquipmentRandomReward
 }
 
 func (t *LocalTemplateManager) GetTplCrystalEquipmentSlotDev() *TableTplCrystalEquipmentSlotDev {

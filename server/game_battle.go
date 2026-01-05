@@ -187,6 +187,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	// 根据战斗类型获取奖励ID和source
 	var rewardId string
 	var source string
+	var dropId string
 	switch battleData.BattleType {
 	case game.BattleType_BATTLE_TYPE_NORMAL:
 		levelInfo, exist := s.template.GetTplLevelInfo().FindByKey(battleData.CurLevelId)
@@ -197,6 +198,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 			}, nil
 		}
 		rewardId = levelInfo.WinRewards
+		dropId = levelInfo.DropID
 		source = "battle_normal_" + battleData.CurLevelId
 
 	case game.BattleType_BATTLE_TYPE_GOLDEN:
@@ -219,12 +221,12 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 			}, nil
 		}
 		rewardId = eliteInfo.WinRewards
+		dropId = eliteInfo.DropID
 		source = "battle_elite_" + battleData.CurLevelId
 	}
 
-	// 收集首充奖励ID
+	// 收集首通奖励ID
 	var firstRewardId string
-
 	// 如果进度 >= 100，检查并更新最大关卡ID，收集首充奖励ID
 	if progress >= 100 {
 		var levelUpdated bool
@@ -296,6 +298,37 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 			}
 		}
 	}
+
+	// 处理水晶装备随机掉落
+	var crystalEquipReward *game.Reward
+	if dropId != "" {
+		randomReward, exist := s.template.GetTplCrystalEquipmentRandomReward().FindByKey(dropId)
+		if exist {
+			generatedEquips, err := generateRandomCrystalEquipmentFromDrop(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, randomReward)
+			if err != nil {
+				s.logger.Error("生成随机水晶装备掉落失败", zap.Error(err), zap.String("drop_id", dropId))
+			} else if len(generatedEquips) > 0 {
+				items := make([]*game.Item, 0, len(generatedEquips))
+				for tplId, count := range generatedEquips {
+					if count > 0 {
+						items = append(items, &game.Item{
+							Id:  tplId,
+							Num: count,
+						})
+					}
+				}
+				if len(items) > 0 {
+					crystalEquipReward = &game.Reward{
+						Items: items,
+					}
+					s.logger.Info("生成水晶装备掉落成功",
+						zap.String("drop_id", dropId),
+						zap.Int("equip_types", len(items)))
+				}
+			}
+		}
+	}
+
 	// 收集所有奖励
 	var rewards []*game.Reward
 
@@ -304,6 +337,11 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	if mainReward != nil {
 		applyProgressToReward(mainReward, progress)
 		rewards = append(rewards, mainReward)
+	}
+
+	// 添加水晶装备掉落奖励
+	if crystalEquipReward != nil {
+		rewards = append(rewards, crystalEquipReward)
 	}
 
 	// 只有进度100时才发放首充奖励

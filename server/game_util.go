@@ -977,6 +977,200 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 	return generatedTplIds, nil
 }
 
+// generateRandomCrystalEquipmentFromDrop 从掉落配置生成随机水晶装备
+//
+// 算法流程：
+//  1. 从dropMin和dropMax之间随机一个数量
+//  2. 对每个掉落：
+//     a. 根据品质权重随机选择品质（quality1-5对应1,2,4,8,16）
+//     b. 获取玩家当前等级
+//     c. 从TplCrystalEquipment中筛选：同一装备类型、相同品质、level <= 玩家等级的装备
+//     d. 选择level最接近玩家等级的装备（同一类型中level最大的）
+//     e. 生成装备实例并保存
+//
+// 参数：
+//   - randomReward: 掉落配置
+//
+// 返回值：
+//   - map[string]int32: 生成的装备tplId及其数量，用于客户端显示
+//   - error: 错误信息
+func generateRandomCrystalEquipmentFromDrop(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, randomReward template.TplCrystalEquipmentRandomReward) (map[string]int32, error) {
+	userID, _ := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// 1. 随机掉落数量
+	dropCount := randomReward.Dropmin
+	if randomReward.Dropmax > randomReward.Dropmin {
+		dropCount = randomReward.Dropmin + rand.Int31n(randomReward.Dropmax-randomReward.Dropmin+1)
+	}
+
+	if dropCount <= 0 {
+		return make(map[string]int32), nil
+	}
+
+	// 获取玩家等级
+	playerLevelData := &PlayerLevelData{}
+	if err := LoadUserData(ctx, logger, db, playerLevelData); err != nil {
+		logger.Error("加载玩家等级数据失败", zap.Error(err))
+		return nil, err
+	}
+	playerLevel := playerLevelData.Level
+
+	// 加载水晶装备数据
+	crystalEquipmentsData := &CrystalEquipmentData{}
+	if err := LoadUserData(ctx, logger, db, crystalEquipmentsData); err != nil {
+		logger.Error("加载水晶装备数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	generatedTplIds := make(map[string]int32)
+
+	logger.Info("开始生成水晶装备掉落",
+		zap.String("user_id", userID.String()),
+		zap.String("drop_id", randomReward.ID),
+		zap.Int32("drop_count", dropCount),
+		zap.Int32("player_level", playerLevel))
+
+	// 2. 对每个掉落单独生成
+	for i := int32(0); i < dropCount; i++ {
+		// a. 根据权重随机选择品质
+		quality := selectQualityByWeight(randomReward, logger)
+		if quality == 0 {
+			logger.Warn("未能选择品质，跳过本次掉落", zap.Int("drop_index", int(i)))
+			continue
+		}
+
+		// c. 筛选符合条件的装备：相同品质、level <= 玩家等级
+		allEquips := templateMgr.GetTplCrystalEquipment().FindByFilter(func(t template.TplCrystalEquipment) bool {
+			return t.Quality == quality && t.Level <= playerLevel
+		})
+
+		if allEquips.Len() == 0 {
+			logger.Warn("未找到符合条件的水晶装备",
+				zap.Int32("quality", quality),
+				zap.Int32("player_level", playerLevel))
+			continue
+		}
+
+		// d. 按装备类型分组，选择每个类型中level最大的
+		equipTypeMap := make(map[int32]template.TplCrystalEquipment)
+		for j := 0; j < allEquips.Len(); j++ {
+			equip := allEquips.Get(j)
+			existing, found := equipTypeMap[equip.EquipType]
+			if !found || equip.Level > existing.Level {
+				equipTypeMap[equip.EquipType] = equip
+			}
+		}
+
+		// 从所有类型中随机选择一个
+		candidates := make([]template.TplCrystalEquipment, 0, len(equipTypeMap))
+		for _, equip := range equipTypeMap {
+			candidates = append(candidates, equip)
+		}
+
+		if len(candidates) == 0 {
+			logger.Warn("未找到候选装备")
+			continue
+		}
+
+		selectedEquip := candidates[rand.Intn(len(candidates))]
+
+		// e. 生成装备实例
+		equipID, err := uuid.NewV4()
+		if err != nil {
+			logger.Error("生成UUID失败", zap.Error(err))
+			continue
+		}
+
+		// 获取词条配置
+		refinementConfigs := templateMgr.GetTplCrystalEquipmentRefinement().FindByFilter(func(t template.TplCrystalEquipmentRefinement) bool {
+			return t.Quality == quality && t.Level == selectedEquip.Level
+		})
+
+		var affixes []CrystalEquipmentAffix
+		if refinementConfigs.Len() > 0 {
+			refinementConfig := refinementConfigs.Get(0)
+			affixes = generateAffixes(templateMgr, selectedEquip.EquipType, quality, refinementConfig, false, logger)
+		} else {
+			affixes = make([]CrystalEquipmentAffix, 0)
+		}
+
+		crystalEquipmentsData.Equipments[equipID.String()] = &CrystalEquipment{
+			TplId:          selectedEquip.ID,
+			ID:             equipID.String(),
+			ActiveAffixes:  affixes,
+			PendingAffixes: make([]CrystalEquipmentAffix, 0),
+			LockedAffixIds: make([]string, 0),
+		}
+
+		generatedTplIds[selectedEquip.ID]++
+
+		logger.Info("生成水晶装备掉落",
+			zap.Int("drop_index", int(i)+1),
+			zap.String("equip_id", equipID.String()),
+			zap.String("tpl_id", selectedEquip.ID),
+			zap.Int32("equip_type", selectedEquip.EquipType),
+			zap.Int32("quality", quality),
+			zap.Int32("level", selectedEquip.Level),
+			zap.Int("affix_count", len(affixes)))
+	}
+
+	// 保存数据
+	if len(generatedTplIds) > 0 {
+		if err := SaveUserData(ctx, logger, db, metrics, storageIndex, crystalEquipmentsData); err != nil {
+			logger.Error("保存水晶装备数据失败", zap.Error(err))
+			return nil, err
+		}
+	}
+
+	return generatedTplIds, nil
+}
+
+// selectQualityByWeight 根据权重随机选择品质
+// quality1-5 对应 1, 2, 4, 8, 16
+func selectQualityByWeight(reward template.TplCrystalEquipmentRandomReward, logger *zap.Logger) int32 {
+	totalWeight := reward.Quality1weight + reward.Quality2weight + reward.Quality3weight + reward.Quality4weight + reward.Quality5weight
+
+	if totalWeight == 0 {
+		logger.Warn("总权重为0")
+		return 0
+	}
+
+	randomValue := rand.Int31n(totalWeight)
+	currentWeight := int32(0)
+
+	qualities := []struct {
+		weight int32
+		value  int32
+	}{
+		{reward.Quality1weight, 1},
+		{reward.Quality2weight, 2},
+		{reward.Quality3weight, 4},
+		{reward.Quality4weight, 8},
+		{reward.Quality5weight, 16},
+	}
+
+	for _, q := range qualities {
+		currentWeight += q.weight
+		if randomValue < currentWeight {
+			logger.Debug("选择品质",
+				zap.Int32("quality", q.value),
+				zap.Int32("weight", q.weight),
+				zap.Int32("random_value", randomValue),
+				zap.Int32("total_weight", totalWeight))
+			return q.value
+		}
+	}
+
+	// 默认返回最后一个非零权重的品质
+	for i := len(qualities) - 1; i >= 0; i-- {
+		if qualities[i].weight > 0 {
+			return qualities[i].value
+		}
+	}
+
+	return 0
+}
+
 // generateAffixes 生成装备词条
 //
 // 算法流程：

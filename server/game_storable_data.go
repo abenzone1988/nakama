@@ -701,6 +701,23 @@ func (d *CrystalEquipmentData) GetKey() string {
 
 func (d *CrystalEquipmentData) Init() {
 	d.Equipments = make(map[string]*CrystalEquipment)
+
+	// 创建4个默认水晶装备
+	defaultTplIds := []string{"CEQ1001001", "CEQ2001001", "CEQ3001001", "CEQ4001001"}
+	for _, tplId := range defaultTplIds {
+		equipID, err := uuid.NewV4()
+		if err != nil {
+			continue
+		}
+		d.Equipments[equipID.String()] = &CrystalEquipment{
+			TplId:          tplId,
+			ID:             equipID.String(),
+			ActiveAffixes:  make([]CrystalEquipmentAffix, 0),
+			PendingAffixes: make([]CrystalEquipmentAffix, 0),
+			LockedAffixIds: make([]string, 0),
+		}
+	}
+
 	d.SetVersion("")
 }
 
