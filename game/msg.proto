@@ -962,6 +962,8 @@ message RefineCrystalEquipmentResponse{
   int32 code = 1;
   string msg = 2;
   CrystalEquipmentInfo equipment = 3; // 洗炼后的装备信息
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
 }
 
 // 锁定词条请求

@@ -83,12 +83,52 @@ func (s *ApiServer) RefineCrystalEquipment(ctx context.Context, in *game.RefineC
 		}
 	}
 
+	// 根据锁定词条数量选择消耗物品配置
+	lockedCount := len(lockedRareAffixes)
+	var costItemInfo string
+	switch lockedCount {
+	case 0:
+		costItemInfo = refinementConfig.CostItemInfo
+	case 1:
+		costItemInfo = refinementConfig.Lock1CostItemInfo
+	case 2:
+		costItemInfo = refinementConfig.Lock2CostItemInfo
+	default:
+		s.logger.Warn("锁定词条数量超过上限", zap.Int("locked_count", lockedCount))
+		return &game.RefineCrystalEquipmentResponse{
+			Code: 7,
+			Msg:  "锁定词条数量超过上限",
+		}, nil
+	}
+
 	s.logger.Info("开始洗炼水晶装备",
 		zap.String("user_id", userID.String()),
 		zap.String("equipment_id", equipmentID),
 		zap.String("equipment_tpl_id", equipment.TplId),
 		zap.Int32("equipment_quality", tplEquip.Quality),
-		zap.Int("locked_rare_count", len(lockedRareAffixes)))
+		zap.Int("locked_rare_count", lockedCount),
+		zap.String("cost_item_info", costItemInfo))
+
+	// 消耗洗炼材料
+	var walletUpdateResult *game.WalletUpdateResult
+	var inventoryUpdateResult *game.InventoryUpdateResult
+	if costItemInfo != "" && costItemInfo != "0" {
+		walletResult, inventoryResult, err := ConsumeCostItems(ctx, s.logger, s.db, s.template, costItemInfo, "crystal_equipment_refine")
+		if err != nil {
+			s.logger.Error("消耗洗炼材料失败", zap.Error(err))
+			return &game.RefineCrystalEquipmentResponse{
+				Code: 8,
+				Msg:  "材料不足或消耗失败",
+			}, nil
+		}
+		walletUpdateResult = walletResult
+		inventoryUpdateResult = inventoryResult
+		s.logger.Info("消耗洗炼材料成功",
+			zap.String("user_id", userID.String()),
+			zap.String("cost_item_info", costItemInfo),
+			zap.Any("wallet_result", walletResult),
+			zap.Any("inventory_result", inventoryResult))
+	}
 
 	newAffixes := generateAffixesWithLockedRare(
 		s.template,
@@ -132,11 +172,20 @@ func (s *ApiServer) RefineCrystalEquipment(ctx context.Context, in *game.RefineC
 		zap.Int("locked_rare_count", len(lockedRareAffixes)),
 		zap.Int("new_rare_count", rareCount-len(lockedRareAffixes)))
 
-	return &game.RefineCrystalEquipmentResponse{
+	response := &game.RefineCrystalEquipmentResponse{
 		Code:      0,
 		Msg:       "Success",
 		Equipment: convertToProtoEquipment(equipment),
-	}, nil
+	}
+
+	if walletUpdateResult != nil {
+		response.WalletUpdated = walletUpdateResult.Updated
+	}
+	if inventoryUpdateResult != nil {
+		response.InventoryUpdated = inventoryUpdateResult.Updated
+	}
+
+	return response, nil
 }
 
 func (s *ApiServer) LockCrystalAffix(ctx context.Context, in *game.LockCrystalAffixRequest) (*game.LockCrystalAffixResponse, error) {

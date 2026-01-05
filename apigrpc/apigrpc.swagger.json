@@ -9311,6 +9311,17 @@
         "equipment": {
           "$ref": "#/definitions/gameCrystalEquipmentInfo",
           "title": "洗炼后的装备信息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
         }
       },
       "title": "洗炼水晶装备响应"

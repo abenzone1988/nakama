@@ -187,9 +187,13 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMg
 			case ItemType_RandomCrystalEquipment:
 				quality := itemTpl.Quality
 				level := itemTpl.Level
-				err := generateRandomCrystalEquipment(ctx, logger, db, templateMgr, metrics, storageIndex, item.Num, quality, level)
+				generatedEquips, err := generateRandomCrystalEquipment(ctx, logger, db, templateMgr, metrics, storageIndex, item.Num, quality, level)
 				if err != nil {
 					logger.Error("生成随机水晶装备失败", zap.Error(err))
+				} else {
+					for tplId, count := range generatedEquips {
+						convertedItems[tplId] += count
+					}
 				}
 				skipItemIds[item.Id] = true
 			case ItemType_Turret:
@@ -894,11 +898,17 @@ func ConsumeCostItems(ctx context.Context, logger *zap.Logger, db *sql.DB, templ
 //   - count: 生成的装备数量
 //   - quality: 装备品质（单一品质值，如8表示紫色）
 //   - level: 装备等级（用于选择词条配置）
-func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, count int32, quality int32, level int32) error {
+//
+// 返回值：
+//   - map[string]int32: 生成的装备tplId及其数量，用于客户端显示
+//   - error: 错误信息
+func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, count int32, quality int32, level int32) (map[string]int32, error) {
+	generatedTplIds := make(map[string]int32)
+
 	crystalEquipmentsData := &CrystalEquipmentData{}
 	if err := LoadUserData(ctx, logger, db, crystalEquipmentsData); err != nil {
 		logger.Error("加载水晶装备数据失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	crystalEquipments := templateMgr.GetTplCrystalEquipment().FindByFilter(func(t template.TplCrystalEquipment) bool {
@@ -907,7 +917,7 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 
 	if crystalEquipments.Len() == 0 {
 		logger.Warn("未找到指定品质的水晶装备", zap.Int32("quality", quality))
-		return nil
+		return generatedTplIds, nil
 	}
 
 	refinementConfigs := templateMgr.GetTplCrystalEquipmentRefinement().FindByFilter(func(t template.TplCrystalEquipmentRefinement) bool {
@@ -950,6 +960,8 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 			LockedAffixIds: make([]string, 0),
 		}
 
+		generatedTplIds[selectedEquip.ID]++
+
 		logger.Info("生成随机水晶装备",
 			zap.String("equip_id", equipID.String()),
 			zap.String("type_id", selectedEquip.ID),
@@ -959,10 +971,10 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 
 	if err := SaveUserData(ctx, logger, db, metrics, storageIndex, crystalEquipmentsData); err != nil {
 		logger.Error("保存水晶装备数据失败", zap.Error(err))
-		return err
+		return nil, err
 	}
 
-	return nil
+	return generatedTplIds, nil
 }
 
 // generateAffixes 生成装备词条
