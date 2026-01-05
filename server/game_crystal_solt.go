@@ -57,7 +57,7 @@ func (s *ApiServer) UpgradeCrystalSlot(ctx context.Context, in *game.UpgradeCrys
 	}
 
 	source := fmt.Sprintf("crystal_slot_upgrade_type_%d_level_%d", in.EquipType, nextLevel)
-	walletUpdateResult, inventoryUpdateResult, err := ConsumeCostItems(ctx, s.logger, s.db, config.CostItem, source)
+	walletUpdateResult, inventoryUpdateResult, err := ConsumeCostItems(ctx, s.logger, s.db, s.template, config.CostItem, source)
 	if err != nil {
 		s.logger.Warn("消耗道具失败", zap.Int32("equip_type", in.EquipType), zap.Error(err))
 		return &game.UpgradeCrystalSlotResponse{

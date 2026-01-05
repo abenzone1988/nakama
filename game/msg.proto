@@ -921,3 +921,81 @@ message ClaimRestStationStaminaResponse{
   RestStationData rest_station = 3;   // 更新后的休息站数据
   StaminaData stamina = 4;            // 更新后的体力数据
 }
+
+// 测试发奖请求
+message TestGrantRewardRequest{
+  string reward_str = 1; // 奖励字符串，格式："itemid_num,itemid_num"，例如："10000_100,10001_50"
+}
+
+// 测试发奖响应
+message TestGrantRewardResponse{
+  int32 code = 1;
+  string msg = 2;
+  Reward reward = 3;                   // 发放的奖励数据
+  Wallet wallet_updated = 4;           // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
+// ==================== Crystal Equipment ====================
+// 水晶装备词条
+message CrystalEquipmentAffix{
+  string affix_id = 1; // 词条ID
+  int32 value = 2;     // 词条数值
+}
+
+// 水晶装备信息
+message CrystalEquipmentInfo{
+  string tpl_id = 1;                              // 模板ID
+  string id = 2;                                  // 唯一ID (UUID)
+  repeated CrystalEquipmentAffix active_affixes = 3;  // 当前激活的词条
+  repeated CrystalEquipmentAffix pending_affixes = 4; // 洗炼生成的备用词条
+  repeated string locked_affix_ids = 5;           // 锁定的词条ID列表
+}
+
+// 洗炼水晶装备请求
+message RefineCrystalEquipmentRequest{
+  string equipment_id = 1; // 装备唯一ID
+}
+
+// 洗炼水晶装备响应
+message RefineCrystalEquipmentResponse{
+  int32 code = 1;
+  string msg = 2;
+  CrystalEquipmentInfo equipment = 3; // 洗炼后的装备信息
+}
+
+// 锁定词条请求
+message LockCrystalAffixRequest{
+  string equipment_id = 1; // 装备唯一ID
+  string affix_id = 2;     // 要锁定的词条ID
+}
+
+// 锁定词条响应
+message LockCrystalAffixResponse{
+  int32 code = 1;
+  string msg = 2;
+  CrystalEquipmentInfo equipment = 3; // 更新后的装备信息
+}
+
+// 激活备用词条请求
+message ActivatePendingAffixesRequest{
+  string equipment_id = 1; // 装备唯一ID
+}
+
+// 激活备用词条响应
+message ActivatePendingAffixesResponse{
+  int32 code = 1;
+  string msg = 2;
+  CrystalEquipmentInfo equipment = 3; // 更新后的装备信息
+}
+
+// 获取水晶装备列表请求
+message GetCrystalEquipmentsRequest{
+}
+
+// 获取水晶装备列表响应
+message GetCrystalEquipmentsResponse{
+  int32 code = 1;
+  string msg = 2;
+  repeated CrystalEquipmentInfo equipments = 3; // 所有水晶装备列表
+}

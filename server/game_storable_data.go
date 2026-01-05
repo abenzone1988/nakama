@@ -670,6 +670,40 @@ func (d *EquipData) Init() {
 	d.SetVersion("")
 }
 
+// CrystalEquipmentAffix 水晶装备词条
+type CrystalEquipmentAffix struct {
+	AffixID string `json:"affixId"`
+	Value   int32  `json:"value"`
+}
+
+// CrystalEquipment 单个水晶装备实例
+type CrystalEquipment struct {
+	TplId          string                  `json:"tplId"`
+	ID             string                  `json:"id"`
+	ActiveAffixes  []CrystalEquipmentAffix `json:"activeAffixes"`  // 当前激活的词条
+	PendingAffixes []CrystalEquipmentAffix `json:"pendingAffixes"` // 洗炼生成的备用词条
+	LockedAffixIds []string                `json:"lockedAffixIds"` // 锁定的词条ID列表
+}
+
+// CrystalEquipmentData 水晶装备数据存储结构（保存所有水晶装备）
+type CrystalEquipmentData struct {
+	BaseStorable
+	Equipments map[string]*CrystalEquipment `json:"equipments"`
+}
+
+func (d *CrystalEquipmentData) GetCollection() string {
+	return "crystal_equipment"
+}
+
+func (d *CrystalEquipmentData) GetKey() string {
+	return "data"
+}
+
+func (d *CrystalEquipmentData) Init() {
+	d.Equipments = make(map[string]*CrystalEquipment)
+	d.SetVersion("")
+}
+
 // ============================================================================
 // 战斗奖励相关数据结构
 // ============================================================================

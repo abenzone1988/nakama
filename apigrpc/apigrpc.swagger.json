@@ -2038,6 +2038,138 @@
         ]
       }
     },
+    "/v2/game/crystal/equipment/affix/activate": {
+      "post": {
+        "summary": "Activate pending affixes",
+        "operationId": "Nakama_ActivatePendingAffixes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameActivatePendingAffixesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameActivatePendingAffixesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/crystal/equipment/affix/lock": {
+      "post": {
+        "summary": "Lock crystal affix",
+        "operationId": "Nakama_LockCrystalAffix",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameLockCrystalAffixResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameLockCrystalAffixRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/crystal/equipment/refine": {
+      "post": {
+        "summary": "==================== Crystal Equipment ====================\nRefine crystal equipment",
+        "operationId": "Nakama_RefineCrystalEquipment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameRefineCrystalEquipmentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameRefineCrystalEquipmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/crystal/equipments/list": {
+      "post": {
+        "summary": "Get all crystal equipments",
+        "operationId": "Nakama_GetCrystalEquipments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetCrystalEquipmentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGetCrystalEquipmentsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/crystal/slot/upgrade": {
       "post": {
         "summary": "==================== Crystal Slot ====================",
@@ -3266,6 +3398,39 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/gameClaimLivenessRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/test/grant_reward": {
+      "post": {
+        "summary": "Test grant reward",
+        "operationId": "Nakama_TestGrantReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameTestGrantRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameTestGrantRewardRequest"
             }
           }
         ],
@@ -7227,6 +7392,33 @@
       },
       "description": "Write objects to the storage engine."
     },
+    "gameActivatePendingAffixesRequest": {
+      "type": "object",
+      "properties": {
+        "equipmentId": {
+          "type": "string",
+          "title": "装备唯一ID"
+        }
+      },
+      "title": "激活备用词条请求"
+    },
+    "gameActivatePendingAffixesResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipment": {
+          "$ref": "#/definitions/gameCrystalEquipmentInfo",
+          "title": "更新后的装备信息"
+        }
+      },
+      "title": "激活备用词条响应"
+    },
     "gameAnnouncementInfo": {
       "type": "object",
       "properties": {
@@ -8161,6 +8353,56 @@
       },
       "title": "领取VIP奖励响应"
     },
+    "gameCrystalEquipmentAffix": {
+      "type": "object",
+      "properties": {
+        "affixId": {
+          "type": "string",
+          "title": "词条ID"
+        },
+        "value": {
+          "type": "integer",
+          "format": "int32",
+          "title": "词条数值"
+        }
+      },
+      "title": "==================== Crystal Equipment ====================\n水晶装备词条"
+    },
+    "gameCrystalEquipmentInfo": {
+      "type": "object",
+      "properties": {
+        "tplId": {
+          "type": "string",
+          "title": "模板ID"
+        },
+        "id": {
+          "type": "string",
+          "title": "唯一ID (UUID)"
+        },
+        "activeAffixes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameCrystalEquipmentAffix"
+          },
+          "title": "当前激活的词条"
+        },
+        "pendingAffixes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameCrystalEquipmentAffix"
+          },
+          "title": "洗炼生成的备用词条"
+        },
+        "lockedAffixIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "锁定的词条ID列表"
+        }
+      },
+      "title": "水晶装备信息"
+    },
     "gameDoMineRequest": {
       "type": "object",
       "title": "挖矿请求"
@@ -8309,6 +8551,30 @@
         }
       },
       "title": "==================== 钻石商店（独立，IAP） ===================="
+    },
+    "gameGetCrystalEquipmentsRequest": {
+      "type": "object",
+      "title": "获取水晶装备列表请求"
+    },
+    "gameGetCrystalEquipmentsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameCrystalEquipmentInfo"
+          },
+          "title": "所有水晶装备列表"
+        }
+      },
+      "title": "获取水晶装备列表响应"
     },
     "gameGetFirstChargeStatusResponse": {
       "type": "object",
@@ -8663,6 +8929,37 @@
       },
       "title": "获取已发布公告响应"
     },
+    "gameLockCrystalAffixRequest": {
+      "type": "object",
+      "properties": {
+        "equipmentId": {
+          "type": "string",
+          "title": "装备唯一ID"
+        },
+        "affixId": {
+          "type": "string",
+          "title": "要锁定的词条ID"
+        }
+      },
+      "title": "锁定词条请求"
+    },
+    "gameLockCrystalAffixResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipment": {
+          "$ref": "#/definitions/gameCrystalEquipmentInfo",
+          "title": "更新后的装备信息"
+        }
+      },
+      "title": "锁定词条响应"
+    },
     "gameMarkNotificationsReadRequest": {
       "type": "object",
       "properties": {
@@ -8991,6 +9288,33 @@
         }
       }
     },
+    "gameRefineCrystalEquipmentRequest": {
+      "type": "object",
+      "properties": {
+        "equipmentId": {
+          "type": "string",
+          "title": "装备唯一ID"
+        }
+      },
+      "title": "洗炼水晶装备请求"
+    },
+    "gameRefineCrystalEquipmentResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "equipment": {
+          "$ref": "#/definitions/gameCrystalEquipmentInfo",
+          "title": "洗炼后的装备信息"
+        }
+      },
+      "title": "洗炼水晶装备响应"
+    },
     "gameRefreshShopRequest": {
       "type": "object",
       "properties": {
@@ -9273,6 +9597,44 @@
           "type": "string"
         }
       }
+    },
+    "gameTestGrantRewardRequest": {
+      "type": "object",
+      "properties": {
+        "rewardStr": {
+          "type": "string",
+          "title": "奖励字符串，格式：\"itemid_num,itemid_num\"，例如：\"10000_100,10001_50\""
+        }
+      },
+      "title": "测试发奖请求"
+    },
+    "gameTestGrantRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "发放的奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "测试发奖响应"
     },
     "gameUpgradeCrystalSlotRequest": {
       "type": "object",

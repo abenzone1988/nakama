@@ -1187,5 +1187,46 @@ service Nakama {
       body: "*"
     };
   }
+
+  // Test grant reward
+  rpc TestGrantReward(game.TestGrantRewardRequest) returns (game.TestGrantRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/test/grant_reward"
+      body: "*"
+    };
+  }
+
+  // ==================== Crystal Equipment ====================
+  // Refine crystal equipment
+  rpc RefineCrystalEquipment(game.RefineCrystalEquipmentRequest) returns (game.RefineCrystalEquipmentResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/equipment/refine"
+      body: "*"
+    };
+  }
+
+  // Lock crystal affix
+  rpc LockCrystalAffix(game.LockCrystalAffixRequest) returns (game.LockCrystalAffixResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/equipment/affix/lock"
+      body: "*"
+    };
+  }
+
+  // Activate pending affixes
+  rpc ActivatePendingAffixes(game.ActivatePendingAffixesRequest) returns (game.ActivatePendingAffixesResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/equipment/affix/activate"
+      body: "*"
+    };
+  }
+
+  // Get all crystal equipments
+  rpc GetCrystalEquipments(game.GetCrystalEquipmentsRequest) returns (game.GetCrystalEquipmentsResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/equipments/list"
+      body: "*"
+    };
+  }
 }
 

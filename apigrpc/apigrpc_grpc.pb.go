@@ -182,6 +182,11 @@ const (
 	Nakama_BuyMineCount_FullMethodName                      = "/nakama.api.Nakama/BuyMineCount"
 	Nakama_GetRestStation_FullMethodName                    = "/nakama.api.Nakama/GetRestStation"
 	Nakama_ClaimRestStationStamina_FullMethodName           = "/nakama.api.Nakama/ClaimRestStationStamina"
+	Nakama_TestGrantReward_FullMethodName                   = "/nakama.api.Nakama/TestGrantReward"
+	Nakama_RefineCrystalEquipment_FullMethodName            = "/nakama.api.Nakama/RefineCrystalEquipment"
+	Nakama_LockCrystalAffix_FullMethodName                  = "/nakama.api.Nakama/LockCrystalAffix"
+	Nakama_ActivatePendingAffixes_FullMethodName            = "/nakama.api.Nakama/ActivatePendingAffixes"
+	Nakama_GetCrystalEquipments_FullMethodName              = "/nakama.api.Nakama/GetCrystalEquipments"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -466,6 +471,17 @@ type NakamaClient interface {
 	GetRestStation(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetRestStationResponse, error)
 	// Claim rest station stamina
 	ClaimRestStationStamina(ctx context.Context, in *game.ClaimRestStationStaminaRequest, opts ...grpc.CallOption) (*game.ClaimRestStationStaminaResponse, error)
+	// Test grant reward
+	TestGrantReward(ctx context.Context, in *game.TestGrantRewardRequest, opts ...grpc.CallOption) (*game.TestGrantRewardResponse, error)
+	// ==================== Crystal Equipment ====================
+	// Refine crystal equipment
+	RefineCrystalEquipment(ctx context.Context, in *game.RefineCrystalEquipmentRequest, opts ...grpc.CallOption) (*game.RefineCrystalEquipmentResponse, error)
+	// Lock crystal affix
+	LockCrystalAffix(ctx context.Context, in *game.LockCrystalAffixRequest, opts ...grpc.CallOption) (*game.LockCrystalAffixResponse, error)
+	// Activate pending affixes
+	ActivatePendingAffixes(ctx context.Context, in *game.ActivatePendingAffixesRequest, opts ...grpc.CallOption) (*game.ActivatePendingAffixesResponse, error)
+	// Get all crystal equipments
+	GetCrystalEquipments(ctx context.Context, in *game.GetCrystalEquipmentsRequest, opts ...grpc.CallOption) (*game.GetCrystalEquipmentsResponse, error)
 }
 
 type nakamaClient struct {
@@ -1763,6 +1779,51 @@ func (c *nakamaClient) ClaimRestStationStamina(ctx context.Context, in *game.Cla
 	return out, nil
 }
 
+func (c *nakamaClient) TestGrantReward(ctx context.Context, in *game.TestGrantRewardRequest, opts ...grpc.CallOption) (*game.TestGrantRewardResponse, error) {
+	out := new(game.TestGrantRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_TestGrantReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) RefineCrystalEquipment(ctx context.Context, in *game.RefineCrystalEquipmentRequest, opts ...grpc.CallOption) (*game.RefineCrystalEquipmentResponse, error) {
+	out := new(game.RefineCrystalEquipmentResponse)
+	err := c.cc.Invoke(ctx, Nakama_RefineCrystalEquipment_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) LockCrystalAffix(ctx context.Context, in *game.LockCrystalAffixRequest, opts ...grpc.CallOption) (*game.LockCrystalAffixResponse, error) {
+	out := new(game.LockCrystalAffixResponse)
+	err := c.cc.Invoke(ctx, Nakama_LockCrystalAffix_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) ActivatePendingAffixes(ctx context.Context, in *game.ActivatePendingAffixesRequest, opts ...grpc.CallOption) (*game.ActivatePendingAffixesResponse, error) {
+	out := new(game.ActivatePendingAffixesResponse)
+	err := c.cc.Invoke(ctx, Nakama_ActivatePendingAffixes_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetCrystalEquipments(ctx context.Context, in *game.GetCrystalEquipmentsRequest, opts ...grpc.CallOption) (*game.GetCrystalEquipmentsResponse, error) {
+	out := new(game.GetCrystalEquipmentsResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetCrystalEquipments_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -2045,6 +2106,17 @@ type NakamaServer interface {
 	GetRestStation(context.Context, *emptypb.Empty) (*game.GetRestStationResponse, error)
 	// Claim rest station stamina
 	ClaimRestStationStamina(context.Context, *game.ClaimRestStationStaminaRequest) (*game.ClaimRestStationStaminaResponse, error)
+	// Test grant reward
+	TestGrantReward(context.Context, *game.TestGrantRewardRequest) (*game.TestGrantRewardResponse, error)
+	// ==================== Crystal Equipment ====================
+	// Refine crystal equipment
+	RefineCrystalEquipment(context.Context, *game.RefineCrystalEquipmentRequest) (*game.RefineCrystalEquipmentResponse, error)
+	// Lock crystal affix
+	LockCrystalAffix(context.Context, *game.LockCrystalAffixRequest) (*game.LockCrystalAffixResponse, error)
+	// Activate pending affixes
+	ActivatePendingAffixes(context.Context, *game.ActivatePendingAffixesRequest) (*game.ActivatePendingAffixesResponse, error)
+	// Get all crystal equipments
+	GetCrystalEquipments(context.Context, *game.GetCrystalEquipmentsRequest) (*game.GetCrystalEquipmentsResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2480,6 +2552,21 @@ func (UnimplementedNakamaServer) GetRestStation(context.Context, *emptypb.Empty)
 }
 func (UnimplementedNakamaServer) ClaimRestStationStamina(context.Context, *game.ClaimRestStationStaminaRequest) (*game.ClaimRestStationStaminaResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimRestStationStamina not implemented")
+}
+func (UnimplementedNakamaServer) TestGrantReward(context.Context, *game.TestGrantRewardRequest) (*game.TestGrantRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestGrantReward not implemented")
+}
+func (UnimplementedNakamaServer) RefineCrystalEquipment(context.Context, *game.RefineCrystalEquipmentRequest) (*game.RefineCrystalEquipmentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RefineCrystalEquipment not implemented")
+}
+func (UnimplementedNakamaServer) LockCrystalAffix(context.Context, *game.LockCrystalAffixRequest) (*game.LockCrystalAffixResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LockCrystalAffix not implemented")
+}
+func (UnimplementedNakamaServer) ActivatePendingAffixes(context.Context, *game.ActivatePendingAffixesRequest) (*game.ActivatePendingAffixesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ActivatePendingAffixes not implemented")
+}
+func (UnimplementedNakamaServer) GetCrystalEquipments(context.Context, *game.GetCrystalEquipmentsRequest) (*game.GetCrystalEquipmentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCrystalEquipments not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -5068,6 +5155,96 @@ func _Nakama_ClaimRestStationStamina_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_TestGrantReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.TestGrantRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).TestGrantReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_TestGrantReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).TestGrantReward(ctx, req.(*game.TestGrantRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_RefineCrystalEquipment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.RefineCrystalEquipmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).RefineCrystalEquipment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_RefineCrystalEquipment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).RefineCrystalEquipment(ctx, req.(*game.RefineCrystalEquipmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_LockCrystalAffix_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.LockCrystalAffixRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).LockCrystalAffix(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_LockCrystalAffix_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).LockCrystalAffix(ctx, req.(*game.LockCrystalAffixRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_ActivatePendingAffixes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.ActivatePendingAffixesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).ActivatePendingAffixes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_ActivatePendingAffixes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).ActivatePendingAffixes(ctx, req.(*game.ActivatePendingAffixesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetCrystalEquipments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetCrystalEquipmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetCrystalEquipments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetCrystalEquipments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetCrystalEquipments(ctx, req.(*game.GetCrystalEquipmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5646,6 +5823,26 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimRestStationStamina",
 			Handler:    _Nakama_ClaimRestStationStamina_Handler,
+		},
+		{
+			MethodName: "TestGrantReward",
+			Handler:    _Nakama_TestGrantReward_Handler,
+		},
+		{
+			MethodName: "RefineCrystalEquipment",
+			Handler:    _Nakama_RefineCrystalEquipment_Handler,
+		},
+		{
+			MethodName: "LockCrystalAffix",
+			Handler:    _Nakama_LockCrystalAffix_Handler,
+		},
+		{
+			MethodName: "ActivatePendingAffixes",
+			Handler:    _Nakama_ActivatePendingAffixes_Handler,
+		},
+		{
+			MethodName: "GetCrystalEquipments",
+			Handler:    _Nakama_GetCrystalEquipments_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

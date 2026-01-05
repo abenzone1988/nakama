@@ -83,7 +83,7 @@ func convertMapInt64ToWallet(m map[string]int64) *game.Wallet {
 
 // GrantReward 统一的奖励发放函数（处理特殊道具逻辑）
 // 用于商店购买、战斗结算、礼包兑换等所有奖励发放场景
-func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template TemplateManager, metrics Metrics, storageIndex StorageIndex, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, reward *game.Reward, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	if reward == nil {
 		return nil, nil, nil
 	}
@@ -112,143 +112,139 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 
 	// 处理道具奖励（包含特殊道具转换）
 	if len(reward.Items) > 0 {
-		convertedRandomCrystals := make(map[string]int32)
-		convertedRandomEquips := make(map[string]int32)
-		convertedEquipToDebris := make(map[string]int32) // 装备转换为碎片
+		convertedItems := make(map[string]int32)
+		skipItemIds := make(map[string]bool)
+		equipCountModify := make(map[string]int32)
+
 		for _, item := range reward.Items {
-			//logger.Info("处理道具奖励", zap.Any("item", item))
 			if item == nil || item.Num <= 0 {
 				continue
 			}
 
-			// 处理特殊道具
-			switch item.Id {
-			case ItemID_Coin: // 金币
+			itemTpl, found := templateMgr.GetTplItem().FindByKey(item.Id)
+			if !found {
+				logger.Warn("物品模板未找到", zap.String("item_id", item.Id))
+				inventoryChangeset[item.Id] += int64(item.Num)
+				continue
+			}
+
+			switch itemTpl.ItemType {
+			case ItemType_Coin:
 				walletChangeset["coin"] += int64(item.Num)
-			case ItemID_Gem: // 钻石
+				skipItemIds[item.Id] = true
+			case ItemType_Gem:
 				walletChangeset["gem"] += int64(item.Num)
-			case ItemID_AdTicket: // 广告券
+				skipItemIds[item.Id] = true
+			case ItemType_AdTicket:
 				walletChangeset["ad"] += int64(item.Num)
-			case ItemID_Stamina: // 体力
+				skipItemIds[item.Id] = true
+			case ItemType_Stamina:
 				walletChangeset["stamina"] += int64(item.Num)
-			case ItemID_RandomCrystal: // 随机水晶
-				// 等概率转换为4种水晶 (30001-30004)
-				crystalIds := []string{CrystalID_1, CrystalID_2, CrystalID_3, CrystalID_4}
+				skipItemIds[item.Id] = true
+			case ItemType_RandomElementCrystal:
+				crystalItems := templateMgr.GetTplItem().FindByFilter(func(t template.TplItem) bool {
+					return t.ItemType == ItemType_ElementCrystal
+				})
+				if crystalItems.Len() == 0 {
+					logger.Warn("未找到元素晶体配置")
+					break
+				}
+				crystalIds := make([]string, 0, crystalItems.Len())
+				for i := 0; i < crystalItems.Len(); i++ {
+					crystalIds = append(crystalIds, crystalItems.Get(i).ID)
+				}
 				for i := int32(0); i < item.Num; i++ {
 					randomCrystal := crystalIds[rand.Intn(len(crystalIds))]
 					inventoryChangeset[randomCrystal]++
-					convertedRandomCrystals[randomCrystal]++
+					convertedItems[randomCrystal]++
 				}
-			case ItemID_RandomTurret: // 随机炮台（转为碎片）
-				// 随机选择一个炮台，给10个碎片
-				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, metrics, storageIndex, item.Num, true)
+				skipItemIds[item.Id] = true
+			case ItemType_RandomQualityTurret:
+				itemTpl, _ := templateMgr.GetTplItem().FindByKey(item.Id)
+				quality := itemTpl.Quality
+
+				distributedItems, err := distributeRandomQualityTurret(ctx, logger, db, templateMgr, metrics, storageIndex, item.Num, quality)
 				if err != nil {
-					logger.Error("分配随机炮台碎片失败", zap.Error(err))
+					logger.Error("分配随机品质炮台失败", zap.Error(err))
 				} else {
-					for debrisId, count := range distributedDebris {
-						inventoryChangeset[debrisId] += count
-						convertedRandomEquips[debrisId] += int32(count)
+					for itemId, count := range distributedItems {
+						inventoryChangeset[itemId] += count
+						convertedItems[itemId] += int32(count)
 					}
 				}
-			case ItemID_TurretDebris: // 炮台碎片
-				// 根据炮台等级概率分配，每个碎片单独随机
-				distributedDebris, err := distributeTurretDebris(ctx, logger, db, template, metrics, storageIndex, item.Num, false)
+				skipItemIds[item.Id] = true
+			case ItemType_RandomTurretFragment:
+				distributedDebris, err := distributeTurretDebris(ctx, logger, db, templateMgr, metrics, storageIndex, item.Num, false)
 				if err != nil {
 					logger.Error("分配炮台碎片失败", zap.Error(err))
 				} else {
 					for debrisId, count := range distributedDebris {
 						inventoryChangeset[debrisId] += count
+						convertedItems[debrisId] += int32(count)
+					}
+				}
+				skipItemIds[item.Id] = true
+			case ItemType_RandomCrystalEquipment:
+				quality := itemTpl.Quality
+				level := itemTpl.Level
+				err := generateRandomCrystalEquipment(ctx, logger, db, templateMgr, metrics, storageIndex, item.Num, quality, level)
+				if err != nil {
+					logger.Error("生成随机水晶装备失败", zap.Error(err))
+				}
+				skipItemIds[item.Id] = true
+			case ItemType_Turret:
+				logger.Info("尝试解锁炮台", zap.String("equip_id", item.Id), zap.Int32("num", item.Num))
+				alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, db, metrics, storageIndex, item.Id)
+				if err != nil {
+					logger.Error("解锁炮台失败",
+						zap.Error(err),
+						zap.String("equip_id", item.Id))
+					inventoryChangeset[item.Id] += int64(item.Num)
+				} else if alreadyUnlocked {
+					debrisId := strings.TrimPrefix(item.Id, "EQ")
+					debrisCount := item.Num * 10
+					inventoryChangeset[debrisId] += int64(debrisCount)
+					convertedItems[debrisId] += debrisCount
+					skipItemIds[item.Id] = true
+
+					logger.Info("炮台已解锁，转换为碎片",
+						zap.String("equip_id", item.Id),
+						zap.String("debris_id", debrisId),
+						zap.Int32("debris_count", debrisCount))
+				} else {
+					if item.Num == 1 {
+						logger.Info("成功解锁新炮台",
+							zap.String("equip_id", item.Id),
+							zap.Int32("equip_count", 1))
+					} else {
+						remainingCount := item.Num - 1
+						debrisId := strings.TrimPrefix(item.Id, "EQ")
+						debrisCount := remainingCount * 10
+						inventoryChangeset[debrisId] += int64(debrisCount)
+						convertedItems[debrisId] += debrisCount
+						equipCountModify[item.Id] = 1
+
+						logger.Info("成功解锁新炮台，部分转换为碎片",
+							zap.String("equip_id", item.Id),
+							zap.Int32("equip_count", 1),
+							zap.Int32("remaining_count", remainingCount),
+							zap.String("debris_id", debrisId),
+							zap.Int32("debris_count", debrisCount))
 					}
 				}
 			default:
-				// 检查是否是炮台装备（以EQ开头）
-				if strings.HasPrefix(item.Id, "EQ") {
-					// 炮台装备特殊处理
-					logger.Info("尝试解锁炮台", zap.String("equip_id", item.Id), zap.Int32("num", item.Num))
-					alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, db, metrics, storageIndex, item.Id)
-					if err != nil {
-						logger.Error("解锁炮台失败",
-							zap.Error(err),
-							zap.String("equip_id", item.Id))
-						// 解锁失败，仍然尝试发放原物品
-						inventoryChangeset[item.Id] += int64(item.Num)
-					} else if alreadyUnlocked {
-						// 炮台已解锁，转换为碎片（10个 × 数量）
-						debrisId := strings.TrimPrefix(item.Id, "EQ")
-						debrisCount := item.Num * 10 // 每个炮台转换为10个碎片
-						inventoryChangeset[debrisId] += int64(debrisCount)
-						convertedEquipToDebris[debrisId] += debrisCount // 记录转换的碎片
-						// 标记装备ID需要跳过（已解锁的装备应该被移除，只保留碎片）
-						convertedEquipToDebris[item.Id] = 0 // 0表示需要移除装备，只保留碎片
-
-						logger.Info("炮台已解锁，转换为碎片",
-							zap.String("equip_id", item.Id),
-							zap.String("debris_id", debrisId),
-							zap.Int32("debris_count", debrisCount))
-					} else {
-						// 炮台首次解锁成功，装备不发到背包，只解锁
-						if item.Num == 1 {
-							// 只有1个，只解锁，不发到背包，但奖励中保留装备
-							logger.Info("成功解锁新炮台",
-								zap.String("equip_id", item.Id),
-								zap.Int32("equip_count", 1))
-							// 不添加到 convertedEquipToDebris，保留在奖励中
-						} else {
-							// 数量大于1：第1个用于解锁（不发到背包，但奖励中保留），剩下的转换为碎片
-							remainingCount := item.Num - 1 // 剩下的装备数量
-							debrisId := strings.TrimPrefix(item.Id, "EQ")
-							debrisCount := remainingCount * 10 // 每个装备转换为10个碎片
-							inventoryChangeset[debrisId] += int64(debrisCount)
-							convertedEquipToDebris[debrisId] += debrisCount // 记录转换的碎片
-							// 标记需要将装备数量改为1（保留第1个装备）
-							convertedEquipToDebris[item.Id] = -item.Num // 负数表示需要修改数量
-
-							logger.Info("成功解锁新炮台，部分转换为碎片",
-								zap.String("equip_id", item.Id),
-								zap.Int32("equip_count", 1),
-								zap.Int32("remaining_count", remainingCount),
-								zap.String("debris_id", debrisId),
-								zap.Int32("debris_count", debrisCount))
-						}
-					}
-				} else {
-					// 普通道具直接进背包
-					inventoryChangeset[item.Id] += int64(item.Num)
-				}
+				inventoryChangeset[item.Id] += int64(item.Num)
 			}
 		}
-		// 更新 reward.Items 以反映转换后的结果
-		if len(convertedRandomCrystals) > 0 || len(convertedRandomEquips) > 0 || len(convertedEquipToDebris) > 0 {
-			skipIds := map[string]struct{}{}
-			if len(convertedRandomCrystals) > 0 {
-				skipIds[ItemID_RandomCrystal] = struct{}{}
-			}
-			if len(convertedRandomEquips) > 0 {
-				skipIds[ItemID_RandomTurret] = struct{}{}
-			}
-			// 标记需要移除或修改数量的装备
-			equipCountModify := make(map[string]int32) // 需要修改数量的装备
-			for equipId, count := range convertedEquipToDebris {
-				if count < 0 {
-					// 负数表示需要修改数量（首次解锁且数量>1的情况）
-					equipCountModify[equipId] = 1 // 将数量改为1
-					skipIds[equipId] = struct{}{} // 先跳过，后面重新添加
-				} else if count == 0 && strings.HasPrefix(equipId, "EQ") {
-					// 0表示需要移除的装备（已解锁，全部转换为碎片）
-					skipIds[equipId] = struct{}{}
-				} else if count > 0 && strings.HasPrefix(equipId, "EQ") {
-					// 正数且以EQ开头，这不应该发生，但为了安全也跳过
-					skipIds[equipId] = struct{}{}
-				}
-			}
 
-			newItems := make([]*game.Item, 0, len(reward.Items)+len(convertedRandomCrystals)+len(convertedRandomEquips)+len(convertedEquipToDebris))
+		if len(convertedItems) > 0 || len(skipItemIds) > 0 {
+			newItems := make([]*game.Item, 0, len(reward.Items)+len(convertedItems))
+
 			for _, item := range reward.Items {
 				if item == nil {
 					continue
 				}
-				if _, skip := skipIds[item.Id]; skip {
-					// 如果是需要修改数量的装备，重新添加数量为1的版本
+				if skipItemIds[item.Id] {
 					if newCount, needModify := equipCountModify[item.Id]; needModify {
 						newItems = append(newItems, &game.Item{
 							Id:  item.Id,
@@ -261,25 +257,10 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, template T
 				newItems = append(newItems, item)
 			}
 
-			// 添加转换后的随机水晶
-			for crystalID, count := range convertedRandomCrystals {
-				newItems = append(newItems, &game.Item{
-					Id:  crystalID,
-					Num: count,
-				})
-			}
-			// 添加转换后的随机炮台碎片
-			for equipID, count := range convertedRandomEquips {
-				newItems = append(newItems, &game.Item{
-					Id:  equipID,
-					Num: count,
-				})
-			}
-			// 添加转换后的装备碎片
-			for debrisId, count := range convertedEquipToDebris {
+			for itemId, count := range convertedItems {
 				if count > 0 {
 					newItems = append(newItems, &game.Item{
-						Id:  debrisId,
+						Id:  itemId,
 						Num: count,
 					})
 				}
@@ -380,6 +361,62 @@ func tryUnlockEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, met
 	return false, nil
 }
 
+// distributeRandomQualityTurret 根据品质随机炮台，如果已解锁则转换为碎片
+func distributeRandomQualityTurret(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, count int32, quality int32) (map[string]int64, error) {
+	result := make(map[string]int64)
+
+	equipments := templateMgr.GetTplEquipment().FindByFilter(func(t template.TplEquipment) bool {
+		return t.Quality == quality && t.Type == 1 && t.ID != EquipID_Crystal
+	})
+
+	if equipments.Len() == 0 {
+		logger.Warn("未找到指定品质的炮台", zap.Int32("quality", quality))
+		return result, nil
+	}
+
+	equipData := &EquipData{}
+	if err := LoadUserData(ctx, logger, db, equipData); err != nil {
+		logger.Error("加载装备数据失败", zap.Error(err))
+		return nil, err
+	}
+
+	for i := int32(0); i < count; i++ {
+		randomIdx := rand.Intn(equipments.Len())
+		selectedEquip := equipments.Get(randomIdx)
+		equipID := selectedEquip.ID
+
+		_, alreadyUnlocked := equipData.UnlockEquips[equipID]
+
+		if alreadyUnlocked {
+			debrisId := strings.TrimPrefix(equipID, "EQ")
+			debrisCount := int64(TurretDebrisCount)
+			result[debrisId] += debrisCount
+
+			logger.Info("炮台已解锁，转换为碎片",
+				zap.String("equip_id", equipID),
+				zap.String("debris_id", debrisId),
+				zap.Int64("debris_count", debrisCount))
+		} else {
+			alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, db, metrics, storageIndex, equipID)
+			if err != nil {
+				logger.Error("解锁炮台失败", zap.Error(err), zap.String("equip_id", equipID))
+				return nil, err
+			}
+
+			if alreadyUnlocked {
+				debrisId := strings.TrimPrefix(equipID, "EQ")
+				debrisCount := int64(TurretDebrisCount)
+				result[debrisId] += debrisCount
+			} else {
+				equipData.UnlockEquips[equipID] = 1
+				logger.Info("解锁新炮台", zap.String("equip_id", equipID), zap.Int32("quality", quality))
+			}
+		}
+	}
+
+	return result, nil
+}
+
 // distributeTurretDebris 根据炮台等级概率分配炮台碎片
 func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, totalDebrisCount int32, singleTurret bool) (map[string]int64, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
@@ -389,14 +426,12 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		zap.Int32("total_debris_count", totalDebrisCount),
 		zap.Bool("single_turret", singleTurret))
 
-	// 直接加载装备数据（不需要保存，所以传入 nil）
 	equipData := &EquipData{}
 	if err := LoadUserData(ctx, logger, db, equipData); err != nil {
 		logger.Error("加载装备数据失败", zap.Error(err))
 		return nil, err
 	}
 
-	// 如果数据为空，返回空结果
 	if len(equipData.UnlockEquips) == 0 {
 		logger.Debug("装备数据为空，无法分配碎片")
 		return make(map[string]int64), nil
@@ -405,35 +440,45 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	logger.Debug("玩家已解锁炮台数量",
 		zap.Int("unlocked_count", len(equipData.UnlockEquips)))
 
-	// 获取玩家背包数据（碎片数量）
 	inventory, err := GetInventory(ctx, logger, db, userID)
 	if err != nil {
 		logger.Error("获取背包数据失败", zap.Error(err))
 		return nil, err
 	}
 
-	// 计算每个炮台的总碎片数（已升级消耗 + 背包持有）
+	debrisItems := templateMgr.GetTplItem().FindByFilter(func(t template.TplItem) bool {
+		return t.ItemType == ItemType_EquipmentFragment
+	})
+
+	if debrisItems.Len() == 0 {
+		logger.Warn("未找到装备碎片配置")
+		return make(map[string]int64), nil
+	}
+
 	type TurretInfo struct {
+		DebrisID     string
 		EquipID      string
 		Level        int32
-		TotalDebris  int32 // 已消耗 + 背包持有的总碎片数
-		DebrisWeight int32 // 权重（碎片数越少权重越高）
+		TotalDebris  int32
+		DebrisWeight int32
 	}
 
 	turrets := make([]TurretInfo, 0)
 
-	// 遍历所有已解锁的炮台
-	for equipID, level := range equipData.UnlockEquips {
-		// 跳过 EQ1999（水晶），它有独立的升级逻辑
-		if equipID == "EQ1999" {
-			//logger.Debug("跳过水晶装备，不参与碎片随机分配",
-			//	zap.String("equip_id", equipID))
+	for i := 0; i < debrisItems.Len(); i++ {
+		debrisItem := debrisItems.Get(i)
+		debrisId := debrisItem.ID
+		equipID := "EQ" + debrisId
+
+		level, unlocked := equipData.UnlockEquips[equipID]
+		if !unlocked {
 			continue
 		}
 
-		debrisId := strings.TrimPrefix(equipID, "EQ") // EQ1999 -> 1999
+		if equipID == "EQ1999" {
+			continue
+		}
 
-		// 计算已消耗的碎片数量（从等级1升到当前等级）
 		consumedDebris := int32(0)
 		for lv := int32(1); lv < level; lv++ {
 			equipDevs := templateMgr.GetTplEquipmentDev().FindByFilter(func(equip template.TplEquipmentDev) bool {
@@ -444,29 +489,17 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 			}
 		}
 
-		// 背包中持有的碎片数量
 		inventoryDebris := int32(0)
 		if count, ok := inventory[debrisId]; ok {
 			inventoryDebris = int32(count)
 		}
-
 		// 总碎片数 = 已消耗 + 背包持有
 		totalDebris := consumedDebris + inventoryDebris
-
 		// 权重计算：碎片越少权重越高（使用反比例）
-		// 基础权重 = 10000，权重 = 基础权重 / (totalDebris + 1)
+		// 基础权重 = 10000，权重 = 基础权重 / (totalDebris + 1)		weight := int32(10000) / (totalDebris + 1)
 		weight := int32(10000) / (totalDebris + 1)
-
-		//logger.Debug("炮台碎片计算详情",
-		//	zap.String("equip_id", equipID),
-		//	zap.String("debris_id", debrisId),
-		//	zap.Int32("level", level),
-		//	zap.Int32("consumed_debris", consumedDebris),
-		//	zap.Int32("inventory_debris", inventoryDebris),
-		//	zap.Int32("total_debris", totalDebris),
-		//	zap.Int32("weight", weight))
-
 		turrets = append(turrets, TurretInfo{
+			DebrisID:     debrisId,
 			EquipID:      equipID,
 			Level:        level,
 			TotalDebris:  totalDebris,
@@ -479,15 +512,10 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		return make(map[string]int64), nil
 	}
 
-	// 计算总权重
 	totalWeight := int32(0)
 	for _, t := range turrets {
 		totalWeight += t.DebrisWeight
 	}
-	//
-	//logger.Debug("炮台权重汇总",
-	//	zap.Int("turret_count", len(turrets)),
-	//	zap.Int32("total_weight", totalWeight))
 
 	result := make(map[string]int64)
 
@@ -499,13 +527,12 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		for _, t := range turrets {
 			currentWeight += t.DebrisWeight
 			if randomValue < currentWeight {
-				debrisId := strings.TrimPrefix(t.EquipID, "EQ")
-				result[debrisId] = int64(totalDebrisCount) * int64(TurretDebrisCount) // 给全部碎片
+				result[t.DebrisID] = int64(totalDebrisCount) * int64(TurretDebrisCount)
 
-				logger.Info("随机选择炮台（50000模式）",
+				logger.Info("随机选择炮台（随机品质炮台模式）",
 					zap.String("user_id", userID.String()),
 					zap.String("selected_equip_id", t.EquipID),
-					zap.String("debris_id", debrisId),
+					zap.String("debris_id", t.DebrisID),
 					zap.Int32("debris_count", totalDebrisCount),
 					zap.Int32("random_value", randomValue),
 					zap.Int32("weight", t.DebrisWeight))
@@ -521,7 +548,6 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	} else {
 		// 90000 模式：每个碎片单独随机分配
 		for i := int32(0); i < totalDebrisCount; i++ {
-			// 随机选择一个炮台
 			randomValue := rand.Int31n(totalWeight)
 			currentWeight := int32(0)
 
@@ -529,16 +555,15 @@ func distributeTurretDebris(ctx context.Context, logger *zap.Logger, db *sql.DB,
 			for _, t := range turrets {
 				currentWeight += t.DebrisWeight
 				if randomValue < currentWeight {
-					debrisId := strings.TrimPrefix(t.EquipID, "EQ")
-					result[debrisId]++
+					result[t.DebrisID]++
 					selectedEquipID = t.EquipID
 
 					logger.Debug("随机抽取炮台碎片",
 						zap.Int32("round", i+1),
 						zap.Int32("random_value", randomValue),
 						zap.String("selected_equip_id", selectedEquipID),
-						zap.String("debris_id", debrisId),
-						zap.Int32("current_total", int32(result[debrisId])))
+						zap.String("debris_id", t.DebrisID),
+						zap.Int64("current_total", result[t.DebrisID]))
 					break
 				}
 			}
@@ -725,7 +750,7 @@ func GrantMergedRewards(ctx context.Context, logger *zap.Logger, db *sql.DB, tem
 // 解析 costItem 字符串（格式："itemId_count,itemId_count"），根据道具类型从钱包或背包中扣除
 // source: 消耗来源标识（如 "crystal_slot_upgrade", "equip_upgrade" 等）
 // 返回：钱包更新结果、背包更新结果、错误信息
-func ConsumeCostItems(ctx context.Context, logger *zap.Logger, db *sql.DB, costItemStr string, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
+func ConsumeCostItems(ctx context.Context, logger *zap.Logger, db *sql.DB, template TemplateManager, costItemStr string, source string) (*game.WalletUpdateResult, *game.InventoryUpdateResult, error) {
 	if costItemStr == "" {
 		return nil, nil, nil
 	}
@@ -750,18 +775,23 @@ func ConsumeCostItems(ctx context.Context, logger *zap.Logger, db *sql.DB, costI
 			continue
 		}
 
-		// 根据 itemID 判断是钱包类型还是背包道具
-		switch itemID {
-		case ItemID_Coin: // 金币
+		itemTpl, found := template.GetTplItem().FindByKey(itemID)
+		if !found {
+			logger.Warn("物品模板未找到", zap.String("item_id", itemID))
+			inventoryChangeset[itemID] -= count
+			continue
+		}
+
+		switch itemTpl.ItemType {
+		case ItemType_Coin:
 			walletChangeset["coin"] -= count
-		case ItemID_Gem: // 钻石
+		case ItemType_Gem:
 			walletChangeset["gem"] -= count
-		case ItemID_Stamina: // 体力
+		case ItemType_Stamina:
 			walletChangeset["stamina"] -= count
-		case ItemID_AdTicket: // 广告券
+		case ItemType_AdTicket:
 			walletChangeset["ad"] -= count
 		default:
-			// 其他道具从背包扣除
 			inventoryChangeset[itemID] -= count
 		}
 	}
@@ -839,4 +869,511 @@ func ConsumeCostItems(ctx context.Context, logger *zap.Logger, db *sql.DB, costI
 	}
 
 	return walletUpdateResult, inventoryUpdateResult, nil
+}
+
+// generateRandomCrystalEquipment 生成随机水晶装备
+//
+// 算法流程：
+// 1. 加载玩家现有的水晶装备数据
+// 2. 根据品质(quality)从TplCrystalEquipment表中过滤可用的装备模板
+// 3. 根据品质和等级(level)从TplCrystalEquipmentRefinement表中获取词条配置
+//   - 精确匹配品质和等级，选择对应的配置
+//     4. 循环生成count个装备：
+//     a. 随机选择一个装备模板
+//     b. 生成UUID作为装备的唯一实例ID
+//     c. 根据配置生成词条（使用位运算判断品质和类型，使用maxRatio计算数值上限）
+//     d. 将新装备添加到玩家的装备合集中
+//     5. 保存更新后的装备数据到storage
+//
+// 品质和类型使用位运算判断：
+//   - 品质：1=白色, 2=绿色, 4=蓝色, 8=紫色(史诗), 16=橙色(传说)
+//   - 类型：1=共鸣核心, 2=加固模组, 4=增幅器, 8=传导矩阵, 15=通用(1|2|4|8)
+//   - 判断逻辑：(装备品质 & 词条需求品质) != 0 表示品质满足要求
+//
+// 参数：
+//   - count: 生成的装备数量
+//   - quality: 装备品质（单一品质值，如8表示紫色）
+//   - level: 装备等级（用于选择词条配置）
+func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, count int32, quality int32, level int32) error {
+	crystalEquipmentsData := &CrystalEquipmentData{}
+	if err := LoadUserData(ctx, logger, db, crystalEquipmentsData); err != nil {
+		logger.Error("加载水晶装备数据失败", zap.Error(err))
+		return err
+	}
+
+	crystalEquipments := templateMgr.GetTplCrystalEquipment().FindByFilter(func(t template.TplCrystalEquipment) bool {
+		return t.Quality == quality
+	})
+
+	if crystalEquipments.Len() == 0 {
+		logger.Warn("未找到指定品质的水晶装备", zap.Int32("quality", quality))
+		return nil
+	}
+
+	refinementConfigs := templateMgr.GetTplCrystalEquipmentRefinement().FindByFilter(func(t template.TplCrystalEquipmentRefinement) bool {
+		return t.Quality == quality && t.Level == level
+	})
+
+	var hasRefinementConfig bool
+	var refinementConfig template.TplCrystalEquipmentRefinement
+
+	if refinementConfigs.Len() == 0 {
+		logger.Warn("未找到指定品质和等级的词条配置，将生成无词条装备", zap.Int32("quality", quality), zap.Int32("level", level))
+		hasRefinementConfig = false
+	} else {
+		refinementConfig = refinementConfigs.Get(0)
+		hasRefinementConfig = true
+	}
+
+	for i := int32(0); i < count; i++ {
+		randomIdx := rand.Intn(crystalEquipments.Len())
+		selectedEquip := crystalEquipments.Get(randomIdx)
+
+		equipID, err := uuid.NewV4()
+		if err != nil {
+			logger.Error("生成UUID失败", zap.Error(err))
+			continue
+		}
+
+		var affixes []CrystalEquipmentAffix
+		if hasRefinementConfig {
+			affixes = generateAffixes(templateMgr, selectedEquip.EquipType, quality, refinementConfig, false, logger)
+		} else {
+			affixes = make([]CrystalEquipmentAffix, 0)
+		}
+
+		crystalEquipmentsData.Equipments[equipID.String()] = &CrystalEquipment{
+			TplId:          selectedEquip.ID,
+			ID:             equipID.String(),
+			ActiveAffixes:  affixes,
+			PendingAffixes: make([]CrystalEquipmentAffix, 0),
+			LockedAffixIds: make([]string, 0),
+		}
+
+		logger.Info("生成随机水晶装备",
+			zap.String("equip_id", equipID.String()),
+			zap.String("type_id", selectedEquip.ID),
+			zap.Int32("quality", quality),
+			zap.Int("affix_count", len(affixes)))
+	}
+
+	if err := SaveUserData(ctx, logger, db, metrics, storageIndex, crystalEquipmentsData); err != nil {
+		logger.Error("保存水晶装备数据失败", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// generateAffixes 生成装备词条
+//
+// 算法流程：
+// 1. 从TplCrystalEquipmentRefinementAffix表中过滤符合条件的词条：
+//   - 使用位运算判断类型：(装备类型 & 词条需求类型) != 0
+//   - 使用位运算判断品质：(装备品质 & 词条需求品质) != 0
+//     例如：词条needQuality=24(二进制11000)表示支持8(紫色)和16(橙色)品质
+//     装备quality=8时，8 & 24 = 8 != 0，满足条件
+//
+// 2. 将词条分为两类：
+//   - 普通词条（quality=0）：基础属性词条
+//   - 稀有词条（quality=1）：高级属性词条
+//
+// 3. 根据refinementConfig配置生成词条：
+//   - 普通词条数量 = entryNum
+//   - 稀有词条数量 = allowRare为true时根据概率生成，false时为0
+//
+// 4. 使用权重随机算法选择词条，确保不重复
+// 5. 为每个词条生成随机数值：
+//   - 数值范围：minValue 到 (maxValue * maxRatio / 100)
+//   - maxRatio控制实际最大值的百分比
+//
+// 参数：
+//   - equipType: 装备类型（1=共鸣核心, 2=加固模组, 4=增幅器, 8=传导矩阵）
+//   - quality: 装备品质（1=白色, 2=绿色, 4=蓝色, 8=紫色, 16=橙色）
+//   - refinementConfig: 词条配置（包含entryNum、rareEntryNum、maxRatio等）
+//   - allowRare: 是否允许生成稀有词条（false=只生成普通词条，true=可根据概率生成稀有词条）
+func generateAffixes(templateMgr TemplateManager, equipType int32, quality int32, refinementConfig template.TplCrystalEquipmentRefinement, allowRare bool, logger *zap.Logger) []CrystalEquipmentAffix {
+	affixes := make([]CrystalEquipmentAffix, 0)
+
+	allAffixes := templateMgr.GetTplCrystalEquipmentRefinementAffix().FindByFilter(func(t template.TplCrystalEquipmentRefinementAffix) bool {
+		equipTypeMatch := (equipType & t.NeedEequipType) != 0
+		qualityMatch := (quality & t.NeedQuality) != 0
+		return equipTypeMatch && qualityMatch
+	})
+
+	if allAffixes.Len() == 0 {
+		logger.Warn("未找到符合条件的词条", zap.Int32("equip_type", equipType), zap.Int32("quality", quality))
+		return affixes
+	}
+
+	normalAffixes := make([]template.TplCrystalEquipmentRefinementAffix, 0)
+	rareAffixes := make([]template.TplCrystalEquipmentRefinementAffix, 0)
+
+	for i := 0; i < allAffixes.Len(); i++ {
+		affix := allAffixes.Get(i)
+		if affix.Quality == 0 {
+			normalAffixes = append(normalAffixes, affix)
+		} else if affix.Quality == 1 {
+			rareAffixes = append(rareAffixes, affix)
+		}
+	}
+
+	normalCount := refinementConfig.EntryNum
+	maxRatio := refinementConfig.MaxRatio
+
+	var rareCount int32
+	if allowRare {
+		rareCount = calculateRareAffixCount(refinementConfig)
+	} else {
+		rareCount = 0
+	}
+
+	usedNormalIDs := make(map[string]bool)
+	for i := int32(0); i < normalCount && len(usedNormalIDs) < len(normalAffixes); i++ {
+		selected := selectAffixByWeightExcluding(normalAffixes, usedNormalIDs)
+		if selected != nil {
+			maxVal := selected.MaxValue * maxRatio / 100
+			if maxVal < selected.MinValue {
+				maxVal = selected.MinValue
+			}
+			valueRange := maxVal - selected.MinValue + 1
+			value := selected.MinValue
+			if valueRange > 0 {
+				value = rand.Int31n(valueRange) + selected.MinValue
+			}
+			affixes = append(affixes, CrystalEquipmentAffix{
+				AffixID: selected.ID,
+				Value:   value,
+			})
+			usedNormalIDs[selected.ID] = true
+
+			logger.Debug("生成普通词条",
+				zap.String("affix_id", selected.ID),
+				zap.Int32("min_value", selected.MinValue),
+				zap.Int32("max_value", maxVal),
+				zap.Int32("random_value", value),
+				zap.Int32("max_ratio", maxRatio))
+		}
+	}
+
+	usedRareIDs := make(map[string]bool)
+	for i := int32(0); i < rareCount && len(usedRareIDs) < len(rareAffixes); i++ {
+		selected := selectAffixByWeightExcluding(rareAffixes, usedRareIDs)
+		if selected != nil {
+			maxVal := selected.MaxValue * maxRatio / 100
+			if maxVal < selected.MinValue {
+				maxVal = selected.MinValue
+			}
+			valueRange := maxVal - selected.MinValue + 1
+			value := selected.MinValue
+			if valueRange > 0 {
+				value = rand.Int31n(valueRange) + selected.MinValue
+			}
+			affixes = append(affixes, CrystalEquipmentAffix{
+				AffixID: selected.ID,
+				Value:   value,
+			})
+			usedRareIDs[selected.ID] = true
+
+			logger.Debug("生成稀有词条",
+				zap.String("affix_id", selected.ID),
+				zap.Int32("min_value", selected.MinValue),
+				zap.Int32("max_value", maxVal),
+				zap.Int32("random_value", value),
+				zap.Int32("max_ratio", maxRatio))
+		}
+	}
+
+	return affixes
+}
+
+// calculateRareAffixCount 根据配置计算稀有词条数量
+// 使用rareEntryWeight权重来决定生成的稀有词条数量
+// 权重越高，生成稀有词条的概率越大
+func calculateRareAffixCount(config template.TplCrystalEquipmentRefinement) int32 {
+	if config.RareEntryNum <= 0 {
+		return 0
+	}
+
+	totalWeight := int32(10000)
+	randomValue := rand.Int31n(totalWeight)
+
+	if randomValue < config.RareEntryWeight {
+		return rand.Int31n(config.RareEntryNum) + 1
+	}
+
+	return 0
+}
+
+// generateAffixesWithLockedRare 生成装备词条（考虑锁定的稀有词条）
+//
+// 算法流程：
+// 1. 生成所有普通词条（数量 = entryNum，每次洗炼都重新生成）
+// 2. 将锁定的稀有词条直接添加到结果中
+// 3. 计算剩余稀有词条配额（rareEntryNum - 锁定的稀有数）
+// 4. 根据概率判断是否生成新的稀有词条来填充剩余配额
+//
+// 示例：
+//
+//	配置：entryNum=4, rareEntryNum=2, rareEntryWeight=5000
+//	锁定：1个稀有词条
+//	生成：
+//	  - 4个普通词条（全部重新生成）
+//	  - 1个锁定的稀有词条（直接保留）
+//	  - 剩余配额1个，根据概率判断是否生成新稀有词条
+//
+// 参数：
+//   - equipType: 装备类型
+//   - quality: 装备品质
+//   - refinementConfig: 词条配置（entryNum=普通词条数, rareEntryNum=稀有词条上限）
+//   - lockedRareAffixes: 锁定的稀有词条列表
+func generateAffixesWithLockedRare(templateMgr TemplateManager, equipType int32, quality int32, refinementConfig template.TplCrystalEquipmentRefinement, lockedRareAffixes []CrystalEquipmentAffix, logger *zap.Logger) []CrystalEquipmentAffix {
+	affixes := make([]CrystalEquipmentAffix, 0)
+
+	allAffixes := templateMgr.GetTplCrystalEquipmentRefinementAffix().FindByFilter(func(t template.TplCrystalEquipmentRefinementAffix) bool {
+		equipTypeMatch := (equipType & t.NeedEequipType) != 0
+		qualityMatch := (quality & t.NeedQuality) != 0
+		return equipTypeMatch && qualityMatch
+	})
+
+	if allAffixes.Len() == 0 {
+		logger.Warn("未找到符合条件的词条", zap.Int32("equip_type", equipType), zap.Int32("quality", quality))
+		return affixes
+	}
+
+	normalAffixes := make([]template.TplCrystalEquipmentRefinementAffix, 0)
+	rareAffixes := make([]template.TplCrystalEquipmentRefinementAffix, 0)
+
+	for i := 0; i < allAffixes.Len(); i++ {
+		affix := allAffixes.Get(i)
+		if affix.Quality == 0 {
+			normalAffixes = append(normalAffixes, affix)
+		} else if affix.Quality == 1 {
+			rareAffixes = append(rareAffixes, affix)
+		}
+	}
+
+	// ===== 计算需要生成的词条数量 =====
+	//
+	// 1. 普通词条：固定生成 entryNum 个（不受锁定影响，每次洗炼都重新生成）
+	normalCount := refinementConfig.EntryNum
+	maxRatio := refinementConfig.MaxRatio
+
+	// 2. 稀有词条：
+	//    a) 先添加锁定的稀有词条
+	//    b) 计算剩余配额 = rareEntryNum - 锁定的稀有数
+	//    c) 根据概率判断是否生成新稀有词条来填充剩余配额
+	lockedRareCount := int32(len(lockedRareAffixes))
+	remainingRareSlots := refinementConfig.RareEntryNum - lockedRareCount
+
+	logger.Info("稀有词条洗炼配置",
+		zap.Int32("rare_entry_num", refinementConfig.RareEntryNum),
+		zap.Int32("locked_rare_count", lockedRareCount),
+		zap.Int32("remaining_slots", remainingRareSlots),
+		zap.Int32("rare_entry_weight", refinementConfig.RareEntryWeight),
+		zap.Float64("probability_percent", float64(refinementConfig.RareEntryWeight)/100.0))
+
+	// 每个剩余的稀有词条槽位独立判断概率
+	// 例如：剩余2个槽位，每个都有20%概率，可能生成0个、1个或2个稀有词条
+	newRareCount := int32(0)
+	totalWeight := int32(100)
+
+	if remainingRareSlots > 0 {
+		logger.Info("开始独立判断每个稀有词条槽位",
+			zap.Int32("remaining_slots", remainingRareSlots),
+			zap.Int32("weight_per_slot", refinementConfig.RareEntryWeight),
+			zap.Float64("probability_per_slot_percent", float64(refinementConfig.RareEntryWeight)/100.0))
+
+		// 对每个剩余槽位独立进行概率判断
+		for slot := int32(0); slot < remainingRareSlots; slot++ {
+			randomValue := rand.Int31n(totalWeight)
+			triggered := randomValue < refinementConfig.RareEntryWeight
+
+			if triggered {
+				newRareCount++
+				logger.Info("稀有词条槽位触发成功",
+					zap.Int32("slot_index", slot+1),
+					zap.Int32("random_value", randomValue),
+					zap.Int32("threshold", refinementConfig.RareEntryWeight),
+					zap.Bool("triggered", true))
+			} else {
+				logger.Info("稀有词条槽位未触发",
+					zap.Int32("slot_index", slot+1),
+					zap.Int32("random_value", randomValue),
+					zap.Int32("threshold", refinementConfig.RareEntryWeight),
+					zap.Bool("triggered", false))
+			}
+		}
+
+		logger.Info("稀有词条槽位判断完成",
+			zap.Int32("total_slots", remainingRareSlots),
+			zap.Int32("triggered_slots", newRareCount),
+			zap.Int32("failed_slots", remainingRareSlots-newRareCount))
+	} else {
+		logger.Info("稀有词条配额已满，跳过概率判断",
+			zap.Int32("locked_rare_count", lockedRareCount),
+			zap.Int32("rare_entry_num", refinementConfig.RareEntryNum))
+	}
+
+	// 记录锁定的稀有词条ID，避免重复生成
+	usedAffixIDs := make(map[string]bool)
+	for _, affix := range lockedRareAffixes {
+		usedAffixIDs[affix.AffixID] = true
+	}
+
+	// 步骤1: 生成普通词条（全部重新生成）
+	for i := int32(0); i < normalCount && len(usedAffixIDs) < len(normalAffixes)+len(rareAffixes); i++ {
+		selected := selectAffixByWeightExcluding(normalAffixes, usedAffixIDs)
+		if selected != nil {
+			maxVal := selected.MaxValue * maxRatio / 100
+			if maxVal < selected.MinValue {
+				maxVal = selected.MinValue
+			}
+			valueRange := maxVal - selected.MinValue + 1
+			value := selected.MinValue
+			if valueRange > 0 {
+				value = rand.Int31n(valueRange) + selected.MinValue
+			}
+			affixes = append(affixes, CrystalEquipmentAffix{
+				AffixID: selected.ID,
+				Value:   value,
+			})
+			usedAffixIDs[selected.ID] = true
+
+			logger.Debug("生成普通词条",
+				zap.String("affix_id", selected.ID),
+				zap.Int32("min_value", selected.MinValue),
+				zap.Int32("max_value", maxVal),
+				zap.Int32("random_value", value),
+				zap.Int32("max_ratio", maxRatio))
+		}
+	}
+
+	// 步骤2: 添加锁定的稀有词条
+	affixes = append(affixes, lockedRareAffixes...)
+
+	if len(lockedRareAffixes) > 0 {
+		logger.Debug("添加锁定的稀有词条",
+			zap.Int("locked_rare_count", len(lockedRareAffixes)))
+		for _, affix := range lockedRareAffixes {
+			logger.Debug("锁定的稀有词条详情",
+				zap.String("affix_id", affix.AffixID),
+				zap.Int32("value", affix.Value))
+		}
+	}
+
+	// 步骤3: 生成新的稀有词条（填充剩余配额）
+	for i := int32(0); i < newRareCount && len(usedAffixIDs) < len(normalAffixes)+len(rareAffixes); i++ {
+		selected := selectAffixByWeightExcluding(rareAffixes, usedAffixIDs)
+		if selected != nil {
+			maxVal := selected.MaxValue * maxRatio / 100
+			if maxVal < selected.MinValue {
+				maxVal = selected.MinValue
+			}
+			valueRange := maxVal - selected.MinValue + 1
+			value := selected.MinValue
+			if valueRange > 0 {
+				value = rand.Int31n(valueRange) + selected.MinValue
+			}
+			affixes = append(affixes, CrystalEquipmentAffix{
+				AffixID: selected.ID,
+				Value:   value,
+			})
+			usedAffixIDs[selected.ID] = true
+
+			logger.Info("生成新的稀有词条",
+				zap.String("affix_id", selected.ID),
+				zap.Int32("min_value", selected.MinValue),
+				zap.Int32("max_value", maxVal),
+				zap.Int32("random_value", value),
+				zap.Int32("max_ratio", maxRatio),
+				zap.Int32("weight", selected.Weight))
+		}
+	}
+
+	// 最终汇总日志
+	logger.Info("词条生成完成",
+		zap.Int("total_affixes", len(affixes)),
+		zap.Int32("normal_count", normalCount),
+		zap.Int32("locked_rare_count", lockedRareCount),
+		zap.Int32("new_rare_count", newRareCount),
+		zap.Int32("total_rare_count", lockedRareCount+newRareCount))
+
+	return affixes
+}
+
+// selectAffixByWeightExcluding 使用权重随机选择一个未使用的词条
+//
+// 算法说明：权重随机算法（Weighted Random Selection）
+//
+// 原理：
+// 1. 将每个词条的权重看作一段区间
+// 2. 所有区间首尾相连，形成一条线段，总长度为所有权重之和
+// 3. 在这条线段上随机选择一个点
+// 4. 该点落在哪个区间，就选择对应的词条
+//
+// 示例：
+// 假设有3个词条：
+//   - 词条A: weight=10, 区间[0, 10)
+//   - 词条B: weight=20, 区间[10, 30)
+//   - 词条C: weight=5,  区间[30, 35)
+//
+// 总权重=35，随机值范围[0, 35)
+//   - 如果随机到8，落在[0,10)，选择词条A
+//   - 如果随机到25，落在[10,30)，选择词条B
+//   - 如果随机到32，落在[30,35)，选择词条C
+//
+// 权重越大的词条，其区间越长，被选中的概率越高
+//
+// 参数：
+//   - affixes: 候选词条列表
+//   - excludedIDs: 已使用的词条ID集合（这些词条将被排除）
+//
+// 返回：
+//   - 根据权重随机选择的词条，如果无可用词条则返回nil
+func selectAffixByWeightExcluding(affixes []template.TplCrystalEquipmentRefinementAffix, excludedIDs map[string]bool) *template.TplCrystalEquipmentRefinementAffix {
+	if len(affixes) == 0 {
+		return nil
+	}
+
+	// 步骤1: 过滤出未使用的词条
+	availableAffixes := make([]template.TplCrystalEquipmentRefinementAffix, 0)
+	for _, affix := range affixes {
+		if !excludedIDs[affix.ID] {
+			availableAffixes = append(availableAffixes, affix)
+		}
+	}
+
+	if len(availableAffixes) == 0 {
+		return nil
+	}
+
+	// 步骤2: 计算总权重
+	totalWeight := int32(0)
+	for _, affix := range availableAffixes {
+		totalWeight += affix.Weight
+	}
+
+	// 特殊情况：如果所有词条权重都为0，则使用均匀随机
+	if totalWeight == 0 {
+		return &availableAffixes[rand.Intn(len(availableAffixes))]
+	}
+
+	// 步骤3: 在[0, totalWeight)范围内生成随机值
+	randomValue := rand.Int31n(totalWeight)
+
+	// 步骤4: 累加权重，找到随机值落在哪个区间
+	// 例如：随机值=15，词条权重为[10, 20, 5]
+	// - 累加到10: 15 >= 10，继续
+	// - 累加到30: 15 < 30，选择第二个词条
+	currentWeight := int32(0)
+	for i := range availableAffixes {
+		currentWeight += availableAffixes[i].Weight
+		if randomValue < currentWeight {
+			return &availableAffixes[i]
+		}
+	}
+
+	// 容错：理论上不会执行到这里，但为了安全返回最后一个
+	return &availableAffixes[len(availableAffixes)-1]
 }

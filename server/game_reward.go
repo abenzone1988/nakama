@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -174,6 +176,13 @@ func (s *ApiServer) OperateInventory(ctx context.Context, in *game.OperateInvent
 		return &game.OperateInventoryResponse{Code: 3, Msg: "签名验证失败"}, nil
 	}
 
+	for _, item := range in.GetItems() {
+		if item.Num < 0 {
+			s.logger.Warn("背包操作参数非法", zap.String("user_id", userID.String()), zap.String("username", username), zap.String("item_id", item.Id), zap.Int32("num", item.Num))
+			return &game.OperateInventoryResponse{Code: 2, Msg: "物品数量不能为负数"}, nil
+		}
+	}
+
 	inventoryId, err := uuid.FromString(in.GetId())
 	if err != nil {
 		return &game.OperateInventoryResponse{Code: 6, Msg: "id错误"}, nil
@@ -245,5 +254,86 @@ func (s *ApiServer) GetInventoryData(ctx context.Context, _ *game.GetInventoryDa
 		Code:  0,
 		Msg:   "success",
 		Items: convertMapInt64ToItems(inventoryMap),
+	}, nil
+}
+
+func (s *ApiServer) TestGrantReward(ctx context.Context, in *game.TestGrantRewardRequest) (*game.TestGrantRewardResponse, error) {
+	userID, _ := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	username, _ := ctx.Value(ctxUsernameKey{}).(string)
+
+	rewardStr := in.GetRewardStr()
+	if rewardStr == "" {
+		return &game.TestGrantRewardResponse{Code: 1, Msg: "奖励字符串不能为空"}, nil
+	}
+
+	reward := &game.Reward{}
+	var items []*game.Item
+
+	parts := strings.Split(rewardStr, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		itemParts := strings.Split(part, "_")
+		if len(itemParts) != 2 {
+			s.logger.Warn("奖励字符串格式错误", zap.String("user_id", userID.String()), zap.String("part", part))
+			return &game.TestGrantRewardResponse{Code: 2, Msg: fmt.Sprintf("奖励字符串格式错误: %s", part)}, nil
+		}
+
+		itemID := strings.TrimSpace(itemParts[0])
+		numStr := strings.TrimSpace(itemParts[1])
+		num, err := strconv.ParseInt(numStr, 10, 32)
+		if err != nil || num <= 0 {
+			s.logger.Warn("奖励数量无效", zap.String("user_id", userID.String()), zap.String("part", part), zap.Error(err))
+			return &game.TestGrantRewardResponse{Code: 3, Msg: fmt.Sprintf("奖励数量无效: %s", part)}, nil
+		}
+
+		items = append(items, &game.Item{
+			Id:  itemID,
+			Num: int32(num),
+		})
+	}
+
+	if len(items) > 0 {
+		reward.Items = items
+	}
+
+	s.logger.Info("测试发奖", zap.String("user_id", userID.String()), zap.String("username", username), zap.String("reward_str", rewardStr), zap.Any("reward", reward))
+
+	source := "test_grant_reward"
+	walletResult, inventoryResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
+	if err != nil {
+		s.logger.Error("测试发奖失败", zap.Error(err), zap.String("user_id", userID.String()), zap.String("reward_str", rewardStr))
+		return &game.TestGrantRewardResponse{Code: 4, Msg: fmt.Sprintf("发奖失败: %v", err)}, nil
+	}
+
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+
+	if walletResult != nil {
+		walletUpdated = walletResult.Updated
+		s.logger.Info("测试发奖-钱包更新", zap.String("user_id", userID.String()),
+			zap.Int32("coin", walletUpdated.Coin),
+			zap.Int32("gem", walletUpdated.Gem),
+			zap.Int32("ad", walletUpdated.Ad),
+			zap.Int32("stamina", walletUpdated.Stamina))
+	}
+
+	if inventoryResult != nil {
+		inventoryUpdated = inventoryResult.Updated
+		s.logger.Info("测试发奖-背包更新", zap.String("user_id", userID.String()), zap.Any("items", inventoryUpdated))
+	}
+
+	s.logger.Info("测试发奖成功", zap.String("user_id", userID.String()), zap.String("username", username),
+		zap.Any("reward", reward), zap.Any("wallet", walletUpdated), zap.Any("inventory", inventoryUpdated))
+
+	return &game.TestGrantRewardResponse{
+		Code:             0,
+		Msg:              "发奖成功",
+		Reward:           reward,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
 	}, nil
 }

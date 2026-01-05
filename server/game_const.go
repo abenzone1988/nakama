@@ -29,7 +29,26 @@ const (
 )
 
 const (
-	ItemType_EquipmentFragment = 4 // 装备碎片
+	ItemType_Stamina                   = 0  // 体力
+	ItemType_AdTicket                  = 1  // 免广告券
+	ItemType_Coin                      = 2  // 金币
+	ItemType_Gem                       = 3  // 钻石
+	ItemType_EquipmentFragment         = 4  // 装备碎片
+	ItemType_Ticket                    = 5  // 抽奖券
+	ItemType_ElementCrystal            = 6  // 元素晶体
+	ItemType_TechPoint                 = 7  // 科技点
+	ItemType_Turret                    = 8  // 炮台
+	ItemType_CrystalEquipmentBlueprint = 9  // 水晶装备图纸
+	ItemType_RefiningStone             = 10 // 洗练石
+	ItemType_RandomCrystalEquipment    = 11 // 随机水晶装备
+	ItemType_CrystalSkinFragment       = 12 // 水晶皮肤碎片
+	ItemType_RandomElementCrystal      = 13 // 随机元素晶体
+	ItemType_RandomEquipmentBlueprint  = 14 // 随机装备图纸
+	ItemType_RandomTurretFragment      = 15 // 随机炮台碎片
+	ItemType_RandomQualityTurret       = 16 // 随机品质炮台
+	ItemType_AvatarFrame               = 17 // 头像框
+	ItemType_CommanderExp              = 18 // 指挥官经验
+	ItemType_CrystalCore               = 19 // 晶核
 )
 
 // 水晶ID常量

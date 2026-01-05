@@ -22,6 +22,7 @@ type TemplateManager interface {
 	GetTplRedemptionInfo() *TableTplRedemption
 	GetTplItem() *TableTplItem
 	GetTplReward() *TableTplReward
+	GetTplEquipment() *TableTplEquipment
 	GetTplEquipmentDev() *TableTplEquipmentDev
 	GetTplUnlock() *TableTplUnlock
 	GetTplShop() *TableTplShop
@@ -43,73 +44,84 @@ type TemplateManager interface {
 	GetTplEliteLevelDrop() *TableTplEliteLevelDrop
 	GetTplMine() *TableTplMine
 	GetTplCrystalEquipmentSlotDev() *TableTplCrystalEquipmentSlotDev
+	GetTplCrystalEquipment() *TableTplCrystalEquipment
+	GetTplCrystalEquipmentRefinement() *TableTplCrystalEquipmentRefinement
+	GetTplCrystalEquipmentRefinementAffix() *TableTplCrystalEquipmentRefinementAffix
 }
 
 type LocalTemplateManager struct {
 	sync.RWMutex
-	logger                          *zap.Logger
-	db                              *sql.DB
-	tableTplRedemption              *TableTplRedemption
-	tableTplLevelInfo               *TableTplLevelInfo
-	tableTplItem                    *TableTplItem
-	tableTplReward                  *TableTplReward
-	tableTplActivityLevelInfo       *TableTplActivityLevelInfo
-	tableTplCrystalTechnology       *TableTplCrystalTechnologyDev
-	tableTplEquipmentDev            *TableTplEquipmentDev
-	tableTplUnlock                  *TableTplUnlock
-	tableTplShop                    *TableTplShop
-	tableTplShopDailyItem           *TableTplShopDailyItem
-	tableTplShopPermanentItem       *TableTplShopPermanentItem
-	tableTplBoxShop                 *TableTplBoxShop
-	tableTplBoxShopItem             *TableTplBoxShopItem
-	tableTplShopChapterItem         *TableTplShopChapterItem
-	tableTplShopGemItem             *TableTplShopGemItem
-	tableTplTasks                   *TableTplTasks
-	tableTplProgressReward          *TableTplProgressReward
-	tableTplFirstCharge             *TableTplFirstCharge
-	tableTplSevenDay                *TableTplSevenDay
-	tableTplDailySignIn             *TableTplDailySignIn
-	tableTplSevenDaySignIn          *TableTplSevenDaySignIn
-	tableTplPay                     *TableTplPay
-	tableTplPlayerLevel             *TableTplPlayerLevel
-	tableTplEliteLevelInfo          *TableTplEliteLevelInfo
-	tableTplEliteLevelDrop          *TableTplEliteLevelDrop
-	tableTplMine                    *TableTplMine
-	tableTplCrystalEquipmentSlotDev *TableTplCrystalEquipmentSlotDev
+	logger                                  *zap.Logger
+	db                                      *sql.DB
+	tableTplRedemption                      *TableTplRedemption
+	tableTplLevelInfo                       *TableTplLevelInfo
+	tableTplItem                            *TableTplItem
+	tableTplReward                          *TableTplReward
+	tableTplActivityLevelInfo               *TableTplActivityLevelInfo
+	tableTplCrystalTechnology               *TableTplCrystalTechnologyDev
+	tableTplEquipment                       *TableTplEquipment
+	tableTplEquipmentDev                    *TableTplEquipmentDev
+	tableTplUnlock                          *TableTplUnlock
+	tableTplShop                            *TableTplShop
+	tableTplShopDailyItem                   *TableTplShopDailyItem
+	tableTplShopPermanentItem               *TableTplShopPermanentItem
+	tableTplBoxShop                         *TableTplBoxShop
+	tableTplBoxShopItem                     *TableTplBoxShopItem
+	tableTplShopChapterItem                 *TableTplShopChapterItem
+	tableTplShopGemItem                     *TableTplShopGemItem
+	tableTplTasks                           *TableTplTasks
+	tableTplProgressReward                  *TableTplProgressReward
+	tableTplFirstCharge                     *TableTplFirstCharge
+	tableTplSevenDay                        *TableTplSevenDay
+	tableTplDailySignIn                     *TableTplDailySignIn
+	tableTplSevenDaySignIn                  *TableTplSevenDaySignIn
+	tableTplPay                             *TableTplPay
+	tableTplPlayerLevel                     *TableTplPlayerLevel
+	tableTplEliteLevelInfo                  *TableTplEliteLevelInfo
+	tableTplEliteLevelDrop                  *TableTplEliteLevelDrop
+	tableTplMine                            *TableTplMine
+	tableTplCrystalEquipmentSlotDev         *TableTplCrystalEquipmentSlotDev
+	tableTplCrystalEquipment                *TableTplCrystalEquipment
+	tableTplCrystalEquipmentRefinement      *TableTplCrystalEquipmentRefinement
+	tableTplCrystalEquipmentRefinementAffix *TableTplCrystalEquipmentRefinementAffix
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
 	jsonPath := config.GetDataDir()
 	t := LocalTemplateManager{
-		logger:                          logger,
-		db:                              db,
-		tableTplRedemption:              NewTableTplRedemption(logger, jsonPath),
-		tableTplLevelInfo:               NewTableTplLevelInfo(logger, jsonPath),
-		tableTplItem:                    NewTableTplItem(logger, jsonPath),
-		tableTplUnlock:                  NewTableTplUnlock(logger, jsonPath),
-		tableTplReward:                  NewTableTplReward(logger, jsonPath),
-		tableTplActivityLevelInfo:       NewTableTplActivityLevelInfo(logger, jsonPath),
-		tableTplCrystalTechnology:       NewTableTplCrystalTechnologyDev(logger, jsonPath),
-		tableTplEquipmentDev:            NewTableTplEquipmentDev(logger, jsonPath),
-		tableTplShop:                    NewTableTplShop(logger, jsonPath),
-		tableTplShopDailyItem:           NewTableTplShopDailyItem(logger, jsonPath),
-		tableTplShopPermanentItem:       NewTableTplShopPermanentItem(logger, jsonPath),
-		tableTplBoxShop:                 NewTableTplBoxShop(logger, jsonPath),
-		tableTplBoxShopItem:             NewTableTplBoxShopItem(logger, jsonPath),
-		tableTplShopChapterItem:         NewTableTplShopChapterItem(logger, jsonPath),
-		tableTplShopGemItem:             NewTableTplShopGemItem(logger, jsonPath),
-		tableTplTasks:                   NewTableTplTasks(logger, jsonPath),
-		tableTplProgressReward:          NewTableTplProgressReward(logger, jsonPath),
-		tableTplFirstCharge:             NewTableTplFirstCharge(logger, jsonPath),
-		tableTplSevenDay:                NewTableTplSevenDay(logger, jsonPath),
-		tableTplDailySignIn:             NewTableTplDailySignIn(logger, jsonPath),
-		tableTplSevenDaySignIn:          NewTableTplSevenDaySignIn(logger, jsonPath),
-		tableTplPay:                     NewTableTplPay(logger, jsonPath),
-		tableTplPlayerLevel:             NewTableTplPlayerLevel(logger, jsonPath),
-		tableTplEliteLevelInfo:          NewTableTplEliteLevelInfo(logger, jsonPath),
-		tableTplEliteLevelDrop:          NewTableTplEliteLevelDrop(logger, jsonPath),
-		tableTplMine:                    NewTableTplMine(logger, jsonPath),
-		tableTplCrystalEquipmentSlotDev: NewTableTplCrystalEquipmentSlotDev(logger, jsonPath),
+		logger:                                  logger,
+		db:                                      db,
+		tableTplRedemption:                      NewTableTplRedemption(logger, jsonPath),
+		tableTplLevelInfo:                       NewTableTplLevelInfo(logger, jsonPath),
+		tableTplItem:                            NewTableTplItem(logger, jsonPath),
+		tableTplUnlock:                          NewTableTplUnlock(logger, jsonPath),
+		tableTplReward:                          NewTableTplReward(logger, jsonPath),
+		tableTplActivityLevelInfo:               NewTableTplActivityLevelInfo(logger, jsonPath),
+		tableTplCrystalTechnology:               NewTableTplCrystalTechnologyDev(logger, jsonPath),
+		tableTplEquipment:                       NewTableTplEquipment(logger, jsonPath),
+		tableTplEquipmentDev:                    NewTableTplEquipmentDev(logger, jsonPath),
+		tableTplShop:                            NewTableTplShop(logger, jsonPath),
+		tableTplShopDailyItem:                   NewTableTplShopDailyItem(logger, jsonPath),
+		tableTplShopPermanentItem:               NewTableTplShopPermanentItem(logger, jsonPath),
+		tableTplBoxShop:                         NewTableTplBoxShop(logger, jsonPath),
+		tableTplBoxShopItem:                     NewTableTplBoxShopItem(logger, jsonPath),
+		tableTplShopChapterItem:                 NewTableTplShopChapterItem(logger, jsonPath),
+		tableTplShopGemItem:                     NewTableTplShopGemItem(logger, jsonPath),
+		tableTplTasks:                           NewTableTplTasks(logger, jsonPath),
+		tableTplProgressReward:                  NewTableTplProgressReward(logger, jsonPath),
+		tableTplFirstCharge:                     NewTableTplFirstCharge(logger, jsonPath),
+		tableTplSevenDay:                        NewTableTplSevenDay(logger, jsonPath),
+		tableTplDailySignIn:                     NewTableTplDailySignIn(logger, jsonPath),
+		tableTplSevenDaySignIn:                  NewTableTplSevenDaySignIn(logger, jsonPath),
+		tableTplPay:                             NewTableTplPay(logger, jsonPath),
+		tableTplPlayerLevel:                     NewTableTplPlayerLevel(logger, jsonPath),
+		tableTplEliteLevelInfo:                  NewTableTplEliteLevelInfo(logger, jsonPath),
+		tableTplEliteLevelDrop:                  NewTableTplEliteLevelDrop(logger, jsonPath),
+		tableTplMine:                            NewTableTplMine(logger, jsonPath),
+		tableTplCrystalEquipmentSlotDev:         NewTableTplCrystalEquipmentSlotDev(logger, jsonPath),
+		tableTplCrystalEquipment:                NewTableTplCrystalEquipment(logger, jsonPath),
+		tableTplCrystalEquipmentRefinement:      NewTableTplCrystalEquipmentRefinement(logger, jsonPath),
+		tableTplCrystalEquipmentRefinementAffix: NewTableTplCrystalEquipmentRefinementAffix(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -125,6 +137,7 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 	t.tableTplActivityLevelInfo.LoadData(t.StorageReadTpl("TplActivityLevelInfo"))
 	t.tableTplCrystalTechnology.LoadData(t.StorageReadTpl("TplCrystalTechnologyDev"))
+	t.tableTplEquipment.LoadData(t.StorageReadTpl("TplEquipment"))
 	t.tableTplEquipmentDev.LoadData(t.StorageReadTpl("TplEquipmentDev"))
 	t.tableTplUnlock.LoadData(t.StorageReadTpl("TplUnlock"))
 	t.tableTplShop.LoadData(t.StorageReadTpl("TplShop"))
@@ -146,6 +159,9 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplEliteLevelDrop.LoadData(t.StorageReadTpl("TplEliteLevelDrop"))
 	t.tableTplMine.LoadData(t.StorageReadTpl("TplMine"))
 	t.tableTplCrystalEquipmentSlotDev.LoadData(t.StorageReadTpl("TplCrystalEquipmentSlotDev"))
+	t.tableTplCrystalEquipment.LoadData(t.StorageReadTpl("TplCrystalEquipment"))
+	t.tableTplCrystalEquipmentRefinement.LoadData(t.StorageReadTpl("TplCrystalEquipmentRefinement"))
+	t.tableTplCrystalEquipmentRefinementAffix.LoadData(t.StorageReadTpl("TplCrystalEquipmentRefinementAffix"))
 }
 
 func (t *LocalTemplateManager) GetTplCrystalEquipmentSlotDev() *TableTplCrystalEquipmentSlotDev {
@@ -244,6 +260,12 @@ func (t *LocalTemplateManager) GetTplCrystalTechnologyDev() *TableTplCrystalTech
 	return t.tableTplCrystalTechnology
 }
 
+func (t *LocalTemplateManager) GetTplEquipment() *TableTplEquipment {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplEquipment
+}
+
 func (t *LocalTemplateManager) GetTplEquipmentDev() *TableTplEquipmentDev {
 	t.RLock()
 	defer t.RUnlock()
@@ -314,6 +336,24 @@ func (t *LocalTemplateManager) GetTplMine() *TableTplMine {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplMine
+}
+
+func (t *LocalTemplateManager) GetTplCrystalEquipment() *TableTplCrystalEquipment {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalEquipment
+}
+
+func (t *LocalTemplateManager) GetTplCrystalEquipmentRefinement() *TableTplCrystalEquipmentRefinement {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalEquipmentRefinement
+}
+
+func (t *LocalTemplateManager) GetTplCrystalEquipmentRefinementAffix() *TableTplCrystalEquipmentRefinementAffix {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalEquipmentRefinementAffix
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
