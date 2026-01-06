@@ -1115,6 +1115,7 @@ service Nakama {
     option (google.api.http) = {
       post: "/v2/game/sevenday/claim"
       body: "*"
+      
     };
   }
 
@@ -1123,6 +1124,12 @@ service Nakama {
     option (google.api.http) = {
       post: "/v2/game/equip/exchange"
       body: "*"
+    };
+  }
+
+  rpc GetEquipExchange(game.GetEquipExchangeRequest) returns (game.GetEquipExchangeResponse) {
+    option (google.api.http) = {
+      get: "/v2/game/equip/exchange"
     };
   }
 

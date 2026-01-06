@@ -174,6 +174,7 @@ const (
 	Nakama_GetSevenDayStatus_FullMethodName                 = "/nakama.api.Nakama/GetSevenDayStatus"
 	Nakama_ClaimSevenDayReward_FullMethodName               = "/nakama.api.Nakama/ClaimSevenDayReward"
 	Nakama_ExchangeEquip_FullMethodName                     = "/nakama.api.Nakama/ExchangeEquip"
+	Nakama_GetEquipExchange_FullMethodName                  = "/nakama.api.Nakama/GetEquipExchange"
 	Nakama_GetMonthlyCardStatus_FullMethodName              = "/nakama.api.Nakama/GetMonthlyCardStatus"
 	Nakama_ClaimMonthlyCardReward_FullMethodName            = "/nakama.api.Nakama/ClaimMonthlyCardReward"
 	Nakama_PurchaseTest_FullMethodName                      = "/nakama.api.Nakama/PurchaseTest"
@@ -460,6 +461,7 @@ type NakamaClient interface {
 	ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest, opts ...grpc.CallOption) (*game.ClaimSevenDayRewardResponse, error)
 	// ==================== Equip Exchange ====================
 	ExchangeEquip(ctx context.Context, in *game.ExchangeEquipRequest, opts ...grpc.CallOption) (*game.ExchangeEquipResponse, error)
+	GetEquipExchange(ctx context.Context, in *game.GetEquipExchangeRequest, opts ...grpc.CallOption) (*game.GetEquipExchangeResponse, error)
 	// ==================== Monthly Card ====================
 	GetMonthlyCardStatus(ctx context.Context, in *game.GetMonthlyCardStatusRequest, opts ...grpc.CallOption) (*game.GetMonthlyCardStatusResponse, error)
 	ClaimMonthlyCardReward(ctx context.Context, in *game.ClaimMonthlyCardRewardRequest, opts ...grpc.CallOption) (*game.ClaimMonthlyCardRewardResponse, error)
@@ -1728,6 +1730,15 @@ func (c *nakamaClient) ExchangeEquip(ctx context.Context, in *game.ExchangeEquip
 	return out, nil
 }
 
+func (c *nakamaClient) GetEquipExchange(ctx context.Context, in *game.GetEquipExchangeRequest, opts ...grpc.CallOption) (*game.GetEquipExchangeResponse, error) {
+	out := new(game.GetEquipExchangeResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetEquipExchange_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) GetMonthlyCardStatus(ctx context.Context, in *game.GetMonthlyCardStatusRequest, opts ...grpc.CallOption) (*game.GetMonthlyCardStatusResponse, error) {
 	out := new(game.GetMonthlyCardStatusResponse)
 	err := c.cc.Invoke(ctx, Nakama_GetMonthlyCardStatus_FullMethodName, in, out, opts...)
@@ -2172,6 +2183,7 @@ type NakamaServer interface {
 	ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error)
 	// ==================== Equip Exchange ====================
 	ExchangeEquip(context.Context, *game.ExchangeEquipRequest) (*game.ExchangeEquipResponse, error)
+	GetEquipExchange(context.Context, *game.GetEquipExchangeRequest) (*game.GetEquipExchangeResponse, error)
 	// ==================== Monthly Card ====================
 	GetMonthlyCardStatus(context.Context, *game.GetMonthlyCardStatusRequest) (*game.GetMonthlyCardStatusResponse, error)
 	ClaimMonthlyCardReward(context.Context, *game.ClaimMonthlyCardRewardRequest) (*game.ClaimMonthlyCardRewardResponse, error)
@@ -2626,6 +2638,9 @@ func (UnimplementedNakamaServer) ClaimSevenDayReward(context.Context, *game.Clai
 }
 func (UnimplementedNakamaServer) ExchangeEquip(context.Context, *game.ExchangeEquipRequest) (*game.ExchangeEquipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExchangeEquip not implemented")
+}
+func (UnimplementedNakamaServer) GetEquipExchange(context.Context, *game.GetEquipExchangeRequest) (*game.GetEquipExchangeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEquipExchange not implemented")
 }
 func (UnimplementedNakamaServer) GetMonthlyCardStatus(context.Context, *game.GetMonthlyCardStatusRequest) (*game.GetMonthlyCardStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMonthlyCardStatus not implemented")
@@ -5130,6 +5145,24 @@ func _Nakama_ExchangeEquip_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetEquipExchange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetEquipExchangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetEquipExchange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetEquipExchange_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetEquipExchange(ctx, req.(*game.GetEquipExchangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_GetMonthlyCardStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.GetMonthlyCardStatusRequest)
 	if err := dec(in); err != nil {
@@ -6036,6 +6069,10 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExchangeEquip",
 			Handler:    _Nakama_ExchangeEquip_Handler,
+		},
+		{
+			MethodName: "GetEquipExchange",
+			Handler:    _Nakama_GetEquipExchange_Handler,
 		},
 		{
 			MethodName: "GetMonthlyCardStatus",

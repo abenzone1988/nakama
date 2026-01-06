@@ -2391,6 +2391,39 @@
       }
     },
     "/v2/game/equip/exchange": {
+      "get": {
+        "operationId": "Nakama_GetEquipExchange",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetEquipExchangeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ids",
+            "description": "兑换配置ID列表，为空则返回所有",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      },
       "post": {
         "summary": "==================== Equip Exchange ====================",
         "operationId": "Nakama_ExchangeEquip",
@@ -8799,6 +8832,26 @@
         }
       }
     },
+    "gameEquipExchangeInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "兑换配置ID"
+        },
+        "boughtCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "本周已购买数量"
+        },
+        "weekLimit": {
+          "type": "integer",
+          "format": "int32",
+          "title": "每周购买限制"
+        }
+      },
+      "title": "装备兑换信息"
+    },
     "gameExchangeEquipRequest": {
       "type": "object",
       "properties": {
@@ -8927,6 +8980,26 @@
           "title": "所有水晶皮肤列表"
         }
       }
+    },
+    "gameGetEquipExchangeResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "exchangeInfos": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/gameEquipExchangeInfo"
+          },
+          "title": "key: 兑换配置ID, value: 兑换信息"
+        }
+      },
+      "title": "获取装备兑换数据响应"
     },
     "gameGetFirstChargeStatusResponse": {
       "type": "object",

@@ -67,7 +67,7 @@ const (
 	FirstChargeProductID = "firstCharge"          // 首冲商品ID
 	SevenDayProductID    = "sevenDay"             // 七日购买商品ID
 	VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
-	MonthlyCardID        = "monthlyCard"          // 月卡商品ID
+	MonthlyCardID        = "monthlyPass"          // 月卡商品ID
 )
 
 const (

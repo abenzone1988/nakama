@@ -43,44 +43,42 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 		exData.BoughtCounts = make(map[string]int32)
 	}
 
-	bought := exData.BoughtCounts[in.Id]
-	remain := cfg.WeekLimit - bought
-	if remain <= 0 {
+	// cfg.Count 表示【每次购买】获得的物品数量（例如：每买1次给2个碎片）
+	// 因此：
+	// - in.Count / BoughtCounts / WeekLimit 都应该用【购买次数】作为单位
+	// - 最终发放数量 = 本次实际购买次数 * cfg.Count
+
+	boughtTimes := exData.BoughtCounts[in.Id]  // 本周已购买次数
+	remainTimes := cfg.WeekLimit - boughtTimes // 本周剩余可购买次数
+	if remainTimes <= 0 {
 		return &game.ExchangeEquipResponse{Code: 4, Msg: "本周购买已达上限"}, nil
 	}
-	if reqCount > remain {
-		reqCount = remain
+
+	buyTimes := reqCount // 用户请求的购买次数
+	if buyTimes > remainTimes {
+		buyTimes = remainTimes
 	}
 
-	var gained int32
+	// cfg.Costs 表示每次购买的消耗梯度（第1次、第2次……），
+	// 如果购买次数超过 Costs 长度，则后续都按最后一个价格计算。
+	if len(cfg.Costs) == 0 {
+		return &game.ExchangeEquipResponse{Code: 5, Msg: "配置错误：Costs为空"}, nil
+	}
+
 	var totalCost int32
-	currentBought := bought
-	purchaseIndex := currentBought / cfg.Count
-
-	for gained < reqCount && currentBought < cfg.WeekLimit {
-		add := cfg.Count
-		if gained+add > reqCount {
-			add = reqCount - gained
-		}
-
-		costIdx := int(purchaseIndex)
+	for i := int32(0); i < buyTimes; i++ {
+		costIdx := int(boughtTimes + i) // 第 (boughtTimes+i+1) 次购买对应的价格档位
 		if costIdx >= len(cfg.Costs) {
 			costIdx = len(cfg.Costs) - 1
 		}
-		if costIdx < 0 || len(cfg.Costs) == 0 {
-			return &game.ExchangeEquipResponse{Code: 5, Msg: "配置错误"}, nil
+		if costIdx < 0 {
+			return &game.ExchangeEquipResponse{Code: 5, Msg: "配置错误：costIdx无效"}, nil
 		}
-
-		// totalCost 累加每一次购买批次的消耗（超过长度用末尾值）
 		totalCost += cfg.Costs[costIdx]
-		gained += add
-		currentBought += add
-		purchaseIndex++
 	}
 
-	if gained <= 0 {
-		return &game.ExchangeEquipResponse{Code: 4, Msg: "本周购买已达上限"}, nil
-	}
+	// 本次实际获得的物品数量 = 购买次数 * cfg.Count
+	gainNum := buyTimes * cfg.Count
 
 	costStr := fmt.Sprintf("%s_%d", ItemID_ExchangePoint, totalCost)
 	wCost, iCost, err := ConsumeCostItems(ctx, s.logger, s.db, s.template, costStr, "equip_exchange_cost")
@@ -90,7 +88,7 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 
 	reward := &game.Reward{
 		Items: []*game.Item{
-			{Id: cfg.ItemID, Num: gained},
+			{Id: cfg.ItemID, Num: gainNum},
 		},
 	}
 	wReward, iReward, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, "equip_exchange_reward")
@@ -98,7 +96,9 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 		return &game.ExchangeEquipResponse{Code: 7, Msg: "发放奖励失败"}, nil
 	}
 
-	exData.BoughtCounts[in.Id] = currentBought
+	// 写回：累计购买次数（不是累计物品数量）
+	newBoughtTimes := boughtTimes + buyTimes
+	exData.BoughtCounts[in.Id] = newBoughtTimes
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, exData); err != nil {
 		return &game.ExchangeEquipResponse{Code: 8, Msg: "保存数据失败"}, nil
 	}
@@ -121,9 +121,9 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 	s.logger.Info("装备兑换成功",
 		zap.String("user_id", userID.String()),
 		zap.String("exchange_id", in.Id),
-		zap.Int32("count", gained),
+		zap.Int32("count", buyTimes),
 		zap.Int32("cost", totalCost),
-		zap.Int32("bought_total", currentBought))
+		zap.Int32("bought_total", gainNum))
 
 	return &game.ExchangeEquipResponse{
 		Code:             0,
@@ -131,8 +131,40 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 		Reward:           reward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
-		ExchangedCount:   gained,
+		ExchangedCount:   gainNum,
 		TotalCost:        totalCost,
-		BoughtCount:      currentBought,
+		BoughtCount:      buyTimes,
+	}, nil
+}
+
+// GetEquipExchange 获取装备兑换数据
+func (s *ApiServer) GetEquipExchange(ctx context.Context, in *game.GetEquipExchangeRequest) (*game.GetEquipExchangeResponse, error) {
+	now := time.Now().UTC()
+	weekKey := GetWeekKey(ctx, now)
+
+	exData := &EquipExchangeData{}
+	if err := LoadUserData(ctx, s.logger, s.db, exData); err != nil {
+		s.logger.Warn("加载兑换数据失败，初始化新数据", zap.Error(err))
+		exData.Init()
+	}
+	if exData.WeekKey != weekKey {
+		exData.WeekKey = weekKey
+		exData.BoughtCounts = make(map[string]int32)
+	}
+
+	exchangeInfos := make(map[string]*game.EquipExchangeInfo, len(exData.BoughtCounts))
+
+	for id, boughtCount := range exData.BoughtCounts {
+		exchangeInfos[id] = &game.EquipExchangeInfo{
+			Id:          id,
+			BoughtCount: boughtCount,
+			WeekLimit:   0,
+		}
+	}
+
+	return &game.GetEquipExchangeResponse{
+		Code:          0,
+		Msg:           "Success",
+		ExchangeInfos: exchangeInfos,
 	}, nil
 }

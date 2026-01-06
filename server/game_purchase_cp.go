@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 )
@@ -31,7 +32,11 @@ func (s *ApiServer) PurchaseTest(ctx context.Context, in *game.PurchaseRequest) 
 		zap.String("uid", req.UID),
 		zap.String("order_money", req.OrderMoney),
 		zap.String("cp_order_id", req.CPOrderID))
-
+	orderId, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+	req.CPOrderID = orderId.String()
 	// 跳过所有验证，直接处理发货逻辑
 	if err := s.processPurchaseDelivery(ctx, req); err != nil {
 		s.logger.Error("测试处理发货失败",

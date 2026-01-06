@@ -463,6 +463,25 @@ message ExchangeEquipResponse{
   int32 bought_count = 8;              // 本周累计购买数量（兑换后）
 }
 
+// 获取装备兑换数据请求
+message GetEquipExchangeRequest{
+  repeated string ids = 1;             // 兑换配置ID列表，为空则返回所有
+}
+
+// 装备兑换信息
+message EquipExchangeInfo{
+  string id = 1;                       // 兑换配置ID
+  int32 bought_count = 2;              // 本周已购买数量
+  int32 week_limit = 3;                // 每周购买限制
+}
+
+// 获取装备兑换数据响应
+message GetEquipExchangeResponse{
+  int32 code = 1;
+  string msg = 2;
+  map<string, EquipExchangeInfo> exchange_infos = 3; // key: 兑换配置ID, value: 兑换信息
+}
+
 // 领取月卡奖励请求
 message ClaimMonthlyCardRewardRequest{
   bool is_purchase_reward = 1;         // true表示领取购买奖励，false表示领取每日奖励

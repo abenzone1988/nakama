@@ -2,6 +2,7 @@
 "foreverAdvCard":{"money":"98","id":"foreverAdvCard","productName":"终身免费卡"},
 "firstCharge":{"money":"6","id":"firstCharge","productName":"首充"},
 "sevenDay":{"money":"68","id":"sevenDay","productName":"七日祈愿"},
+"monthlyPass":{"money":"30","id":"monthlyPass","productName":"月卡"},
 "chapter_L1005":{"money":"12","id":"chapter_L1005","productName":"章节礼包第5章"},
 "chapter_L1010":{"money":"12","id":"chapter_L1010","productName":"章节礼包第10章"},
 "chapter_L1015":{"money":"12","id":"chapter_L1015","productName":"章节礼包第15章"},
