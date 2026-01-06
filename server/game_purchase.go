@@ -440,6 +440,45 @@ func (s *ApiServer) deliverSevenDayProduct(ctx context.Context, userID uuid.UUID
 	return nil
 }
 
+// deliverMonthlyCardProduct 处理月卡购买发货
+func (s *ApiServer) deliverMonthlyCardProduct(ctx context.Context, userID uuid.UUID, productID string) error {
+	username := userID.String()
+	users, err := GetUsers(ctx, s.logger, s.db, s.statusRegistry, []string{userID.String()}, nil, nil)
+	if err == nil && users != nil && len(users.Users) > 0 && users.Users[0] != nil && users.Users[0].Username != "" {
+		username = users.Users[0].Username
+	}
+
+	extendDuration := 30 * 24 * time.Hour
+	if _, err := VipAccountExtend(ctx, s.logger, s.db, userID, username, extendDuration); err != nil {
+		s.logger.Error("扩展VIP时间失败",
+			zap.Error(err),
+			zap.String("user_id", userID.String()),
+			zap.String("product_id", productID))
+		return fmt.Errorf("扩展VIP时间失败: %w", err)
+	}
+
+	monthlyCardData := &MonthlyCardData{}
+	if err := LoadUserData(ctx, s.logger, s.db, monthlyCardData); err != nil {
+		s.logger.Error("加载月卡数据失败", zap.Error(err))
+		monthlyCardData.Init()
+	}
+
+	monthlyCardData.PurchaseTime = time.Now().Format(time.RFC3339)
+	monthlyCardData.PurchaseRewardClaimed = false
+	monthlyCardData.TotalPurchases++
+
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, monthlyCardData); err != nil {
+		return fmt.Errorf("保存月卡数据失败: %w", err)
+	}
+
+	s.logger.Info("月卡购买记录成功",
+		zap.String("user_id", userID.String()),
+		zap.String("product_id", productID),
+		zap.String("purchase_time", monthlyCardData.PurchaseTime),
+		zap.Int32("total_purchases", monthlyCardData.TotalPurchases))
+	return nil
+}
+
 // deliverShopGemProduct 处理钻石商店商品购买发货
 func (s *ApiServer) deliverShopGemProduct(ctx context.Context, userID uuid.UUID, productID string, price string) error {
 	// 通过 productID（TplPay.ID）找到对应的商店商品
@@ -593,10 +632,11 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	isFirstCharge := productID == FirstChargeProductID
 	isVipPurchase := productID == VipProductID
 	isSevenDayPurchase := productID == SevenDayProductID
+	isMonthlyCardPurchase := productID == MonthlyCardID
 	isShopGem := strings.HasPrefix(productID, "shopGem")
 	isShopChapter := strings.HasPrefix(productID, "chapter")
 
-	if (isFirstCharge || isVipPurchase || isSevenDayPurchase || isShopGem || isShopChapter) && ctx.Value(ctxUserIDKey{}) == nil {
+	if (isFirstCharge || isSevenDayPurchase || isVipPurchase || isMonthlyCardPurchase || isShopGem || isShopChapter) && ctx.Value(ctxUserIDKey{}) == nil {
 		ctx = context.WithValue(ctx, ctxUserIDKey{}, userID)
 	}
 
@@ -625,6 +665,12 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 		}
 	}
 
+	if isMonthlyCardPurchase {
+		if err := s.deliverMonthlyCardProduct(ctx, userID, productID); err != nil {
+			s.logger.Error("月卡购买记录失败", zap.Error(err), zap.String("user_id", userID.String()), zap.String("product_id", productID))
+		}
+	}
+
 	if isShopGem {
 		if err := s.deliverShopGemProduct(ctx, userID, productID, price); err != nil {
 			// 钻石购买记录失败不影响发货流程，继续处理
@@ -645,9 +691,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	s.logger.Info("商品发放完成",
 		zap.String("user_id", userID.String()),
 		zap.String("product_id", productID),
-		zap.String("price", price),
-		zap.Bool("is_first_charge", isFirstCharge),
-		zap.Bool("is_vip_purchase", isVipPurchase))
+		zap.String("price", price))
 
 	return nil
 }

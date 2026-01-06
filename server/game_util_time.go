@@ -132,3 +132,49 @@ func LoadPlayerTimeZone(ctx context.Context, logger *zap.Logger, db *sql.DB, sta
 func GetCurrentTimeUTC() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
+
+// GetWeekKey 返回玩家时区下的周标识（year-week），用于每周重置
+func GetWeekKey(ctx context.Context, t time.Time) string {
+	loc := GetGameTimeZone(ctx)
+	tInZone := t.In(loc)
+	year, week := tInZone.ISOWeek()
+	return fmt.Sprintf("%d-%02d", year, week)
+}
+
+// IsSameWeek 判断两个时间（UTC）在玩家时区下是否是同一周
+// 如果用户未设置时区，默认使用服务器时区
+func IsSameWeek(ctx context.Context, t1, t2 time.Time) bool {
+	if t1.IsZero() || t2.IsZero() {
+		return false
+	}
+	loc := GetGameTimeZone(ctx)
+	y1, w1 := t1.In(loc).ISOWeek()
+	y2, w2 := t2.In(loc).ISOWeek()
+	return y1 == y2 && w1 == w2
+}
+
+// IsSameDay 判断两个时间（UTC）在玩家时区下是否是同一天
+// 如果用户没有设置时区，使用服务器时区作为默认时区
+func IsSameDay(ctx context.Context, t1, t2 time.Time) bool {
+	if t1.IsZero() || t2.IsZero() {
+		return false
+	}
+
+	loc := GetGameTimeZone(ctx)
+	t1InZone := t1.In(loc)
+	t2InZone := t2.In(loc)
+
+	return t1InZone.Year() == t2InZone.Year() &&
+		t1InZone.Month() == t2InZone.Month() &&
+		t1InZone.Day() == t2InZone.Day()
+}
+
+// GetDateString 获取时间在玩家时区下的日期字符串（YYYY-MM-DD格式）
+func GetDateString(ctx context.Context, t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	loc := GetGameTimeZone(ctx)
+	tInZone := t.In(loc)
+	return tInZone.Format("2006-01-02")
+}

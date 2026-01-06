@@ -246,3 +246,64 @@ func IsUserVip(ctx context.Context, db *sql.DB, userID uuid.UUID) (bool, error) 
 
 	return count > 0, nil
 }
+
+// VipAccountExtend 扩展VIP账户有效期
+func VipAccountExtend(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, username string, extendDuration time.Duration) (*console.VipAccount, error) {
+	var id string
+	var existingExpiryTime time.Time
+	var createTime time.Time
+
+	err := db.QueryRowContext(ctx, `
+		SELECT id, expiry_time, create_time
+		FROM vip_accounts
+		WHERE user_id = $1
+		ORDER BY create_time DESC
+		LIMIT 1
+	`, userID).Scan(&id, &existingExpiryTime, &createTime)
+
+	now := time.Now()
+	var newExpiryTime time.Time
+
+	if err == sql.ErrNoRows {
+		newExpiryTime = now.Add(extendDuration)
+		vipID := uuid.Must(uuid.NewV4())
+		_, err = db.ExecContext(ctx, `
+			INSERT INTO vip_accounts (id, user_id, username, create_time, expiry_time)
+			VALUES ($1, $2, $3, $4, $5)
+		`, vipID, userID, username, now, newExpiryTime)
+		if err != nil {
+			logger.Error("插入VIP账户失败", zap.Error(err))
+			return nil, err
+		}
+		id = vipID.String()
+		createTime = now
+	} else if err != nil {
+		logger.Error("查询VIP账户失败", zap.Error(err))
+		return nil, err
+	} else {
+		if existingExpiryTime.After(now) {
+			newExpiryTime = existingExpiryTime.Add(extendDuration)
+		} else {
+			newExpiryTime = now.Add(extendDuration)
+		}
+
+		_, err = db.ExecContext(ctx, `
+			UPDATE vip_accounts
+			SET expiry_time = $1, username = $2
+			WHERE id = $3
+		`, newExpiryTime, username, id)
+		if err != nil {
+			logger.Error("更新VIP账户过期时间失败", zap.Error(err))
+			return nil, err
+		}
+	}
+
+	return &console.VipAccount{
+		Id:         id,
+		UserId:     userID.String(),
+		Username:   username,
+		CreateTime: timestamppb.New(createTime),
+		ExpiryTime: timestamppb.New(newExpiryTime),
+		IsActive:   newExpiryTime.After(now),
+	}, nil
+}

@@ -131,16 +131,12 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMg
 			switch itemTpl.ItemType {
 			case ItemType_Coin:
 				walletChangeset["coin"] += int64(item.Num)
-				skipItemIds[item.Id] = true
 			case ItemType_Gem:
 				walletChangeset["gem"] += int64(item.Num)
-				skipItemIds[item.Id] = true
 			case ItemType_AdTicket:
 				walletChangeset["ad"] += int64(item.Num)
-				skipItemIds[item.Id] = true
 			case ItemType_Stamina:
 				walletChangeset["stamina"] += int64(item.Num)
-				skipItemIds[item.Id] = true
 			case ItemType_RandomElementCrystal:
 				crystalItems := templateMgr.GetTplItem().FindByFilter(func(t template.TplItem) bool {
 					return t.ItemType == ItemType_ElementCrystal
@@ -947,7 +943,7 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 	}
 
 	crystalEquipments := templateMgr.GetTplCrystalEquipment().FindByFilter(func(t template.TplCrystalEquipment) bool {
-		return t.Quality == quality
+		return t.Quality == quality && t.Level == level
 	})
 
 	if crystalEquipments.Len() == 0 {

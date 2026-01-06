@@ -22,10 +22,12 @@ const (
 	ItemID_Coin          = "10000" // 金币
 	ItemID_Gem           = "10001" // 钻石
 	ItemID_Stamina       = "10002" // 体力
+	ItemID_ExchangePoint = "10004" //兑换积分
 	ItemID_AdTicket      = "20000" // 广告券
 	ItemID_RandomTurret  = "50000" // 随机炮台（转为碎片）
 	ItemID_RandomCrystal = "60000" // 随机水晶
 	ItemID_TurretDebris  = "90000" // 炮台碎片
+
 )
 
 const (
@@ -61,10 +63,11 @@ const (
 
 // 直购ID
 const (
-	VipProductID         = "foreverAdvCard"       // VIP商品ID
-	FirstChargeProductID = "firstCharge"          // 首冲商品ID
-	SevenDayProductID    = "sevenDay"             // 七日购买商品ID
-	VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
+	VipProductID         = "foreverAdvCard" // VIP商品ID
+	FirstChargeProductID = "firstCharge"    // 首冲商品ID
+	SevenDayProductID    = "sevenDay"       // 七日购买商品ID
+	// VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
+	MonthlyCardID = "monthlyCard" // 月卡商品ID
 )
 
 const (
@@ -74,8 +77,12 @@ const (
 	TTShortcutRewardID = "TTShortcutReword" // 添加到桌面奖励（仅一次）
 	// 入口有奖
 	TTEntryRewardID = "TTEntryReword" // 入口有奖（每天一次）
-
-	TTDirectPlayRewardID = "LimitedTimePackageReword" // 直玩显示礼包
+	// 直玩显示礼包
+	TTDirectPlayRewardID = "LimitedTimePackageReword"
+	//	MonthlyPassReward00	月卡首日立即可获得的奖励 只有一次
+	MonthlyPassReward00ID = "MonthlyPassReward00"
+	//	MonthlyPassReward01	月卡每日可获得的奖励
+	MonthlyPassReward01ID = "MonthlyPassReward01"
 )
 
 // 每日签到相关常量

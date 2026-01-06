@@ -11,7 +11,6 @@ import (
 type TplCrystalEquipment struct {
 	EquipType    int32  `json:"equipType"`
 	ID           string `json:"id"`
-	Level        int32  `json:"level"`
 	Quality      int32  `json:"quality"`
 	SalvageItems string `json:"salvageItems"`
 }

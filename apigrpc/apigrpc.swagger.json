@@ -2390,6 +2390,39 @@
         ]
       }
     },
+    "/v2/game/equip/exchange": {
+      "post": {
+        "summary": "==================== Equip Exchange ====================",
+        "operationId": "Nakama_ExchangeEquip",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameExchangeEquipResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameExchangeEquipRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/equip/upgrade": {
       "post": {
         "summary": "==================== Equip ====================",
@@ -2760,6 +2793,61 @@
             }
           }
         ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/monthlycard/claim": {
+      "post": {
+        "operationId": "Nakama_ClaimMonthlyCardReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameClaimMonthlyCardRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameClaimMonthlyCardRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/monthlycard/status": {
+      "get": {
+        "summary": "==================== Monthly Card ====================",
+        "operationId": "Nakama_GetMonthlyCardStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetMonthlyCardStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
         "tags": [
           "Nakama"
         ]
@@ -8120,6 +8208,44 @@
       },
       "title": "领取活跃度奖励响应"
     },
+    "gameClaimMonthlyCardRewardRequest": {
+      "type": "object",
+      "properties": {
+        "isPurchaseReward": {
+          "type": "boolean",
+          "title": "true表示领取购买奖励，false表示领取每日奖励"
+        }
+      },
+      "title": "领取月卡奖励请求"
+    },
+    "gameClaimMonthlyCardRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励数据"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "领取月卡奖励响应"
+    },
     "gameClaimMoppingRewardRequest": {
       "type": "object",
       "properties": {
@@ -8673,6 +8799,64 @@
         }
       }
     },
+    "gameExchangeEquipRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "兑换配置ID"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "兑换数量（单位：道具个数）"
+        }
+      },
+      "title": "装备兑换请求"
+    },
+    "gameExchangeEquipResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "获得的物品"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新（若无变更则为空）"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新"
+        },
+        "exchangedCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "本次实际兑换数量"
+        },
+        "totalCost": {
+          "type": "integer",
+          "format": "int32",
+          "title": "本次消耗的积分数量"
+        },
+        "boughtCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "本周累计购买数量（兑换后）"
+        }
+      },
+      "title": "装备兑换响应"
+    },
     "gameFeedbackRequest": {
       "type": "object",
       "properties": {
@@ -8861,6 +9045,36 @@
         }
       },
       "title": "获取挖矿数据响应"
+    },
+    "gameGetMonthlyCardStatusResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean",
+          "title": "月卡是否有效"
+        },
+        "expiryTime": {
+          "type": "string",
+          "format": "int64",
+          "title": "VIP过期时间（Unix时间戳）"
+        },
+        "canClaimDailyReward": {
+          "type": "boolean",
+          "title": "是否可以领取当天奖励（月卡有效且与上次领取不是同一天）"
+        },
+        "purchaseRewardClaimed": {
+          "type": "boolean",
+          "title": "是否已领取购买奖励"
+        }
+      },
+      "title": "获取月卡状态响应"
     },
     "gameGetRestStationResponse": {
       "type": "object",
@@ -9581,6 +9795,10 @@
         },
         "msg": {
           "type": "string"
+        },
+        "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "发放的奖励数据"
         },
         "walletUpdated": {
           "$ref": "#/definitions/gameWallet",

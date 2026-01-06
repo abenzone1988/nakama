@@ -488,8 +488,9 @@ func (s *ApiServer) SalvageCrystalEquipment(ctx context.Context, in *game.Salvag
 		zap.Int("item_count", len(mergedReward.Items)))
 
 	response := &game.SalvageCrystalEquipmentResponse{
-		Code: 0,
-		Msg:  "Success",
+		Code:   0,
+		Msg:    "Success",
+		Reward: mergedReward,
 	}
 
 	if walletUpdateResult != nil {

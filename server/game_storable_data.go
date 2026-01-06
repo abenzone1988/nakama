@@ -434,6 +434,52 @@ func (v *VipRewardData) Init() {
 	v.SetVersion("")
 }
 
+// MonthlyCardData 月卡数据存储结构
+type MonthlyCardData struct {
+	BaseStorable
+	PurchaseTime          string    `json:"purchase_time"`           // 最后一次购买时间，ISO 8601 格式
+	LastClaimTime         time.Time `json:"last_claim_time"`         // 最后一次领取每日奖励的时间（UTC）
+	PurchaseRewardClaimed bool      `json:"purchase_reward_claimed"` // 是否已领取购买奖励
+	TotalPurchases        int32     `json:"total_purchases"`         // 总购买次数
+}
+
+func (d *MonthlyCardData) GetCollection() string {
+	return "monthly_card"
+}
+
+func (d *MonthlyCardData) GetKey() string {
+	return "data"
+}
+
+func (d *MonthlyCardData) Init() {
+	d.PurchaseTime = ""
+	d.LastClaimTime = time.Time{}
+	d.PurchaseRewardClaimed = false
+	d.TotalPurchases = 0
+	d.SetVersion("")
+}
+
+// EquipExchangeData 装备兑换数据
+type EquipExchangeData struct {
+	BaseStorable
+	WeekKey      string           `json:"week_key"`
+	BoughtCounts map[string]int32 `json:"bought_counts"`
+}
+
+func (d *EquipExchangeData) GetCollection() string {
+	return "equip_exchange"
+}
+
+func (d *EquipExchangeData) GetKey() string {
+	return "data"
+}
+
+func (d *EquipExchangeData) Init() {
+	d.WeekKey = ""
+	d.BoughtCounts = make(map[string]int32)
+	d.SetVersion("")
+}
+
 // ============================================================================
 // 任务相关数据结构
 // ============================================================================

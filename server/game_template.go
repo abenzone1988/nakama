@@ -50,6 +50,7 @@ type TemplateManager interface {
 	GetTplCrystalEquipmentRandomReward() *TableTplCrystalEquipmentRandomReward
 	GetTplCrystalSkin() *TableTplCrystalSkin
 	GetTplCrystalSkinDev() *TableTplCrystalSkinDev
+	GetTplEquipExchange() *TableTplEquipExchange
 }
 
 type LocalTemplateManager struct {
@@ -90,6 +91,7 @@ type LocalTemplateManager struct {
 	tableTplCrystalEquipmentRandomReward    *TableTplCrystalEquipmentRandomReward
 	tableTplCrystalSkin                     *TableTplCrystalSkin
 	tableTplCrystalSkinDev                  *TableTplCrystalSkinDev
+	tableTplEquipExchange                   *TableTplEquipExchange
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -131,6 +133,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplCrystalEquipmentRandomReward:    NewTableTplCrystalEquipmentRandomReward(logger, jsonPath),
 		tableTplCrystalSkin:                     NewTableTplCrystalSkin(logger, jsonPath),
 		tableTplCrystalSkinDev:                  NewTableTplCrystalSkinDev(logger, jsonPath),
+		tableTplEquipExchange:                   NewTableTplEquipExchange(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -174,6 +177,13 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplCrystalEquipmentRandomReward.LoadData(t.StorageReadTpl("TplCrystalEquipmentRandomReward"))
 	t.tableTplCrystalSkin.LoadData(t.StorageReadTpl("TplCrystalSkin"))
 	t.tableTplCrystalSkinDev.LoadData(t.StorageReadTpl("TplCrystalSkinDev"))
+	t.tableTplEquipExchange.LoadData(t.StorageReadTpl("TplEquipExchange"))
+}
+
+func (t *LocalTemplateManager) GetTplEquipExchange() *TableTplEquipExchange {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplEquipExchange
 }
 
 func (t *LocalTemplateManager) GetTplCrystalSkin() *TableTplCrystalSkin {

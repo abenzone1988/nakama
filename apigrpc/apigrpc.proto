@@ -1118,6 +1118,26 @@ service Nakama {
     };
   }
 
+  // ==================== Equip Exchange ====================
+  rpc ExchangeEquip(game.ExchangeEquipRequest) returns (game.ExchangeEquipResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/equip/exchange"
+      body: "*"
+    };
+  }
+
+  // ==================== Monthly Card ====================
+  rpc GetMonthlyCardStatus(game.GetMonthlyCardStatusRequest) returns (game.GetMonthlyCardStatusResponse) {
+    option (google.api.http).get = "/v2/game/monthlycard/status";
+  }
+
+  rpc ClaimMonthlyCardReward(game.ClaimMonthlyCardRewardRequest) returns (game.ClaimMonthlyCardRewardResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/monthlycard/claim"
+      body: "*"
+    };
+  }
+
   //====================PurchaseTest====================
 
   rpc PurchaseTest(game.PurchaseRequest) returns (game.PurchaseResponse) {
