@@ -63,11 +63,11 @@ const (
 
 // 直购ID
 const (
-	VipProductID         = "foreverAdvCard" // VIP商品ID
-	FirstChargeProductID = "firstCharge"    // 首冲商品ID
-	SevenDayProductID    = "sevenDay"       // 七日购买商品ID
-	// VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
-	MonthlyCardID = "monthlyCard" // 月卡商品ID
+	VipProductID         = "foreverAdvCard"       // VIP商品ID
+	FirstChargeProductID = "firstCharge"          // 首冲商品ID
+	SevenDayProductID    = "sevenDay"             // 七日购买商品ID
+	VipRewardID          = "ForeverAdvCardReward" // VIP额外奖励ID
+	MonthlyCardID        = "monthlyCard"          // 月卡商品ID
 )
 
 const (
@@ -79,9 +79,9 @@ const (
 	TTEntryRewardID = "TTEntryReword" // 入口有奖（每天一次）
 	// 直玩显示礼包
 	TTDirectPlayRewardID = "LimitedTimePackageReword"
-	//	MonthlyPassReward00	月卡首日立即可获得的奖励 只有一次
+	// 月卡首日立即可获得的奖励 只有一次
 	MonthlyPassReward00ID = "MonthlyPassReward00"
-	//	MonthlyPassReward01	月卡每日可获得的奖励
+	// 月卡每日可获得的奖励
 	MonthlyPassReward01ID = "MonthlyPassReward01"
 )
 
