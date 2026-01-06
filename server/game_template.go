@@ -48,6 +48,8 @@ type TemplateManager interface {
 	GetTplCrystalEquipmentRefinement() *TableTplCrystalEquipmentRefinement
 	GetTplCrystalEquipmentRefinementAffix() *TableTplCrystalEquipmentRefinementAffix
 	GetTplCrystalEquipmentRandomReward() *TableTplCrystalEquipmentRandomReward
+	GetTplCrystalSkin() *TableTplCrystalSkin
+	GetTplCrystalSkinDev() *TableTplCrystalSkinDev
 }
 
 type LocalTemplateManager struct {
@@ -86,6 +88,8 @@ type LocalTemplateManager struct {
 	tableTplCrystalEquipmentRefinement      *TableTplCrystalEquipmentRefinement
 	tableTplCrystalEquipmentRefinementAffix *TableTplCrystalEquipmentRefinementAffix
 	tableTplCrystalEquipmentRandomReward    *TableTplCrystalEquipmentRandomReward
+	tableTplCrystalSkin                     *TableTplCrystalSkin
+	tableTplCrystalSkinDev                  *TableTplCrystalSkinDev
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -125,6 +129,8 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplCrystalEquipmentRefinement:      NewTableTplCrystalEquipmentRefinement(logger, jsonPath),
 		tableTplCrystalEquipmentRefinementAffix: NewTableTplCrystalEquipmentRefinementAffix(logger, jsonPath),
 		tableTplCrystalEquipmentRandomReward:    NewTableTplCrystalEquipmentRandomReward(logger, jsonPath),
+		tableTplCrystalSkin:                     NewTableTplCrystalSkin(logger, jsonPath),
+		tableTplCrystalSkinDev:                  NewTableTplCrystalSkinDev(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -166,6 +172,20 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplCrystalEquipmentRefinement.LoadData(t.StorageReadTpl("TplCrystalEquipmentRefinement"))
 	t.tableTplCrystalEquipmentRefinementAffix.LoadData(t.StorageReadTpl("TplCrystalEquipmentRefinementAffix"))
 	t.tableTplCrystalEquipmentRandomReward.LoadData(t.StorageReadTpl("TplCrystalEquipmentRandomReward"))
+	t.tableTplCrystalSkin.LoadData(t.StorageReadTpl("TplCrystalSkin"))
+	t.tableTplCrystalSkinDev.LoadData(t.StorageReadTpl("TplCrystalSkinDev"))
+}
+
+func (t *LocalTemplateManager) GetTplCrystalSkin() *TableTplCrystalSkin {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalSkin
+}
+
+func (t *LocalTemplateManager) GetTplCrystalSkinDev() *TableTplCrystalSkinDev {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplCrystalSkinDev
 }
 
 func (t *LocalTemplateManager) GetTplCrystalEquipmentRandomReward() *TableTplCrystalEquipmentRandomReward {

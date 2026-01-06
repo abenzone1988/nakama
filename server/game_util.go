@@ -196,6 +196,41 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMg
 					}
 				}
 				skipItemIds[item.Id] = true
+			case ItemType_RandomEquipmentBlueprint:
+				blueprintItems := templateMgr.GetTplItem().FindByFilter(func(t template.TplItem) bool {
+					return t.ItemType == ItemType_CrystalEquipmentBlueprint
+				})
+				if blueprintItems.Len() == 0 {
+					logger.Warn("未找到水晶装备图纸配置")
+					break
+				}
+				blueprintIds := make([]string, 0, blueprintItems.Len())
+				for i := 0; i < blueprintItems.Len(); i++ {
+					blueprintIds = append(blueprintIds, blueprintItems.Get(i).ID)
+				}
+				for i := int32(0); i < item.Num; i++ {
+					randomBlueprint := blueprintIds[rand.Intn(len(blueprintIds))]
+					inventoryChangeset[randomBlueprint]++
+					convertedItems[randomBlueprint]++
+				}
+				skipItemIds[item.Id] = true
+			case ItemType_CommanderExp:
+				playerLevelData := &PlayerLevelData{}
+				if err := LoadUserData(ctx, logger, db, playerLevelData); err != nil {
+					logger.Error("加载玩家等级数据失败", zap.Error(err))
+					inventoryChangeset[item.Id] += int64(item.Num)
+				} else {
+					playerLevelData.TotalExp += item.Num
+					if err := SaveUserData(ctx, logger, db, metrics, storageIndex, playerLevelData); err != nil {
+						logger.Error("保存玩家等级数据失败", zap.Error(err))
+						inventoryChangeset[item.Id] += int64(item.Num)
+					} else {
+						logger.Info("玩家获得指挥官经验",
+							zap.Int32("exp_gained", item.Num),
+							zap.Int32("total_exp", playerLevelData.TotalExp))
+						skipItemIds[item.Id] = true
+					}
+				}
 			case ItemType_Turret:
 				logger.Info("尝试解锁炮台", zap.String("equip_id", item.Id), zap.Int32("num", item.Num))
 				alreadyUnlocked, err := tryUnlockEquipment(ctx, logger, db, metrics, storageIndex, item.Id)
@@ -994,13 +1029,20 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 // 返回值：
 //   - map[string]int32: 生成的装备tplId及其数量，用于客户端显示
 //   - error: 错误信息
-func generateRandomCrystalEquipmentFromDrop(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, randomReward template.TplCrystalEquipmentRandomReward) (map[string]int32, error) {
+func generateRandomCrystalEquipmentFromDrop(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMgr TemplateManager, metrics Metrics, storageIndex StorageIndex, randomReward template.TplCrystalEquipmentRandomReward, progress int32) (map[string]int32, error) {
 	userID, _ := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	// 1. 随机掉落数量
 	dropCount := randomReward.Dropmin
 	if randomReward.Dropmax > randomReward.Dropmin {
-		dropCount = randomReward.Dropmin + rand.Int31n(randomReward.Dropmax-randomReward.Dropmin+1)
+		diff := randomReward.Dropmax - randomReward.Dropmin
+		extra := diff * progress / 100
+
+		if progress == 100 {
+			dropCount = randomReward.Dropmax
+		} else {
+			dropCount = randomReward.Dropmin + extra
+		}
 	}
 
 	if dropCount <= 0 {

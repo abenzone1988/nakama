@@ -248,16 +248,31 @@ func (s *ApiServer) LockCrystalAffix(ctx context.Context, in *game.LockCrystalAf
 		}, nil
 	}
 
+	isLocked := false
 	for _, lockedID := range equipment.LockedAffixIds {
 		if lockedID == affixID {
+			isLocked = true
+			break
+		}
+	}
+
+	if in.GetLock() {
+		if isLocked {
 			return &game.LockCrystalAffixResponse{
 				Code: 5,
 				Msg:  "词条已锁定",
 			}, nil
 		}
+		equipment.LockedAffixIds = append(equipment.LockedAffixIds, affixID)
+	} else {
+		if !isLocked {
+			return &game.LockCrystalAffixResponse{
+				Code: 5,
+				Msg:  "词条未锁定",
+			}, nil
+		}
+		equipment.LockedAffixIds = removeStringFromSlice(equipment.LockedAffixIds, affixID)
 	}
-
-	equipment.LockedAffixIds = append(equipment.LockedAffixIds, affixID)
 
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, crystalEquipmentsData); err != nil {
 		s.logger.Error("保存水晶装备数据失败", zap.Error(err))
@@ -267,10 +282,15 @@ func (s *ApiServer) LockCrystalAffix(ctx context.Context, in *game.LockCrystalAf
 		}, nil
 	}
 
-	s.logger.Info("锁定词条成功",
+	action := "锁定"
+	if !in.GetLock() {
+		action = "解锁"
+	}
+	s.logger.Info(action+"词条成功",
 		zap.String("user_id", userID.String()),
 		zap.String("equipment_id", equipmentID),
-		zap.String("affix_id", affixID))
+		zap.String("affix_id", affixID),
+		zap.Bool("lock", in.GetLock()))
 
 	return &game.LockCrystalAffixResponse{
 		Code:      0,
@@ -367,6 +387,121 @@ func (s *ApiServer) GetCrystalEquipments(ctx context.Context, in *game.GetCrysta
 	}, nil
 }
 
+func (s *ApiServer) SalvageCrystalEquipment(ctx context.Context, in *game.SalvageCrystalEquipmentRequest) (*game.SalvageCrystalEquipmentResponse, error) {
+	userID, _ := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+	equipmentIDs := in.GetEquipmentIds()
+	if len(equipmentIDs) == 0 {
+		return &game.SalvageCrystalEquipmentResponse{
+			Code: 1,
+			Msg:  "装备ID不能为空",
+		}, nil
+	}
+
+	crystalEquipmentsData := &CrystalEquipmentData{}
+	if err := LoadUserData(ctx, s.logger, s.db, crystalEquipmentsData); err != nil {
+		s.logger.Error("加载水晶装备数据失败", zap.Error(err), zap.String("user_id", userID.String()))
+		return &game.SalvageCrystalEquipmentResponse{
+			Code: 2,
+			Msg:  "加载数据失败",
+		}, nil
+	}
+
+	var allRewards []*game.Reward
+	var validEquipmentIDs []string
+
+	for _, equipmentID := range equipmentIDs {
+		if equipmentID == "" {
+			continue
+		}
+
+		equipment, exists := crystalEquipmentsData.Equipments[equipmentID]
+		if !exists {
+			s.logger.Warn("装备不存在", zap.String("equipment_id", equipmentID), zap.String("user_id", userID.String()))
+			continue
+		}
+
+		tplEquip, found := s.template.GetTplCrystalEquipment().FindByKey(equipment.TplId)
+		if !found {
+			s.logger.Error("装备模板不存在", zap.String("tpl_id", equipment.TplId), zap.String("equipment_id", equipmentID))
+			continue
+		}
+
+		if tplEquip.SalvageItems == "" {
+			s.logger.Warn("装备无分解奖励", zap.String("equipment_id", equipmentID), zap.String("tpl_id", equipment.TplId))
+			continue
+		}
+
+		salvageItems := parseItems(tplEquip.SalvageItems, s.logger)
+		if len(salvageItems) == 0 {
+			s.logger.Warn("分解物品解析失败", zap.String("salvage_items", tplEquip.SalvageItems), zap.String("equipment_id", equipmentID))
+			continue
+		}
+
+		allRewards = append(allRewards, &game.Reward{
+			Items: salvageItems,
+		})
+		validEquipmentIDs = append(validEquipmentIDs, equipmentID)
+	}
+
+	if len(validEquipmentIDs) == 0 {
+		return &game.SalvageCrystalEquipmentResponse{
+			Code: 3,
+			Msg:  "没有可分解的装备",
+		}, nil
+	}
+
+	mergedReward := MergeRewards(allRewards)
+	if mergedReward == nil {
+		return &game.SalvageCrystalEquipmentResponse{
+			Code: 6,
+			Msg:  "分解物品配置错误",
+		}, nil
+	}
+
+	walletUpdateResult, inventoryUpdateResult, err := GrantReward(
+		ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex,
+		mergedReward, "crystal_equipment_salvage",
+	)
+	if err != nil {
+		s.logger.Error("发放分解奖励失败", zap.Error(err))
+		return &game.SalvageCrystalEquipmentResponse{
+			Code: 7,
+			Msg:  "发放奖励失败",
+		}, nil
+	}
+
+	for _, equipmentID := range validEquipmentIDs {
+		delete(crystalEquipmentsData.Equipments, equipmentID)
+	}
+
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, crystalEquipmentsData); err != nil {
+		s.logger.Error("保存水晶装备数据失败", zap.Error(err))
+		return &game.SalvageCrystalEquipmentResponse{
+			Code: 8,
+			Msg:  "保存数据失败",
+		}, nil
+	}
+
+	s.logger.Info("分解水晶装备成功",
+		zap.String("user_id", userID.String()),
+		zap.Int("equipment_count", len(validEquipmentIDs)),
+		zap.Int("item_count", len(mergedReward.Items)))
+
+	response := &game.SalvageCrystalEquipmentResponse{
+		Code: 0,
+		Msg:  "Success",
+	}
+
+	if walletUpdateResult != nil {
+		response.WalletUpdated = walletUpdateResult.Updated
+	}
+	if inventoryUpdateResult != nil {
+		response.InventoryUpdated = inventoryUpdateResult.Updated
+	}
+
+	return response, nil
+}
+
 func convertToProtoEquipment(equipment *CrystalEquipment) *game.CrystalEquipmentInfo {
 	activeAffixesProto := make([]*game.CrystalEquipmentAffix, len(equipment.ActiveAffixes))
 	for i, affix := range equipment.ActiveAffixes {
@@ -391,4 +526,15 @@ func convertToProtoEquipment(equipment *CrystalEquipment) *game.CrystalEquipment
 		PendingAffixes: pendingAffixesProto,
 		LockedAffixIds: equipment.LockedAffixIds,
 	}
+}
+
+// removeStringFromSlice 从字符串切片中删除指定元素
+func removeStringFromSlice(slice []string, item string) []string {
+	result := make([]string, 0, len(slice))
+	for _, s := range slice {
+		if s != item {
+			result = append(result, s)
+		}
+	}
+	return result
 }

@@ -2137,6 +2137,39 @@
         ]
       }
     },
+    "/v2/game/crystal/equipment/salvage": {
+      "post": {
+        "summary": "Salvage crystal equipment",
+        "operationId": "Nakama_SalvageCrystalEquipment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameSalvageCrystalEquipmentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameSalvageCrystalEquipmentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/crystal/equipments/list": {
       "post": {
         "summary": "Get all crystal equipments",
@@ -2162,6 +2195,105 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/gameGetCrystalEquipmentsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/crystal/skin/unlock": {
+      "post": {
+        "summary": "==================== Crystal Skin ====================\nUnlock crystal skin",
+        "operationId": "Nakama_UnlockCrystalSkin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUnlockCrystalSkinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUnlockCrystalSkinRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/crystal/skin/upgrade": {
+      "post": {
+        "summary": "Upgrade crystal skin",
+        "operationId": "Nakama_UpgradeCrystalSkin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeCrystalSkinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameUpgradeCrystalSkinRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/crystal/skins/list": {
+      "post": {
+        "summary": "Get all crystal skins",
+        "operationId": "Nakama_GetCrystalSkins",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetCrystalSkinsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGetCrystalSkinsRequest"
             }
           }
         ],
@@ -8403,6 +8535,20 @@
       },
       "title": "水晶装备信息"
     },
+    "gameCrystalSkinInfo": {
+      "type": "object",
+      "properties": {
+        "skinId": {
+          "type": "string",
+          "title": "皮肤模板ID (如 \"SKIN10001\")"
+        },
+        "starLevel": {
+          "type": "integer",
+          "format": "int32",
+          "title": "星级"
+        }
+      }
+    },
     "gameDoMineRequest": {
       "type": "object",
       "title": "挖矿请求"
@@ -8575,6 +8721,28 @@
         }
       },
       "title": "获取水晶装备列表响应"
+    },
+    "gameGetCrystalSkinsRequest": {
+      "type": "object"
+    },
+    "gameGetCrystalSkinsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "skins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameCrystalSkinInfo"
+          },
+          "title": "所有水晶皮肤列表"
+        }
+      }
     },
     "gameGetFirstChargeStatusResponse": {
       "type": "object",
@@ -8939,6 +9107,10 @@
         "affixId": {
           "type": "string",
           "title": "要锁定的词条ID"
+        },
+        "lock": {
+          "type": "boolean",
+          "title": "是否锁定"
         }
       },
       "title": "锁定词条请求"
@@ -9387,6 +9559,43 @@
       },
       "title": "奖励数据"
     },
+    "gameSalvageCrystalEquipmentRequest": {
+      "type": "object",
+      "properties": {
+        "equipmentIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "装备唯一ID数组"
+        }
+      },
+      "title": "分解水晶装备请求"
+    },
+    "gameSalvageCrystalEquipmentResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      },
+      "title": "分解水晶装备响应"
+    },
     "gameShopChapterItem": {
       "type": "object",
       "properties": {
@@ -9646,6 +9855,78 @@
         }
       },
       "title": "测试发奖响应"
+    },
+    "gameUnlockCrystalSkinRequest": {
+      "type": "object",
+      "properties": {
+        "skinId": {
+          "type": "string",
+          "title": "皮肤ID (如 \"SKIN10001\")"
+        }
+      }
+    },
+    "gameUnlockCrystalSkinResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "skin": {
+          "$ref": "#/definitions/gameCrystalSkinInfo",
+          "title": "解锁的皮肤信息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      }
+    },
+    "gameUpgradeCrystalSkinRequest": {
+      "type": "object",
+      "properties": {
+        "skinId": {
+          "type": "string",
+          "title": "皮肤ID (如 \"SKIN10001\")"
+        }
+      }
+    },
+    "gameUpgradeCrystalSkinResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "skin": {
+          "$ref": "#/definitions/gameCrystalSkinInfo",
+          "title": "升级后的皮肤信息"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameItem"
+          },
+          "title": "背包更新结果"
+        }
+      }
     },
     "gameUpgradeCrystalSlotRequest": {
       "type": "object",

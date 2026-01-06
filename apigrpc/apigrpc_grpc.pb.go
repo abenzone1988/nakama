@@ -187,6 +187,10 @@ const (
 	Nakama_LockCrystalAffix_FullMethodName                  = "/nakama.api.Nakama/LockCrystalAffix"
 	Nakama_ActivatePendingAffixes_FullMethodName            = "/nakama.api.Nakama/ActivatePendingAffixes"
 	Nakama_GetCrystalEquipments_FullMethodName              = "/nakama.api.Nakama/GetCrystalEquipments"
+	Nakama_SalvageCrystalEquipment_FullMethodName           = "/nakama.api.Nakama/SalvageCrystalEquipment"
+	Nakama_UnlockCrystalSkin_FullMethodName                 = "/nakama.api.Nakama/UnlockCrystalSkin"
+	Nakama_UpgradeCrystalSkin_FullMethodName                = "/nakama.api.Nakama/UpgradeCrystalSkin"
+	Nakama_GetCrystalSkins_FullMethodName                   = "/nakama.api.Nakama/GetCrystalSkins"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -482,6 +486,15 @@ type NakamaClient interface {
 	ActivatePendingAffixes(ctx context.Context, in *game.ActivatePendingAffixesRequest, opts ...grpc.CallOption) (*game.ActivatePendingAffixesResponse, error)
 	// Get all crystal equipments
 	GetCrystalEquipments(ctx context.Context, in *game.GetCrystalEquipmentsRequest, opts ...grpc.CallOption) (*game.GetCrystalEquipmentsResponse, error)
+	// Salvage crystal equipment
+	SalvageCrystalEquipment(ctx context.Context, in *game.SalvageCrystalEquipmentRequest, opts ...grpc.CallOption) (*game.SalvageCrystalEquipmentResponse, error)
+	// ==================== Crystal Skin ====================
+	// Unlock crystal skin
+	UnlockCrystalSkin(ctx context.Context, in *game.UnlockCrystalSkinRequest, opts ...grpc.CallOption) (*game.UnlockCrystalSkinResponse, error)
+	// Upgrade crystal skin
+	UpgradeCrystalSkin(ctx context.Context, in *game.UpgradeCrystalSkinRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalSkinResponse, error)
+	// Get all crystal skins
+	GetCrystalSkins(ctx context.Context, in *game.GetCrystalSkinsRequest, opts ...grpc.CallOption) (*game.GetCrystalSkinsResponse, error)
 }
 
 type nakamaClient struct {
@@ -1824,6 +1837,42 @@ func (c *nakamaClient) GetCrystalEquipments(ctx context.Context, in *game.GetCry
 	return out, nil
 }
 
+func (c *nakamaClient) SalvageCrystalEquipment(ctx context.Context, in *game.SalvageCrystalEquipmentRequest, opts ...grpc.CallOption) (*game.SalvageCrystalEquipmentResponse, error) {
+	out := new(game.SalvageCrystalEquipmentResponse)
+	err := c.cc.Invoke(ctx, Nakama_SalvageCrystalEquipment_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UnlockCrystalSkin(ctx context.Context, in *game.UnlockCrystalSkinRequest, opts ...grpc.CallOption) (*game.UnlockCrystalSkinResponse, error) {
+	out := new(game.UnlockCrystalSkinResponse)
+	err := c.cc.Invoke(ctx, Nakama_UnlockCrystalSkin_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) UpgradeCrystalSkin(ctx context.Context, in *game.UpgradeCrystalSkinRequest, opts ...grpc.CallOption) (*game.UpgradeCrystalSkinResponse, error) {
+	out := new(game.UpgradeCrystalSkinResponse)
+	err := c.cc.Invoke(ctx, Nakama_UpgradeCrystalSkin_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetCrystalSkins(ctx context.Context, in *game.GetCrystalSkinsRequest, opts ...grpc.CallOption) (*game.GetCrystalSkinsResponse, error) {
+	out := new(game.GetCrystalSkinsResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetCrystalSkins_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -2117,6 +2166,15 @@ type NakamaServer interface {
 	ActivatePendingAffixes(context.Context, *game.ActivatePendingAffixesRequest) (*game.ActivatePendingAffixesResponse, error)
 	// Get all crystal equipments
 	GetCrystalEquipments(context.Context, *game.GetCrystalEquipmentsRequest) (*game.GetCrystalEquipmentsResponse, error)
+	// Salvage crystal equipment
+	SalvageCrystalEquipment(context.Context, *game.SalvageCrystalEquipmentRequest) (*game.SalvageCrystalEquipmentResponse, error)
+	// ==================== Crystal Skin ====================
+	// Unlock crystal skin
+	UnlockCrystalSkin(context.Context, *game.UnlockCrystalSkinRequest) (*game.UnlockCrystalSkinResponse, error)
+	// Upgrade crystal skin
+	UpgradeCrystalSkin(context.Context, *game.UpgradeCrystalSkinRequest) (*game.UpgradeCrystalSkinResponse, error)
+	// Get all crystal skins
+	GetCrystalSkins(context.Context, *game.GetCrystalSkinsRequest) (*game.GetCrystalSkinsResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2567,6 +2625,18 @@ func (UnimplementedNakamaServer) ActivatePendingAffixes(context.Context, *game.A
 }
 func (UnimplementedNakamaServer) GetCrystalEquipments(context.Context, *game.GetCrystalEquipmentsRequest) (*game.GetCrystalEquipmentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCrystalEquipments not implemented")
+}
+func (UnimplementedNakamaServer) SalvageCrystalEquipment(context.Context, *game.SalvageCrystalEquipmentRequest) (*game.SalvageCrystalEquipmentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SalvageCrystalEquipment not implemented")
+}
+func (UnimplementedNakamaServer) UnlockCrystalSkin(context.Context, *game.UnlockCrystalSkinRequest) (*game.UnlockCrystalSkinResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlockCrystalSkin not implemented")
+}
+func (UnimplementedNakamaServer) UpgradeCrystalSkin(context.Context, *game.UpgradeCrystalSkinRequest) (*game.UpgradeCrystalSkinResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradeCrystalSkin not implemented")
+}
+func (UnimplementedNakamaServer) GetCrystalSkins(context.Context, *game.GetCrystalSkinsRequest) (*game.GetCrystalSkinsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCrystalSkins not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -5245,6 +5315,78 @@ func _Nakama_GetCrystalEquipments_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_SalvageCrystalEquipment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.SalvageCrystalEquipmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).SalvageCrystalEquipment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_SalvageCrystalEquipment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).SalvageCrystalEquipment(ctx, req.(*game.SalvageCrystalEquipmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UnlockCrystalSkin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UnlockCrystalSkinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UnlockCrystalSkin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UnlockCrystalSkin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UnlockCrystalSkin(ctx, req.(*game.UnlockCrystalSkinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_UpgradeCrystalSkin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.UpgradeCrystalSkinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).UpgradeCrystalSkin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_UpgradeCrystalSkin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).UpgradeCrystalSkin(ctx, req.(*game.UpgradeCrystalSkinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetCrystalSkins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetCrystalSkinsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetCrystalSkins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetCrystalSkins_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetCrystalSkins(ctx, req.(*game.GetCrystalSkinsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5843,6 +5985,22 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCrystalEquipments",
 			Handler:    _Nakama_GetCrystalEquipments_Handler,
+		},
+		{
+			MethodName: "SalvageCrystalEquipment",
+			Handler:    _Nakama_SalvageCrystalEquipment_Handler,
+		},
+		{
+			MethodName: "UnlockCrystalSkin",
+			Handler:    _Nakama_UnlockCrystalSkin_Handler,
+		},
+		{
+			MethodName: "UpgradeCrystalSkin",
+			Handler:    _Nakama_UpgradeCrystalSkin_Handler,
+		},
+		{
+			MethodName: "GetCrystalSkins",
+			Handler:    _Nakama_GetCrystalSkins_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

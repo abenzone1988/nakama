@@ -304,7 +304,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 	if dropId != "" {
 		randomReward, exist := s.template.GetTplCrystalEquipmentRandomReward().FindByKey(dropId)
 		if exist {
-			generatedEquips, err := generateRandomCrystalEquipmentFromDrop(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, randomReward)
+			generatedEquips, err := generateRandomCrystalEquipmentFromDrop(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, randomReward, progress)
 			if err != nil {
 				s.logger.Error("生成随机水晶装备掉落失败", zap.Error(err), zap.String("drop_id", dropId))
 			} else if len(generatedEquips) > 0 {

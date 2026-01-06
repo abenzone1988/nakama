@@ -970,6 +970,7 @@ message RefineCrystalEquipmentResponse{
 message LockCrystalAffixRequest{
   string equipment_id = 1; // 装备唯一ID
   string affix_id = 2;     // 要锁定的词条ID
+  bool lock = 3;           // 是否锁定
 }
 
 // 锁定词条响应
@@ -1001,3 +1002,57 @@ message GetCrystalEquipmentsResponse{
   string msg = 2;
   repeated CrystalEquipmentInfo equipments = 3; // 所有水晶装备列表
 }
+
+// 分解水晶装备请求
+message SalvageCrystalEquipmentRequest{
+ repeated string equipment_ids = 1; // 装备唯一ID数组
+}
+
+// 分解水晶装备响应
+message SalvageCrystalEquipmentResponse{
+  int32 code = 1;
+  string msg = 2;
+  Wallet wallet_updated = 3; // 钱包更新结果
+  repeated Item inventory_updated = 4; // 背包更新结果
+}
+
+// ==================== Crystal Skin ====================
+
+message GetCrystalSkinsRequest{
+}
+
+message GetCrystalSkinsResponse{
+  int32 code = 1;
+  string msg = 2;
+  repeated CrystalSkinInfo skins = 3; // 所有水晶皮肤列表
+}
+
+message CrystalSkinInfo{
+  string skin_id = 1; // 皮肤模板ID (如 "SKIN10001")
+  int32 star_level = 2; // 星级
+}
+
+message UnlockCrystalSkinRequest{
+  string skin_id = 1; // 皮肤ID (如 "SKIN10001")
+}
+
+message UnlockCrystalSkinResponse{
+  int32 code = 1;
+  string msg = 2;
+  CrystalSkinInfo skin = 3; // 解锁的皮肤信息
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+
+message UpgradeCrystalSkinRequest{
+  string skin_id = 1; // 皮肤ID (如 "SKIN10001")
+}
+
+message UpgradeCrystalSkinResponse{
+  int32 code = 1;
+  string msg = 2;
+  CrystalSkinInfo skin = 3; // 升级后的皮肤信息
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
+}
+

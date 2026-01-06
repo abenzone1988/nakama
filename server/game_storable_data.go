@@ -722,6 +722,36 @@ func (d *CrystalEquipmentData) Init() {
 }
 
 // ============================================================================
+// 水晶皮肤相关数据结构
+// ============================================================================
+
+// CrystalSkin 单个水晶皮肤实例
+type CrystalSkin struct {
+	SkinID    string `json:"skinId"`    // 皮肤模板ID (如 "SKIN10001")
+	ID        string `json:"id"`        // 唯一ID (UUID)
+	StarLevel int32  `json:"starLevel"` // 星级 (0-5)
+}
+
+// CrystalSkinData 水晶皮肤数据存储结构
+type CrystalSkinData struct {
+	BaseStorable
+	Skins map[string]*CrystalSkin `json:"skins"` // key: skinId, value: CrystalSkin
+}
+
+func (d *CrystalSkinData) GetCollection() string {
+	return "crystal_skin"
+}
+
+func (d *CrystalSkinData) GetKey() string {
+	return "data"
+}
+
+func (d *CrystalSkinData) Init() {
+	d.Skins = make(map[string]*CrystalSkin)
+	d.SetVersion("")
+}
+
+// ============================================================================
 // 战斗奖励相关数据结构
 // ============================================================================
 

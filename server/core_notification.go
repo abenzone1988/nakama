@@ -51,6 +51,7 @@ const (
 )
 
 var ErrNotificationAlreadyClaimed = errors.New("some notifications are already claimed")
+var ErrNotificationExpired = errors.New("some notifications are expired")
 
 type notificationCacheableCursor struct {
 	NotificationID []byte
@@ -334,16 +335,18 @@ func NotificationSave(ctx context.Context, logger *zap.Logger, db *sql.DB, notif
 	contents := make([]string, 0, len(notifications))
 	codes := make([]int32, 0, len(notifications))
 	senderIds := make([]string, 0, len(notifications))
+	expiryTimes := make([]interface{}, 0, len(notifications))
 	query := `
 INSERT INTO
-	notification (id, user_id, subject, content, code, sender_id)
+	notification (id, user_id, subject, content, code, sender_id, expiry_time)
 SELECT
 	unnest($1::uuid[]),
 	unnest($2::uuid[]),
 	unnest($3::text[]),
 	unnest($4::jsonb[]),
 	unnest($5::smallint[]),
-	unnest($6::uuid[]);
+	unnest($6::uuid[]),
+	unnest($7::timestamptz[]);
 `
 	for userID, no := range notifications {
 		for _, un := range no {
@@ -353,10 +356,15 @@ SELECT
 			contents = append(contents, un.Content)
 			codes = append(codes, un.Code)
 			senderIds = append(senderIds, un.SenderId)
+			if un.ExpiryTime != nil && un.ExpiryTime.Seconds > 0 {
+				expiryTimes = append(expiryTimes, time.Unix(un.ExpiryTime.Seconds, 0).UTC())
+			} else {
+				expiryTimes = append(expiryTimes, nil)
+			}
 		}
 	}
 
-	if _, err := db.ExecContext(ctx, query, ids, userIds, subjects, contents, codes, senderIds); err != nil {
+	if _, err := db.ExecContext(ctx, query, ids, userIds, subjects, contents, codes, senderIds, expiryTimes); err != nil {
 		logger.Error("Could not save notifications.", zap.Error(err))
 		return err
 	}
@@ -511,7 +519,7 @@ func NotificationClaimAttachments(ctx context.Context, logger *zap.Logger, db *s
 	}
 
 	query := `
-SELECT id, content, status
+SELECT id, content, status, expiry_time
 FROM notification
 WHERE user_id = $1
   AND id = ANY($2::uuid[])
@@ -523,20 +531,29 @@ WHERE user_id = $1
 	}
 	defer rows.Close()
 
+	now := time.Now().UTC()
 	contents := make(map[string]string, len(notificationIDs))
+	expiredIDs := make([]string, 0)
 	for rows.Next() {
 		var (
 			id         string
 			contentStr string
 			status     int32
+			expiryTime pgtype.Timestamptz
 		)
-		if err := rows.Scan(&id, &contentStr, &status); err != nil {
+		if err := rows.Scan(&id, &contentStr, &status, &expiryTime); err != nil {
 			logger.Error("扫描通知内容失败", zap.Error(err))
 			return nil, 0, err
 		}
 
 		if status == 2 {
 			return nil, 0, ErrNotificationAlreadyClaimed
+		}
+
+		if expiryTime.Valid && expiryTime.Time.Before(now) {
+			logger.Warn("通知已过期，将删除", zap.String("notification_id", id), zap.Time("expiry_time", expiryTime.Time))
+			expiredIDs = append(expiredIDs, id)
+			continue
 		}
 
 		contents[id] = contentStr
@@ -547,12 +564,30 @@ WHERE user_id = $1
 		return nil, 0, err
 	}
 
+	if len(expiredIDs) > 0 {
+		deleteQuery := "DELETE FROM notification WHERE user_id = $1 AND id = ANY($2::uuid[])"
+		_, err := db.ExecContext(ctx, deleteQuery, userID, expiredIDs)
+		if err != nil {
+			logger.Error("删除过期通知失败", zap.Error(err), zap.Strings("expired_ids", expiredIDs))
+		} else {
+			logger.Info("已删除过期通知", zap.Int("count", len(expiredIDs)), zap.Strings("expired_ids", expiredIDs))
+		}
+	}
+
 	if len(contents) == 0 {
+		if len(expiredIDs) > 0 {
+			return nil, 0, ErrNotificationExpired
+		}
 		return map[string]string{}, 0, nil
 	}
 
+	claimedIDs := make([]string, 0, len(contents))
+	for id := range contents {
+		claimedIDs = append(claimedIDs, id)
+	}
+
 	updateQuery := "UPDATE notification SET status = 2 WHERE user_id = $1 AND id = ANY($2::uuid[]) AND status < 2"
-	result, err := db.ExecContext(ctx, updateQuery, userID, notificationIDs)
+	result, err := db.ExecContext(ctx, updateQuery, userID, claimedIDs)
 	if err != nil {
 		logger.Error("更新通知状态失败", zap.Error(err))
 		return nil, 0, err

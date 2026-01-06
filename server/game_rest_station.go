@@ -3,18 +3,23 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama/v3/console"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (s *ApiServer) GetRestStation(ctx context.Context, in *emptypb.Empty) (*game.GetRestStationResponse, error) {
 	ctx = LoadPlayerTimeZone(ctx, s.logger, s.db, s.statusRegistry)
 
-	data, err := GetRestStationData(ctx, s.logger, s.db, s.statusRegistry)
+	data, err := GetRestStationData(ctx, s.logger, s.db, s.statusRegistry, s.tracker, s.router)
 	if err != nil {
 		s.logger.Error("获取休息站数据失败", zap.Error(err))
 		return &game.GetRestStationResponse{
@@ -30,7 +35,7 @@ func (s *ApiServer) GetRestStation(ctx context.Context, in *emptypb.Empty) (*gam
 	}, nil
 }
 
-func GetRestStationData(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry) (*game.RestStationData, error) {
+func GetRestStationData(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, tracker Tracker, router MessageRouter) (*game.RestStationData, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 
 	userMeta, _, err := LoadUserMeta(ctx, logger, db, statusRegistry, userID)
@@ -48,7 +53,7 @@ func GetRestStationData(ctx context.Context, logger *zap.Logger, db *sql.DB, sta
 		needUpdate = true
 	}
 
-	newCount, newGrantTime := calculateRestStationGrant(ctx, currentCount, lastGrantTime, logger)
+	newCount, newGrantTime := calculateRestStationGrant(ctx, currentCount, lastGrantTime, logger, db, tracker, router, userID)
 	if newCount != currentCount {
 		userMeta.RestStationStamina = newCount
 		userMeta.RestStationLastGrantTime = newGrantTime
@@ -79,7 +84,7 @@ func (s *ApiServer) ClaimRestStationStamina(ctx context.Context, in *game.ClaimR
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
 	claimCount := in.GetCount()
 
-	restData, err := GetRestStationData(ctx, s.logger, s.db, s.statusRegistry)
+	restData, err := GetRestStationData(ctx, s.logger, s.db, s.statusRegistry, s.tracker, s.router)
 	if err != nil {
 		return &game.ClaimRestStationStaminaResponse{
 			Code: 1,
@@ -133,7 +138,7 @@ func (s *ApiServer) ClaimRestStationStamina(ctx context.Context, in *game.ClaimR
 		}, nil
 	}
 
-	updatedRestData, err := GetRestStationData(ctx, s.logger, s.db, s.statusRegistry)
+	updatedRestData, err := GetRestStationData(ctx, s.logger, s.db, s.statusRegistry, s.tracker, s.router)
 	if err != nil {
 		s.logger.Error("获取更新后的休息站数据失败", zap.Error(err))
 	}
@@ -151,7 +156,7 @@ func (s *ApiServer) ClaimRestStationStamina(ctx context.Context, in *game.ClaimR
 	}, nil
 }
 
-func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGrantTimeStr string, logger *zap.Logger) (int32, string) {
+func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGrantTimeStr string, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, userID uuid.UUID) (int32, string) {
 	if currentCount >= RestStationMaxCount {
 		return currentCount, lastGrantTimeStr
 	}
@@ -165,8 +170,20 @@ func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGran
 	passedCount, latestPassedTime := CountPassedDailyTimes(ctx, lastGrantTime, RestStationDailyTimes)
 
 	newCount := currentCount + passedCount
+	overflowCount := int32(0)
 	if newCount > RestStationMaxCount {
+		overflowCount = newCount - RestStationMaxCount
 		newCount = RestStationMaxCount
+	}
+
+	if overflowCount > 0 {
+		staminaToAdd := overflowCount * RestStationEveryStamina
+		if err := sendRestStationOverflowEmail(ctx, logger, db, tracker, router, userID, overflowCount, staminaToAdd); err != nil {
+			logger.Error("发送休息站溢出邮件失败",
+				zap.String("user_id", userID.String()),
+				zap.Int32("overflow_count", overflowCount),
+				zap.Error(err))
+		}
 	}
 
 	if passedCount > 0 {
@@ -174,6 +191,55 @@ func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGran
 	}
 
 	return currentCount, lastGrantTimeStr
+}
+
+func sendRestStationOverflowEmail(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, userID uuid.UUID, overflowCount int32, staminaToAdd int32) error {
+	reward := &game.Reward{
+		Wallet: &game.Wallet{
+			Stamina: staminaToAdd,
+		},
+	}
+
+	content := &console.NoticeContent{
+		Description: fmt.Sprintf("您的休息站体力已满，超过的 %d 个休息站体力已自动转换为 %d 点体力，请查收！", overflowCount, staminaToAdd),
+		Rewards:     []*game.Reward{reward},
+	}
+
+	contentBytes, err := json.Marshal(content)
+	if err != nil {
+		logger.Error("序列化邮件内容失败", zap.Error(err))
+		return err
+	}
+
+	expiryTime := time.Now().UTC().Add(3 * 24 * time.Hour)
+	notification := &api.Notification{
+		Id:         uuid.Must(uuid.NewV4()).String(),
+		Subject:    "休息站体力溢出补偿",
+		Content:    string(contentBytes),
+		Code:       NotificationSystemNotice,
+		SenderId:   uuid.Nil.String(),
+		Persistent: true,
+		ExpiryTime: timestamppb.New(expiryTime),
+	}
+
+	notifications := make(map[uuid.UUID][]*api.Notification)
+	notifications[userID] = []*api.Notification{notification}
+
+	err = NotificationSend(ctx, logger, db, tracker, router, notifications)
+	if err != nil {
+		logger.Error("发送休息站溢出邮件失败",
+			zap.String("user_id", userID.String()),
+			zap.Error(err))
+		return err
+	}
+
+	logger.Info("成功发送休息站溢出邮件",
+		zap.String("user_id", userID.String()),
+		zap.Int32("overflow_count", overflowCount),
+		zap.Int32("stamina_added", staminaToAdd),
+		zap.Time("expiry_time", expiryTime))
+
+	return nil
 }
 
 func calculateNextGrantTime(ctx context.Context) time.Time {

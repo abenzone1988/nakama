@@ -160,6 +160,9 @@ func (s *ApiServer) ClaimNotificationAttachments(ctx context.Context, in *game.C
 		if errors.Is(err, ErrNotificationAlreadyClaimed) {
 			return nil, status.Error(codes.FailedPrecondition, "Some notifications are already claimed.")
 		}
+		if errors.Is(err, ErrNotificationExpired) {
+			return nil, status.Error(codes.DeadlineExceeded, "Some notifications are expired.")
+		}
 		return nil, status.Error(codes.Internal, "Error while claiming notification attachments.")
 	}
 

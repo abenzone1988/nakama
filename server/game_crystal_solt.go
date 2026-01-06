@@ -32,7 +32,7 @@ func (s *ApiServer) UpgradeCrystalSlot(ctx context.Context, in *game.UpgradeCrys
 
 	currentLevel, exists := equipData.CrystalSlots[in.EquipType]
 	if !exists {
-		currentLevel = 0
+		currentLevel = 1
 		equipData.CrystalSlots[in.EquipType] = 0
 	}
 

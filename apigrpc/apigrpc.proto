@@ -1228,5 +1228,38 @@ service Nakama {
       body: "*"
     };
   }
+
+  // Salvage crystal equipment
+  rpc SalvageCrystalEquipment(game.SalvageCrystalEquipmentRequest) returns (game.SalvageCrystalEquipmentResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/equipment/salvage"
+      body: "*"
+    };
+  }
+
+  // ==================== Crystal Skin ====================
+  // Unlock crystal skin
+  rpc UnlockCrystalSkin(game.UnlockCrystalSkinRequest) returns (game.UnlockCrystalSkinResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/skin/unlock"
+      body: "*"
+    };
+  }
+
+  // Upgrade crystal skin
+  rpc UpgradeCrystalSkin(game.UpgradeCrystalSkinRequest) returns (game.UpgradeCrystalSkinResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/skin/upgrade"
+      body: "*"
+    };
+  }
+
+  // Get all crystal skins
+  rpc GetCrystalSkins(game.GetCrystalSkinsRequest) returns (game.GetCrystalSkinsResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/crystal/skins/list"
+      body: "*"
+    };
+  }
 }
 
