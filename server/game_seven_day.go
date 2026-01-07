@@ -286,7 +286,7 @@ func (s *ApiServer) RecordSevenDayPurchase(ctx context.Context, userID uuid.UUID
 	}
 
 	// 记录购买（可以重复购买）
-	sevenDayData.LastPurchaseTime = time.Now().Format(time.RFC3339)
+	sevenDayData.LastPurchaseTime = time.Now().UTC().Format(time.RFC3339)
 	sevenDayData.ClaimedDays = []int32{} // 重置领取记录
 	sevenDayData.TotalPurchases++        // 增加购买次数
 

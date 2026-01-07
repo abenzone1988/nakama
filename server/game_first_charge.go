@@ -260,7 +260,7 @@ func RecordFirstCharge(ctx context.Context, logger *zap.Logger, db *sql.DB, metr
 
 	// 记录首冲
 	firstChargeData.IsCharged = true
-	firstChargeData.ChargeTime = time.Now().Format(time.RFC3339)
+	firstChargeData.ChargeTime = time.Now().UTC().Format(time.RFC3339)
 	firstChargeData.ClaimedDays = []int32{}
 
 	if err := SaveData(ctx, logger, db, metrics, storageIndex, userID, firstChargeData); err != nil {

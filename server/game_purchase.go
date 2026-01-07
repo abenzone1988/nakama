@@ -463,7 +463,7 @@ func (s *ApiServer) deliverMonthlyCardProduct(ctx context.Context, userID uuid.U
 		monthlyCardData.Init()
 	}
 
-	monthlyCardData.PurchaseTime = time.Now().Format(time.RFC3339)
+	monthlyCardData.PurchaseTime = time.Now().UTC().Format(time.RFC3339)
 	monthlyCardData.PurchaseRewardClaimed = false
 	monthlyCardData.TotalPurchases++
 

@@ -4,15 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
-	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 )
 
+type UserMeta struct {
+	LastSyncNotice           int64     `json:"last_sync_notice"`             // 秒级时间戳（unix seconds）
+	StaminaLastRefreshTime   time.Time `json:"stamina_last_refresh_time"`    // 体力最后刷新时间
+	RestStationStamina       int32     `json:"rest_station_stamina"`         // 休息站存储的体力数量
+	RestStationLastGrantTime time.Time `json:"rest_station_last_grant_time"` // 休息站最后一次补充时间
+}
+
 // LoadUserMeta 从数据库加载 UserMeta
-func LoadUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, userID uuid.UUID) (*game.UserMeta, *api.User, error) {
+func LoadUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry, userID uuid.UUID) (*UserMeta, *api.User, error) {
 	ids := []string{userID.String()}
 	users, err := GetUsers(ctx, logger, db, statusRegistry, ids, nil, nil)
 	if err != nil {
@@ -20,7 +27,7 @@ func LoadUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, statusReg
 	}
 
 	user := users.Users[0]
-	userMeta := &game.UserMeta{}
+	userMeta := &UserMeta{}
 
 	// 如果 metadata 不为空，则解析
 	if user.Metadata != "" {
@@ -36,7 +43,7 @@ func LoadUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, statusReg
 }
 
 // SaveUserMeta 保存 UserMeta 到数据库
-func SaveUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, userMeta *game.UserMeta) error {
+func SaveUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, userMeta *UserMeta) error {
 	metadataJSON, err := json.Marshal(userMeta)
 	if err != nil {
 		logger.Error("json.Marshal userMeta failed", zap.Error(err))
@@ -56,7 +63,7 @@ func SaveUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uu
 // InitializeNewUserMeta 初始化新用户的 UserMeta（在用户注册时调用）
 func InitializeNewUserMeta(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, templateMgr TemplateManager) error {
 	// 创建新的 UserMeta
-	userMeta := &game.UserMeta{}
+	userMeta := &UserMeta{}
 
 	// 注意：StaminaData 和 LevelData 已迁移到独立的 storage 存储
 	// 它们会在首次访问时自动初始化，不需要在这里初始化

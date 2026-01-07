@@ -30,9 +30,9 @@ func (s *ApiServer) GetMonthlyCardStatus(ctx context.Context, in *game.GetMonthl
 		monthlyCardData.Init()
 	}
 
-	var expiryTime int64
+	var expiryTime string
 	if isVip && vipAccount.ExpiryTime != nil {
-		expiryTime = vipAccount.ExpiryTime.AsTime().Unix()
+		expiryTime = vipAccount.ExpiryTime.AsTime().Format(time.RFC3339)
 	}
 
 	tplPays := s.template.GetTplPay().FindByFilter(func(tp template.TplPay) bool {
@@ -44,6 +44,8 @@ func (s *ApiServer) GetMonthlyCardStatus(ctx context.Context, in *game.GetMonthl
 			Msg:  fmt.Sprintf("商品不存在: %s", MonthlyCardID),
 		}, nil
 	}
+	tplPay := tplPays.Get(0)
+
 	canClaimDailyReward := false
 	if isVip {
 		now := time.Now().UTC()
@@ -61,6 +63,7 @@ func (s *ApiServer) GetMonthlyCardStatus(ctx context.Context, in *game.GetMonthl
 		ExpiryTime:            expiryTime,
 		CanClaimDailyReward:   canClaimDailyReward,
 		PurchaseRewardClaimed: monthlyCardData.PurchaseRewardClaimed,
+		Price:                 tplPay.Money,
 	}, nil
 }
 

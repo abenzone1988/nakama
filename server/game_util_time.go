@@ -82,19 +82,6 @@ func CountPassedDailyTimes(ctx context.Context, lastTime time.Time, hours []int)
 	return count, latestPassedTime
 }
 
-// ParseTimeString 解析 RFC3339 格式的时间字符串
-func ParseTimeString(timeStr string) (time.Time, error) {
-	if timeStr == "" {
-		return time.Time{}, fmt.Errorf("empty time string")
-	}
-	return time.Parse(time.RFC3339, timeStr)
-}
-
-// FormatTimeToRFC3339 将时间格式化为 RFC3339 字符串（UTC）
-func FormatTimeToRFC3339(t time.Time) string {
-	return t.UTC().Format(time.RFC3339)
-}
-
 // LoadPlayerTimeZone 从用户账号加载玩家时区并存入 context
 func LoadPlayerTimeZone(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry StatusRegistry) context.Context {
 	userID, ok := ctx.Value(ctxUserIDKey{}).(uuid.UUID)

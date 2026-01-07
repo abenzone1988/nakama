@@ -17,6 +17,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
@@ -63,7 +64,8 @@ func (s *ApiServer) CheckVipStatus(ctx context.Context, in *emptypb.Empty) (*gam
 	if isVip && vipAccount.ExpiryTime != nil {
 		signature, _ := GenerateVipSignature(userIDUUID.String(), vipAccount.ExpiryTime.AsTime().Unix())
 		response.Signature = signature
-		response.ExpireTime = vipAccount.ExpiryTime.AsTime().Unix()
+
+		response.ExpireTime = vipAccount.ExpiryTime.AsTime().Format(time.RFC3339)
 		vipRewardData := &VipRewardData{}
 		if err := LoadUserData(ctx, s.logger, s.db, vipRewardData); err != nil {
 			return nil, status.Error(codes.Internal, "Failed to load VIP reward data.")

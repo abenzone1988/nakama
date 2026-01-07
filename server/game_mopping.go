@@ -169,7 +169,7 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 	} else {
 		battleData.HasMoppingTimes++
 	}
-	battleData.LastMoppingTimestamp = time.Now().Format(time.RFC3339)
+	battleData.LastMoppingTimestamp = time.Now().UTC().Format(time.RFC3339)
 
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
 		s.logger.Error("更新扫荡次数失败", zap.Error(err))

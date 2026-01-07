@@ -149,15 +149,6 @@ message SignInData{
   string last_claim_date = 2;              // 最后一次签到日期（YYYY-MM-DD）
 }
 
-// 玩家元数据
-message UserMeta{
-  int64 last_sync_notice = 1;//秒级时间戳（unix seconds）
-  string stamina_last_refresh_time = 2; // 体力最后刷新时间，ISO 8601 格式
-  int32 rest_station_stamina = 3; // 休息站存储的体力数量
-  string rest_station_last_grant_time = 4; // 休息站最后一次补充时间，ISO 8601 格式
-  // StaminaData、EquipData 和 LevelData 已迁移到独立的 storage 存储
-}
-
 // 钱包结构v
 message Wallet{
   int32 coin = 1;
@@ -192,8 +183,8 @@ message InventoryUpdateResult {
 
 // VIP状态
 message CheckVipStatusResponse {
-  // Expire time in seconds (int64 to avoid 2038 problem)
-  int64 expire_time = 1;
+  // Expire time (]time.RFC3339)
+  string expire_time = 1;
   // Signature
   string signature = 2;
   // 当前领奖状态
@@ -440,9 +431,10 @@ message GetMonthlyCardStatusResponse{
   int32 code = 1;
   string msg = 2;
   bool is_active = 3;                  // 月卡是否有效
-  int64 expiry_time = 4;               // VIP过期时间（Unix时间戳）
+  string expiry_time = 4;               // VIP过期时间 ISO
   bool can_claim_daily_reward = 5;      // 是否可以领取当天奖励（月卡有效且与上次领取不是同一天）
   bool purchase_reward_claimed = 6;     // 是否已领取购买奖励
+  string price = 7;                    // 人民币购买价格
 }
 
 // 装备兑换请求
@@ -465,7 +457,6 @@ message ExchangeEquipResponse{
 
 // 获取装备兑换数据请求
 message GetEquipExchangeRequest{
-  repeated string ids = 1;             // 兑换配置ID列表，为空则返回所有
 }
 
 // 装备兑换信息

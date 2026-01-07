@@ -47,8 +47,8 @@ func GetRestStationData(ctx context.Context, logger *zap.Logger, db *sql.DB, sta
 	currentCount := userMeta.RestStationStamina
 	lastGrantTime := userMeta.RestStationLastGrantTime
 
-	if lastGrantTime == "" {
-		lastGrantTime = time.Now().UTC().Format(time.RFC3339)
+	if lastGrantTime.IsZero() {
+		lastGrantTime = time.Now().UTC()
 		userMeta.RestStationLastGrantTime = lastGrantTime
 		needUpdate = true
 	}
@@ -70,7 +70,7 @@ func GetRestStationData(ctx context.Context, logger *zap.Logger, db *sql.DB, sta
 			zap.Int32("new_count", newCount))
 	}
 
-	nextGrantTime := calculateNextGrantTime(ctx)
+	nextGrantTime := GetNextDailyTime(ctx, RestStationDailyTimes)
 
 	return &game.RestStationData{
 		StaminaCount:  userMeta.RestStationStamina,
@@ -156,15 +156,13 @@ func (s *ApiServer) ClaimRestStationStamina(ctx context.Context, in *game.ClaimR
 	}, nil
 }
 
-func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGrantTimeStr string, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, userID uuid.UUID) (int32, string) {
+func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGrantTime time.Time, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, userID uuid.UUID) (int32, time.Time) {
 	if currentCount >= RestStationMaxCount {
-		return currentCount, lastGrantTimeStr
+		return currentCount, lastGrantTime
 	}
 
-	lastGrantTime, err := ParseTimeString(lastGrantTimeStr)
-	if err != nil {
-		logger.Error("解析时间失败", zap.Error(err), zap.String("time", lastGrantTimeStr))
-		return currentCount, GetCurrentTimeUTC()
+	if lastGrantTime.IsZero() {
+		lastGrantTime = time.Now().UTC()
 	}
 
 	passedCount, latestPassedTime := CountPassedDailyTimes(ctx, lastGrantTime, RestStationDailyTimes)
@@ -187,10 +185,10 @@ func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGran
 	}
 
 	if passedCount > 0 {
-		return newCount, FormatTimeToRFC3339(latestPassedTime)
+		return newCount, latestPassedTime
 	}
 
-	return currentCount, lastGrantTimeStr
+	return currentCount, lastGrantTime
 }
 
 func sendRestStationOverflowEmail(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, userID uuid.UUID, overflowCount int32, staminaToAdd int32) error {
@@ -240,8 +238,4 @@ func sendRestStationOverflowEmail(ctx context.Context, logger *zap.Logger, db *s
 		zap.Time("expiry_time", expiryTime))
 
 	return nil
-}
-
-func calculateNextGrantTime(ctx context.Context) time.Time {
-	return GetNextDailyTime(ctx, RestStationDailyTimes)
 }

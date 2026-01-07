@@ -48,9 +48,9 @@ func GetCurrentStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, stat
 	lastRefreshTime := userMeta.StaminaLastRefreshTime
 
 	// 如果体力为0且刷新时间为空，初始化
-	if currentStamina == 0 && lastRefreshTime == "" {
+	if currentStamina == 0 && lastRefreshTime.IsZero() {
 		currentStamina = MaxStamina
-		lastRefreshTime = time.Now().Format(time.RFC3339)
+		lastRefreshTime = time.Now().UTC()
 
 		// 初始化钱包体力
 		metadata, _ := json.Marshal(map[string]interface{}{
@@ -76,7 +76,7 @@ func GetCurrentStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, stat
 		logger.Info("Stamina initialized", zap.Int32("stamina", MaxStamina))
 		return &game.StaminaData{
 			Stamina:         currentStamina,
-			LastRefreshTime: lastRefreshTime,
+			LastRefreshTime: lastRefreshTime.Format(time.RFC3339),
 		}, nil
 	}
 
@@ -115,7 +115,7 @@ func GetCurrentStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, stat
 
 	return &game.StaminaData{
 		Stamina:         currentStamina,
-		LastRefreshTime: lastRefreshTime,
+		LastRefreshTime: lastRefreshTime.Format(time.RFC3339),
 	}, nil
 }
 
@@ -236,7 +236,7 @@ func ResetStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusReg
 		logger.Error("读取 UserMeta 失败", zap.Error(err))
 		return nil, err
 	}
-	lastRefreshTime := time.Now().Format(time.RFC3339)
+	lastRefreshTime := time.Now().UTC()
 	userMeta.StaminaLastRefreshTime = lastRefreshTime
 	if err := SaveUserMeta(ctx, logger, db, userID, userMeta); err != nil {
 		logger.Error("保存重置后的刷新时间失败", zap.Error(err))
@@ -246,7 +246,7 @@ func ResetStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, statusReg
 	logger.Info("Stamina reset", zap.Int32("stamina", MaxStamina))
 	return &game.StaminaData{
 		Stamina:         MaxStamina,
-		LastRefreshTime: lastRefreshTime,
+		LastRefreshTime: lastRefreshTime.Format(time.RFC3339),
 	}, nil
 }
 
@@ -261,27 +261,22 @@ func GetTimeToFullStamina(ctx context.Context, logger *zap.Logger, db *sql.DB, s
 
 // 计算自然恢复后的体力值
 // 返回：新体力值、新刷新时间
-func calculateRecoveredStamina(currentStamina int32, lastRefreshTime string) (int32, string) {
+func calculateRecoveredStamina(currentStamina int32, lastRefreshTime time.Time) (int32, time.Time) {
 	if currentStamina >= MaxStamina {
 		return currentStamina, lastRefreshTime
 	}
 
-	if lastRefreshTime == "" {
-		return currentStamina, time.Now().Format(time.RFC3339)
+	if lastRefreshTime.IsZero() {
+		return currentStamina, time.Now().UTC()
 	}
 
-	lastRefresh, err := time.Parse(time.RFC3339, lastRefreshTime)
-	if err != nil {
-		return currentStamina, time.Now().Format(time.RFC3339)
-	}
-
-	recoveryPeriods := int32(time.Since(lastRefresh) / StaminaRecoveryRate)
+	recoveryPeriods := int32(time.Since(lastRefreshTime) / StaminaRecoveryRate)
 	if recoveryPeriods <= 0 {
 		return currentStamina, lastRefreshTime
 	}
 
 	newStamina := min(currentStamina+(recoveryPeriods*StaminaRecoveryAmount), MaxStamina)
 	// 保存当前恢复时间，用于下次计算间隔，避免重复计算
-	newRefreshTime := time.Now().Format(time.RFC3339)
+	newRefreshTime := time.Now().UTC()
 	return newStamina, newRefreshTime
 }

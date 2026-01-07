@@ -2407,19 +2407,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "ids",
-            "description": "兑换配置ID列表，为空则返回所有",
-            "in": "query",
-            "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "collectionFormat": "multi"
-          }
-        ],
         "tags": [
           "Nakama"
         ]
@@ -7901,8 +7888,7 @@
       "properties": {
         "expireTime": {
           "type": "string",
-          "format": "int64",
-          "title": "Expire time in seconds (int64 to avoid 2038 problem)"
+          "title": "Expire time (time.RFC3339)"
         },
         "signature": {
           "type": "string",
@@ -9135,8 +9121,7 @@
         },
         "expiryTime": {
           "type": "string",
-          "format": "int64",
-          "title": "VIP过期时间（Unix时间戳）"
+          "title": "VIP过期时间 ISO"
         },
         "canClaimDailyReward": {
           "type": "boolean",
@@ -9145,6 +9130,10 @@
         "purchaseRewardClaimed": {
           "type": "boolean",
           "title": "是否已领取购买奖励"
+        },
+        "price": {
+          "type": "string",
+          "title": "人民币购买价格"
         }
       },
       "title": "获取月卡状态响应"
