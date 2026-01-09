@@ -131,36 +131,76 @@ func (s *ApiServer) ClaimMoppingReward(ctx context.Context, in *game.ClaimMoppin
 		}
 	}
 
+	// 处理水晶装备随机掉落
+	var crystalEquipReward *game.Reward
+	dropId := levelInfo.DropID
+	if dropId != "" {
+		randomReward, exist := s.template.GetTplCrystalEquipmentRandomReward().FindByKey(dropId)
+		if exist {
+			generatedEquips, err := generateRandomCrystalEquipmentFromDrop(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, randomReward, 100)
+			if err != nil {
+				s.logger.Error("生成随机水晶装备掉落失败", zap.Error(err), zap.String("drop_id", dropId))
+			} else if len(generatedEquips) > 0 {
+				items := make([]*game.Item, 0, len(generatedEquips))
+				for tplId, count := range generatedEquips {
+					if count > 0 {
+						items = append(items, &game.Item{
+							Id:  tplId,
+							Num: count,
+						})
+					}
+				}
+				if len(items) > 0 {
+					crystalEquipReward = &game.Reward{
+						Items: items,
+					}
+					s.logger.Info("生成水晶装备掉落成功",
+						zap.String("drop_id", dropId),
+						zap.Int("equip_types", len(items)))
+				}
+			}
+		}
+	}
+
+	// 收集所有奖励
+	var rewards []*game.Reward
+
 	// 获取扫荡奖励
 	reward := GetReward(levelInfo.MoppingReward, s.template.GetTplReward(), s.logger)
 	if reward != nil {
-		// 发放奖励
-		var err error
+		rewards = append(rewards, reward)
+	}
+
+	// 添加水晶装备掉落奖励
+	if crystalEquipReward != nil {
+		rewards = append(rewards, crystalEquipReward)
+	}
+
+	// 发放奖励
+	if len(rewards) > 0 {
 		source := "mopping_" + battleData.MaxLevelId
+		mergedReward, wResult, iResult, err := GrantMergedRewards(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, rewards, source)
+		if err != nil {
+			return &game.ClaimMoppingRewardResponse{
+				Code: 9,
+				Msg:  "奖励发放失败: " + err.Error(),
+			}, nil
+		}
 
 		// 如果之前扣除了 ad，需要合并钱包更新结果
 		if walletUpdateResult != nil {
-			// 先发放奖励
-			wResult, iResult, err := GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-			if err != nil {
-				return &game.ClaimMoppingRewardResponse{
-					Code: 9,
-					Msg:  "奖励发放失败: " + err.Error(),
-				}, nil
-			}
-			// 合并钱包更新结果（扣除的 ad 值已经在 walletUpdateResult 中）
 			if wResult != nil {
 				walletUpdateResult.Updated = wResult.Updated
 			}
 			inventoryUpdateResult = iResult
 		} else {
-			walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-			if err != nil {
-				return &game.ClaimMoppingRewardResponse{
-					Code: 9,
-					Msg:  "奖励发放失败: " + err.Error(),
-				}, nil
-			}
+			walletUpdateResult = wResult
+			inventoryUpdateResult = iResult
+		}
+
+		// 更新返回的 reward 为合并后的奖励
+		if mergedReward != nil {
+			reward = mergedReward
 		}
 	}
 

@@ -64,20 +64,43 @@ func (s *ApiServer) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlay
 
 	currentLevel := playerLevelData.Level
 	totalExp := playerLevelData.TotalExp
+	oldLevel := currentLevel
 
-	// 查询下一级所需经验值
-	nextLevel := currentLevel + 1
-	levelKey := strconv.FormatInt(int64(nextLevel), 10)
-	levelInfo, exist := s.template.GetTplPlayerLevel().FindByKey(levelKey)
-	if !exist {
-		return &game.UpgradePlayerLevelResponse{
-			Code: 2,
-			Msg:  "已达到最高等级",
-		}, nil
+	rewards := make([]*game.Reward, 0)
+
+	for {
+		nextLevel := currentLevel + 1
+		levelKey := strconv.FormatInt(int64(nextLevel), 10)
+		levelInfo, exist := s.template.GetTplPlayerLevel().FindByKey(levelKey)
+		if !exist {
+			break
+		}
+
+		if totalExp < levelInfo.ExpRequire {
+			break
+		}
+
+		currentLevel = nextLevel
+
+		if levelInfo.Reward != "" {
+			reward := GetReward(levelInfo.Reward, s.template.GetTplReward(), s.logger)
+			if reward != nil {
+				rewards = append(rewards, reward)
+			}
+		}
 	}
 
-	// 检查总经验值是否足够（ExpRequire 是升级到该等级所需的总经验值）
-	if totalExp < levelInfo.ExpRequire {
+	if currentLevel == oldLevel {
+		nextLevel := currentLevel + 1
+		levelKey := strconv.FormatInt(int64(nextLevel), 10)
+		levelInfo, exist := s.template.GetTplPlayerLevel().FindByKey(levelKey)
+		if !exist {
+			return &game.UpgradePlayerLevelResponse{
+				Code: 2,
+				Msg:  "已达到最高等级",
+			}, nil
+		}
+
 		return &game.UpgradePlayerLevelResponse{
 			Code:             3,
 			Msg:              "经验值不足，需要 " + strconv.FormatInt(int64(levelInfo.ExpRequire-totalExp), 10) + " 点经验值",
@@ -89,28 +112,21 @@ func (s *ApiServer) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlay
 		}, nil
 	}
 
-	// 升级（不需要扣除经验值，因为 TotalExp 是累计值）
-	playerLevelData.Level = nextLevel
+	playerLevelData.Level = currentLevel
 
-	// 发放升级奖励
-	var reward *game.Reward
+	var mergedReward *game.Reward
 	var walletUpdateResult *game.WalletUpdateResult
 	var inventoryUpdateResult *game.InventoryUpdateResult
 
-	if levelInfo.Reward != "" {
-		reward = GetReward(levelInfo.Reward, s.template.GetTplReward(), s.logger)
-		if reward != nil {
-			source := "player_level_up_" + levelKey
-			var err error
-			walletUpdateResult, inventoryUpdateResult, err = GrantReward(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, reward, source)
-			if err != nil {
-				s.logger.Error("发放升级奖励失败", zap.Error(err))
-				// 不返回错误，继续升级流程
-			}
+	if len(rewards) > 0 {
+		source := "player_level_up"
+		var err error
+		mergedReward, walletUpdateResult, inventoryUpdateResult, err = GrantMergedRewards(ctx, s.logger, s.db, s.template, s.metrics, s.storageIndex, rewards, source)
+		if err != nil {
+			s.logger.Error("发放升级奖励失败", zap.Error(err))
 		}
 	}
 
-	// 保存等级数据
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, playerLevelData); err != nil {
 		s.logger.Error("保存玩家等级数据失败", zap.Error(err))
 		return &game.UpgradePlayerLevelResponse{
@@ -119,7 +135,6 @@ func (s *ApiServer) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlay
 		}, nil
 	}
 
-	// 提取更新后的数据
 	var walletUpdated *game.Wallet
 	var inventoryUpdated []*game.Item
 	if walletUpdateResult != nil {
@@ -130,15 +145,16 @@ func (s *ApiServer) UpgradePlayerLevel(ctx context.Context, in *game.UpgradePlay
 	}
 
 	s.logger.Info("玩家升级成功",
-		zap.Int32("old_level", currentLevel),
-		zap.Int32("new_level", nextLevel))
+		zap.Int32("old_level", oldLevel),
+		zap.Int32("new_level", currentLevel),
+		zap.Int("levels_upgraded", int(currentLevel-oldLevel)))
 
 	return &game.UpgradePlayerLevelResponse{
 		Code:             0,
 		Msg:              "升级成功",
-		Level:            nextLevel,
+		Level:            currentLevel,
 		TotalExp:         playerLevelData.TotalExp,
-		Reward:           reward,
+		Reward:           mergedReward,
 		WalletUpdated:    walletUpdated,
 		InventoryUpdated: inventoryUpdated,
 	}, nil

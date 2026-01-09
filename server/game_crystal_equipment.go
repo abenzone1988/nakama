@@ -371,6 +371,16 @@ func (s *ApiServer) GetCrystalEquipments(ctx context.Context, in *game.GetCrysta
 		}, nil
 	}
 
+	if crystalEquipmentsData.GetVersion() == "" {
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, crystalEquipmentsData); err != nil {
+			s.logger.Error("保存初始化的水晶装备数据失败", zap.Error(err))
+			return &game.GetCrystalEquipmentsResponse{
+				Code: 2,
+				Msg:  "保存数据失败",
+			}, nil
+		}
+	}
+
 	equipments := make([]*game.CrystalEquipmentInfo, 0, len(crystalEquipmentsData.Equipments))
 	for _, equipment := range crystalEquipmentsData.Equipments {
 		equipments = append(equipments, convertToProtoEquipment(equipment))

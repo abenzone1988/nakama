@@ -51,8 +51,7 @@ func (s *ApiServer) ClaimLevelBox(ctx context.Context, in *game.ClaimLevelBoxReq
 		return nil, err
 	}
 
-	// 检查关卡是否已通过（当前关卡ID要小于等于已通过的关卡）
-	if !isLevelPassed(in.GetLevelId(), battleData.MaxLevelId) {
+	if !isLevelPassedOrCurrent(in.GetLevelId(), battleData.MaxLevelId) {
 		return &game.ClaimLevelBoxResponse{
 			Code: 6,
 			Msg:  "关卡尚未通过",
@@ -222,7 +221,6 @@ func (s *ApiServer) GetLevelBox(ctx context.Context, in *game.GetLevelBoxRequest
 
 // isLevelPassed 检查关卡是否已通过
 func isLevelPassed(targetLevelId, currentLevelId string) bool {
-	// 将 "L1001" 转换为 1001 进行比较
 	targetNum, err1 := parseLevelIdToInt(targetLevelId)
 	currentNum, err2 := parseLevelIdToInt(currentLevelId)
 
@@ -231,6 +229,18 @@ func isLevelPassed(targetLevelId, currentLevelId string) bool {
 	}
 
 	return targetNum <= currentNum
+}
+
+// isLevelPassedOrCurrent 检查关卡是否已通过或是当前关卡
+func isLevelPassedOrCurrent(targetLevelId, maxLevelId string) bool {
+	targetNum, err1 := parseLevelIdToInt(targetLevelId)
+	maxNum, err2 := parseLevelIdToInt(maxLevelId)
+
+	if err1 != nil || err2 != nil {
+		return false
+	}
+
+	return targetNum <= maxNum+1
 }
 
 // parseLevelIdToInt 解析关卡ID为数字

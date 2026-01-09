@@ -36,7 +36,6 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 	exData := &EquipExchangeData{}
 	if err := LoadUserData(ctx, s.logger, s.db, exData); err != nil {
 		s.logger.Error("加载兑换数据失败", zap.Error(err))
-		exData.Init()
 	}
 	if exData.WeekKey != weekKey {
 		exData.WeekKey = weekKey
@@ -59,6 +58,15 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 		buyTimes = remainTimes
 	}
 
+	s.logger.Info("装备兑换-购买次数计算",
+		zap.String("user_id", userID.String()),
+		zap.String("exchange_id", in.Id),
+		zap.Int32("req_count", reqCount),
+		zap.Int32("bought_times", boughtTimes),
+		zap.Int32("week_limit", cfg.WeekLimit),
+		zap.Int32("remain_times", remainTimes),
+		zap.Int32("buy_times", buyTimes))
+
 	// cfg.Costs 表示每次购买的消耗梯度（第1次、第2次……），
 	// 如果购买次数超过 Costs 长度，则后续都按最后一个价格计算。
 	if len(cfg.Costs) == 0 {
@@ -66,6 +74,7 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 	}
 
 	var totalCost int32
+	var costDetails []int32
 	for i := int32(0); i < buyTimes; i++ {
 		costIdx := int(boughtTimes + i) // 第 (boughtTimes+i+1) 次购买对应的价格档位
 		if costIdx >= len(cfg.Costs) {
@@ -74,11 +83,22 @@ func (s *ApiServer) ExchangeEquip(ctx context.Context, in *game.ExchangeEquipReq
 		if costIdx < 0 {
 			return &game.ExchangeEquipResponse{Code: 5, Msg: "配置错误：costIdx无效"}, nil
 		}
-		totalCost += cfg.Costs[costIdx]
+		cost := cfg.Costs[costIdx]
+		costDetails = append(costDetails, cost)
+		totalCost += cost
 	}
 
 	// 本次实际获得的物品数量 = 购买次数 * cfg.Count
 	gainNum := buyTimes * cfg.Count
+
+	s.logger.Info("装备兑换-价格和数量计算",
+		zap.String("user_id", userID.String()),
+		zap.String("exchange_id", in.Id),
+		zap.Int32("buy_times", buyTimes),
+		zap.Int32s("cost_details", costDetails),
+		zap.Int32("total_cost", totalCost),
+		zap.Int32("cfg_count", cfg.Count),
+		zap.Int32("gain_num", gainNum))
 
 	costStr := fmt.Sprintf("%s_%d", ItemID_ExchangePoint, totalCost)
 	wCost, iCost, err := ConsumeCostItems(ctx, s.logger, s.db, s.template, costStr, "equip_exchange_cost")

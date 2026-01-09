@@ -249,7 +249,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 					zap.String("old_level_id", oldLevelId),
 					zap.String("new_level_id", battleData.CurLevelId))
 
-				// 收集首充奖励ID
+				// 收集首通奖励ID
 				if levelUpdated {
 					activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(battleData.CurLevelId)
 					if exist && activityInfo.FirstRewards != "" {
@@ -267,7 +267,7 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 					zap.String("old_level_id", oldLevelId),
 					zap.String("new_level_id", battleData.CurLevelId))
 
-				// 收集首充奖励ID
+				// 收集首通奖励ID
 				if levelUpdated {
 					eliteInfo, exist := s.template.GetTplEliteLevelInfo().FindByKey(battleData.CurLevelId)
 					if exist && eliteInfo.FirstRewards != "" {
