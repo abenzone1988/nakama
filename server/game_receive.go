@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -22,6 +23,22 @@ const (
 	sub_err_code_user_not_found = 172935494
 	NotificationCodeWechatGift  = 1
 )
+
+type GiftNotificationConfig struct {
+	Title       string
+	Description string
+}
+
+var giftNotificationConfigs = map[string]GiftNotificationConfig{
+	"CBgAAoXb6-hx2kb4vrq9mMP2tXCYy-CnIDjeL16t6_ZBPJLZZWcCOnnyoNDIGle4ju2SMRwwRdwYevb4": {
+		Title:       "每日登录奖励",
+		Description: "您的每日登录奖励已送达，请查收！",
+	},
+	"CBgAAoXb6-hx2kb4vrq9mMP2tXCYy-Cmca2VjoRJHnCv4wtyo9B1YoJmvh14frdIM7Gfwk6sV_dfQ2n4": {
+		Title:       "擂台赛胜利",
+		Description: "恭喜您在擂台赛中取得胜利！奖励已送达，请查收。",
+	},
+}
 
 // WechatResponse 微信接口统一返回格式
 type WechatResponse struct {
@@ -75,7 +92,7 @@ func (s *ApiServer) verifyWechatSignature(signature, timestamp, nonce string) (b
 	return hashcode == signature, nil
 }
 
-// handleWechatGetRequest 处理微信服务器的GET验证请求
+// 处理微信服务器的GET验证请求
 func (s *ApiServer) handleWechatGetRequest(w http.ResponseWriter, r *http.Request) {
 	signature := r.URL.Query().Get("signature")
 	timestamp := r.URL.Query().Get("timestamp")
@@ -133,37 +150,81 @@ func (s *ApiServer) writeWechatResponse(w http.ResponseWriter, response WechatRe
 }
 
 // sendGiftNotification 发送礼物通知
-func (s *ApiServer) sendGiftNotification(ctx context.Context, userID uuid.UUID, orderId string, goods []WechatGoodsItem, giftTypeId int, sendTime int64) error {
-	notifications := make(map[uuid.UUID][]*api.Notification)
-	content := map[string]interface{}{
-		"goods":    goods,
-		"giftType": giftTypeId,
+func (s *ApiServer) sendGiftNotification(ctx context.Context, userID uuid.UUID, orderId string, goods []WechatGoodsItem, giftTypeId int, giftId string, sendTime int64) error {
+	if len(goods) == 0 {
+		s.logger.Warn("礼物物品列表为空", zap.String("order_id", orderId))
+		return nil
 	}
-	contentJson, err := json.Marshal(content)
+
+	items := make([]*game.Item, 0, len(goods))
+	for _, good := range goods {
+		items = append(items, &game.Item{
+			Id:  good.Id,
+			Num: int32(good.Num),
+		})
+	}
+
+	reward := &game.Reward{
+		Items: items,
+	}
+
+	config, exists := giftNotificationConfigs[giftId]
+	title := "微信礼包领取"
+	description := "微信礼包已送到，请查收。"
+	if exists {
+		title = config.Title
+		description = config.Description
+	}
+
+	content := map[string]interface{}{
+		"description": description,
+		"rewards":     []*game.Reward{reward},
+	}
+
+	contentBytes, err := json.Marshal(content)
 	if err != nil {
+		s.logger.Error("序列化通知内容失败", zap.Error(err))
 		return fmt.Errorf("failed to marshal notification content: %v", err)
 	}
 
-	// 使用订单ID生成UUID
 	notificationId := uuid.NewV5(uuid.NamespaceURL, orderId)
 
-	notifications[userID] = []*api.Notification{{
+	notification := &api.Notification{
 		Id:         notificationId.String(),
-		Subject:    "wechat_gift_delivery",
-		Content:    string(contentJson),
-		Code:       int32(giftTypeId),
+		Subject:    title,
+		Content:    string(contentBytes),
+		Code:       NotificationSystemNotice,
+		SenderId:   uuid.Nil.String(),
 		CreateTime: timestamppb.New(time.Unix(sendTime, 0)),
 		Persistent: true,
-		SenderId:   uuid.Nil.String(),
-	}}
+	}
 
-	return NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
+	notifications := make(map[uuid.UUID][]*api.Notification)
+	notifications[userID] = []*api.Notification{notification}
+
+	err = NotificationSend(ctx, s.logger, s.db, s.tracker, s.router, notifications)
+	if err != nil {
+		s.logger.Error("发送礼物通知失败",
+			zap.String("user_id", userID.String()),
+			zap.String("order_id", orderId),
+			zap.String("gift_id", giftId),
+			zap.Error(err))
+		return err
+	}
+
+	s.logger.Info("成功发送微信礼包奖励通知",
+		zap.String("user_id", userID.String()),
+		zap.String("order_id", orderId),
+		zap.String("gift_id", giftId))
+
+	return nil
 }
 
 // handleDeliverGoods 处理发货请求
 func (s *ApiServer) handleDeliverGoods(w http.ResponseWriter, r *http.Request, miniGame *WechatMiniGameInfo) {
 	s.logger.Info("收到小游戏发货请求",
 		zap.String("orderId", miniGame.OrderId),
+		zap.String("giftId", miniGame.GiftId),
 		zap.String("openId", miniGame.ToUserOpenid),
 		zap.Int("zone", miniGame.Zone),
 		zap.Any("goods", miniGame.GoodsList))
@@ -188,7 +249,7 @@ func (s *ApiServer) handleDeliverGoods(w http.ResponseWriter, r *http.Request, m
 	}
 
 	// 2. 发送通知
-	if err := s.sendGiftNotification(r.Context(), userID, miniGame.OrderId, miniGame.GoodsList, miniGame.GiftTypeId, miniGame.SendTime); err != nil {
+	if err := s.sendGiftNotification(r.Context(), userID, miniGame.OrderId, miniGame.GoodsList, miniGame.GiftTypeId, miniGame.GiftId, miniGame.SendTime); err != nil {
 		s.logger.Error("发送通知失败", zap.Error(err))
 		s.writeWechatResponse(w, WechatResponse{
 			ErrCode: -1,
@@ -205,6 +266,7 @@ func (s *ApiServer) handleDeliverGoods(w http.ResponseWriter, r *http.Request, m
 
 // HandleWechatVerify 处理微信服务器发来的验证请求
 func (s *ApiServer) HandleWechatVerify(w http.ResponseWriter, r *http.Request) {
+	s.logger.Info("收到微信服务器发来的验证请求", zap.String("method", r.Method))
 	switch r.Method {
 	case "GET":
 		s.handleWechatGetRequest(w, r)
