@@ -1027,6 +1027,33 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 	return generatedTplIds, nil
 }
 
+// getMaxEquipmentLevel 获取装备等级上限
+// 根据玩家等级和是否允许下一个等级段，返回可用的最大装备等级
+func getMaxEquipmentLevel(playerLevel int32, allowNextStage bool) int32 {
+	equipmentLevels := []int32{1, 10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100}
+
+	currentLevel := int32(1)
+	for _, level := range equipmentLevels {
+		if playerLevel >= level {
+			currentLevel = level
+		} else {
+			break
+		}
+	}
+
+	if !allowNextStage {
+		return currentLevel
+	}
+
+	for i, level := range equipmentLevels {
+		if level == currentLevel && i+1 < len(equipmentLevels) {
+			return equipmentLevels[i+1]
+		}
+	}
+
+	return currentLevel
+}
+
 // generateRandomCrystalEquipmentFromDrop 从掉落配置生成随机水晶装备
 //
 // 算法流程：
@@ -1096,9 +1123,10 @@ func generateRandomCrystalEquipmentFromDrop(ctx context.Context, logger *zap.Log
 			continue
 		}
 
-		// c. 筛选符合条件的装备：相同品质、level <= 玩家等级
+		// c. 筛选符合条件的装备：相同品质、level <= 玩家等级（如果Isdropnextstage=1则允许下一个等级段）
+		maxLevel := getMaxEquipmentLevel(playerLevel, randomReward.Isdropnextstage == 1)
 		allEquips := templateMgr.GetTplCrystalEquipment().FindByFilter(func(t template.TplCrystalEquipment) bool {
-			return t.Quality == quality && t.Level <= playerLevel
+			return t.Quality == quality && t.Level <= maxLevel
 		})
 
 		if allEquips.Len() == 0 {

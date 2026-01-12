@@ -33,7 +33,7 @@
 "31":{"equipId":"EQ1105","param":45,"id":31,"type":"RANGE_FIND_B"},
 "32":{"equipId":"EQ1105","param":5,"id":32,"type":"DURATION_ATK_B"},
 "33":{"equipId":"EQ1105","param":3,"id":33,"type":"COOLDOWN_B"},
-"34":{"equipId":"EQ1106","param":181,"id":34,"type":"DMG_B"},
+"34":{"equipId":"EQ1106","param":193,"id":34,"type":"DMG_B"},
 "35":{"equipId":"EQ1106","param":35,"id":35,"type":"RANGE_FIND_B"},
 "36":{"equipId":"EQ1106","param":3,"id":36,"type":"COOLDOWN_B"},
 "37":{"equipId":"EQ1106","param":1,"id":37,"type":"BURST_B"},

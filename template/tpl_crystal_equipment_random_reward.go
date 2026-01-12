@@ -9,14 +9,15 @@ import (
 )
 
 type TplCrystalEquipmentRandomReward struct {
-	Dropmax        int32  `json:"dropmax"`
-	Dropmin        int32  `json:"dropmin"`
-	ID             string `json:"id"`
-	Quality1weight int32  `json:"quality1weight"`
-	Quality2weight int32  `json:"quality2weight"`
-	Quality3weight int32  `json:"quality3weight"`
-	Quality4weight int32  `json:"quality4weight"`
-	Quality5weight int32  `json:"quality5weight"`
+	Isdropnextstage int32  `json:"Isdropnextstage"`
+	Dropmax         int32  `json:"dropmax"`
+	Dropmin         int32  `json:"dropmin"`
+	ID              string `json:"id"`
+	Quality1weight  int32  `json:"quality1weight"`
+	Quality2weight  int32  `json:"quality2weight"`
+	Quality3weight  int32  `json:"quality3weight"`
+	Quality4weight  int32  `json:"quality4weight"`
+	Quality5weight  int32  `json:"quality5weight"`
 }
 
 // ReadOnlyTplCrystalEquipmentRandomRewardSlice 只读TplCrystalEquipmentRandomReward切片接口

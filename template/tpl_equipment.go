@@ -9,13 +9,10 @@ import (
 )
 
 type TplEquipment struct {
-	Brief     string `json:"brief"`
-	DemoBrief string `json:"demoBrief"`
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Occupy    int32  `json:"occupy"`
-	Quality   int32  `json:"quality"`
-	Type      int32  `json:"type"`
+	ID      string `json:"id"`
+	Occupy  int32  `json:"occupy"`
+	Quality int32  `json:"quality"`
+	Type    int32  `json:"type"`
 }
 
 // ReadOnlyTplEquipmentSlice 只读TplEquipment切片接口

@@ -11,10 +11,8 @@ import (
 type TplUnlock struct {
 	ConditionParameter string `json:"conditionParameter"`
 	ConditionType      int32  `json:"conditionType"`
-	Content            string `json:"content"`
 	ID                 string `json:"id"`
 	Parameter          string `json:"parameter"`
-	Title              string `json:"title"`
 	Type               int32  `json:"type"`
 }
 

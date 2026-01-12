@@ -10,10 +10,8 @@ import (
 
 type TplTasks struct {
 	Liveness    int32  `json:"Liveness"`
-	PreID       string `json:"PreId"`
 	TargetType  string `json:"TargetType"`
 	TargetValue int32  `json:"TargetValue"`
-	Brief       string `json:"brief"`
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Reward      string `json:"reward"`
