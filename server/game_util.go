@@ -159,13 +159,32 @@ func GrantReward(ctx context.Context, logger *zap.Logger, db *sql.DB, templateMg
 				itemTpl, _ := templateMgr.GetTplItem().FindByKey(item.Id)
 				quality := itemTpl.Quality
 
-				distributedItems, err := distributeRandomQualityTurret(ctx, logger, db, templateMgr, metrics, storageIndex, item.Num, quality)
-				if err != nil {
-					logger.Error("分配随机品质炮台失败", zap.Error(err))
+				equipData := &EquipData{}
+				if err := LoadUserData(ctx, logger, db, equipData); err != nil {
+					logger.Error("加载装备数据失败", zap.Error(err))
 				} else {
-					for itemId, count := range distributedItems {
-						inventoryChangeset[itemId] += count
-						convertedItems[itemId] += int32(count)
+					allTurrets := templateMgr.GetTplEquipment().FindByFilter(func(t template.TplEquipment) bool {
+						return t.Quality == quality && t.Type == 1 && t.ID != EquipID_Crystal
+					})
+
+					unlockedTurrets := make([]string, 0)
+					for i := 0; i < allTurrets.Len(); i++ {
+						equip := allTurrets.Get(i)
+						if _, unlocked := equipData.UnlockEquips[equip.ID]; unlocked {
+							unlockedTurrets = append(unlockedTurrets, equip.ID)
+						}
+					}
+
+					if len(unlockedTurrets) > 0 {
+						for i := int32(0); i < item.Num; i++ {
+							randomEquipID := unlockedTurrets[rand.Intn(len(unlockedTurrets))]
+							debrisId := strings.TrimPrefix(randomEquipID, "EQ")
+							debrisCount := int64(TurretDebrisCount)
+							inventoryChangeset[debrisId] += debrisCount
+							convertedItems[debrisId] += int32(debrisCount)
+						}
+					} else {
+						logger.Warn("未找到已解锁的对应品质炮台", zap.Int32("quality", quality))
 					}
 				}
 				skipItemIds[item.Id] = true

@@ -70,7 +70,7 @@ func (s *ApiServer) UnlockCrystalSkin(ctx context.Context, in *game.UnlockCrysta
 		crystalSkinData.Skins[skinID] = &CrystalSkin{
 			SkinID:    skinID,
 			ID:        skinUUID.String(),
-			StarLevel: 0,
+			StarLevel: 1,
 		}
 
 		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, crystalSkinData); err != nil {

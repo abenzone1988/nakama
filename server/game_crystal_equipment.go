@@ -337,7 +337,6 @@ func (s *ApiServer) ActivatePendingAffixes(ctx context.Context, in *game.Activat
 
 	equipment.ActiveAffixes = equipment.PendingAffixes
 	equipment.PendingAffixes = make([]CrystalEquipmentAffix, 0)
-	equipment.LockedAffixIds = make([]string, 0)
 
 	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, crystalEquipmentsData); err != nil {
 		s.logger.Error("保存水晶装备数据失败", zap.Error(err))
