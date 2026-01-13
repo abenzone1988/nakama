@@ -641,7 +641,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	}
 
 	// 验证商品
-	tplPay, err := s.validateProduct(productID, price)
+	_, err := s.validateProduct(productID, price)
 	if err != nil {
 		return err
 	}
@@ -673,6 +673,7 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 
 	if isShopGem {
 		if err := s.deliverShopGemProduct(ctx, userID, productID, price); err != nil {
+
 			// 钻石购买记录失败不影响发货流程，继续处理
 		}
 	}
@@ -684,9 +685,9 @@ func (s *ApiServer) deliverProductToUser(ctx context.Context, userID uuid.UUID, 
 	}
 
 	// 发送通知给用户
-	if err := s.sendPurchaseNotification(ctx, userID, tplPay.ProductName, price, req.CPOrderID); err != nil {
-		// 通知发送失败不影响发货流程，记录日志即可
-	}
+	//if err := s.sendPurchaseNotification(ctx, userID, tplPay.ProductName, price, req.CPOrderID); err != nil {
+	//	// 通知发送失败不影响发货流程，记录日志即可
+	//}
 
 	s.logger.Info("商品发放完成",
 		zap.String("user_id", userID.String()),

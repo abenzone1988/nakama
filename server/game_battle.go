@@ -81,6 +81,12 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 			}, nil
 		}
 		staminaCost = levelInfo.Cost
+		if battleData.MaxEnterLevelId == "" || compareLevelId(in.GetLevelId(), battleData.MaxEnterLevelId) {
+			battleData.MaxEnterLevelId = in.GetLevelId()
+			s.logger.Info("更新最大已打过的关卡",
+				zap.String("old_level_id", battleData.MaxEnterLevelId),
+				zap.String("new_level_id", in.GetLevelId()))
+		}
 
 	case game.BattleType_BATTLE_TYPE_GOLDEN:
 		activityInfo, exist := s.template.GetTplActivityLevelInfo().FindByKey(in.GetLevelId())

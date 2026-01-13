@@ -805,7 +805,8 @@ func (d *CrystalSkinData) Init() {
 type BattleData struct {
 	BaseStorable
 	CurLevelId             string          `json:"cur_level_id"`               // 当前正在战斗的关卡ID
-	MaxLevelId             string          `json:"max_level_id"`               // 最大关卡ID
+	MaxEnterLevelId        string          `json:"max_enter_level_id"`         // 最大进入的关卡ID
+	MaxLevelId             string          `json:"max_level_id"`               // 最大通关关卡ID
 	MaxActivityLevelId     string          `json:"max_activity_level_id"`      // 最大活动关卡ID
 	MaxEliteLevelId        string          `json:"max_elite_level_id"`         // 最大精英关卡ID
 	BattleType             game.BattleType `json:"battle_type"`                // 最后一次战斗类型（0=普通，1=黄金）

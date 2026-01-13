@@ -1027,9 +1027,9 @@ func generateRandomCrystalEquipment(ctx context.Context, logger *zap.Logger, db 
 	return generatedTplIds, nil
 }
 
-// getMaxEquipmentLevel 获取装备等级上限
-// 根据玩家等级和是否允许下一个等级段，返回可用的最大装备等级
-func getMaxEquipmentLevel(playerLevel int32, allowNextStage bool) int32 {
+// getAllowedEquipmentLevels 获取允许的装备等级段
+// 根据玩家等级和是否允许下一个等级段，返回允许的等级段列表（当前段和下一个段）
+func getAllowedEquipmentLevels(playerLevel int32, allowNextStage bool) []int32 {
 	equipmentLevels := []int32{1, 10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100}
 
 	currentLevel := int32(1)
@@ -1041,17 +1041,18 @@ func getMaxEquipmentLevel(playerLevel int32, allowNextStage bool) int32 {
 		}
 	}
 
-	if !allowNextStage {
-		return currentLevel
-	}
+	allowedLevels := []int32{currentLevel}
 
-	for i, level := range equipmentLevels {
-		if level == currentLevel && i+1 < len(equipmentLevels) {
-			return equipmentLevels[i+1]
+	if allowNextStage {
+		for i, level := range equipmentLevels {
+			if level == currentLevel && i+1 < len(equipmentLevels) {
+				allowedLevels = append(allowedLevels, equipmentLevels[i+1])
+				break
+			}
 		}
 	}
 
-	return currentLevel
+	return allowedLevels
 }
 
 // generateRandomCrystalEquipmentFromDrop 从掉落配置生成随机水晶装备
@@ -1123,10 +1124,14 @@ func generateRandomCrystalEquipmentFromDrop(ctx context.Context, logger *zap.Log
 			continue
 		}
 
-		// c. 筛选符合条件的装备：相同品质、level <= 玩家等级（如果Isdropnextstage=1则允许下一个等级段）
-		maxLevel := getMaxEquipmentLevel(playerLevel, randomReward.Isdropnextstage == 1)
+		// c. 筛选符合条件的装备：相同品质、当前等级段（如果Isdropnextstage=1则允许当前段和下一个段）
+		allowedLevels := getAllowedEquipmentLevels(playerLevel, randomReward.Isdropnextstage == 1)
+		allowedLevelsMap := make(map[int32]bool)
+		for _, level := range allowedLevels {
+			allowedLevelsMap[level] = true
+		}
 		allEquips := templateMgr.GetTplCrystalEquipment().FindByFilter(func(t template.TplCrystalEquipment) bool {
-			return t.Quality == quality && t.Level <= maxLevel
+			return t.Quality == quality && allowedLevelsMap[t.Level]
 		})
 
 		if allEquips.Len() == 0 {
@@ -1136,28 +1141,8 @@ func generateRandomCrystalEquipmentFromDrop(ctx context.Context, logger *zap.Log
 			continue
 		}
 
-		// d. 按装备类型分组，选择每个类型中level最大的
-		equipTypeMap := make(map[int32]template.TplCrystalEquipment)
-		for j := 0; j < allEquips.Len(); j++ {
-			equip := allEquips.Get(j)
-			existing, found := equipTypeMap[equip.EquipType]
-			if !found || equip.Level > existing.Level {
-				equipTypeMap[equip.EquipType] = equip
-			}
-		}
-
-		// 从所有类型中随机选择一个
-		candidates := make([]template.TplCrystalEquipment, 0, len(equipTypeMap))
-		for _, equip := range equipTypeMap {
-			candidates = append(candidates, equip)
-		}
-
-		if len(candidates) == 0 {
-			logger.Warn("未找到候选装备")
-			continue
-		}
-
-		selectedEquip := candidates[rand.Intn(len(candidates))]
+		// d. 从符合条件的装备中随机选择一个
+		selectedEquip := allEquips.Get(rand.Intn(allEquips.Len()))
 
 		// e. 生成装备实例
 		equipID, err := uuid.NewV4()

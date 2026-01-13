@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -193,13 +192,16 @@ func calculateRestStationGrant(ctx context.Context, currentCount int32, lastGran
 
 func sendRestStationOverflowEmail(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, userID uuid.UUID, overflowCount int32, staminaToAdd int32) error {
 	reward := &game.Reward{
-		Wallet: &game.Wallet{
-			Stamina: staminaToAdd,
+		Items: []*game.Item{
+			{
+				Id:  ItemID_Stamina,
+				Num: overflowCount,
+			},
 		},
 	}
 
 	content := &console.NoticeContent{
-		Description: fmt.Sprintf("您的休息站体力已满，超过的 %d 个休息站体力已自动转换为 %d 点体力，请查收！", overflowCount, staminaToAdd),
+		Description: "亲爱的指挥官，这是您自然恢复所溢出的体力资源，后勤部已帮您收集，请查收",
 		Rewards:     []*game.Reward{reward},
 	}
 

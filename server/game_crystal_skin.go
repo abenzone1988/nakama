@@ -90,7 +90,7 @@ func (s *ApiServer) UnlockCrystalSkin(ctx context.Context, in *game.UnlockCrysta
 			Msg:  "Success",
 			Skin: &game.CrystalSkinInfo{
 				SkinId:    skinID,
-				StarLevel: 0,
+				StarLevel: 1,
 			},
 		}
 

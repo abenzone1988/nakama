@@ -41,7 +41,6 @@ type TemplateManager interface {
 	GetTplPay() *TableTplPay
 	GetTplPlayerLevel() *TableTplPlayerLevel
 	GetTplEliteLevelInfo() *TableTplEliteLevelInfo
-	GetTplEliteLevelDrop() *TableTplEliteLevelDrop
 	GetTplMine() *TableTplMine
 	GetTplCrystalEquipmentSlotDev() *TableTplCrystalEquipmentSlotDev
 	GetTplCrystalEquipment() *TableTplCrystalEquipment
@@ -82,7 +81,6 @@ type LocalTemplateManager struct {
 	tableTplPay                             *TableTplPay
 	tableTplPlayerLevel                     *TableTplPlayerLevel
 	tableTplEliteLevelInfo                  *TableTplEliteLevelInfo
-	tableTplEliteLevelDrop                  *TableTplEliteLevelDrop
 	tableTplMine                            *TableTplMine
 	tableTplCrystalEquipmentSlotDev         *TableTplCrystalEquipmentSlotDev
 	tableTplCrystalEquipment                *TableTplCrystalEquipment
@@ -124,7 +122,6 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplPay:                             NewTableTplPay(logger, jsonPath),
 		tableTplPlayerLevel:                     NewTableTplPlayerLevel(logger, jsonPath),
 		tableTplEliteLevelInfo:                  NewTableTplEliteLevelInfo(logger, jsonPath),
-		tableTplEliteLevelDrop:                  NewTableTplEliteLevelDrop(logger, jsonPath),
 		tableTplMine:                            NewTableTplMine(logger, jsonPath),
 		tableTplCrystalEquipmentSlotDev:         NewTableTplCrystalEquipmentSlotDev(logger, jsonPath),
 		tableTplCrystalEquipment:                NewTableTplCrystalEquipment(logger, jsonPath),
@@ -168,7 +165,6 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
 	t.tableTplPlayerLevel.LoadData(t.StorageReadTpl("TplPlayerLevel"))
 	t.tableTplEliteLevelInfo.LoadData(t.StorageReadTpl("TplEliteLevelInfo"))
-	t.tableTplEliteLevelDrop.LoadData(t.StorageReadTpl("TplEliteLevelDrop"))
 	t.tableTplMine.LoadData(t.StorageReadTpl("TplMine"))
 	t.tableTplCrystalEquipmentSlotDev.LoadData(t.StorageReadTpl("TplCrystalEquipmentSlotDev"))
 	t.tableTplCrystalEquipment.LoadData(t.StorageReadTpl("TplCrystalEquipment"))
@@ -214,12 +210,6 @@ func (t *LocalTemplateManager) GetTplEliteLevelInfo() *TableTplEliteLevelInfo {
 	t.RLock()
 	defer t.RUnlock()
 	return t.tableTplEliteLevelInfo
-}
-
-func (t *LocalTemplateManager) GetTplEliteLevelDrop() *TableTplEliteLevelDrop {
-	t.RLock()
-	defer t.RUnlock()
-	return t.tableTplEliteLevelDrop
 }
 
 func (t *LocalTemplateManager) GetTplPlayerLevel() *TableTplPlayerLevel {
