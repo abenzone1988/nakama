@@ -214,7 +214,7 @@ func sendRestStationOverflowEmail(ctx context.Context, logger *zap.Logger, db *s
 	expiryTime := time.Now().UTC().Add(3 * 24 * time.Hour)
 	notification := &api.Notification{
 		Id:         uuid.Must(uuid.NewV4()).String(),
-		Subject:    "休息站体力溢出补偿",
+		Subject:    "溢出的体力补发",
 		Content:    string(contentBytes),
 		Code:       NotificationSystemNotice,
 		SenderId:   uuid.Nil.String(),
