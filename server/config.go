@@ -1032,6 +1032,14 @@ func (cfg *SocialConfig) Clone() *SocialConfig {
 		c := *(cfg.Apple)
 		cfgCopy.Apple = &c
 	}
+	if cfg.Wechat != nil {
+		c := *(cfg.Wechat)
+		cfgCopy.Wechat = &c
+	}
+	if cfg.TikTok != nil {
+		c := *(cfg.TikTok)
+		cfgCopy.TikTok = &c
+	}
 
 	return &cfgCopy
 }
@@ -1066,8 +1074,13 @@ func (c *SocialConfigWeChat) GetAppSecret() string {
 }
 
 type SocialConfigTikTok struct {
-	AppId     string `yaml:"app_id"`
-	AppSecret string `yaml:"app_secret"`
+	AppId            string `yaml:"app_id"`
+	AppSecret        string `yaml:"app_secret"`
+	Scene1ContentID  string `yaml:"scene1_content_id" json:"scene1_content_id" usage:"TikTok直玩场景1(离线收益场景)内容ID"`
+	Scene2ContentID  string `yaml:"scene2_content_id" json:"scene2_content_id" usage:"TikTok直玩场景2(体力恢复场景)内容ID"`
+	Scene3ContentID  string `yaml:"scene3_content_id" json:"scene3_content_id" usage:"TikTok直玩场景3(重要事件掉落)内容ID"`
+	DirectPlaySecret string `yaml:"direct_play_secret" json:"direct_play_secret" usage:"TikTok直玩场景签名验证Secret"`
+	DirectPlayTest   bool   `yaml:"direct_play_test" json:"direct_play_test" usage:"TikTok直玩场景测试模式，启用后将返回所有场景"`
 }
 
 func (c *SocialConfigTikTok) GetAppId() string {
@@ -1076,6 +1089,22 @@ func (c *SocialConfigTikTok) GetAppId() string {
 
 func (c *SocialConfigTikTok) GetAppSecret() string {
 	return c.AppSecret
+}
+
+func (c *SocialConfigTikTok) GetScene1ContentID() string {
+	return c.Scene1ContentID
+}
+
+func (c *SocialConfigTikTok) GetScene2ContentID() string {
+	return c.Scene2ContentID
+}
+
+func (c *SocialConfigTikTok) GetScene3ContentID() string {
+	return c.Scene3ContentID
+}
+
+func (c *SocialConfigTikTok) GetDirectPlaySecret() string {
+	return c.DirectPlaySecret
 }
 
 var _ runtime.SocialConfigFacebookInstantGame = &SocialConfigFacebookInstantGame{}
@@ -1125,6 +1154,15 @@ func NewSocialConfig() *SocialConfig {
 		},
 		Apple: &SocialConfigApple{
 			BundleId: "",
+		},
+		TikTok: &SocialConfigTikTok{
+			AppId:            "",
+			AppSecret:        "",
+			Scene1ContentID:  "CONTENT963547906",
+			Scene2ContentID:  "",
+			Scene3ContentID:  "CONTENT586019586",
+			DirectPlaySecret: "Mkj586019074Fdh",
+			DirectPlayTest:   false,
 		},
 	}
 }

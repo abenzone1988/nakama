@@ -23,7 +23,14 @@ socket:
   server_key: "sparkgame"
   port: 7350
 
-
+social:
+  tiktok:
+    app_id: "tt554023fdca4d184c07"
+    app_secret: ""
+    scene1_content_id: "CONTENT13200696834"
+    scene2_content_id: ""
+    scene3_content_id: "CONTENT13177809154"
+    direct_play_secret: "Atf13170739202SHS"
 
 console:
   port: 7351

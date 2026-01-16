@@ -18,16 +18,7 @@ const (
 	ErrNoSuccess         = 0        // 成功
 	ErrNoInvalidParam    = 28001007 // 参数错误
 	ErrNoSignatureFailed = 28006009 // 校验签名失败
-
-	// 场景内容ID
-	ContentOfflineIncome = "CONTENT963547906" // 离线收益场景内容ID
-	ContentReFight       = "CONTENT586019586" // 重新进入关卡
-
-	// 测试模式
-	TestModeEnabled = false // 是否启用测试模式，启用后将返回所有场景
 )
-
-const TestSecret = "Mkj586019074Fdh"
 
 // Scene 场景信息
 type Scene struct {
@@ -104,10 +95,20 @@ func (s *ApiServer) verifySignature(r *http.Request, bodyStr string) bool {
 		return false
 	}
 
-	// 3. 计算签名
-	expectedSignature := getSignature(params, bodyStr, TestSecret)
+	// 3. 从配置获取Secret
+	socialConfig := s.config.GetSocial()
+	if socialConfig == nil || socialConfig.TikTok == nil {
+		return false
+	}
+	secret := socialConfig.TikTok.DirectPlaySecret
+	if secret == "" {
+		return false
+	}
 
-	// 4. 验证签名
+	// 4. 计算签名
+	expectedSignature := getSignature(params, bodyStr, secret)
+
+	// 5. 验证签名
 	return signature == expectedSignature
 }
 
@@ -129,14 +130,26 @@ func (s *ApiServer) writeFeedResponse(w http.ResponseWriter, r *http.Request, re
 	params["nonce"] = r.URL.Query().Get("nonce")
 	params["timestamp"] = r.URL.Query().Get("timestamp")
 
-	// 3. 计算响应签名
-	signature := getSignature(params, bodyStr, TestSecret)
+	// 3. 从配置获取Secret
+	socialConfig := s.config.GetSocial()
+	if socialConfig == nil || socialConfig.TikTok == nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	secret := socialConfig.TikTok.DirectPlaySecret
+	if secret == "" {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
-	// 4. 设置响应头
+	// 4. 计算响应签名
+	signature := getSignature(params, bodyStr, secret)
+
+	// 5. 设置响应头
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("x-signature", signature)
 
-	// 5. 写入响应体
+	// 6. 写入响应体
 	w.Write(bodyBytes)
 }
 
@@ -205,21 +218,31 @@ func (s *ApiServer) HandleSceneList(w http.ResponseWriter, r *http.Request) {
 func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scene, error) {
 	scenes := make([]*Scene, 0)
 
+	// 从配置获取测试模式设置
+	socialConfig := s.config.GetSocial()
+	if socialConfig == nil || socialConfig.TikTok == nil {
+		return scenes, nil
+	}
+
 	// 如果启用测试模式，直接返回所有场景
-	if TestModeEnabled {
+	if socialConfig.TikTok.DirectPlayTest {
 		s.logger.Info("测试模式：返回所有场景")
-		return []*Scene{
-			{
+		testScenes := []*Scene{}
+		if scene1ID := socialConfig.TikTok.Scene1ContentID; scene1ID != "" {
+			testScenes = append(testScenes, &Scene{
 				Scene:      1,
-				ContentIDs: []string{ContentOfflineIncome},
+				ContentIDs: []string{scene1ID},
 				Extra:      "",
-			},
-			{
+			})
+		}
+		if scene3ID := socialConfig.TikTok.Scene3ContentID; scene3ID != "" {
+			testScenes = append(testScenes, &Scene{
 				Scene:      3,
-				ContentIDs: []string{ContentReFight},
+				ContentIDs: []string{scene3ID},
 				Extra:      "",
-			},
-		}, nil
+			})
+		}
+		return testScenes, nil
 	}
 
 	// 读取 ByteDirectPlay 数据
@@ -246,9 +269,12 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		return nil, err
 	}
 
+	scene1ContentID := socialConfig.TikTok.Scene1ContentID
+	scene3ContentID := socialConfig.TikTok.Scene3ContentID
+
 	// 判断是否超过8小时且今天未返回过该场景
-	if time.Since(lastGetTime).Hours() >= 8 {
-		lastSceneTime := directPlay.SceneTimestamps[ContentOfflineIncome]
+	if scene1ContentID != "" && time.Since(lastGetTime).Hours() >= 8 {
+		lastSceneTime := directPlay.SceneTimestamps[scene1ContentID]
 		isSameDay := false
 		if lastSceneTime != "" {
 			lastTime, err := parseTime(lastSceneTime)
@@ -260,31 +286,33 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		if !isSameDay {
 			scenes = append(scenes, &Scene{
 				Scene:      1,
-				ContentIDs: []string{ContentOfflineIncome},
+				ContentIDs: []string{scene1ContentID},
 				Extra:      "",
 			})
-			directPlay.SceneTimestamps[ContentOfflineIncome] = currentTime.Format(time.RFC3339)
+			directPlay.SceneTimestamps[scene1ContentID] = currentTime.Format(time.RFC3339)
 		}
 	}
 
 	// 检查重新进入关卡场景
-	lastReFightTime := directPlay.SceneTimestamps[ContentReFight]
-	isSameDay := false
-	if lastReFightTime != "" {
-		lastTime, err := parseTime(lastReFightTime)
-		if err == nil {
-			lastDate := lastTime.UTC().Format("2006-01-02")
-			isSameDay = lastDate == currentDate
+	if scene3ContentID != "" {
+		lastReFightTime := directPlay.SceneTimestamps[scene3ContentID]
+		isSameDay := false
+		if lastReFightTime != "" {
+			lastTime, err := parseTime(lastReFightTime)
+			if err == nil {
+				lastDate := lastTime.UTC().Format("2006-01-02")
+				isSameDay = lastDate == currentDate
+			}
 		}
-	}
-	if !isSameDay {
-		scenes = append(scenes, &Scene{
-			Scene:      3,
-			ContentIDs: []string{ContentReFight},
-			Extra:      "",
-		})
-		directPlay.SceneTimestamps[ContentReFight] = currentTime.Format(time.RFC3339)
-		directPlay.GetDirectPlayReward = false
+		if !isSameDay {
+			scenes = append(scenes, &Scene{
+				Scene:      3,
+				ContentIDs: []string{scene3ContentID},
+				Extra:      "",
+			})
+			directPlay.SceneTimestamps[scene3ContentID] = currentTime.Format(time.RFC3339)
+			directPlay.GetDirectPlayReward = false
+		}
 	}
 
 	// 保存更新后的 ByteDirectPlay 数据
