@@ -245,6 +245,16 @@ func (s *ApiServer) queryUserScenes(ctx context.Context, openid string) ([]*Scen
 		return testScenes, nil
 	}
 
+	// 从 openid 获取 userID
+	userID, err := FindUserByDeviceID(ctx, s.logger, s.db, openid)
+	if err != nil {
+		s.logger.Error("根据 openid 查找用户失败", zap.String("openid", openid), zap.Error(err))
+		return scenes, nil
+	}
+
+	// 将 userID 设置到 context 中
+	ctx = context.WithValue(ctx, ctxUserIDKey{}, userID)
+
 	// 读取 ByteDirectPlay 数据
 	directPlay := &ByteRewardData{}
 	if err := LoadUserData(ctx, s.logger, s.db, directPlay); err != nil {

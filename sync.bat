@@ -4,7 +4,7 @@ set GOOS=linux
 set GOARCH=amd64
 
 go build -o nakama
-scp -P 22  nakama   root@39.101.186.196:/root/dy-xjsm-iap/bin
+scp -P 22  nakama   root@192.168.102.223:/root/xjsmiap-us/bin
 
 #scp -P 31222  nakama   root@118.145.206.63:/root/zw_zjstf/bin
 
