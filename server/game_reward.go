@@ -24,7 +24,7 @@ var signatureFailCounter = make(map[string]int)
 
 // 作弊检测阈值
 const CheatDetectionThreshold = 10000  // 广告券>=1000视为作弊
-const FrequentClaimIntervalSeconds = 1 // 频繁领取间隔阈值：3秒
+const FrequentClaimIntervalSeconds = 3 // 频繁领取间隔阈值：3秒
 const DailyAdCheatThreshold = 100      // 全天ad获取阈值：100个
 const DailyGemLimit = 9999             // 每日钻石领取上限：9999
 const DailyCoinLimit = 499999          // 每日金币领取上限：499999

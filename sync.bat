@@ -18,6 +18,6 @@ rem Hjzx!@#*()800
 rem Aben6290209
 
 rem scp -P 22  nakama   root@192.168.102.223:/root/hjdt/bin
-rem   scp -P 22  nakama   root@118.145.182.217:/root/wx-hjzx/bin
+scp -P 31222  nakama   root@118.145.160.21:/root/wx-hjzx/bin
 rem    scp -P 22  nakama   root@118.145.146.135:/root/wx-hjzx/bin
-scp -P 22  nakama   root@39.101.186.196:/root/wx-hjzx/bin
+rem scp -P 22  nakama   root@39.101.186.196:/root/wx-hjzx/bin
