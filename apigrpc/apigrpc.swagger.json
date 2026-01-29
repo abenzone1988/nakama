@@ -2368,38 +2368,6 @@
         ]
       }
     },
-    "/v2/game/purchase/test": {
-      "post": {
-        "operationId": "Nakama_PurchaseTest",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/gamePurchaseResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/gamePurchaseRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Nakama"
-        ]
-      }
-    },
     "/v2/game/redeem_gift": {
       "post": {
         "summary": "Redeem a Gift by code",
@@ -8190,76 +8158,6 @@
       "default": "FREE",
       "description": "- FREE: 免费\n - COIN: 金币\n - GEM: 钻石\n - AD: 广告",
       "title": "商店相关消息定义"
-    },
-    "gamePurchaseRequest": {
-      "type": "object",
-      "properties": {
-        "site": {
-          "type": "string",
-          "title": "应用 ID"
-        },
-        "orderId": {
-          "type": "string",
-          "title": "商户订单号"
-        },
-        "uid": {
-          "type": "string",
-          "title": "用户ID"
-        },
-        "sid": {
-          "type": "string",
-          "title": "服务器 ID"
-        },
-        "cpOrderId": {
-          "type": "string",
-          "title": "CP订单号"
-        },
-        "roleid": {
-          "type": "string",
-          "title": "角色ID"
-        },
-        "rolename": {
-          "type": "string",
-          "title": "角色名称"
-        },
-        "orderMoney": {
-          "type": "string",
-          "title": "实际总价"
-        },
-        "productid": {
-          "type": "string",
-          "title": "商品ID"
-        },
-        "payType": {
-          "type": "integer",
-          "format": "int32",
-          "title": "支付方式 1：苹果内购, 2：支付宝, 3和11：微信h5支付, 5：微信公众号支付, 13：微信虚拟内购"
-        },
-        "ext": {
-          "type": "string",
-          "title": "透传字段，由 CP 定义的字段"
-        },
-        "time": {
-          "type": "string",
-          "title": "时间戳 10位"
-        },
-        "sign": {
-          "type": "string",
-          "title": "签名"
-        }
-      }
-    },
-    "gamePurchaseResponse": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "msg": {
-          "type": "string"
-        }
-      }
     },
     "gameRedeemGiftRequest": {
       "type": "object",
