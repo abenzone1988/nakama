@@ -37,6 +37,9 @@ type TemplateManager interface {
 	GetTplSevenDay() *TableTplSevenDay
 	GetTplDailySignIn() *TableTplDailySignIn
 	GetTplPay() *TableTplPay
+	GetTplChallenge() *TableTplChallenge
+	GetTplChallengeInfo() *TableTplChallengeInfo
+	GetTplChallengeReward() *TableTplChallengeReward
 }
 
 type LocalTemplateManager struct {
@@ -64,6 +67,9 @@ type LocalTemplateManager struct {
 	tableTplSevenDay          *TableTplSevenDay
 	tableTplDailySignIn       *TableTplDailySignIn
 	tableTplPay               *TableTplPay
+	tableTplChallenge         *TableTplChallenge
+	tableTplChallengeInfo     *TableTplChallengeInfo
+	tableTplChallengeReward   *TableTplChallengeReward
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -92,6 +98,9 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplSevenDay:          NewTableTplSevenDay(logger, jsonPath),
 		tableTplDailySignIn:       NewTableTplDailySignIn(logger, jsonPath),
 		tableTplPay:               NewTableTplPay(logger, jsonPath),
+		tableTplChallenge:         NewTableTplChallenge(logger, jsonPath),
+		tableTplChallengeInfo:     NewTableTplChallengeInfo(logger, jsonPath),
+		tableTplChallengeReward:   NewTableTplChallengeReward(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -122,6 +131,27 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplSevenDay.LoadData(t.StorageReadTpl("TplSevenDay"))
 	t.tableTplDailySignIn.LoadData(t.StorageReadTpl("TplDailySignIn"))
 	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
+	t.tableTplChallenge.LoadData(t.StorageReadTpl("TplChallenge"))
+	t.tableTplChallengeInfo.LoadData(t.StorageReadTpl("TplChallengeInfo"))
+	t.tableTplChallengeReward.LoadData(t.StorageReadTpl("TplChallengeReward"))
+}
+
+func (t *LocalTemplateManager) GetTplChallenge() *TableTplChallenge {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplChallenge
+}
+
+func (t *LocalTemplateManager) GetTplChallengeInfo() *TableTplChallengeInfo {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplChallengeInfo
+}
+
+func (t *LocalTemplateManager) GetTplChallengeReward() *TableTplChallengeReward {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplChallengeReward
 }
 
 func (t *LocalTemplateManager) GetTplFirstCharge() *TableTplFirstCharge {

@@ -588,6 +588,31 @@ func GetReward(rewardId string, tplReward *template.TableTplReward, logger *zap.
 	}
 }
 
+func ParseRewards(logger *zap.Logger, tplReward *template.TableTplReward, rewardIds []string) ([]*game.Reward, error) {
+	if len(rewardIds) == 0 {
+		return nil, nil
+	}
+
+	rewards := make([]*game.Reward, 0, len(rewardIds))
+	for _, rewardId := range rewardIds {
+		if rewardId == "" {
+			continue
+		}
+		reward := GetReward(rewardId, tplReward, logger)
+		if reward == nil {
+			logger.Warn("奖励配置不存在", zap.String("reward_id", rewardId))
+			continue
+		}
+		rewards = append(rewards, reward)
+	}
+
+	if len(rewards) == 0 {
+		return nil, fmt.Errorf("所有奖励ID都无效")
+	}
+
+	return rewards, nil
+}
+
 func parseItems(itemsString string, logger *zap.Logger) []*game.Item {
 	if itemsString == "" {
 		return nil
@@ -694,4 +719,16 @@ func MergeRewards(rewards []*game.Reward) *game.Reward {
 	}
 
 	return result
+}
+
+// parseDateTime 解析日期和时间字符串为 time.Time
+// 适配格式如 "2025/7/11 10:00"
+func parseDateTime(datetimeStr string) (time.Time, error) {
+	// 解析格式为 "2006/1/2 15:04"
+	parsedTime, err := time.ParseInLocation("2006-1-2 15:04", datetimeStr, time.Local)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("解析时间失败 '%s': %w", datetimeStr, err)
+	}
+
+	return parsedTime, nil
 }

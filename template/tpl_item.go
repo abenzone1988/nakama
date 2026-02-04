@@ -9,14 +9,14 @@ import (
 )
 
 type TplItem struct {
-	Gain       []interface{} `json:"gain"`
-	IconScale  string        `json:"iconScale"`
-	ID         string        `json:"id"`
-	ItemType   int32         `json:"itemType"`
-	Name       string        `json:"name"`
-	OnlyOne    int32         `json:"onlyOne"`
-	OrderIndex int32         `json:"orderIndex"`
-	Quality    int32         `json:"quality"`
+	Gain       []string `json:"gain"`
+	IconScale  string   `json:"iconScale"`
+	ID         string   `json:"id"`
+	ItemType   int32    `json:"itemType"`
+	Name       string   `json:"name"`
+	OnlyOne    int32    `json:"onlyOne"`
+	OrderIndex int32    `json:"orderIndex"`
+	Quality    int32    `json:"quality"`
 }
 
 // ReadOnlyTplItemSlice 只读TplItem切片接口
@@ -118,5 +118,6 @@ func DeserializeStringToTplItemMap(jsonStr []byte, logger *zap.Logger) map[strin
 		logger.Error("JSON 反序列化错误", zap.Error(err))
 		return make(map[string]TplItem)
 	}
+
 	return jsonMap
 }

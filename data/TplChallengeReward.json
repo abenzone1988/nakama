@@ -1,0 +1,7 @@
+{
+"1":{"rewardIcon":"R5","rewardId":"ActivityRank_1_new","minRank":1,"name":"第1名","activeId":"RankReward","id":"1","maxRank":1},
+"2":{"rewardIcon":"R4","rewardId":"ActivityRank_2_new","minRank":2,"name":"第2名","activeId":"RankReward","id":"2","maxRank":2},
+"3":{"rewardIcon":"R3","rewardId":"ActivityRank_3_new","minRank":3,"name":"第3名","activeId":"RankReward","id":"3","maxRank":3},
+"4":{"rewardIcon":"R2","rewardId":"ActivityRank_4_new","minRank":4,"name":"第4-10名","activeId":"RankReward","id":"4","maxRank":10},
+"5":{"rewardIcon":"R1","rewardId":"ActivityRank_5_new","minRank":11,"name":"第11-20名","activeId":"RankReward","id":"5","maxRank":20}
+}

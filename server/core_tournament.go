@@ -421,13 +421,6 @@ func TournamentRecordsList(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 
 func TournamentRecordWrite(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, caller uuid.UUID, tournamentId string, ownerId uuid.UUID, username string, score, subscore int64, metadata string, overrideOperator api.Operator) (*api.LeaderboardRecord, error) {
 	leaderboard := leaderboardCache.Get(tournamentId)
-	//if leaderboard == nil {
-	//	var err error
-	//	leaderboard, err = ensureTournamentCacheFromDBLocal(ctx, logger, db, leaderboardCache, tournamentId)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//}
 	if leaderboard == nil || !leaderboard.IsTournament() {
 		return nil, runtime.ErrTournamentNotFound
 	}
@@ -844,90 +837,6 @@ func parseTournament(scannable Scannable, now time.Time) (*api.Tournament, error
 	return tournament, nil
 }
 
-// ensureTournamentCacheFromDBLocal 确保本地缓存存在指定 tournament；
-// 当缓存未命中时，从数据库加载并仅在本地节点填充缓存（不进行广播），返回填充后的缓存对象。
-func ensureTournamentCacheFromDBLocal(
-	ctx context.Context,
-	logger *zap.Logger,
-	db *sql.DB,
-	leaderboardCache LeaderboardCache,
-	tournamentId string,
-) (*Leaderboard, error) {
-	// 已有则直接返回
-	if lb := leaderboardCache.Get(tournamentId); lb != nil {
-		return lb, nil
-	}
-
-	// 从数据库读取定义
-	var dbAuthoritative bool
-	var dbSortOrder int
-	var dbOperator int
-	var dbResetSchedule string
-	var dbMetadata string
-	var dbCreateTime pgtype.Timestamptz
-	var dbCategory int
-	var dbDescription string
-	var dbDuration int
-	var dbEndTime pgtype.Timestamptz
-	var dbJoinRequired bool
-	var dbMaxSize int
-	var dbMaxNumScore int
-	var dbTitle string
-	var dbStartTime pgtype.Timestamptz
-	var dbEnableRanks bool
-
-	err := db.QueryRowContext(ctx, `SELECT authoritative, sort_order, operator, COALESCE(reset_schedule, ''), metadata, create_time,
-            category, description, duration, end_time, join_required, max_size, max_num_score, title, start_time, enable_ranks
-        FROM leaderboard WHERE id = $1`, tournamentId).
-		Scan(&dbAuthoritative, &dbSortOrder, &dbOperator, &dbResetSchedule, &dbMetadata, &dbCreateTime,
-			&dbCategory, &dbDescription, &dbDuration, &dbEndTime, &dbJoinRequired, &dbMaxSize, &dbMaxNumScore, &dbTitle, &dbStartTime, &dbEnableRanks)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, runtime.ErrTournamentNotFound
-		}
-		logger.Error("Error loading leaderboard for local cache fill", zap.Error(err))
-		return nil, err
-	}
-
-	// 必须是锦标赛
-	if dbDuration <= 0 {
-		return nil, runtime.ErrTournamentNotFound
-	}
-
-	// 仅在本地填充，不广播
-	if l, ok := leaderboardCache.(*LocalLeaderboardCache); ok {
-		var endUnix int64
-		if dbEndTime.Valid {
-			endUnix = dbEndTime.Time.Unix()
-		}
-		l.insertTournamentLocal(
-			tournamentId,
-			dbAuthoritative,
-			dbSortOrder,
-			dbOperator,
-			dbResetSchedule,
-			dbMetadata,
-			dbTitle,
-			dbDescription,
-			dbCategory,
-			dbDuration,
-			dbMaxSize,
-			dbMaxNumScore,
-			dbJoinRequired,
-			dbCreateTime.Time.Unix(),
-			dbStartTime.Time.Unix(),
-			endUnix,
-			dbEnableRanks,
-		)
-	}
-
-	// 返回填充后的缓存
-	if lb := leaderboardCache.Get(tournamentId); lb != nil {
-		return lb, nil
-	}
-	return nil, runtime.ErrTournamentNotFound
-}
-
 func DisableTournamentRanks(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, id string) error {
 	l := leaderboardCache.Get(id)
 	if l == nil || !l.IsTournament() {
@@ -945,4 +854,47 @@ func DisableTournamentRanks(ctx context.Context, logger *zap.Logger, db *sql.DB,
 	rankCache.DeleteLeaderboard(l.Id, expiryUnix)
 
 	return nil
+}
+
+// 快速查找第一个可加入的tournament
+func TournamentFindFirstAvailable(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, category int, maxSize int) (*api.Tournament, error) {
+	// 简化查询：只使用category和size条件
+	query := `
+SELECT id, sort_order, operator, reset_schedule, metadata, create_time,
+       category, description, duration, end_time, max_size, max_num_score,
+       title, size, start_time
+FROM leaderboard
+WHERE duration > 0
+  AND category = $1
+  AND (max_size = 0 OR size < max_size)`
+
+	params := []interface{}{
+		category,
+	}
+
+	// 如果有最大size要求，添加size限制
+	if maxSize > 0 {
+		query += " AND size < $2"
+		params = append(params, maxSize)
+	}
+
+	query += " ORDER BY create_time ASC LIMIT 1"
+
+	row := db.QueryRowContext(ctx, query, params...)
+	tournament, err := parseTournament(row, time.Now().UTC())
+	if err != nil {
+		if errors.Is(err, runtime.ErrTournamentNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // 没有找到可加入的tournament
+		}
+		logger.Error("Error finding first available tournament", zap.Error(err))
+		return nil, err
+	}
+
+	logger.Debug("快速查找到第一个可加入的tournament",
+		zap.Int("category", category),
+		zap.String("tournament_id", tournament.Id),
+		zap.Uint32("current_size", tournament.Size),
+		zap.Uint32("max_size", tournament.MaxSize))
+
+	return tournament, nil
 }

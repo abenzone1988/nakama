@@ -114,5 +114,6 @@ func DeserializeStringToTplBoxShopMap(jsonStr []byte, logger *zap.Logger) map[st
 		logger.Error("JSON 反序列化错误", zap.Error(err))
 		return make(map[string]TplBoxShop)
 	}
+
 	return jsonMap
 }

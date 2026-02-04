@@ -2006,6 +2006,118 @@
         ]
       }
     },
+    "/v2/game/challenges": {
+      "get": {
+        "summary": "==================== Challenge ====================\nGet Challenge",
+        "operationId": "Nakama_GetChallenge",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetChallengeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/challenges/gain": {
+      "post": {
+        "summary": "Gain Challenge Reward",
+        "operationId": "Nakama_GainChallengeReward",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGainChallengeRewardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameGainChallengeRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/challenges/join": {
+      "post": {
+        "summary": "Join Challenge",
+        "operationId": "Nakama_JoinChallenge",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameJoinChallengeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameJoinChallengeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/challenges/top-three-stats": {
+      "get": {
+        "summary": "Get Top Three Stats",
+        "operationId": "Nakama_GetChallengeTopStats",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetChallengeTopStatsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/equip": {
       "get": {
         "summary": "Get equip data",
@@ -2360,6 +2472,38 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/gameClaimOnHookRewardRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/purchase/test": {
+      "post": {
+        "operationId": "Nakama_PurchaseTest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gamePurchaseResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gamePurchaseRequest"
             }
           }
         ],
@@ -7010,6 +7154,46 @@
       },
       "title": "购买商店商品响应"
     },
+    "gameChallenge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "open": {
+          "type": "string",
+          "format": "date-time",
+          "title": "开始"
+        },
+        "close": {
+          "type": "string",
+          "format": "date-time",
+          "title": "关闭"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time",
+          "title": "结束提交分数"
+        },
+        "over": {
+          "type": "string",
+          "format": "date-time",
+          "title": "结束领取奖励"
+        },
+        "maxPart": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tournamentId": {
+          "type": "string",
+          "title": "玩家当前参与的竞标赛ID，如果为空表示未参与"
+        }
+      }
+    },
     "gameChapterShopData": {
       "type": "object",
       "properties": {
@@ -7737,6 +7921,39 @@
         }
       }
     },
+    "gameGainChallengeRewardRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "rankReward": {
+          "type": "boolean"
+        }
+      }
+    },
+    "gameGainChallengeRewardResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "reward": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameReward"
+          },
+          "title": "奖励"
+        }
+      }
+    },
     "gameGemShopData": {
       "type": "object",
       "properties": {
@@ -7749,6 +7966,45 @@
         }
       },
       "title": "==================== 钻石商店（独立，IAP） ===================="
+    },
+    "gameGetChallengeResponse": {
+      "type": "object",
+      "properties": {
+        "challenges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameChallenge"
+          }
+        },
+        "joined": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gameJoinChallengeStatus"
+          }
+        },
+        "getReward": {
+          "type": "boolean"
+        }
+      }
+    },
+    "gameGetChallengeTopStatsResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "stats": {
+          "$ref": "#/definitions/gameTopThreeStats",
+          "title": "前三名统计数据"
+        }
+      },
+      "title": "获取前三名统计响应"
     },
     "gameGetFirstChargeStatusResponse": {
       "type": "object",
@@ -7972,6 +8228,79 @@
       },
       "title": "道具"
     },
+    "gameJoinChallengeRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "gameJoinChallengeResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "challenge": {
+          "$ref": "#/definitions/gameChallenge"
+        }
+      }
+    },
+    "gameJoinChallengeStatus": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "tournamentId": {
+          "type": "string"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "joined": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rankReward": {
+          "type": "boolean"
+        },
+        "lowScoreReward": {
+          "type": "boolean"
+        },
+        "midScoreReward": {
+          "type": "boolean"
+        },
+        "highScoreReward": {
+          "type": "boolean"
+        },
+        "over": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "open": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "close": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "gameLevelBoxInfo": {
       "type": "object",
       "properties": {
@@ -8158,6 +8487,76 @@
       "default": "FREE",
       "description": "- FREE: 免费\n - COIN: 金币\n - GEM: 钻石\n - AD: 广告",
       "title": "商店相关消息定义"
+    },
+    "gamePurchaseRequest": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "type": "string",
+          "title": "应用 ID"
+        },
+        "orderId": {
+          "type": "string",
+          "title": "商户订单号"
+        },
+        "uid": {
+          "type": "string",
+          "title": "用户ID"
+        },
+        "sid": {
+          "type": "string",
+          "title": "服务器 ID"
+        },
+        "cpOrderId": {
+          "type": "string",
+          "title": "CP订单号"
+        },
+        "roleid": {
+          "type": "string",
+          "title": "角色ID"
+        },
+        "rolename": {
+          "type": "string",
+          "title": "角色名称"
+        },
+        "orderMoney": {
+          "type": "string",
+          "title": "实际总价"
+        },
+        "productid": {
+          "type": "string",
+          "title": "商品ID"
+        },
+        "payType": {
+          "type": "integer",
+          "format": "int32",
+          "title": "支付方式 1：苹果内购, 2：支付宝, 3和11：微信h5支付, 5：微信公众号支付, 13：微信虚拟内购"
+        },
+        "ext": {
+          "type": "string",
+          "title": "透传字段，由 CP 定义的字段"
+        },
+        "time": {
+          "type": "string",
+          "title": "时间戳 10位"
+        },
+        "sign": {
+          "type": "string",
+          "title": "签名"
+        }
+      }
+    },
+    "gamePurchaseResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
     },
     "gameRedeemGiftRequest": {
       "type": "object",
@@ -8446,6 +8845,32 @@
           "type": "string"
         }
       }
+    },
+    "gameTopThreeStats": {
+      "type": "object",
+      "properties": {
+        "firstPlace": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第一名次数"
+        },
+        "secondPlace": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第二名次数"
+        },
+        "thirdPlace": {
+          "type": "integer",
+          "format": "int32",
+          "title": "第三名次数"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "int64",
+          "title": "最后更新时间戳"
+        }
+      },
+      "title": "前三名统计数据"
     },
     "gameUpgradeCrystalTechRequest": {
       "type": "object"

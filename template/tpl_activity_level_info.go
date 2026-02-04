@@ -119,5 +119,6 @@ func DeserializeStringToTplActivityLevelInfoMap(jsonStr []byte, logger *zap.Logg
 		logger.Error("JSON 反序列化错误", zap.Error(err))
 		return make(map[string]TplActivityLevelInfo)
 	}
+
 	return jsonMap
 }

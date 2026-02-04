@@ -1,0 +1,4 @@
+{
+"CL10011":{"winRewards":"Activity_Gem_new","stamina":5,"reward01":"Activity_1_new","reward02":"Activity_2_new","reward03":"Activity_3_new","monsterWaveGroupId":"CL1001","monsterLevel":40,"name":"虫潮走廊","id":"CL10011","condition03":70000,"RewardGroupID":"RankReward","LevelMonsterDev":"CLD10000","condition01":30000,"condition02":50000},
+"CL10012":{"winRewards":"Activity_Gem_new","stamina":5,"reward01":"Activity_1_new","reward02":"Activity_2_new","reward03":"Activity_3_new","monsterWaveGroupId":"CL2001","monsterLevel":40,"name":"峡谷虫潮","id":"CL10012","condition03":80000,"RewardGroupID":"RankReward","LevelMonsterDev":"CLD10000","condition01":40000,"condition02":60000}
+}

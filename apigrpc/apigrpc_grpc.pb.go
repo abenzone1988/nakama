@@ -169,6 +169,11 @@ const (
 	Nakama_CheckVipStatus_FullMethodName                    = "/nakama.api.Nakama/CheckVipStatus"
 	Nakama_GetSevenDayStatus_FullMethodName                 = "/nakama.api.Nakama/GetSevenDayStatus"
 	Nakama_ClaimSevenDayReward_FullMethodName               = "/nakama.api.Nakama/ClaimSevenDayReward"
+	Nakama_GetChallenge_FullMethodName                      = "/nakama.api.Nakama/GetChallenge"
+	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
+	Nakama_GainChallengeReward_FullMethodName               = "/nakama.api.Nakama/GainChallengeReward"
+	Nakama_GetChallengeTopStats_FullMethodName              = "/nakama.api.Nakama/GetChallengeTopStats"
+	Nakama_PurchaseTest_FullMethodName                      = "/nakama.api.Nakama/PurchaseTest"
 )
 
 // NakamaClient is the client API for Nakama service.
@@ -427,6 +432,16 @@ type NakamaClient interface {
 	// ==================== Seven Day Event ====================
 	GetSevenDayStatus(ctx context.Context, in *game.GetSevenDayStatusRequest, opts ...grpc.CallOption) (*game.GetSevenDayStatusResponse, error)
 	ClaimSevenDayReward(ctx context.Context, in *game.ClaimSevenDayRewardRequest, opts ...grpc.CallOption) (*game.ClaimSevenDayRewardResponse, error)
+	// ==================== Challenge ====================
+	// Get Challenge
+	GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error)
+	// Join Challenge
+	JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest, opts ...grpc.CallOption) (*game.JoinChallengeResponse, error)
+	// Gain Challenge Reward
+	GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest, opts ...grpc.CallOption) (*game.GainChallengeRewardResponse, error)
+	// Get Top Three Stats
+	GetChallengeTopStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeTopStatsResponse, error)
+	PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error)
 }
 
 type nakamaClient struct {
@@ -1607,6 +1622,51 @@ func (c *nakamaClient) ClaimSevenDayReward(ctx context.Context, in *game.ClaimSe
 	return out, nil
 }
 
+func (c *nakamaClient) GetChallenge(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeResponse, error) {
+	out := new(game.GetChallengeResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetChallenge_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest, opts ...grpc.CallOption) (*game.JoinChallengeResponse, error) {
+	out := new(game.JoinChallengeResponse)
+	err := c.cc.Invoke(ctx, Nakama_JoinChallenge_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest, opts ...grpc.CallOption) (*game.GainChallengeRewardResponse, error) {
+	out := new(game.GainChallengeRewardResponse)
+	err := c.cc.Invoke(ctx, Nakama_GainChallengeReward_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) GetChallengeTopStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeTopStatsResponse, error) {
+	out := new(game.GetChallengeTopStatsResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetChallengeTopStats_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error) {
+	out := new(game.PurchaseResponse)
+	err := c.cc.Invoke(ctx, Nakama_PurchaseTest_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NakamaServer is the server API for Nakama service.
 // All implementations must embed UnimplementedNakamaServer
 // for forward compatibility
@@ -1863,6 +1923,16 @@ type NakamaServer interface {
 	// ==================== Seven Day Event ====================
 	GetSevenDayStatus(context.Context, *game.GetSevenDayStatusRequest) (*game.GetSevenDayStatusResponse, error)
 	ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error)
+	// ==================== Challenge ====================
+	// Get Challenge
+	GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error)
+	// Join Challenge
+	JoinChallenge(context.Context, *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error)
+	// Gain Challenge Reward
+	GainChallengeReward(context.Context, *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error)
+	// Get Top Three Stats
+	GetChallengeTopStats(context.Context, *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error)
+	PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
 
@@ -2259,6 +2329,21 @@ func (UnimplementedNakamaServer) GetSevenDayStatus(context.Context, *game.GetSev
 }
 func (UnimplementedNakamaServer) ClaimSevenDayReward(context.Context, *game.ClaimSevenDayRewardRequest) (*game.ClaimSevenDayRewardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimSevenDayReward not implemented")
+}
+func (UnimplementedNakamaServer) GetChallenge(context.Context, *emptypb.Empty) (*game.GetChallengeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallenge not implemented")
+}
+func (UnimplementedNakamaServer) JoinChallenge(context.Context, *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinChallenge not implemented")
+}
+func (UnimplementedNakamaServer) GainChallengeReward(context.Context, *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GainChallengeReward not implemented")
+}
+func (UnimplementedNakamaServer) GetChallengeTopStats(context.Context, *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallengeTopStats not implemented")
+}
+func (UnimplementedNakamaServer) PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PurchaseTest not implemented")
 }
 func (UnimplementedNakamaServer) mustEmbedUnimplementedNakamaServer() {}
 
@@ -4613,6 +4698,96 @@ func _Nakama_ClaimSevenDayReward_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChallenge(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_JoinChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.JoinChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).JoinChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_JoinChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).JoinChallenge(ctx, req.(*game.JoinChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GainChallengeReward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GainChallengeRewardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GainChallengeReward(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GainChallengeReward_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GainChallengeReward(ctx, req.(*game.GainChallengeRewardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_GetChallengeTopStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChallengeTopStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChallengeTopStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChallengeTopStats(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_PurchaseTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.PurchaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).PurchaseTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_PurchaseTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).PurchaseTest(ctx, req.(*game.PurchaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Nakama_ServiceDesc is the grpc.ServiceDesc for Nakama service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5139,6 +5314,26 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimSevenDayReward",
 			Handler:    _Nakama_ClaimSevenDayReward_Handler,
+		},
+		{
+			MethodName: "GetChallenge",
+			Handler:    _Nakama_GetChallenge_Handler,
+		},
+		{
+			MethodName: "JoinChallenge",
+			Handler:    _Nakama_JoinChallenge_Handler,
+		},
+		{
+			MethodName: "GainChallengeReward",
+			Handler:    _Nakama_GainChallengeReward_Handler,
+		},
+		{
+			MethodName: "GetChallengeTopStats",
+			Handler:    _Nakama_GetChallengeTopStats_Handler,
+		},
+		{
+			MethodName: "PurchaseTest",
+			Handler:    _Nakama_PurchaseTest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

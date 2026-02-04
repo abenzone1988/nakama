@@ -113,5 +113,6 @@ func DeserializeStringToTplDailySignInMap(jsonStr []byte, logger *zap.Logger) ma
 		logger.Error("JSON 反序列化错误", zap.Error(err))
 		return make(map[string]TplDailySignIn)
 	}
+
 	return jsonMap
 }

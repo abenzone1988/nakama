@@ -116,5 +116,6 @@ func DeserializeStringToTplDropRewardMap(jsonStr []byte, logger *zap.Logger) map
 		logger.Error("JSON 反序列化错误", zap.Error(err))
 		return make(map[string]TplDropReward)
 	}
+
 	return jsonMap
 }

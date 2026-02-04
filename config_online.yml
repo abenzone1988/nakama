@@ -2,7 +2,7 @@ name: nakama-node-jp
 
 database:
   address:
-    - "root@192.168.102.223:26257/test"
+    - "postgres://root:sparkinfi123!@192.168.102.223:5432/xjsm-iap?sslmode=disable"
 
 logger:
   level: "debug"

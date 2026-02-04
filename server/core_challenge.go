@@ -83,7 +83,7 @@ func ChallengeCreateAndJoin(ctx context.Context, logger *zap.Logger, db *sql.DB,
 		}
 
 		// 4) 生成唯一 tournamentID
-		newID := fmt.Sprintf("challenge_%d_%d_%d", challengeID, startTime.Unix(), nextBatch)
+		newID := fmt.Sprintf("challenge_%d_%d", challengeID, nextBatch)
 
 		// 5) 在事务内创建 Tournament 记录（与 CreateNewChallengeTournament 语义一致）
 		createdTitle = fmt.Sprintf("%s - 第%d轮", challengeName, nextBatch)

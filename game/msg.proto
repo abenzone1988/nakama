@@ -728,3 +728,75 @@ message PurchaseResponse{
   int32 code = 1;
   string msg = 2;
 }
+
+
+message Challenge{
+  int32 id = 1;
+  string activity_id = 2;
+  google.protobuf.Timestamp open = 3; //开始
+  google.protobuf.Timestamp close = 4; //关闭
+  google.protobuf.Timestamp end = 5; //结束提交分数
+  google.protobuf.Timestamp over = 6; //结束领取奖励
+  int32 max_part = 7;
+  string tournament_id = 8;      // 玩家当前参与的竞标赛ID，如果为空表示未参与
+
+}
+
+message JoinChallengeStatus{
+  int32 id = 1;
+  string tournament_id = 2;
+  string activity_id = 3;
+  google.protobuf.Timestamp joined = 4;
+  bool rank_reward = 5;
+  bool low_score_reward = 6;
+  bool mid_score_reward = 7;
+  bool high_score_reward = 8;
+  google.protobuf.Timestamp over = 9;
+  google.protobuf.Timestamp open = 10;
+  google.protobuf.Timestamp close = 11;
+  google.protobuf.Timestamp end = 12;
+}
+
+message GetChallengeResponse{
+  repeated Challenge challenges = 1;
+  repeated JoinChallengeStatus joined = 2;
+  bool get_reward = 3;
+}
+
+
+message JoinChallengeRequest{
+  int32 challenge_id = 1;
+}
+
+message JoinChallengeResponse{
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  Challenge challenge  = 3;
+}
+
+
+message GainChallengeRewardRequest{
+  int32 challenge_id = 1;
+  bool rank_reward = 2;
+}
+
+message GainChallengeRewardResponse{
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  repeated Reward reward = 3;     // 奖励
+}
+
+// 前三名统计数据
+message TopThreeStats {
+  int32 first_place = 1;         // 第一名次数
+  int32 second_place = 2;        // 第二名次数
+  int32 third_place = 3;         // 第三名次数
+  int64 last_updated = 4;        // 最后更新时间戳
+}
+
+// 获取前三名统计响应
+message GetChallengeTopStatsResponse {
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  TopThreeStats stats = 3;       // 前三名统计数据
+}

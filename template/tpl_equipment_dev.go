@@ -118,5 +118,6 @@ func DeserializeStringToTplEquipmentDevMap(jsonStr []byte, logger *zap.Logger) m
 		logger.Error("JSON 反序列化错误", zap.Error(err))
 		return make(map[string]TplEquipmentDev)
 	}
+
 	return jsonMap
 }
