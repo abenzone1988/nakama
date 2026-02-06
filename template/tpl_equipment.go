@@ -9,23 +9,23 @@ import (
 )
 
 type TplEquipment struct {
-	Brief            string `json:"brief"`
-	CriAtk           int32  `json:"criAtk"`
-	CriProbability   int32  `json:"criProbability"`
-	DemoBrief        string `json:"demoBrief"`
-	DisplayScale     int32  `json:"displayScale"`
-	EquipInfoUIScale int32  `json:"equipInfoUIScale"`
-	IconRes          string `json:"iconRes"`
-	IconScale        int32  `json:"iconScale"`
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	Occupy           int32  `json:"occupy"`
-	Order            int32  `json:"order"`
-	Quality          int32  `json:"quality"`
-	StorageScale     int32  `json:"storageScale"`
-	TargetType       int32  `json:"targetType"`
-	Type             int32  `json:"type"`
-	UnlockUIScale    int32  `json:"unlockUIScale"`
+	Brief            string  `json:"brief"`
+	CriAtk           int32   `json:"criAtk"`
+	CriProbability   int32   `json:"criProbability"`
+	DemoBrief        string  `json:"demoBrief"`
+	DisplayScale     int32   `json:"displayScale"`
+	EquipInfoUIScale float64 `json:"equipInfoUIScale"`
+	IconRes          string  `json:"iconRes"`
+	IconScale        float64 `json:"iconScale"`
+	ID               string  `json:"id"`
+	Name             string  `json:"name"`
+	Occupy           int32   `json:"occupy"`
+	Order            int32   `json:"order"`
+	Quality          int32   `json:"quality"`
+	StorageScale     float64 `json:"storageScale"`
+	TargetType       int32   `json:"targetType"`
+	Type             int32   `json:"type"`
+	UnlockUIScale    float64 `json:"unlockUIScale"`
 }
 
 // ReadOnlyTplEquipmentSlice 只读TplEquipment切片接口

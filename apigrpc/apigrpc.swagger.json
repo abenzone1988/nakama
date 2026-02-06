@@ -7011,7 +7011,8 @@
       "type": "string",
       "enum": [
         "BATTLE_TYPE_NORMAL",
-        "BATTLE_TYPE_GOLDEN"
+        "BATTLE_TYPE_GOLDEN",
+        "BATTLE_TYPE_CHALLENGE"
       ],
       "default": "BATTLE_TYPE_NORMAL"
     },
@@ -7856,6 +7857,14 @@
         "progress": {
           "type": "integer",
           "format": "int32"
+        },
+        "monsters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": "怪物ID:数量（仅用于挑战模式）"
         }
       },
       "title": "结束战斗"

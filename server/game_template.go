@@ -40,6 +40,7 @@ type TemplateManager interface {
 	GetTplChallenge() *TableTplChallenge
 	GetTplChallengeInfo() *TableTplChallengeInfo
 	GetTplChallengeReward() *TableTplChallengeReward
+	GetTplMonster() *TableTplMonster
 }
 
 type LocalTemplateManager struct {
@@ -70,6 +71,7 @@ type LocalTemplateManager struct {
 	tableTplChallenge         *TableTplChallenge
 	tableTplChallengeInfo     *TableTplChallengeInfo
 	tableTplChallengeReward   *TableTplChallengeReward
+	tableTplMonster           *TableTplMonster
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -101,6 +103,7 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplChallenge:         NewTableTplChallenge(logger, jsonPath),
 		tableTplChallengeInfo:     NewTableTplChallengeInfo(logger, jsonPath),
 		tableTplChallengeReward:   NewTableTplChallengeReward(logger, jsonPath),
+		tableTplMonster:           NewTableTplMonster(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -134,6 +137,13 @@ func (t *LocalTemplateManager) LoadData() {
 	t.tableTplChallenge.LoadData(t.StorageReadTpl("TplChallenge"))
 	t.tableTplChallengeInfo.LoadData(t.StorageReadTpl("TplChallengeInfo"))
 	t.tableTplChallengeReward.LoadData(t.StorageReadTpl("TplChallengeReward"))
+	t.tableTplMonster.LoadData(t.StorageReadTpl("TplMonster"))
+}
+
+func (t *LocalTemplateManager) GetTplMonster() *TableTplMonster {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tableTplMonster
 }
 
 func (t *LocalTemplateManager) GetTplChallenge() *TableTplChallenge {

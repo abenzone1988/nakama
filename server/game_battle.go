@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
@@ -10,7 +11,16 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const unlockConditionTypeLevel = 1
+const (
+	unlockConditionTypeLevel = 1
+	maxChallengeTimesPerDay  = 3
+	dateLayout               = "2006-01-02"
+)
+
+// getCurrentDate 获取当前日期（YYYY-MM-DD）
+func getCurrentDate() string {
+	return time.Now().Format(dateLayout)
+}
 
 // compareLevelId 比较两个关卡 ID 的大小，返回 true 表示 id1 > id2
 func compareLevelId(id1, id2 string) bool {
@@ -60,6 +70,34 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 			}, nil
 		}
 		staminaCost = activityInfo.Stamina
+
+	case game.BattleType_BATTLE_TYPE_CHALLENGE:
+		challengeInfo, exist := s.template.GetTplChallengeInfo().FindByKey(in.GetLevelId())
+		if !exist {
+			return &game.StartBattleResponse{
+				Code: 2,
+				Msg:  "挑战关卡不存在",
+			}, nil
+		}
+		staminaCost = challengeInfo.Stamina
+
+		// 检查每日挑战次数（最多3次）
+		currentDate := getCurrentDate()
+		if battleData.LastChallengeDate != currentDate {
+			// 新的一天，重置挑战次数
+			battleData.ChallengeTimes = 0
+			battleData.LastChallengeDate = currentDate
+		}
+
+		if battleData.ChallengeTimes >= maxChallengeTimesPerDay {
+			return &game.StartBattleResponse{
+				Code: 6,
+				Msg:  "今日挑战次数已用完",
+			}, nil
+		}
+
+		// 增加挑战次数
+		battleData.ChallengeTimes++
 
 	default:
 		return &game.StartBattleResponse{
@@ -160,6 +198,38 @@ func (s *ApiServer) EndBattle(ctx context.Context, in *game.EndBattleRequest) (*
 		}
 		rewardId = activityInfo.RewardID
 		source = "battle_golden_" + battleData.CurLevelId
+
+	case game.BattleType_BATTLE_TYPE_CHALLENGE:
+		// 挑战模式：根据怪物数量计算得分
+		monsters := in.GetMonsters()
+		totalScore := int32(0)
+
+		for monsterId, num := range monsters {
+			monsterInfo, exist := s.template.GetTplMonster().FindByKey(monsterId)
+			if !exist {
+				s.logger.Warn("怪物配置不存在",
+					zap.String("monster_id", monsterId))
+				continue
+			}
+			totalScore += monsterInfo.Score * num
+		}
+
+		s.logger.Info("挑战模式得分计算",
+			zap.String("level_id", battleData.CurLevelId),
+			zap.Int32("total_score", totalScore),
+			zap.Any("monsters", monsters))
+
+		// 挑战模式不发放奖励，只记录得分
+		// 标记战斗已结束
+		battleData.BattleEnded = true
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+			s.logger.Error("保存战斗数据失败", zap.Error(err))
+		}
+
+		return &game.EndBattleResponse{
+			Code: 0,
+			Msg:  "挑战完成",
+		}, nil
 
 	default:
 		return &game.EndBattleResponse{
@@ -356,6 +426,11 @@ func (s *ApiServer) ClaimBattleRewardByShare(ctx context.Context, in *game.Claim
 		source = "battle_normal_share_" + battleData.CurLevelId
 	case game.BattleType_BATTLE_TYPE_GOLDEN:
 		source = "battle_golden_share_" + battleData.CurLevelId
+	case game.BattleType_BATTLE_TYPE_CHALLENGE:
+		return &game.ClaimBattleRewardByShareResponse{
+			Code: 7,
+			Msg:  "挑战模式不支持分享奖励",
+		}, nil
 	default:
 		return &game.ClaimBattleRewardByShareResponse{
 			Code: 4,

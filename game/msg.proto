@@ -194,6 +194,7 @@ message CheckVipStatusResponse {
 enum BattleType{
   BATTLE_TYPE_NORMAL = 0;
   BATTLE_TYPE_GOLDEN = 1;
+  BATTLE_TYPE_CHALLENGE = 2;
 }
 
 
@@ -212,6 +213,7 @@ message StartBattleResponse{
 //结束战斗
 message EndBattleRequest{
   int32 progress = 1;
+  map<string, int32> monsters = 2; // 怪物ID:数量（仅用于挑战模式）
 }
 
 message EndBattleResponse{
