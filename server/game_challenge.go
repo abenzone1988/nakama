@@ -74,6 +74,57 @@ func (f *UserMatch) Init() {
 	}
 }
 
+// ChallengeRewards 擂台赛奖励凭证
+type ChallengeRewards struct {
+	Rewards      map[string]int32            `json:"rewards"`       // key: 商品ID(如"60000"), value: 历史总数量
+	DailyRewards map[string]map[string]int32 `json:"daily_rewards"` // key1: 商品ID, key2: 日期(YYYY-MM-DD), value: 当日数量
+}
+
+func (f *ChallengeRewards) GetCollection() string {
+	return "challenge"
+}
+
+func (f *ChallengeRewards) GetKey() string {
+	return "rewards"
+}
+
+func (f *ChallengeRewards) Init() {
+	f.Rewards = make(map[string]int32)
+	f.DailyRewards = make(map[string]map[string]int32)
+}
+
+// GetTodayCount 获取今天的奖励数量
+func (f *ChallengeRewards) GetTodayCount(itemID string) int32 {
+	today := time.Now().Format("2006-01-02")
+	if dailyMap, exists := f.DailyRewards[itemID]; exists {
+		if count, ok := dailyMap[today]; ok {
+			return count
+		}
+	}
+	return 0
+}
+
+// GetTotalCount 获取历史总数量
+func (f *ChallengeRewards) GetTotalCount(itemID string) int32 {
+	if count, exists := f.Rewards[itemID]; exists {
+		return count
+	}
+	return 0
+}
+
+// AddReward 添加奖励
+func (f *ChallengeRewards) AddReward(itemID string, count int32) {
+	// 累加历史总数
+	f.Rewards[itemID] += count
+
+	// 累加今日数量
+	today := time.Now().Format("2006-01-02")
+	if f.DailyRewards[itemID] == nil {
+		f.DailyRewards[itemID] = make(map[string]int32)
+	}
+	f.DailyRewards[itemID][today] += count
+}
+
 // TopThreeStats 前三名统计数据
 type TopThreeStats struct {
 	FirstPlaceTournaments  map[string]bool `json:"first_place_tournaments"`  // 获得第一名的竞标赛ID集合

@@ -22,6 +22,7 @@ const (
 	push_token                  = "sparkinfi"
 	sub_err_code_user_not_found = 172935494
 	NotificationCodeWechatGift  = 1
+	ChallengeRewardItemID       = "60000" // 擂台赛获奖凭证商品ID
 )
 
 type GiftNotificationConfig struct {
@@ -73,7 +74,22 @@ type WechatPushMessage struct {
 	MsgType      string             `json:"MsgType"`      // 消息类型
 	Event        string             `json:"Event"`        // 事件类型
 	MiniGame     WechatMiniGameInfo `json:"MiniGame"`     // 小游戏信息
+	QueryReward  QueryRewardRequest `json:"QueryReward"`  // 查询奖励信息
 	Encrypt      string             `json:"Encrypt"`      // 加密消息
+}
+
+// QueryRewardRequest 查询奖励请求
+type QueryRewardRequest struct {
+	ToUserOpenid string `json:"ToUserOpenid"` // 用户OpenID
+	ItemID       string `json:"ItemID"`       // 商品ID
+}
+
+// QueryRewardResponse 查询奖励响应
+type QueryRewardResponse struct {
+	ErrCode    int    `json:"ErrCode"`
+	ErrMsg     string `json:"ErrMsg"`
+	TodayCount int32  `json:"TodayCount"` // 当天获得数量
+	TotalCount int32  `json:"TotalCount"` // 历史总数量
 }
 
 // verifyWechatSignature 验证请求是否来自微信服务器
@@ -220,6 +236,61 @@ func (s *ApiServer) sendGiftNotification(ctx context.Context, userID uuid.UUID, 
 	return nil
 }
 
+// handleQueryReward 处理查询奖励请求
+func (s *ApiServer) handleQueryReward(w http.ResponseWriter, r *http.Request, queryReq *QueryRewardRequest) {
+	s.logger.Info("收到查询奖励请求",
+		zap.String("openId", queryReq.ToUserOpenid),
+		zap.String("itemId", queryReq.ItemID))
+
+	// 查找用户
+	userID, err := FindUserByDeviceID(r.Context(), s.logger, s.db, queryReq.ToUserOpenid)
+	if err != nil {
+		s.logger.Error("查找用户失败", zap.Error(err))
+		s.writeQueryRewardResponse(w, QueryRewardResponse{
+			ErrCode: -1,
+			ErrMsg:  "User not found",
+		})
+		return
+	}
+
+	// 加载奖励数据
+	challengeRewards := &ChallengeRewards{}
+	err = LoadData(r.Context(), s.logger, s.db, userID, challengeRewards)
+	if err != nil {
+		s.logger.Warn("加载擂台赛奖励数据失败，返回0", zap.Error(err))
+		s.writeQueryRewardResponse(w, QueryRewardResponse{
+			ErrCode:    0,
+			ErrMsg:     "Success",
+			TodayCount: 0,
+			TotalCount: 0,
+		})
+		return
+	}
+
+	// 获取数量
+	todayCount := challengeRewards.GetTodayCount(queryReq.ItemID)
+	totalCount := challengeRewards.GetTotalCount(queryReq.ItemID)
+
+	s.logger.Info("查询奖励成功",
+		zap.String("userId", userID.String()),
+		zap.String("itemId", queryReq.ItemID),
+		zap.Int32("todayCount", todayCount),
+		zap.Int32("totalCount", totalCount))
+
+	s.writeQueryRewardResponse(w, QueryRewardResponse{
+		ErrCode:    0,
+		ErrMsg:     "Success",
+		TodayCount: todayCount,
+		TotalCount: totalCount,
+	})
+}
+
+// writeQueryRewardResponse 写入查询奖励响应
+func (s *ApiServer) writeQueryRewardResponse(w http.ResponseWriter, response QueryRewardResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // handleDeliverGoods 处理发货请求
 func (s *ApiServer) handleDeliverGoods(w http.ResponseWriter, r *http.Request, miniGame *WechatMiniGameInfo) {
 	s.logger.Info("收到小游戏发货请求",
@@ -248,14 +319,59 @@ func (s *ApiServer) handleDeliverGoods(w http.ResponseWriter, r *http.Request, m
 		return
 	}
 
-	// 2. 发送通知
-	if err := s.sendGiftNotification(r.Context(), userID, miniGame.OrderId, miniGame.GoodsList, miniGame.GiftTypeId, miniGame.GiftId, miniGame.SendTime); err != nil {
-		s.logger.Error("发送通知失败", zap.Error(err))
-		s.writeWechatResponse(w, WechatResponse{
-			ErrCode: -1,
-			ErrMsg:  "Failed to send notification",
-		})
-		return
+	// 2. 处理特殊商品 ID 60000（擂台赛获奖凭证）
+	regularGoods := []WechatGoodsItem{}
+	var challengeRewardCount int32 = 0
+
+	for _, good := range miniGame.GoodsList {
+		if good.Id == ChallengeRewardItemID {
+			challengeRewardCount += int32(good.Num)
+		} else {
+			regularGoods = append(regularGoods, good)
+		}
+	}
+
+	// 3. 保存擂台赛奖励凭证到 storage
+	if challengeRewardCount > 0 {
+		challengeRewards := &ChallengeRewards{}
+		err := LoadData(r.Context(), s.logger, s.db, userID, challengeRewards)
+		if err != nil {
+			s.logger.Warn("首次加载擂台赛奖励数据，初始化新数据", zap.Error(err))
+		}
+
+		// 初始化数据结构
+		if challengeRewards.Rewards == nil {
+			challengeRewards.Init()
+		}
+
+		// 添加奖励（自动处理历史总数和当日数量）
+		challengeRewards.AddReward(ChallengeRewardItemID, challengeRewardCount)
+
+		// 保存到 storage
+		if err := SaveData(r.Context(), s.logger, s.db, s.metrics, s.storageIndex, userID, challengeRewards); err != nil {
+			s.logger.Error("保存擂台赛奖励失败", zap.Error(err))
+			s.writeWechatResponse(w, WechatResponse{
+				ErrCode: -1,
+				ErrMsg:  "Failed to save challenge reward",
+			})
+			return
+		}
+
+		s.logger.Info("成功保存擂台赛奖励凭证",
+			zap.String("userId", userID.String()),
+			zap.Int32("count", challengeRewardCount))
+	}
+
+	// 4. 发送剩余商品通知
+	if len(regularGoods) > 0 {
+		if err := s.sendGiftNotification(r.Context(), userID, miniGame.OrderId, regularGoods, miniGame.GiftTypeId, miniGame.GiftId, miniGame.SendTime); err != nil {
+			s.logger.Error("发送通知失败", zap.Error(err))
+			s.writeWechatResponse(w, WechatResponse{
+				ErrCode: -1,
+				ErrMsg:  "Failed to send notification",
+			})
+			return
+		}
 	}
 
 	s.writeWechatResponse(w, WechatResponse{
@@ -300,6 +416,8 @@ func (s *ApiServer) HandleWechatVerify(w http.ResponseWriter, r *http.Request) {
 		switch pushMsg.Event {
 		case "minigame_deliver_goods":
 			s.handleDeliverGoods(w, r, &pushMsg.MiniGame)
+		case "query_challenge_reward":
+			s.handleQueryReward(w, r, &pushMsg.QueryReward)
 		default:
 			s.logger.Info("收到其他类型的微信消息推送",
 				zap.String("event", pushMsg.Event),
