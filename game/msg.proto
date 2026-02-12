@@ -785,7 +785,9 @@ message GainChallengeRewardRequest{
 message GainChallengeRewardResponse{
   int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
   string msg = 2;                // 响应消息
-  repeated Reward reward = 3;     // 奖励
+  Reward reward = 3;     // 奖励
+  Wallet wallet_updated = 4; // 钱包更新结果
+  repeated Item inventory_updated = 5; // 背包更新结果
 }
 
 // 前三名统计数据
@@ -801,4 +803,40 @@ message GetChallengeTopStatsResponse {
   int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
   string msg = 2;                // 响应消息
   TopThreeStats stats = 3;       // 前三名统计数据
+}
+
+// 获取挑战次数信息请求
+message GetChallengeBattleTimesRequest {
+}
+
+// 获取挑战次数信息响应
+message GetChallengeBattleTimesResponse {
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  int32 remaining_times = 3;     // 剩余挑战次数（基础次数）
+  int32 ad_times_remaining = 4;  // 看广告剩余次数（每天1次）
+  int32 gem_times_remaining = 5; // 钻石购买剩余次数（每天3次）
+  string last_reset_date = 6;    // 最后重置日期（YYYY-MM-DD）
+}
+
+// 购买挑战次数类型
+enum BuyChallengeBattleTimesType {
+  BUY_WITH_AD = 0;   // 看广告购买
+  BUY_WITH_GEM = 1;  // 钻石购买
+}
+
+// 购买挑战次数请求
+message BuyChallengeBattleTimesRequest {
+  BuyChallengeBattleTimesType type = 1;  // 购买类型
+  bool ad_watched = 2;                   // 是否已完整观看广告（仅type=AD时有效）
+}
+
+// 购买挑战次数响应
+message BuyChallengeBattleTimesResponse {
+  int32 code = 1;                // 状态码 (0: 成功, 其他: 错误码)
+  string msg = 2;                // 响应消息
+  int32 remaining_times = 3;     // 剩余挑战次数
+  int32 ad_times_remaining = 4;  // 看广告剩余次数
+  int32 gem_times_remaining = 5; // 钻石购买剩余次数
+  Wallet wallet_updated = 6;     // 钱包更新结果（扣除钻石或广告券）
 }

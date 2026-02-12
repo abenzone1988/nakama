@@ -173,6 +173,8 @@ const (
 	Nakama_JoinChallenge_FullMethodName                     = "/nakama.api.Nakama/JoinChallenge"
 	Nakama_GainChallengeReward_FullMethodName               = "/nakama.api.Nakama/GainChallengeReward"
 	Nakama_GetChallengeTopStats_FullMethodName              = "/nakama.api.Nakama/GetChallengeTopStats"
+	Nakama_GetChallengeBattleTimes_FullMethodName           = "/nakama.api.Nakama/GetChallengeBattleTimes"
+	Nakama_BuyChallengeBattleTimes_FullMethodName           = "/nakama.api.Nakama/BuyChallengeBattleTimes"
 	Nakama_PurchaseTest_FullMethodName                      = "/nakama.api.Nakama/PurchaseTest"
 )
 
@@ -441,6 +443,10 @@ type NakamaClient interface {
 	GainChallengeReward(ctx context.Context, in *game.GainChallengeRewardRequest, opts ...grpc.CallOption) (*game.GainChallengeRewardResponse, error)
 	// Get Top Three Stats
 	GetChallengeTopStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*game.GetChallengeTopStatsResponse, error)
+	// Get Challenge Battle Times
+	GetChallengeBattleTimes(ctx context.Context, in *game.GetChallengeBattleTimesRequest, opts ...grpc.CallOption) (*game.GetChallengeBattleTimesResponse, error)
+	// Buy Challenge Battle Times
+	BuyChallengeBattleTimes(ctx context.Context, in *game.BuyChallengeBattleTimesRequest, opts ...grpc.CallOption) (*game.BuyChallengeBattleTimesResponse, error)
 	PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error)
 }
 
@@ -1658,6 +1664,24 @@ func (c *nakamaClient) GetChallengeTopStats(ctx context.Context, in *emptypb.Emp
 	return out, nil
 }
 
+func (c *nakamaClient) GetChallengeBattleTimes(ctx context.Context, in *game.GetChallengeBattleTimesRequest, opts ...grpc.CallOption) (*game.GetChallengeBattleTimesResponse, error) {
+	out := new(game.GetChallengeBattleTimesResponse)
+	err := c.cc.Invoke(ctx, Nakama_GetChallengeBattleTimes_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nakamaClient) BuyChallengeBattleTimes(ctx context.Context, in *game.BuyChallengeBattleTimesRequest, opts ...grpc.CallOption) (*game.BuyChallengeBattleTimesResponse, error) {
+	out := new(game.BuyChallengeBattleTimesResponse)
+	err := c.cc.Invoke(ctx, Nakama_BuyChallengeBattleTimes_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nakamaClient) PurchaseTest(ctx context.Context, in *game.PurchaseRequest, opts ...grpc.CallOption) (*game.PurchaseResponse, error) {
 	out := new(game.PurchaseResponse)
 	err := c.cc.Invoke(ctx, Nakama_PurchaseTest_FullMethodName, in, out, opts...)
@@ -1932,6 +1956,10 @@ type NakamaServer interface {
 	GainChallengeReward(context.Context, *game.GainChallengeRewardRequest) (*game.GainChallengeRewardResponse, error)
 	// Get Top Three Stats
 	GetChallengeTopStats(context.Context, *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error)
+	// Get Challenge Battle Times
+	GetChallengeBattleTimes(context.Context, *game.GetChallengeBattleTimesRequest) (*game.GetChallengeBattleTimesResponse, error)
+	// Buy Challenge Battle Times
+	BuyChallengeBattleTimes(context.Context, *game.BuyChallengeBattleTimesRequest) (*game.BuyChallengeBattleTimesResponse, error)
 	PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error)
 	mustEmbedUnimplementedNakamaServer()
 }
@@ -2341,6 +2369,12 @@ func (UnimplementedNakamaServer) GainChallengeReward(context.Context, *game.Gain
 }
 func (UnimplementedNakamaServer) GetChallengeTopStats(context.Context, *emptypb.Empty) (*game.GetChallengeTopStatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChallengeTopStats not implemented")
+}
+func (UnimplementedNakamaServer) GetChallengeBattleTimes(context.Context, *game.GetChallengeBattleTimesRequest) (*game.GetChallengeBattleTimesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChallengeBattleTimes not implemented")
+}
+func (UnimplementedNakamaServer) BuyChallengeBattleTimes(context.Context, *game.BuyChallengeBattleTimesRequest) (*game.BuyChallengeBattleTimesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuyChallengeBattleTimes not implemented")
 }
 func (UnimplementedNakamaServer) PurchaseTest(context.Context, *game.PurchaseRequest) (*game.PurchaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PurchaseTest not implemented")
@@ -4770,6 +4804,42 @@ func _Nakama_GetChallengeTopStats_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Nakama_GetChallengeBattleTimes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.GetChallengeBattleTimesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).GetChallengeBattleTimes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_GetChallengeBattleTimes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).GetChallengeBattleTimes(ctx, req.(*game.GetChallengeBattleTimesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Nakama_BuyChallengeBattleTimes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(game.BuyChallengeBattleTimesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NakamaServer).BuyChallengeBattleTimes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Nakama_BuyChallengeBattleTimes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NakamaServer).BuyChallengeBattleTimes(ctx, req.(*game.BuyChallengeBattleTimesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Nakama_PurchaseTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(game.PurchaseRequest)
 	if err := dec(in); err != nil {
@@ -5330,6 +5400,14 @@ var Nakama_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChallengeTopStats",
 			Handler:    _Nakama_GetChallengeTopStats_Handler,
+		},
+		{
+			MethodName: "GetChallengeBattleTimes",
+			Handler:    _Nakama_GetChallengeBattleTimes_Handler,
+		},
+		{
+			MethodName: "BuyChallengeBattleTimes",
+			Handler:    _Nakama_BuyChallengeBattleTimes_Handler,
 		},
 		{
 			MethodName: "PurchaseTest",

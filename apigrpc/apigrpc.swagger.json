@@ -2029,6 +2029,62 @@
         ]
       }
     },
+    "/v2/game/challenges/battle-times": {
+      "get": {
+        "summary": "Get Challenge Battle Times",
+        "operationId": "Nakama_GetChallengeBattleTimes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameGetChallengeBattleTimesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
+    "/v2/game/challenges/battle-times/buy": {
+      "post": {
+        "summary": "Buy Challenge Battle Times",
+        "operationId": "Nakama_BuyChallengeBattleTimes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/gameBuyChallengeBattleTimesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/gameBuyChallengeBattleTimesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      }
+    },
     "/v2/game/challenges/gain": {
       "post": {
         "summary": "Gain Challenge Reward",
@@ -7104,6 +7160,64 @@
       },
       "title": "购买宝箱响应"
     },
+    "gameBuyChallengeBattleTimesRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/gameBuyChallengeBattleTimesType",
+          "title": "购买类型"
+        },
+        "adWatched": {
+          "type": "boolean",
+          "title": "是否已完整观看广告（仅type=AD时有效）"
+        }
+      },
+      "title": "购买挑战次数请求"
+    },
+    "gameBuyChallengeBattleTimesResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "remainingTimes": {
+          "type": "integer",
+          "format": "int32",
+          "title": "剩余挑战次数"
+        },
+        "adTimesRemaining": {
+          "type": "integer",
+          "format": "int32",
+          "title": "看广告剩余次数"
+        },
+        "gemTimesRemaining": {
+          "type": "integer",
+          "format": "int32",
+          "title": "钻石购买剩余次数"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果（扣除钻石或广告券）"
+        }
+      },
+      "title": "购买挑战次数响应"
+    },
+    "gameBuyChallengeBattleTimesType": {
+      "type": "string",
+      "enum": [
+        "BUY_WITH_AD",
+        "BUY_WITH_GEM"
+      ],
+      "default": "BUY_WITH_AD",
+      "description": "- BUY_WITH_AD: 看广告购买\n - BUY_WITH_GEM: 钻石购买",
+      "title": "购买挑战次数类型"
+    },
     "gameBuyShopItemRequest": {
       "type": "object",
       "properties": {
@@ -7955,11 +8069,19 @@
           "title": "响应消息"
         },
         "reward": {
+          "$ref": "#/definitions/gameReward",
+          "title": "奖励"
+        },
+        "walletUpdated": {
+          "$ref": "#/definitions/gameWallet",
+          "title": "钱包更新结果"
+        },
+        "inventoryUpdated": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/gameReward"
+            "$ref": "#/definitions/gameItem"
           },
-          "title": "奖励"
+          "title": "背包更新结果"
         }
       }
     },
@@ -7975,6 +8097,40 @@
         }
       },
       "title": "==================== 钻石商店（独立，IAP） ===================="
+    },
+    "gameGetChallengeBattleTimesResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "title": "状态码 (0: 成功, 其他: 错误码)"
+        },
+        "msg": {
+          "type": "string",
+          "title": "响应消息"
+        },
+        "remainingTimes": {
+          "type": "integer",
+          "format": "int32",
+          "title": "剩余挑战次数（基础次数）"
+        },
+        "adTimesRemaining": {
+          "type": "integer",
+          "format": "int32",
+          "title": "看广告剩余次数（每天1次）"
+        },
+        "gemTimesRemaining": {
+          "type": "integer",
+          "format": "int32",
+          "title": "钻石购买剩余次数（每天3次）"
+        },
+        "lastResetDate": {
+          "type": "string",
+          "title": "最后重置日期（YYYY-MM-DD）"
+        }
+      },
+      "title": "获取挑战次数信息响应"
     },
     "gameGetChallengeResponse": {
       "type": "object",

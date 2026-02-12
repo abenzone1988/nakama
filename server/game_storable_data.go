@@ -638,19 +638,20 @@ func (d *EquipData) Init() {
 // BattleData 战斗数据存储结构
 type BattleData struct {
 	BaseStorable
-	CurLevelId             string           `json:"cur_level_id"`               // 当前正在战斗的关卡ID
-	MaxLevelId             string           `json:"max_level_id"`               // 最大关卡ID
-	Progress               map[string]int32 `json:"progress_map"`               // key: level_id, value: progress
-	BattleType             game.BattleType  `json:"battle_type"`                // 最后一次战斗类型（0=普通，1=黄金，2=挑战）
-	BattleEnded            bool             `json:"battle_ended"`               // 战斗是否已结束（防止重复领取奖励）
-	ShareRewardClaimed     bool             `json:"share_reward_claimed"`       // 是否已领取分享奖励（每次战斗可重新领取一次）
-	RewardJSON             string           `json:"reward_json"`                // 保存的奖励 JSON 字符串
-	HasMoppingTimes        int32            `json:"has_mopping_times"`          // 第一阶段已使用次数（扣体力）
-	HasMoppingTimesForAdv  int32            `json:"has_mopping_times_for_adv"`  // 第二阶段已使用次数（扣体力+广告）
-	LastMoppingTimestamp   string           `json:"last_mopping_timestamp"`     // 最后一次扫荡时间，ISO 8601 格式
-	LastGetOnHookTimestamp string           `json:"last_get_on_hook_timestamp"` // 最后一次领取挂机奖励时间，ISO 8601 格式
-	ChallengeTimes         int32            `json:"challenge_times"`            // 当日挑战次数
-	LastChallengeDate      string           `json:"last_challenge_date"`        // 最后一次挑战日期（YYYY-MM-DD）
+	CurLevelId             string          `json:"cur_level_id"`               // 当前正在战斗的关卡ID
+	MaxLevelId             string          `json:"max_level_id"`               // 最大关卡ID
+	BattleType             game.BattleType `json:"battle_type"`                // 最后一次战斗类型（0=普通，1=黄金，2=挑战）
+	BattleEnded            bool            `json:"battle_ended"`               // 战斗是否已结束（防止重复领取奖励）
+	ShareRewardClaimed     bool            `json:"share_reward_claimed"`       // 是否已领取分享奖励（每次战斗可重新领取一次）
+	RewardJSON             string          `json:"reward_json"`                // 保存的奖励 JSON 字符串
+	HasMoppingTimes        int32           `json:"has_mopping_times"`          // 第一阶段已使用次数（扣体力）
+	HasMoppingTimesForAdv  int32           `json:"has_mopping_times_for_adv"`  // 第二阶段已使用次数（扣体力+广告）
+	LastMoppingTimestamp   string          `json:"last_mopping_timestamp"`     // 最后一次扫荡时间，ISO 8601 格式
+	LastGetOnHookTimestamp string          `json:"last_get_on_hook_timestamp"` // 最后一次领取挂机奖励时间，ISO 8601 格式
+	ChallengeTimes         int32           `json:"challenge_times"`            // 当日挑战次数
+	LastChallengeDate      string          `json:"last_challenge_date"`        // 最后一次挑战日期（YYYY-MM-DD）
+	ChallengeAdBuyTimes    int32           `json:"challenge_ad_buy_times"`     // 当日通过广告购买的挑战次数
+	ChallengeGemBuyTimes   int32           `json:"challenge_gem_buy_times"`    // 当日通过钻石购买的挑战次数
 }
 
 func (d *BattleData) resetMoppingTimes() {
@@ -669,7 +670,6 @@ func (d *BattleData) GetKey() string {
 func (d *BattleData) Init() {
 	d.CurLevelId = ""
 	d.MaxLevelId = ""
-	d.Progress = make(map[string]int32)
 	d.BattleType = 0
 	d.BattleEnded = true
 	d.ShareRewardClaimed = false
@@ -678,6 +678,8 @@ func (d *BattleData) Init() {
 	d.HasMoppingTimesForAdv = 0
 	d.ChallengeTimes = 0
 	d.LastChallengeDate = ""
+	d.ChallengeAdBuyTimes = 0
+	d.ChallengeGemBuyTimes = 0
 	d.SetVersion("")
 }
 

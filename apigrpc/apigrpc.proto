@@ -1118,6 +1118,19 @@ service Nakama {
     option (google.api.http).get = "/v2/game/challenges/top-three-stats";
   }
 
+  // Get Challenge Battle Times
+  rpc GetChallengeBattleTimes(game.GetChallengeBattleTimesRequest) returns (game.GetChallengeBattleTimesResponse) {
+    option (google.api.http).get = "/v2/game/challenges/battle-times";
+  }
+
+  // Buy Challenge Battle Times
+  rpc BuyChallengeBattleTimes(game.BuyChallengeBattleTimesRequest) returns (game.BuyChallengeBattleTimesResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/challenges/battle-times/buy"
+      body: "*"
+    };
+  }
+
   //====================PurchaseTest====================
 
   rpc PurchaseTest(game.PurchaseRequest) returns (game.PurchaseResponse) {

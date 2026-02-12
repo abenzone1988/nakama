@@ -522,7 +522,7 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 	}
 
 	// 使用 GrantReward 直接发放奖励
-	_, _, err = GrantReward(
+	walletUpdateResult, inventoryUpdateResult, err := GrantReward(
 		ctx,
 		s.logger,
 		s.db,
@@ -540,10 +540,22 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 		return nil, status.Error(codes.Internal, fmt.Sprintf("发放奖励失败: %v", err))
 	}
 
+	// 提取更新后的数据
+	var walletUpdated *game.Wallet
+	var inventoryUpdated []*game.Item
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+	if inventoryUpdateResult != nil {
+		inventoryUpdated = inventoryUpdateResult.Updated
+	}
+
 	return &game.GainChallengeRewardResponse{
-		Code:   0,
-		Msg:    "领取奖励成功",
-		Reward: []*game.Reward{mergedReward},
+		Code:             0,
+		Msg:              "领取奖励成功",
+		Reward:           mergedReward,
+		WalletUpdated:    walletUpdated,
+		InventoryUpdated: inventoryUpdated,
 	}, nil
 }
 
@@ -1072,4 +1084,215 @@ func (s *ApiServer) updateTopThreeStats(userID uuid.UUID, userMatch *UserMatch, 
 	}
 
 	return updated
+}
+
+// GetChallengeBattleTimes 获取挑战次数信息
+func (s *ApiServer) GetChallengeBattleTimes(ctx context.Context, in *game.GetChallengeBattleTimesRequest) (*game.GetChallengeBattleTimesResponse, error) {
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载战斗数据失败", zap.Error(err))
+		return &game.GetChallengeBattleTimesResponse{
+			Code: 1,
+			Msg:  "加载数据失败",
+		}, nil
+	}
+
+	// 检查是否需要重置（新的一天）
+	currentDate := getCurrentDate()
+	if battleData.LastChallengeDate != currentDate {
+		battleData.ChallengeTimes = 0
+		battleData.ChallengeAdBuyTimes = 0
+		battleData.ChallengeGemBuyTimes = 0
+		battleData.LastChallengeDate = currentDate
+
+		if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+			s.logger.Error("保存战斗数据失败", zap.Error(err))
+		}
+	}
+
+	// 计算剩余次数
+	totalAvailableTimes := maxChallengeTimesPerDay + battleData.ChallengeAdBuyTimes + battleData.ChallengeGemBuyTimes
+	remainingTimes := totalAvailableTimes - battleData.ChallengeTimes
+	if remainingTimes < 0 {
+		remainingTimes = 0
+	}
+
+	// 计算剩余购买次数
+	adTimesRemaining := maxChallengeAdBuyTimesPerDay - battleData.ChallengeAdBuyTimes
+	if adTimesRemaining < 0 {
+		adTimesRemaining = 0
+	}
+
+	gemTimesRemaining := maxChallengeGemBuyTimesPerDay - battleData.ChallengeGemBuyTimes
+	if gemTimesRemaining < 0 {
+		gemTimesRemaining = 0
+	}
+
+	return &game.GetChallengeBattleTimesResponse{
+		Code:              0,
+		Msg:               "获取成功",
+		RemainingTimes:    remainingTimes,
+		AdTimesRemaining:  adTimesRemaining,
+		GemTimesRemaining: gemTimesRemaining,
+		LastResetDate:     battleData.LastChallengeDate,
+	}, nil
+}
+
+// BuyChallengeBattleTimes 购买挑战次数
+func (s *ApiServer) BuyChallengeBattleTimes(ctx context.Context, in *game.BuyChallengeBattleTimesRequest) (*game.BuyChallengeBattleTimesResponse, error) {
+	battleData := &BattleData{}
+	if err := LoadUserData(ctx, s.logger, s.db, battleData); err != nil {
+		s.logger.Error("加载战斗数据失败", zap.Error(err))
+		return &game.BuyChallengeBattleTimesResponse{
+			Code: 1,
+			Msg:  "加载数据失败",
+		}, nil
+	}
+
+	// 检查是否需要重置（新的一天）
+	currentDate := getCurrentDate()
+	if battleData.LastChallengeDate != currentDate {
+		battleData.ChallengeTimes = 0
+		battleData.ChallengeAdBuyTimes = 0
+		battleData.ChallengeGemBuyTimes = 0
+		battleData.LastChallengeDate = currentDate
+	}
+
+	var walletUpdateResult *game.WalletUpdateResult
+
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	switch in.Type {
+	case game.BuyChallengeBattleTimesType_BUY_WITH_AD:
+		// 广告购买
+		if battleData.ChallengeAdBuyTimes >= maxChallengeAdBuyTimesPerDay {
+			return &game.BuyChallengeBattleTimesResponse{
+				Code: 2,
+				Msg:  "今日广告购买次数已用完",
+			}, nil
+		}
+
+		// 检查是否看完广告
+		if in.AdWatched {
+			// 看完广告，免费获得
+			s.logger.Info("通过观看广告获得挑战次数", zap.String("user_id", userID.String()))
+		} else {
+			// 没看完，扣除广告券
+			changeset := map[string]int64{"ad": -1}
+			metadata := `{"reason": "购买挑战次数"}`
+
+			results, err := UpdateWallets(ctx, s.logger, s.db, []*walletUpdate{
+				{
+					UserID:    userID,
+					Changeset: changeset,
+					Metadata:  metadata,
+				},
+			}, true)
+			if err != nil {
+				s.logger.Error("扣除广告券失败", zap.Error(err))
+				return &game.BuyChallengeBattleTimesResponse{
+					Code: 4,
+					Msg:  "广告券不足",
+				}, nil
+			}
+
+			if len(results) > 0 {
+				walletUpdateResult = &game.WalletUpdateResult{
+					Previous: convertMapInt64ToWallet(results[0].Previous),
+					Updated:  convertMapInt64ToWallet(results[0].Updated),
+				}
+			}
+
+			s.logger.Info("通过广告券购买挑战次数", zap.String("user_id", userID.String()))
+		}
+
+		battleData.ChallengeAdBuyTimes++
+
+	case game.BuyChallengeBattleTimesType_BUY_WITH_GEM:
+		// 钻石购买
+		if battleData.ChallengeGemBuyTimes >= maxChallengeGemBuyTimesPerDay {
+			return &game.BuyChallengeBattleTimesResponse{
+				Code: 6,
+				Msg:  "今日钻石购买次数已用完",
+			}, nil
+		}
+
+		// 扣除钻石
+		changeset := map[string]int64{"gem": -int64(challengeGemBuyPrice)}
+		metadata := `{"reason": "购买挑战次数"}`
+
+		results, err := UpdateWallets(ctx, s.logger, s.db, []*walletUpdate{
+			{
+				UserID:    userID,
+				Changeset: changeset,
+				Metadata:  metadata,
+			},
+		}, true)
+		if err != nil {
+			s.logger.Error("扣除钻石失败", zap.Error(err))
+			return &game.BuyChallengeBattleTimesResponse{
+				Code: 7,
+				Msg:  "钻石不足",
+			}, nil
+		}
+
+		if len(results) > 0 {
+			walletUpdateResult = &game.WalletUpdateResult{
+				Previous: convertMapInt64ToWallet(results[0].Previous),
+				Updated:  convertMapInt64ToWallet(results[0].Updated),
+			}
+		}
+
+		battleData.ChallengeGemBuyTimes++
+		s.logger.Info("通过钻石购买挑战次数",
+			zap.String("user_id", userID.String()),
+			zap.Int32("price", challengeGemBuyPrice))
+
+	default:
+		return &game.BuyChallengeBattleTimesResponse{
+			Code: 9,
+			Msg:  "无效的购买类型",
+		}, nil
+	}
+
+	// 保存战斗数据
+	if err := SaveUserData(ctx, s.logger, s.db, s.metrics, s.storageIndex, battleData); err != nil {
+		s.logger.Error("保存战斗数据失败", zap.Error(err))
+		return &game.BuyChallengeBattleTimesResponse{
+			Code: 10,
+			Msg:  "保存数据失败",
+		}, nil
+	}
+
+	// 计算更新后的剩余次数
+	totalAvailableTimes := maxChallengeTimesPerDay + battleData.ChallengeAdBuyTimes + battleData.ChallengeGemBuyTimes
+	remainingTimes := totalAvailableTimes - battleData.ChallengeTimes
+	if remainingTimes < 0 {
+		remainingTimes = 0
+	}
+
+	adTimesRemaining := maxChallengeAdBuyTimesPerDay - battleData.ChallengeAdBuyTimes
+	if adTimesRemaining < 0 {
+		adTimesRemaining = 0
+	}
+
+	gemTimesRemaining := maxChallengeGemBuyTimesPerDay - battleData.ChallengeGemBuyTimes
+	if gemTimesRemaining < 0 {
+		gemTimesRemaining = 0
+	}
+
+	// 提取钱包更新数据
+	var walletUpdated *game.Wallet
+	if walletUpdateResult != nil {
+		walletUpdated = walletUpdateResult.Updated
+	}
+
+	return &game.BuyChallengeBattleTimesResponse{
+		Code:              0,
+		Msg:               "购买成功",
+		RemainingTimes:    remainingTimes,
+		AdTimesRemaining:  adTimesRemaining,
+		GemTimesRemaining: gemTimesRemaining,
+		WalletUpdated:     walletUpdated,
+	}, nil
 }
