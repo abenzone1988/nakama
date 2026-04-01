@@ -45,13 +45,6 @@ export interface AccountList {
   users?:Array<ApiUser>
 }
 
-export interface AddGroupUsersRequest {
-  // Users to add/join.
-  ids?:string
-  // Whether it is a join request.
-  join_request?:boolean
-}
-
 export interface AddUserRequest {
   // Email address of the user.
   email?:string
@@ -151,21 +144,9 @@ export interface AuthenticateRequest {
   username?:string
 }
 
-export interface CallApiEndpointRequest {
-  body?:string
-  session_vars?:Map<string, string>
-  user_id?:string
-}
-
 export interface CallApiEndpointResponse {
   body?:string
   error_message?:string
-}
-
-export interface CallRpcEndpointRequest {
-  body?:string
-  session_vars?:Map<string, string>
-  user_id?:string
 }
 
 export interface ChallengeTemplate {
@@ -212,12 +193,132 @@ export interface ConfigWarning {
   message?:string
 }
 
+/** Add/join users to a group. */
+export interface ConsoleAddGroupUsersBody {
+  // Users to add/join.
+  ids?:string
+  // Whether it is a join request.
+  join_request?:boolean
+}
+
+export interface ConsoleCallApiEndpointBody {
+  body?:string
+  session_vars?:Map<string, string>
+  user_id?:string
+}
+
+export interface ConsoleCallRpcEndpointBody {
+  body?:string
+  session_vars?:Map<string, string>
+  user_id?:string
+}
+
+/** Make a user's mfa required or not. */
+export interface ConsoleRequireUserMfaBody {
+  // Required.
+  required?:boolean
+}
+
 /** A console user session. */
 export interface ConsoleSession {
   // MFA code required to setup the MFA mechanism.
   mfa_code?:string
   // A session token (JWT) for the console user.
   token?:string
+}
+
+/** Unlink a particular device ID from a user's account. */
+export interface ConsoleUnlinkDeviceBody {
+  // Device ID to unlink.
+  device_id?:string
+}
+
+/** Update user account information. */
+export interface ConsoleUpdateAccountBody {
+  // Avatar URL.
+  avatar_url?:string
+  // Custom ID.
+  custom_id?:string
+  // Device ID modifications.
+  device_ids?:Map<string, string>
+  // Display name.
+  display_name?:string
+  // Email.
+  email?:string
+  // Inventory.
+  inventory?:string
+  // Langtag.
+  lang_tag?:string
+  // Location.
+  location?:string
+  // Metadata.
+  metadata?:string
+  // Password.
+  password?:string
+  // Timezone.
+  timezone?:string
+  // Username.
+  username?:string
+  // Wallet.
+  wallet?:string
+}
+
+export interface ConsoleUpdateAnnouncementBody {
+  // Announcement content
+  content?:string
+  // Image URL
+  img?:string
+  // Status 0:draft 1:published 2:offline
+  status?:number
+  // Announcement title
+  title?:string
+}
+
+/** Update group information. */
+export interface ConsoleUpdateGroupBody {
+  // Avatar URL.
+  avatar_url?:string
+  // Description.
+  description?:string
+  // Langtag.
+  lang_tag?:string
+  // The maximum number of members allowed.
+  max_count?:number
+  // Metadata.
+  metadata?:string
+  // Name.
+  name?:string
+  // Anyone can join open groups, otherwise only admins can accept members.
+  open?:boolean
+}
+
+export interface ConsoleUpdateSystemNotificationBody {
+  // Challenge ID
+  challenge_id?:number
+  // Notification content
+  content?:NoticeContent
+  // Creation time
+  create_time?:string
+  // Effective time
+  effective_time?:string
+  // Expiry time
+  expiry_time?:string
+  // Notice Type
+  notice_type?:number
+  // Notification subject
+  subject?:string
+}
+
+/** Write a new storage object or update an existing one. */
+export interface ConsoleWriteStorageObjectBody {
+  // Read permission value.
+  permission_read?:number
+  // Write permission value.
+  permission_write?:number
+  // Value.
+  value?:string
+  // Version for OCC.
+  version?:string
 }
 
 export interface CreateAnnouncementRequest {
@@ -482,11 +583,6 @@ export interface PersonalNotificationLog {
   target_ids?:string
 }
 
-export interface RequireUserMfaRequest {
-  // Required.
-  required?:boolean
-}
-
 export interface RuntimeInfo {
   // Go loaded modules
   go_modules?:Array<RuntimeInfoModuleInfo>
@@ -602,85 +698,6 @@ export interface SystemNotice {
   subject?:string
 }
 
-export interface UnlinkDeviceRequest {
-  // Device ID to unlink.
-  device_id?:string
-}
-
-export interface UpdateAccountRequest {
-  // Avatar URL.
-  avatar_url?:string
-  // Custom ID.
-  custom_id?:string
-  // Device ID modifications.
-  device_ids?:Map<string, string>
-  // Display name.
-  display_name?:string
-  // Email.
-  email?:string
-  // Inventory.
-  inventory?:string
-  // Langtag.
-  lang_tag?:string
-  // Location.
-  location?:string
-  // Metadata.
-  metadata?:string
-  // Password.
-  password?:string
-  // Timezone.
-  timezone?:string
-  // Username.
-  username?:string
-  // Wallet.
-  wallet?:string
-}
-
-export interface UpdateAnnouncementRequest {
-  // Announcement content
-  content?:string
-  // Image URL
-  img?:string
-  // Status 0:draft 1:published 2:offline
-  status?:number
-  // Announcement title
-  title?:string
-}
-
-export interface UpdateGroupRequest {
-  // Avatar URL.
-  avatar_url?:string
-  // Description.
-  description?:string
-  // Langtag.
-  lang_tag?:string
-  // The maximum number of members allowed.
-  max_count?:number
-  // Metadata.
-  metadata?:string
-  // Name.
-  name?:string
-  // Anyone can join open groups, otherwise only admins can accept members.
-  open?:boolean
-}
-
-export interface UpdateSystemNotificationRequest {
-  // Challenge ID
-  challenge_id?:number
-  // Notification content
-  content?:NoticeContent
-  // Creation time
-  create_time?:string
-  // Effective time
-  effective_time?:string
-  // Expiry time
-  expiry_time?:string
-  // Notice Type
-  notice_type?:number
-  // Notification subject
-  subject?:string
-}
-
 /** A single group-role pair. */
 export interface UserGroupListUserGroup {
   // Group.
@@ -786,17 +803,6 @@ export interface WalletLedgerList {
   next_cursor?:string
   // The cursor to send when retrieving the previous page newer, if any.
   prev_cursor?:string
-}
-
-export interface WriteStorageObjectRequest {
-  // Read permission value.
-  permission_read?:number
-  // Write permission value.
-  permission_write?:number
-  // Value.
-  value?:string
-  // Version for OCC.
-  version?:string
 }
 
 /** A user with additional account details. Always the current user. */
@@ -1304,7 +1310,7 @@ export class ConsoleService {
   }
 
   /** Update one or more fields on a user account. */
-  updateAccount(auth_token: string, id: string, body: UpdateAccountRequest): Observable<any> {
+  updateAccount(auth_token: string, id: string, body: ConsoleUpdateAccountBody): Observable<any> {
     const encodedId = encodeURIComponent(String(id))
     const urlPath = `/v2/console/account/${encodedId}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1395,7 +1401,7 @@ export class ConsoleService {
   }
 
   /** Unlink the device ID from a user account. */
-  unlinkDevice(auth_token: string, id: string, body: UnlinkDeviceRequest): Observable<any> {
+  unlinkDevice(auth_token: string, id: string, body: ConsoleUnlinkDeviceBody): Observable<any> {
     const encodedId = encodeURIComponent(String(id))
     const urlPath = `/v2/console/account/${encodedId}/unlink/device`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1490,7 +1496,7 @@ export class ConsoleService {
   }
 
   /** Update announcement */
-  updateAnnouncement(auth_token: string, id: string, body: UpdateAnnouncementRequest): Observable<Announcement> {
+  updateAnnouncement(auth_token: string, id: string, body: ConsoleUpdateAnnouncementBody): Observable<Announcement> {
     const encodedId = encodeURIComponent(String(id))
     const urlPath = `/v2/console/announcement/${encodedId}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1537,7 +1543,7 @@ export class ConsoleService {
   }
 
   /** API Explorer - call a custom RPC endpoint */
-  callRpcEndpoint(auth_token: string, method: string, body: CallRpcEndpointRequest): Observable<CallApiEndpointResponse> {
+  callRpcEndpoint(auth_token: string, method: string, body: ConsoleCallRpcEndpointBody): Observable<CallApiEndpointResponse> {
     const encodedMethod = encodeURIComponent(String(method))
     const urlPath = `/v2/console/api/endpoints/rpc/${encodedMethod}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1545,7 +1551,7 @@ export class ConsoleService {
   }
 
   /** API Explorer - call an endpoint */
-  callApiEndpoint(auth_token: string, method: string, body: CallApiEndpointRequest): Observable<CallApiEndpointResponse> {
+  callApiEndpoint(auth_token: string, method: string, body: ConsoleCallApiEndpointBody): Observable<CallApiEndpointResponse> {
     const encodedMethod = encodeURIComponent(String(method))
     const urlPath = `/v2/console/api/endpoints/${encodedMethod}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1637,7 +1643,7 @@ export class ConsoleService {
   }
 
   /** Add/join members to a group. */
-  addGroupUsers(auth_token: string, group_id: string, body: AddGroupUsersRequest): Observable<any> {
+  addGroupUsers(auth_token: string, group_id: string, body: ConsoleAddGroupUsersBody): Observable<any> {
     const encodedGroup_id = encodeURIComponent(String(group_id))
     const urlPath = `/v2/console/group/${encodedGroup_id}/add`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1661,7 +1667,7 @@ export class ConsoleService {
   }
 
   /** Update one or more fields on a group. */
-  updateGroup(auth_token: string, id: string, body: UpdateGroupRequest): Observable<any> {
+  updateGroup(auth_token: string, id: string, body: ConsoleUpdateGroupBody): Observable<any> {
     const encodedId = encodeURIComponent(String(id))
     const urlPath = `/v2/console/group/${encodedId}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -1955,7 +1961,7 @@ export class ConsoleService {
   }
 
   /** Write a new storage object or replace an existing one. */
-  writeStorageObject(auth_token: string, collection: string, key: string, user_id: string, body: WriteStorageObjectRequest): Observable<ApiStorageObjectAck> {
+  writeStorageObject(auth_token: string, collection: string, key: string, user_id: string, body: ConsoleWriteStorageObjectBody): Observable<ApiStorageObjectAck> {
     const encodedCollection = encodeURIComponent(String(collection))
     const encodedKey = encodeURIComponent(String(key))
     const encodedUser_id = encodeURIComponent(String(user_id))
@@ -2015,7 +2021,7 @@ export class ConsoleService {
   }
 
   /** Update system notification */
-  updateSystemNotification(auth_token: string, id: string, body: UpdateSystemNotificationRequest): Observable<SystemNotice> {
+  updateSystemNotification(auth_token: string, id: string, body: ConsoleUpdateSystemNotificationBody): Observable<SystemNotice> {
     const encodedId = encodeURIComponent(String(id))
     const urlPath = `/v2/console/system_notification/${encodedId}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });
@@ -2085,7 +2091,7 @@ export class ConsoleService {
   }
 
   /** Sets the user's MFA as required or not required. */
-  requireUserMfa(auth_token: string, username: string, body: RequireUserMfaRequest): Observable<any> {
+  requireUserMfa(auth_token: string, username: string, body: ConsoleRequireUserMfaBody): Observable<any> {
     const encodedUsername = encodeURIComponent(String(username))
     const urlPath = `/v2/console/user/${encodedUsername}/mfa/require`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });

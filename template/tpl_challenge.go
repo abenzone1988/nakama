@@ -14,7 +14,6 @@ type TplChallenge struct {
 	EndTime       string `json:"end_time"`
 	ID            int32  `json:"id"`
 	MaxPart       int32  `json:"max_part"`
-	Name          string `json:"name"`
 	OpenTime      string `json:"open_time"`
 	RewardRemains int32  `json:"reward_remains"`
 	Status        int32  `json:"status"`

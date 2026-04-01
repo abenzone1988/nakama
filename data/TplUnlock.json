@@ -11,7 +11,7 @@
 "10":{"parameter":"10","conditionType":1,"id":"10","type":1,"title":"免广告","content":"弹窗终身免广告","conditionParameter":"L1006"},
 "11":{"parameter":"11","conditionType":1,"id":"11","type":1,"title":"水晶科技树","content":"引导水晶科技树","conditionParameter":"L1006"},
 "12":{"parameter":"12","conditionType":1,"id":"12","type":1,"title":"公告","content":"解锁公告","conditionParameter":"L1003"},
-"13":{"parameter":"13","conditionType":1,"id":"13","type":1,"title":"挑战赛","content":"解锁挑战赛","conditionParameter":"L1003"},
+"13":{"parameter":"13","conditionType":1,"id":"13","type":1,"title":"挑战赛","content":"解锁挑战赛","conditionParameter":"L1010"},
 "14":{"parameter":"EQ1999","conditionType":1,"id":"14","type":2,"title":"水晶","content":"水晶基地，为其他炮台供能，同时使用射线对敌人造成能量伤害。","conditionParameter":"L1000"},
 "15":{"parameter":"EQ1100","conditionType":1,"id":"15","type":2,"title":"机枪塔","content":"快速连续单体射击，对敌人造成物理伤害。","conditionParameter":"L1000"},
 "16":{"parameter":"EQ1101","conditionType":1,"id":"16","type":2,"title":"火焰塔","content":"持续喷射中等距离的火焰，对敌人造成火焰伤害。","conditionParameter":"L1000"},
@@ -22,6 +22,5 @@
 "21":{"parameter":"EQ1106","conditionType":1,"id":"21","type":2,"title":"等离子闪电塔","content":"发射1道跳跃2次的连锁闪电。对目标造成雷电伤害的同时附带麻痹效果。","conditionParameter":"L1007"},
 "22":{"parameter":"EQ1109","conditionType":1,"id":"22","type":2,"title":"核导弹发射井","content":"发射核弹，对大范围敌人进行毁灭打击，造成高额火焰伤害。","conditionParameter":"L1010"},
 "23":{"parameter":"EQ1105","conditionType":1,"id":"23","type":2,"title":"镭射塔","content":"发射激光对1个目标持续造成能量伤害。","conditionParameter":"L1013"},
-"24":{"parameter":"EQ1103","conditionType":1,"id":"24","type":2,"title":"电磁炮","content":"发射一个电磁炮弹，落地时引爆，造成范围雷电伤害并麻痹敌人。","conditionParameter":"L1016"},
-"25":{"parameter":"EQ1110","conditionType":1,"id":"25","type":2,"title":"特斯拉电塔","content":"特斯拉电塔描述","conditionParameter":"L1003"}
+"24":{"parameter":"EQ1103","conditionType":1,"id":"24","type":2,"title":"电磁炮","content":"发射一个电磁炮弹，落地时引爆，造成范围雷电伤害并麻痹敌人。","conditionParameter":"L1016"}
 }

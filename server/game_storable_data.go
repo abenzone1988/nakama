@@ -727,6 +727,7 @@ type ChallengeStatus struct {
 	TournamentID    string    `json:"tournament_id"`
 	ActivityID      string    `json:"activity_id"`
 	Joined          time.Time `json:"joined"`
+	BattleTimes     int32     `json:"battle_times"`      // 挑战赛参与次数（用于次数型奖励）
 	RankReward      bool      `json:"rank_reward"`       // 排名奖励是否已领取
 	LowScoreReward  bool      `json:"low_score_reward"`  // 低分奖励是否已领取
 	MidScoreReward  bool      `json:"mid_score_reward"`  // 中分奖励是否已领取

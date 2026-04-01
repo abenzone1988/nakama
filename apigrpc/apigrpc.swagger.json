@@ -1485,7 +1485,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/apiEvent"
+              "$ref": "#/definitions/nakamaapiEvent"
             }
           }
         ],
@@ -3321,30 +3321,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Name."
-                },
-                "description": {
-                  "type": "string",
-                  "description": "Description string."
-                },
-                "langTag": {
-                  "type": "string",
-                  "description": "Lang tag."
-                },
-                "avatarUrl": {
-                  "type": "string",
-                  "description": "Avatar URL."
-                },
-                "open": {
-                  "type": "boolean",
-                  "description": "Open is true if anyone should be allowed to join, or false if joins must be approved by a group admin."
-                }
-              },
-              "description": "Update fields in a given group."
+              "$ref": "#/definitions/NakamaUpdateGroupBody"
             }
           }
         ],
@@ -5316,6 +5293,32 @@
       },
       "description": "A single user-role pair."
     },
+    "NakamaUpdateGroupBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description string."
+        },
+        "langTag": {
+          "type": "string",
+          "description": "Lang tag."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Avatar URL."
+        },
+        "open": {
+          "type": "boolean",
+          "description": "Open is true if anyone should be allowed to join, or false if joins must be approved by a group admin."
+        }
+      },
+      "description": "Update fields in a given group."
+    },
     "UserGroupListUserGroup": {
       "type": "object",
       "properties": {
@@ -5397,6 +5400,7 @@
         "devices": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiAccountDevice"
           },
           "description": "The devices which belong to the user's account."
@@ -5667,6 +5671,7 @@
         "messages": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "A list of messages."
@@ -5741,38 +5746,13 @@
         "objectIds": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiDeleteStorageObjectId"
           },
           "description": "Batch of storage objects."
         }
       },
       "description": "Batch delete storage objects."
-    },
-    "apiEvent": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "An event name, type, category, or identifier."
-        },
-        "properties": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Arbitrary event property values."
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the event was triggered."
-        },
-        "external": {
-          "type": "boolean",
-          "description": "True if the event came directly from a client call, false otherwise."
-        }
-      },
-      "description": "Represents an event to be passed through the server to registered event handlers."
     },
     "apiFriend": {
       "type": "object",
@@ -5804,6 +5784,7 @@
         "friends": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The Friend objects."
@@ -5821,6 +5802,7 @@
         "friendsOfFriends": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/FriendsOfFriendsListFriendOfFriend"
           },
           "description": "User friends of friends."
@@ -5896,6 +5878,7 @@
         "groups": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "One or more groups."
@@ -5913,6 +5896,7 @@
         "groupUsers": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "User-role pairs for a group."
@@ -5992,6 +5976,7 @@
         "records": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of leaderboard records."
@@ -5999,6 +5984,7 @@
         "ownerRecords": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of leaderboard records belonging to specified owners."
@@ -6086,6 +6072,7 @@
         "matches": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiMatch"
           },
           "description": "A number of matches corresponding to a list operation."
@@ -6121,6 +6108,7 @@
         "completions": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiMatchmakerCompletionStats"
           }
         }
@@ -6179,6 +6167,7 @@
         "notifications": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiNotification"
           },
           "description": "Collection of notifications."
@@ -6226,6 +6215,7 @@
         "objectIds": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiReadStorageObjectId"
           },
           "description": "Batch of storage objects."
@@ -6384,6 +6374,7 @@
         "acks": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiStorageObjectAck"
           },
           "description": "Batch of storage write acknowledgements."
@@ -6397,6 +6388,7 @@
         "objects": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The list of storage objects."
@@ -6414,6 +6406,7 @@
         "objects": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The batch of storage objects."
@@ -6451,6 +6444,7 @@
         "validatedSubscriptions": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiValidatedSubscription"
           },
           "description": "Stored validated subscriptions."
@@ -6571,6 +6565,7 @@
         "tournaments": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiTournament"
           },
           "description": "The list of tournaments returned."
@@ -6588,6 +6583,7 @@
         "records": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of tournament records."
@@ -6595,6 +6591,7 @@
         "ownerRecords": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of tournament records belonging to specified owners."
@@ -6732,6 +6729,7 @@
         "userGroups": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/UserGroupListUserGroup"
           },
           "description": "Group-role pairs for a user."
@@ -6749,6 +6747,7 @@
         "users": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiUser"
           },
           "description": "The User objects."
@@ -6822,6 +6821,7 @@
         "validatedPurchases": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiValidatedPurchase"
           },
           "description": "Newly seen validated purchases."
@@ -7024,6 +7024,7 @@
         "objects": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiWriteStorageObject"
           },
           "description": "The objects to store on the server."
@@ -7146,6 +7147,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         },
@@ -7258,6 +7260,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "更新后的背包"
@@ -7306,6 +7309,11 @@
         "tournamentId": {
           "type": "string",
           "title": "玩家当前参与的竞标赛ID，如果为空表示未参与"
+        },
+        "battleTimes": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前挑战赛已参与次数（用于次数型奖励展示）"
         }
       }
     },
@@ -7315,6 +7323,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameShopChapterItem"
           },
           "title": "章节商品列表"
@@ -7369,6 +7378,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7407,6 +7417,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7443,6 +7454,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         },
@@ -7488,6 +7500,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7532,6 +7545,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         },
@@ -7574,6 +7588,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7619,6 +7634,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7660,6 +7676,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7698,6 +7715,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7750,6 +7768,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "description": "Aggregated inventory changes after claiming attachments."
@@ -7786,6 +7805,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7828,6 +7848,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7873,6 +7894,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7922,6 +7944,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -7954,6 +7977,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -8004,6 +8028,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -8079,6 +8104,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -8091,6 +8117,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameShopGemItem"
           },
           "title": "钻石商品列表"
@@ -8138,12 +8165,14 @@
         "challenges": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameChallenge"
           }
         },
         "joined": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameJoinChallengeStatus"
           }
         },
@@ -8231,6 +8260,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         }
@@ -8463,6 +8493,11 @@
         "end": {
           "type": "string",
           "format": "date-time"
+        },
+        "battleTimes": {
+          "type": "integer",
+          "format": "int32",
+          "title": "当前挑战赛已参与次数（用于次数型奖励展示）"
         }
       }
     },
@@ -8497,6 +8532,7 @@
         "announcements": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameAnnouncementInfo"
           },
           "title": "公告列表"
@@ -8546,6 +8582,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         },
@@ -8581,6 +8618,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -8783,6 +8821,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         }
@@ -8832,6 +8871,7 @@
         "shops": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameSingleShopData"
           },
           "title": "所有商店列表"
@@ -8942,6 +8982,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameShopItem"
           },
           "title": "商品列表"
@@ -9062,6 +9103,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -9100,6 +9142,7 @@
         "inventoryUpdated": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           },
           "title": "背包更新结果"
@@ -9128,6 +9171,32 @@
       },
       "title": "钱包结构v"
     },
+    "nakamaapiEvent": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "An event name, type, category, or identifier."
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Arbitrary event property values."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the event was triggered."
+        },
+        "external": {
+          "type": "boolean",
+          "description": "True if the event came directly from a client call, false otherwise."
+        }
+      },
+      "description": "Represents an event to be passed through the server to registered event handlers."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -9150,6 +9219,7 @@
         "details": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }

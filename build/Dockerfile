@@ -15,7 +15,7 @@
 # docker build . --build-arg commit="$(git rev-parse --short HEAD)" --build-arg version=v2.1.1 -t heroiclabs/nakama:2.1.1
 # docker build . --build-arg commit="$(git rev-parse --short HEAD)" --build-arg version="$(git rev-parse --short HEAD)" -t heroiclabs/nakama-prerelease:"$(git rev-parse --short HEAD)"
 
-FROM docker.sparkinfi.com:8443/base-img/nakama-builder:bookworm-prepped AS builder
+FROM docker.sparkinfi.com/base-img/nakama-builder:bookworm-prepped AS builder
 
 ARG COMMIT
 ARG VERSION
@@ -32,7 +32,7 @@ COPY . .
 
 RUN go build -o /go/build-out/nakama -trimpath -mod=vendor -gcflags "-trimpath $PWD" -asmflags "-trimpath $PWD" -ldflags "-s -w -X main.version=$VERSION -X main.commitID=$COMMIT"
 
-FROM docker.sparkinfi.com:8443/base-img/nakama-runtime:bookworm-prepped
+FROM docker.sparkinfi.com/base-img/nakama-runtime:bookworm-prepped
 
 ARG VERSION
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama/v3/game"
 	"github.com/heroiclabs/nakama/v3/template"
 	"go.uber.org/zap"
@@ -14,8 +15,8 @@ import (
 const (
 	unlockConditionTypeLevel      = 1
 	maxChallengeTimesPerDay       = 3  // 基础挑战次数
-	maxChallengeAdBuyTimesPerDay  = 1  // 广告购买次数上限
-	maxChallengeGemBuyTimesPerDay = 3  // 钻石购买次数上限
+	maxChallengeAdBuyTimesPerDay  = 2  // 广告购买次数上限
+	maxChallengeGemBuyTimesPerDay = 5  // 钻石购买次数上限
 	challengeGemBuyPrice          = 50 // 钻石购买单价
 	dateLayout                    = "2006-01-02"
 )
@@ -105,6 +106,24 @@ func (s *ApiServer) StartBattle(ctx context.Context, in *game.StartBattleRequest
 
 		// 增加挑战次数
 		battleData.ChallengeTimes++
+
+		// 记录挑战赛参与次数（用于次数型奖励）
+		if userID, ok := ctx.Value(ctxUserIDKey{}).(uuid.UUID); ok {
+			userMatch := &UserMatch{}
+			if err := LoadData(ctx, s.logger, s.db, userID, userMatch); err == nil && userMatch != nil {
+				for _, ch := range userMatch.Challenges {
+					if ch == nil {
+						continue
+					}
+					// StartBattle 的 level_id 对应挑战活动ID（TplChallengeInfo.id）
+					if ch.ActivityID == in.GetLevelId() && ch.TournamentID != "" {
+						ch.BattleTimes++
+						_ = SaveData(ctx, s.logger, s.db, s.metrics, s.storageIndex, userID, userMatch)
+						break
+					}
+				}
+			}
+		}
 
 	default:
 		return &game.StartBattleResponse{

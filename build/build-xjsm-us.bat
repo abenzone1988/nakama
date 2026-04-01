@@ -23,7 +23,7 @@ for /f "tokens=*" %%i in ('git rev-parse --short HEAD 2^>nul') do set COMMIT=%%i
 if "%COMMIT%"=="" set COMMIT=unknown
 
 REM Set default parameters
-set REGISTRY=docker.sparkinfi.com:8443
+set REGISTRY=docker.sparkinfi.com
 set IMAGE_NAME=xjsm-iap/nakama-us
 set PLATFORM=linux/amd64
 set NO_PUSH=false
@@ -71,7 +71,7 @@ echo Usage: build.bat [options]
 echo.
 echo Options:
 echo   --version VERSION     Set version number (default: from git tag)
-echo   --registry REGISTRY   Set registry address (default: docker.sparkinfi.com:8443)
+echo   --registry REGISTRY   Set registry address (default: docker.sparkinfi.com)
 echo   --image-name NAME     Set image name (default: nakama)
 echo   --platform PLATFORM   Set target platform (default: linux/amd64)
 echo   --no-push             Build only, do not push

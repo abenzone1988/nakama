@@ -162,8 +162,10 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 
 		// 获取用户挑战赛状态中的竞标赛ID
 		var tournamentID string
+		var battleTimes int32
 		if challengeData, exists := userMatch.Challenges[tplChallenge.ID]; exists && challengeData != nil {
 			tournamentID = challengeData.TournamentID
+			battleTimes = challengeData.BattleTimes
 		}
 
 		challenge := &game.Challenge{
@@ -175,6 +177,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			Over:         timestamppb.New(challengeInfo.EndTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)),
 			MaxPart:      tplChallenge.MaxPart,
 			TournamentId: tournamentID,
+			BattleTimes:  battleTimes,
 		}
 
 		challenges = append(challenges, challenge)
@@ -237,6 +240,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			LowScoreReward:  challengeStatus.LowScoreReward,
 			MidScoreReward:  challengeStatus.MidScoreReward,
 			HighScoreReward: challengeStatus.HighScoreReward,
+			BattleTimes:     challengeStatus.BattleTimes,
 		}
 		joinedChallenges = append(joinedChallenges, joinedStatus)
 	}
@@ -355,6 +359,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		ActivityID:      tplChallenge.ActivityID,
 		TournamentID:    tournamentID,
 		Joined:          now.Truncate(time.Second),
+		BattleTimes:     0,
 		HighScoreReward: false,
 		LowScoreReward:  false,
 		MidScoreReward:  false,
@@ -378,6 +383,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 			Over:         timestamppb.New(overTime),
 			MaxPart:      tplChallenge.MaxPart,
 			TournamentId: tournamentID,
+			BattleTimes:  0,
 		},
 	}, nil
 
@@ -601,20 +607,44 @@ func (s *ApiServer) checkScoreRewards(challengeData *ChallengeStatus, ownerRecor
 		RewardTypes: []string{},
 	}
 
-	if ownerRecord.Score >= int64(activityInfo.Condition01) && !challengeData.LowScoreReward {
-		result.RewardIds = append(result.RewardIds, activityInfo.Reward01)
-		result.RewardTypes = append(result.RewardTypes, "low")
-		result.HasNewReward = true
+	if !challengeData.LowScoreReward {
+		ok := false
+		if activityInfo.RewardType01 == 1 {
+			ok = challengeData.BattleTimes >= activityInfo.Condition01
+		} else {
+			ok = ownerRecord.Score >= int64(activityInfo.Condition01)
+		}
+		if ok {
+			result.RewardIds = append(result.RewardIds, activityInfo.Reward01)
+			result.RewardTypes = append(result.RewardTypes, "low")
+			result.HasNewReward = true
+		}
 	}
-	if ownerRecord.Score >= int64(activityInfo.Condition02) && !challengeData.MidScoreReward {
-		result.RewardIds = append(result.RewardIds, activityInfo.Reward02)
-		result.RewardTypes = append(result.RewardTypes, "mid")
-		result.HasNewReward = true
+	if !challengeData.MidScoreReward {
+		ok := false
+		if activityInfo.RewardType02 == 1 {
+			ok = challengeData.BattleTimes >= activityInfo.Condition02
+		} else {
+			ok = ownerRecord.Score >= int64(activityInfo.Condition02)
+		}
+		if ok {
+			result.RewardIds = append(result.RewardIds, activityInfo.Reward02)
+			result.RewardTypes = append(result.RewardTypes, "mid")
+			result.HasNewReward = true
+		}
 	}
-	if ownerRecord.Score >= int64(activityInfo.Condition03) && !challengeData.HighScoreReward {
-		result.RewardIds = append(result.RewardIds, activityInfo.Reward03)
-		result.RewardTypes = append(result.RewardTypes, "high")
-		result.HasNewReward = true
+	if !challengeData.HighScoreReward {
+		ok := false
+		if activityInfo.RewardType03 == 1 {
+			ok = challengeData.BattleTimes >= activityInfo.Condition03
+		} else {
+			ok = ownerRecord.Score >= int64(activityInfo.Condition03)
+		}
+		if ok {
+			result.RewardIds = append(result.RewardIds, activityInfo.Reward03)
+			result.RewardTypes = append(result.RewardTypes, "high")
+			result.HasNewReward = true
+		}
 	}
 
 	return result
@@ -905,7 +935,7 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 		s.db,
 		s.leaderboardCache,
 		tplChallenge.ID,
-		tplChallenge.Name,
+		tplChallenge.ActivityID,
 		startTime,
 		endTime,
 		tplChallenge.MaxPart,
@@ -952,7 +982,7 @@ func (s *ApiServer) matchPlayerToChallengeTournament(ctx context.Context, userID
 	tid, err := ChallengeJoin(
 		ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache,
 		userID, username,
-		tplChallenge.ID, tplChallenge.Name,
+		tplChallenge.ID, tplChallenge.ActivityID,
 		startTime, endTime,
 		tplChallenge.MaxPart,
 	)

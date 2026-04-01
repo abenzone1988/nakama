@@ -1101,5 +1101,14 @@
 "MoppingReward001":{"coupon":0,"name":"扫荡第1关奖励","id":"MoppingReward001","items":"60000_4","gem":0,"coin":100},
 "MoppingReward002":{"coupon":0,"name":"扫荡第2关奖励","id":"MoppingReward002","items":"60000_6","gem":0,"coin":110},
 "MoppingReward006":{"coupon":0,"name":"扫荡第6关奖励","id":"MoppingReward006","items":"60000_14","gem":0,"coin":150},
-"MoppingReward004":{"coupon":0,"name":"扫荡第4关奖励","id":"MoppingReward004","items":"60000_10","gem":0,"coin":130}
+"MoppingReward004":{"coupon":0,"name":"扫荡第4关奖励","id":"MoppingReward004","items":"60000_10","gem":0,"coin":130},
+"ActivityRank_1_new":{"coupon":3,"name":"挑战赛排第1名奖励","id":"ActivityRank_1_new","items":"","gem":500,"coin":10000},
+"ActivityRank_2_new":{"coupon":2,"name":"挑战赛排第2名奖励","id":"ActivityRank_2_new","items":"","gem":300,"coin":8000},
+"ActivityRank_3_new":{"coupon":1,"name":"挑战赛排第3名奖励","id":"ActivityRank_3_new","items":"","gem":200,"coin":6000},
+"ActivityRank_4_new":{"coupon":0,"name":"挑战赛排第4-10名奖励","id":"ActivityRank_4_new","items":"","gem":100,"coin":5000},
+"ActivityRank_5_new":{"coupon":0,"name":"挑战赛排第11-20名奖励","id":"ActivityRank_5_new","items":"","gem":50,"coin":3000},
+"Activity_Gem_new":{"coupon":0,"name":"挑战赛通关奖励","id":"Activity_Gem_new","items":"","gem":20,"coin":0},
+"ChallengeReward1":{"coupon":0,"name":"挑战赛宝箱1奖励","id":"ChallengeReward1","items":"","gem":0,"coin":5000},
+"ChallengeReward2":{"coupon":0,"name":"挑战赛宝箱2奖励","id":"ChallengeReward2","items":"","gem":100,"coin":8000},
+"ChallengeReward3":{"coupon":1,"name":"挑战赛宝箱3奖励","id":"ChallengeReward3","items":"20001_3","gem":200,"coin":0}
 }

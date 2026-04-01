@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 REM Build & push prepped base images (builder/runtime)
 REM Run from any path; it will cd to repo root.
 
-set REGISTRY=docker.sparkinfi.com:8443
+set REGISTRY=docker.sparkinfi.com
 set BUILDER_IMAGE=%REGISTRY%/base-img/nakama-builder:bookworm-prepped
 set RUNTIME_IMAGE=%REGISTRY%/base-img/nakama-runtime:bookworm-prepped
 

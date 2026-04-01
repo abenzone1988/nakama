@@ -286,65 +286,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "username": {
-                  "type": "string",
-                  "description": "Username."
-                },
-                "display_name": {
-                  "type": "string",
-                  "description": "Display name."
-                },
-                "metadata": {
-                  "type": "string",
-                  "description": "Metadata."
-                },
-                "avatar_url": {
-                  "type": "string",
-                  "description": "Avatar URL."
-                },
-                "lang_tag": {
-                  "type": "string",
-                  "description": "Langtag."
-                },
-                "location": {
-                  "type": "string",
-                  "description": "Location."
-                },
-                "timezone": {
-                  "type": "string",
-                  "description": "Timezone."
-                },
-                "custom_id": {
-                  "type": "string",
-                  "description": "Custom ID."
-                },
-                "email": {
-                  "type": "string",
-                  "description": "Email."
-                },
-                "password": {
-                  "type": "string",
-                  "description": "Password."
-                },
-                "device_ids": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "description": "Device ID modifications."
-                },
-                "wallet": {
-                  "type": "string",
-                  "description": "Wallet."
-                },
-                "inventory": {
-                  "type": "string",
-                  "description": "Inventory."
-                }
-              },
-              "description": "Update user account information."
+              "$ref": "#/definitions/ConsoleUpdateAccountBody"
             }
           }
         ],
@@ -733,14 +675,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "device_id": {
-                  "type": "string",
-                  "description": "Device ID to unlink."
-                }
-              },
-              "description": "Unlink a particular device ID from a user's account."
+              "$ref": "#/definitions/ConsoleUnlinkDeviceBody"
             }
           }
         ],
@@ -1134,26 +1069,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string",
-                  "title": "Announcement title"
-                },
-                "content": {
-                  "type": "string",
-                  "title": "Announcement content"
-                },
-                "img": {
-                  "type": "string",
-                  "title": "Image URL"
-                },
-                "status": {
-                  "type": "integer",
-                  "format": "int32",
-                  "title": "Status 0:draft 1:published 2:offline"
-                }
-              }
+              "$ref": "#/definitions/ConsoleUpdateAnnouncementBody"
             }
           }
         ],
@@ -1310,22 +1226,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "body": {
-                  "type": "string"
-                },
-                "user_id": {
-                  "type": "string"
-                },
-                "session_vars": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                }
-              },
-              "title": "API Explorer request definition for CallApiEndpoint"
+              "$ref": "#/definitions/ConsoleCallRpcEndpointBody"
             }
           }
         ],
@@ -1364,22 +1265,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "body": {
-                  "type": "string"
-                },
-                "user_id": {
-                  "type": "string"
-                },
-                "session_vars": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                }
-              },
-              "title": "API Explorer request definition for CallApiEndpoint"
+              "$ref": "#/definitions/ConsoleCallApiEndpointBody"
             }
           }
         ],
@@ -1743,18 +1629,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "ids": {
-                  "type": "string",
-                  "description": "Users to add/join."
-                },
-                "join_request": {
-                  "type": "boolean",
-                  "description": "Whether it is a join request."
-                }
-              },
-              "description": "Add/join users to a group."
+              "$ref": "#/definitions/ConsoleAddGroupUsersBody"
             }
           }
         ],
@@ -1856,39 +1731,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Name."
-                },
-                "description": {
-                  "type": "string",
-                  "description": "Description."
-                },
-                "lang_tag": {
-                  "type": "string",
-                  "description": "Langtag."
-                },
-                "metadata": {
-                  "type": "string",
-                  "description": "Metadata."
-                },
-                "avatar_url": {
-                  "type": "string",
-                  "description": "Avatar URL."
-                },
-                "open": {
-                  "type": "boolean",
-                  "description": "Anyone can join open groups, otherwise only admins can accept members."
-                },
-                "max_count": {
-                  "type": "integer",
-                  "format": "int32",
-                  "description": "The maximum number of members allowed."
-                }
-              },
-              "description": "Update group information."
+              "$ref": "#/definitions/ConsoleUpdateGroupBody"
             }
           }
         ],
@@ -2922,28 +2765,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "type": "string",
-                  "description": "Value."
-                },
-                "version": {
-                  "type": "string",
-                  "description": "Version for OCC."
-                },
-                "permission_read": {
-                  "type": "integer",
-                  "format": "int32",
-                  "description": "Read permission value."
-                },
-                "permission_write": {
-                  "type": "integer",
-                  "format": "int32",
-                  "description": "Write permission value."
-                }
-              },
-              "description": "Write a new storage object or update an existing one."
+              "$ref": "#/definitions/consoleConsoleWriteStorageObjectBody"
             }
           }
         ],
@@ -3178,43 +3000,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "subject": {
-                  "type": "string",
-                  "title": "Notification subject"
-                },
-                "content": {
-                  "$ref": "#/definitions/consoleNoticeContent",
-                  "title": "Notification content"
-                },
-                "create_time": {
-                  "type": "string",
-                  "format": "date-time",
-                  "title": "Creation time"
-                },
-                "effective_time": {
-                  "type": "string",
-                  "format": "date-time",
-                  "title": "Effective time"
-                },
-                "expiry_time": {
-                  "type": "string",
-                  "format": "date-time",
-                  "title": "Expiry time"
-                },
-                "challenge_id": {
-                  "type": "integer",
-                  "format": "int32",
-                  "title": "Challenge ID"
-                },
-                "notice_type": {
-                  "type": "integer",
-                  "format": "int32",
-                  "title": "Notice Type"
-                }
-              },
-              "title": "System notification message definition"
+              "$ref": "#/definitions/ConsoleUpdateSystemNotificationBody"
             }
           }
         ],
@@ -3468,14 +3254,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "required": {
-                  "type": "boolean",
-                  "description": "Required."
-                }
-              },
-              "description": "Make a user's mfa required or not."
+              "$ref": "#/definitions/ConsoleRequireUserMfaBody"
             }
           }
         ],
@@ -3678,6 +3457,233 @@
       },
       "description": "A warning for a configuration field."
     },
+    "ConsoleAddGroupUsersBody": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "string",
+          "description": "Users to add/join."
+        },
+        "join_request": {
+          "type": "boolean",
+          "description": "Whether it is a join request."
+        }
+      },
+      "description": "Add/join users to a group."
+    },
+    "ConsoleCallApiEndpointBody": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "session_vars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "API Explorer request definition for CallApiEndpoint"
+    },
+    "ConsoleCallRpcEndpointBody": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "session_vars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "API Explorer request definition for CallApiEndpoint"
+    },
+    "ConsoleRequireUserMfaBody": {
+      "type": "object",
+      "properties": {
+        "required": {
+          "type": "boolean",
+          "description": "Required."
+        }
+      },
+      "description": "Make a user's mfa required or not."
+    },
+    "ConsoleUnlinkDeviceBody": {
+      "type": "object",
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "description": "Device ID to unlink."
+        }
+      },
+      "description": "Unlink a particular device ID from a user's account."
+    },
+    "ConsoleUpdateAccountBody": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Username."
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Metadata."
+        },
+        "avatar_url": {
+          "type": "string",
+          "description": "Avatar URL."
+        },
+        "lang_tag": {
+          "type": "string",
+          "description": "Langtag."
+        },
+        "location": {
+          "type": "string",
+          "description": "Location."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Timezone."
+        },
+        "custom_id": {
+          "type": "string",
+          "description": "Custom ID."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password."
+        },
+        "device_ids": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Device ID modifications."
+        },
+        "wallet": {
+          "type": "string",
+          "description": "Wallet."
+        },
+        "inventory": {
+          "type": "string",
+          "description": "Inventory."
+        }
+      },
+      "description": "Update user account information."
+    },
+    "ConsoleUpdateAnnouncementBody": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "title": "Announcement title"
+        },
+        "content": {
+          "type": "string",
+          "title": "Announcement content"
+        },
+        "img": {
+          "type": "string",
+          "title": "Image URL"
+        },
+        "status": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Status 0:draft 1:published 2:offline"
+        }
+      }
+    },
+    "ConsoleUpdateGroupBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description."
+        },
+        "lang_tag": {
+          "type": "string",
+          "description": "Langtag."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Metadata."
+        },
+        "avatar_url": {
+          "type": "string",
+          "description": "Avatar URL."
+        },
+        "open": {
+          "type": "boolean",
+          "description": "Anyone can join open groups, otherwise only admins can accept members."
+        },
+        "max_count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The maximum number of members allowed."
+        }
+      },
+      "description": "Update group information."
+    },
+    "ConsoleUpdateSystemNotificationBody": {
+      "type": "object",
+      "properties": {
+        "subject": {
+          "type": "string",
+          "title": "Notification subject"
+        },
+        "content": {
+          "$ref": "#/definitions/consoleNoticeContent",
+          "title": "Notification content"
+        },
+        "create_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Creation time"
+        },
+        "effective_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Effective time"
+        },
+        "expiry_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Expiry time"
+        },
+        "challenge_id": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Challenge ID"
+        },
+        "notice_type": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Notice Type"
+        }
+      },
+      "title": "System notification message definition"
+    },
     "GroupUserListGroupUser": {
       "type": "object",
       "properties": {
@@ -3807,6 +3813,7 @@
         "messages": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "A list of messages."
@@ -3856,6 +3863,7 @@
         "friends": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The Friend objects."
@@ -3931,6 +3939,7 @@
         "group_users": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "User-role pairs for a group."
@@ -4010,6 +4019,7 @@
         "records": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of leaderboard records."
@@ -4017,6 +4027,7 @@
         "owner_records": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of leaderboard records belonging to specified owners."
@@ -4043,6 +4054,7 @@
         "validated_purchases": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiValidatedPurchase"
           },
           "description": "Stored validated purchases."
@@ -4166,6 +4178,7 @@
         "validated_subscriptions": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiValidatedSubscription"
           },
           "description": "Stored validated subscriptions."
@@ -4187,6 +4200,7 @@
         "user_groups": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/UserGroupListUserGroup"
           },
           "description": "Group-role pairs for a user."
@@ -4324,6 +4338,7 @@
         "objects": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The user's storage."
@@ -4331,6 +4346,7 @@
         "friends": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The user's friends."
@@ -4338,6 +4354,7 @@
         "groups": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "The user's groups."
@@ -4345,6 +4362,7 @@
         "messages": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "The user's chat messages."
@@ -4352,6 +4370,7 @@
         "leaderboard_records": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "The user's leaderboard records."
@@ -4359,6 +4378,7 @@
         "notifications": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/nakamaapiNotification"
           },
           "description": "The user's notifications."
@@ -4366,6 +4386,7 @@
         "wallet_ledgers": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "The user's wallet ledger items."
@@ -4373,6 +4394,7 @@
         "inventory_ledgers": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleInventoryLedger"
           },
           "description": "The user's inventory ledger items."
@@ -4386,6 +4408,7 @@
         "users": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/nakamaapiUser"
           },
           "description": "A list of users."
@@ -4455,6 +4478,7 @@
         "success_accounts": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleVipAccount"
           },
           "title": "Successfully added VIP accounts"
@@ -4462,6 +4486,7 @@
         "failed_accounts": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleVipAccountError"
           },
           "title": "Failed username mappings"
@@ -4524,6 +4549,7 @@
         "announcements": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleAnnouncement"
           },
           "title": "Announcement list"
@@ -4557,12 +4583,14 @@
         "endpoints": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         },
         "rpc_endpoints": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         }
@@ -4700,6 +4728,7 @@
         "warnings": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/ConfigWarning"
           },
           "description": "Any warnings about the current config."
@@ -4724,6 +4753,30 @@
         }
       },
       "description": "A console user session."
+    },
+    "consoleConsoleWriteStorageObjectBody": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "Value."
+        },
+        "version": {
+          "type": "string",
+          "description": "Version for OCC."
+        },
+        "permission_read": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Read permission value."
+        },
+        "permission_write": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Write permission value."
+        }
+      },
+      "description": "Write a new storage object or update an existing one."
     },
     "consoleCreateAnnouncementRequest": {
       "type": "object",
@@ -4805,6 +4858,7 @@
         "templates": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleChallengeTemplate"
           },
           "title": "Challenge template list"
@@ -4821,6 +4875,7 @@
         "members": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "The group's list of members."
@@ -4866,6 +4921,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleInventoryLedger"
           },
           "description": "A list of inventory ledger items."
@@ -4897,6 +4953,7 @@
         "logs": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consolePersonalNotificationLog"
           },
           "title": "Log list"
@@ -4922,6 +4979,7 @@
         "notifications": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleSystemNotice"
           },
           "title": "Notification list"
@@ -4960,6 +5018,7 @@
         "presences": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/realtimeUserPresence"
           },
           "description": "Presence list."
@@ -4986,6 +5045,7 @@
         "rewards": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameReward"
           },
           "title": "Reward items"
@@ -5068,6 +5128,7 @@
         "go_modules": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Go loaded modules"
@@ -5075,6 +5136,7 @@
         "lua_modules": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Lua loaded modules"
@@ -5082,6 +5144,7 @@
         "js_modules": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "JavaScript loaded modules"
@@ -5105,6 +5168,7 @@
         "nodes": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleStatusListStatus"
           },
           "description": "List of nodes and their stats."
@@ -5189,6 +5253,7 @@
         "objects": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleStorageListObject"
           },
           "description": "List of storage objects matching list/filter operation."
@@ -5296,6 +5361,7 @@
         "users": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleUserListUser"
           },
           "description": "A list of users."
@@ -5396,6 +5462,7 @@
         "accounts": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleVipAccount"
           },
           "title": "VIP account list"
@@ -5466,6 +5533,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "A list of wallet ledger items."
@@ -5503,6 +5571,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/gameItem"
           }
         }
@@ -5544,6 +5613,7 @@
         "details": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -5567,6 +5637,7 @@
         "devices": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiAccountDevice"
           },
           "description": "The devices which belong to the user's account."
@@ -5772,6 +5843,7 @@
         "groups": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "A list of groups."
@@ -5902,6 +5974,7 @@
         "leaderboards": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/nakamaconsoleLeaderboard"
           },
           "description": "The list of leaderboards returned."
@@ -5924,6 +5997,7 @@
         "matches": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/consoleMatchListMatch"
           }
         }
@@ -5985,6 +6059,7 @@
         "notifications": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/nakamaconsoleNotification"
           },
           "description": "List of notifications."

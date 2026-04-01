@@ -15,12 +15,15 @@ type TplChallengeInfo struct {
 	Condition02        int32  `json:"condition02"`
 	Condition03        int32  `json:"condition03"`
 	ID                 string `json:"id"`
+	Name               string `json:"name"`
 	MonsterLevel       int32  `json:"monsterLevel"`
 	MonsterWaveGroupID string `json:"monsterWaveGroupId"`
-	Name               string `json:"name"`
 	Reward01           string `json:"reward01"`
 	Reward02           string `json:"reward02"`
 	Reward03           string `json:"reward03"`
+	RewardType01       int32  `json:"rewardType01"`
+	RewardType02       int32  `json:"rewardType02"`
+	RewardType03       int32  `json:"rewardType03"`
 	Stamina            int32  `json:"stamina"`
 	WinRewards         string `json:"winRewards"`
 }

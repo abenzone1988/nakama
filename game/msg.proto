@@ -741,6 +741,7 @@ message Challenge{
   google.protobuf.Timestamp over = 6; //结束领取奖励
   int32 max_part = 7;
   string tournament_id = 8;      // 玩家当前参与的竞标赛ID，如果为空表示未参与
+  int32 battle_times = 9;        // 当前挑战赛已参与次数（用于次数型奖励展示）
 
 }
 
@@ -757,6 +758,7 @@ message JoinChallengeStatus{
   google.protobuf.Timestamp open = 10;
   google.protobuf.Timestamp close = 11;
   google.protobuf.Timestamp end = 12;
+  int32 battle_times = 13;       // 当前挑战赛已参与次数（用于次数型奖励展示）
 }
 
 message GetChallengeResponse{
