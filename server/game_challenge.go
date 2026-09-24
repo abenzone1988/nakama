@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -308,7 +309,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 	joinedChallenges := make([]*game.JoinChallengeStatus, 0, len(userMatch.Challenges))
 	for _, challengeStatus := range userMatch.Challenges {
 
-		tplChallenge, found := s.template.GetTplChallenge().FindByKey(challengeStatus.ID)
+		tplChallenge, found := s.template.GetTplChallenge().FindByKey(strconv.Itoa(int(challengeStatus.ID)))
 		if !found {
 			s.logger.Error("模板挑战赛不存在", zap.Int32("challenge_id", challengeStatus.ID))
 			continue
@@ -376,7 +377,7 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 }
 
 func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeRequest) (*game.JoinChallengeResponse, error) {
-	tplChallenge, found := s.template.GetTplChallenge().FindByKey(in.ChallengeId)
+	tplChallenge, found := s.template.GetTplChallenge().FindByKey(strconv.Itoa(int(in.ChallengeId)))
 	if !found {
 		return &game.JoinChallengeResponse{
 			Code: 1,
@@ -524,7 +525,7 @@ func (s *ApiServer) GainChallengeReward(ctx context.Context, in *game.GainChalle
 		}, nil
 	}
 
-	tplChallenge, found := s.template.GetTplChallenge().FindByKey(in.ChallengeId)
+	tplChallenge, found := s.template.GetTplChallenge().FindByKey(strconv.Itoa(int(in.ChallengeId)))
 	if !found {
 		return nil, status.Error(codes.InvalidArgument, "挑战赛不存在")
 	}
@@ -728,7 +729,7 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 			}
 
 			// 获取挑战赛模板信息
-			tplChallenge, found := s.template.GetTplChallenge().FindByKey(challenge.ID)
+			tplChallenge, found := s.template.GetTplChallenge().FindByKey(strconv.Itoa(int(challenge.ID)))
 			if !found {
 				s.logger.Error("模板挑战赛不存在", zap.Int32("challenge_id", challenge.ID))
 				continue

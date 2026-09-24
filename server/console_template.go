@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/heroiclabs/nakama/v3/console"
 	"google.golang.org/grpc/codes"
@@ -36,7 +37,7 @@ func (s *ConsoleServer) GetChallengeTemplate(ctx context.Context, in *console.Ch
 
 	// 从模板管理器中获取挑战赛模板
 	tplChallenge := s.template.GetTplChallenge()
-	challenge, found := tplChallenge.FindByKey(in.Id)
+	challenge, found := tplChallenge.FindByKey(strconv.Itoa(int(in.Id)))
 	if !found {
 		return nil, status.Error(codes.NotFound, "Challenge template not found")
 	}

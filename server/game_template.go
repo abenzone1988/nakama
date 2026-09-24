@@ -82,11 +82,11 @@ func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
 
 	readData, err := StorageReadObjects(context.Background(), t.logger, t.db, uuid.Nil, ids)
 	if err != nil {
-		t.logger.Error("Error reading storage object", zap.Error(err))
+		t.logger.Error("读取数据库模板失败", zap.String("table", key), zap.Error(err))
 		return nil
 	}
 	if readData == nil || readData.Objects == nil || len(readData.Objects) == 0 {
-		t.logger.Error("Error reading storage object", zap.Error(err))
+		t.logger.Warn("数据库无此模板，回退本地文件", zap.String("table", key))
 		return nil
 	}
 	return []byte(readData.Objects[0].Value)

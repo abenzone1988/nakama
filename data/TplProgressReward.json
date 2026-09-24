@@ -1,0 +1,6 @@
+{
+"20001":{"reward":"DailyTask001","needValue":20,"id":"20001","type":2},
+"20002":{"reward":"DailyTask002","needValue":40,"id":"20002","type":2},
+"20003":{"reward":"DailyTask003","needValue":60,"id":"20003","type":2},
+"20004":{"reward":"DailyTask004","needValue":100,"id":"20004","type":2}
+}

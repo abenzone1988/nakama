@@ -8,13 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// ReadOnlyRewardSlice 只读奖励切片接口
-type ReadOnlyRewardSlice interface {
-	Len() int
-	Get(index int) TplReward
-	ToSlice() []TplReward
-}
-
 type TplReward struct {
 	Coin   int32  `json:"coin"`
 	Coupon int32  `json:"coupon"`
@@ -24,23 +17,30 @@ type TplReward struct {
 	Name   string `json:"name"`
 }
 
-// readOnlyRewardSlice 只读奖励切片实现
-type readOnlyRewardSlice struct {
+// ReadOnlyTplRewardSlice 只读TplReward切片接口
+type ReadOnlyTplRewardSlice interface {
+	Len() int
+	Get(index int) TplReward
+	ToSlice() []TplReward
+}
+
+// readOnlyTplRewardSlice 只读TplReward切片实现
+type readOnlyTplRewardSlice struct {
 	data []TplReward
 }
 
-func (r *readOnlyRewardSlice) Len() int {
+func (r *readOnlyTplRewardSlice) Len() int {
 	return len(r.data)
 }
 
-func (r *readOnlyRewardSlice) Get(index int) TplReward {
+func (r *readOnlyTplRewardSlice) Get(index int) TplReward {
 	if index < 0 || index >= len(r.data) {
 		return TplReward{} // 返回零值
 	}
 	return r.data[index]
 }
 
-func (r *readOnlyRewardSlice) ToSlice() []TplReward {
+func (r *readOnlyTplRewardSlice) ToSlice() []TplReward {
 	// 返回副本，确保外部无法修改原始数据
 	result := make([]TplReward, len(r.data))
 	copy(result, r.data)
@@ -66,7 +66,7 @@ func (t *TableTplReward) FindByKey(key string) (TplReward, bool) {
 	return val, ok
 }
 
-func (t *TableTplReward) FindByFilter(f func(TplReward) bool) ReadOnlyRewardSlice {
+func (t *TableTplReward) FindByFilter(f func(TplReward) bool) ReadOnlyTplRewardSlice {
 	// 创建新的切片，避免共享字段竞争
 	result := make([]TplReward, 0)
 	for _, item := range t.tableData {
@@ -74,17 +74,17 @@ func (t *TableTplReward) FindByFilter(f func(TplReward) bool) ReadOnlyRewardSlic
 			result = append(result, item)
 		}
 	}
-	return &readOnlyRewardSlice{data: result}
+	return &readOnlyTplRewardSlice{data: result}
 }
 
-func (t *TableTplReward) FindAll() ReadOnlyRewardSlice {
+func (t *TableTplReward) FindAll() ReadOnlyTplRewardSlice {
 	// 直接从 tableData 创建切片，避免共享字段竞争
 	// 返回只读切片，调用者无法修改原始数据
 	result := make([]TplReward, 0, len(t.tableData))
 	for _, item := range t.tableData {
 		result = append(result, item)
 	}
-	return &readOnlyRewardSlice{data: result}
+	return &readOnlyTplRewardSlice{data: result}
 }
 
 func (t *TableTplReward) Release() {
@@ -94,16 +94,18 @@ func (t *TableTplReward) Release() {
 func (t *TableTplReward) LoadData(content []byte) {
 	if content != nil {
 		t.tableData = DeserializeStringToTplRewardMap(content, t.logger)
+		t.logger.Info("从数据库加载模板", zap.String("table", "TplReward"), zap.Int("count", len(t.tableData)))
 		return
 	}
 	path := filepath.Join(t.loadPath, "TplReward.json")
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		t.logger.Error("读取文件错误", zap.Error(err))
+		t.logger.Error("读取文件错误", zap.String("table", "TplReward"), zap.String("path", path), zap.Error(err))
 		return
 	}
 
 	t.tableData = DeserializeStringToTplRewardMap(fileContent, t.logger)
+	t.logger.Info("从文件加载模板", zap.String("table", "TplReward"), zap.String("path", path), zap.Int("count", len(t.tableData)))
 }
 
 func DeserializeStringToTplRewardMap(jsonStr []byte, logger *zap.Logger) map[string]TplReward {

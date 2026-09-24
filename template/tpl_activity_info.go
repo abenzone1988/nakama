@@ -8,58 +8,48 @@ import (
 	"go.uber.org/zap"
 )
 
-// ReadOnlyActivityInfoSlice 只读活动信息切片接口
-type ReadOnlyActivityInfoSlice interface {
+type TplActivityInfo struct {
+	LevelMonsterDev    string `json:"LevelMonsterDev"`
+	RewardGroupID      string `json:"RewardGroupID"`
+	BattleWaveGroupID  string `json:"battleWaveGroupId"`
+	Condition01        int32  `json:"condition01"`
+	Condition02        int32  `json:"condition02"`
+	Condition03        int32  `json:"condition03"`
+	ID                 string `json:"id"`
+	MonsterLevel       int32  `json:"monsterLevel"`
+	MonsterLimitCount  int32  `json:"monsterLimitCount"`
+	MonsterWaveGroupID string `json:"monsterWaveGroupId"`
+	Name               string `json:"name"`
+	Reward01           string `json:"reward01"`
+	Reward02           string `json:"reward02"`
+	Reward03           string `json:"reward03"`
+	WinRewards         string `json:"winRewards"`
+}
+
+// ReadOnlyTplActivityInfoSlice 只读TplActivityInfo切片接口
+type ReadOnlyTplActivityInfoSlice interface {
 	Len() int
 	Get(index int) TplActivityInfo
 	ToSlice() []TplActivityInfo
 }
 
-type TplActivityInfo struct {
-	LevelMonsterDev    string   `json:"LevelMonsterDev"`
-	MapIcon            string   `json:"MapIcon"`
-	RewardGroupID      string   `json:"RewardGroupID"`
-	AddHpScale         float64  `json:"addHpScale"`
-	BattleWaveGroupID  string   `json:"battleWaveGroupId"`
-	Brief              string   `json:"brief"`
-	BuildingIds        []string `json:"buildingIds"`
-	Condition01        int32    `json:"condition01"`
-	Condition02        int32    `json:"condition02"`
-	Condition03        int32    `json:"condition03"`
-	EndlessWavesCount  int32    `json:"endlessWavesCount"`
-	ID                 string   `json:"id"`
-	MaiBaseID          string   `json:"maiBaseId"`
-	MonsterLevel       int32    `json:"monsterLevel"`
-	MonsterLimitCount  int32    `json:"monsterLimitCount"`
-	MonsterWaveGroupID string   `json:"monsterWaveGroupId"`
-	Name               string   `json:"name"`
-	PropertyLevel      int32    `json:"propertyLevel"`
-	Reward01           string   `json:"reward01"`
-	Reward02           string   `json:"reward02"`
-	Reward03           string   `json:"reward03"`
-	SceneConfigData    string   `json:"sceneConfigData"`
-	TitleIcon          string   `json:"titleIcon"`
-	UIName             string   `json:"uiName"`
-	WinRewards         string   `json:"winRewards"`
-}
-
-// readOnlyActivityInfoSlice 只读活动信息切片实现
-type readOnlyActivityInfoSlice struct {
+// readOnlyTplActivityInfoSlice 只读TplActivityInfo切片实现
+type readOnlyTplActivityInfoSlice struct {
 	data []TplActivityInfo
 }
 
-func (r *readOnlyActivityInfoSlice) Len() int {
+func (r *readOnlyTplActivityInfoSlice) Len() int {
 	return len(r.data)
 }
 
-func (r *readOnlyActivityInfoSlice) Get(index int) TplActivityInfo {
+func (r *readOnlyTplActivityInfoSlice) Get(index int) TplActivityInfo {
 	if index < 0 || index >= len(r.data) {
 		return TplActivityInfo{} // 返回零值
 	}
 	return r.data[index]
 }
 
-func (r *readOnlyActivityInfoSlice) ToSlice() []TplActivityInfo {
+func (r *readOnlyTplActivityInfoSlice) ToSlice() []TplActivityInfo {
 	// 返回副本，确保外部无法修改原始数据
 	result := make([]TplActivityInfo, len(r.data))
 	copy(result, r.data)
@@ -85,7 +75,7 @@ func (t *TableTplActivityInfo) FindByKey(key string) (TplActivityInfo, bool) {
 	return val, ok
 }
 
-func (t *TableTplActivityInfo) FindByFilter(f func(TplActivityInfo) bool) ReadOnlyActivityInfoSlice {
+func (t *TableTplActivityInfo) FindByFilter(f func(TplActivityInfo) bool) ReadOnlyTplActivityInfoSlice {
 	// 创建新的切片，避免共享字段竞争
 	result := make([]TplActivityInfo, 0)
 	for _, item := range t.tableData {
@@ -93,17 +83,17 @@ func (t *TableTplActivityInfo) FindByFilter(f func(TplActivityInfo) bool) ReadOn
 			result = append(result, item)
 		}
 	}
-	return &readOnlyActivityInfoSlice{data: result}
+	return &readOnlyTplActivityInfoSlice{data: result}
 }
 
-func (t *TableTplActivityInfo) FindAll() ReadOnlyActivityInfoSlice {
+func (t *TableTplActivityInfo) FindAll() ReadOnlyTplActivityInfoSlice {
 	// 直接从 tableData 创建切片，避免共享字段竞争
 	// 返回只读切片，调用者无法修改原始数据
 	result := make([]TplActivityInfo, 0, len(t.tableData))
 	for _, item := range t.tableData {
 		result = append(result, item)
 	}
-	return &readOnlyActivityInfoSlice{data: result}
+	return &readOnlyTplActivityInfoSlice{data: result}
 }
 
 func (t *TableTplActivityInfo) Release() {
@@ -113,16 +103,18 @@ func (t *TableTplActivityInfo) Release() {
 func (t *TableTplActivityInfo) LoadData(content []byte) {
 	if content != nil {
 		t.tableData = DeserializeStringToTplActivityInfoMap(content, t.logger)
+		t.logger.Info("从数据库加载模板", zap.String("table", "TplActivityInfo"), zap.Int("count", len(t.tableData)))
 		return
 	}
 	path := filepath.Join(t.loadPath, "TplActivityInfo.json")
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		t.logger.Error("读取文件错误", zap.Error(err))
+		t.logger.Error("读取文件错误", zap.String("table", "TplActivityInfo"), zap.String("path", path), zap.Error(err))
 		return
 	}
 
 	t.tableData = DeserializeStringToTplActivityInfoMap(fileContent, t.logger)
+	t.logger.Info("从文件加载模板", zap.String("table", "TplActivityInfo"), zap.String("path", path), zap.Int("count", len(t.tableData)))
 }
 
 func DeserializeStringToTplActivityInfoMap(jsonStr []byte, logger *zap.Logger) map[string]TplActivityInfo {
