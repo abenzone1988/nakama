@@ -1,0 +1,85 @@
+# 生产环境 compose —— AWS EC2 (hhxj / us-east-1)
+#
+# 与旧版的关键区别：模板表 (Tpl*.json) 和 Lua 模块已经打进镜像，
+# 所以**不再挂载整个 data 目录**，只单独挂一个配置文件 local.yml。
+# 更新模板表/模块 = 重新构建镜像 + 推送 + 拉取重启，见 AWS-部署运维说明.md 第 5 节。
+#
+# 部署位置：服务器 /opt/nakama/
+#   /opt/nakama/docker-compose.yml   <- 本文件
+#   /opt/nakama/local.yml            <- 含数据库口令与各密钥，权限 600
+#
+# 用法：
+#   cd /opt/nakama && docker compose pull && docker compose up -d
+
+services:
+  nakama:
+    image: docker.sparkinfi.com/hjzx/nakama-us:latest
+    container_name: nakama
+    restart: unless-stopped
+    entrypoint:
+      - "/bin/sh"
+      - "-ecx"
+      - >
+        /nakama/nakama migrate up --config /nakama/data/local.yml &&
+        exec /nakama/nakama --config /nakama/data/local.yml
+    environment:
+      # 健康检查连续失败多少次后触发重启。改这个数字即可，不用动下面的脚本。
+      HC_FAIL_THRESHOLD: "3"
+    volumes:
+      # 单文件挂载。⚠️ 容器启动前宿主机上该文件必须已存在，
+      # 否则 Docker 会把它当成目录创建，服务起不来（表现为 local.yml 变成目录）。
+      - /opt/nakama/local.yml:/nakama/data/local.yml:ro
+    ports:
+      - "7350:7350"        # 客户端 API + 实时 Socket（安全组对 0.0.0.0/0 开放）
+      - "7351:7351"        # 管理控制台
+      - "127.0.0.1:7349:7349"   # gRPC，仅回环，不对外
+
+    # ------------------------------------------------------------------
+    # 健康检查 + 连续失败自动重启
+    #
+    # ⚠️ 这套机制的由来：Docker 的 restart 策略只在容器「进程退出」时触发，
+    #    **不会重启只是「不健康」的容器**。所以这里自己数失败次数，
+    #    到阈值就 kill PID 1，由上面的 restart: unless-stopped 拉起。
+    #
+    # ⚠️ 探针是「浅」的：nakama healthcheck 只是 GET http://localhost:7350/ 判 200，
+    #    而该路由无条件返回 200（server/api.go:275）。所以它只证明 HTTP 监听还在，
+    #    **数据库断了它照样报健康**。RDS 故障不会触发重启，也探不出来。
+    #
+    # ⚠️⚠️ 脚本里所有 $ 都必须写成 $$。compose 会对整个 YAML 做变量插值，
+    #    写单个 $ 会被 compose 当成自己的变量吃掉（$n 会被替换成空串），
+    #    脚本就静默失效了。改动后务必用 `docker compose config` 复核渲染结果。
+    #
+    # 告警日志写到 /proc/1/fd/1 —— 容器内 PID 1 就是 nakama 本身（entrypoint 里的
+    # sh 已经被 exec 掉），所以这是主进程的 stdout，直接进 docker logs，
+    # 复用已有的 json-file 轮转（20m × 5 个文件），不用额外挂载日志目录。
+    # 查看：docker logs nakama 2>&1 | grep HEALTHCHECK
+    # ------------------------------------------------------------------
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - |
+          THRESHOLD=$${HC_FAIL_THRESHOLD:-3}
+          if timeout 8 /nakama/nakama healthcheck >/dev/null 2>&1; then
+            echo 0 > /tmp/.hc_fail
+            : > /tmp/.hc_ok
+            exit 0
+          fi
+          n=$$(cat /tmp/.hc_fail 2>/dev/null || echo 0)
+          n=$$((n + 1))
+          echo "$$n" > /tmp/.hc_fail
+          echo "[HEALTHCHECK] $$(date -u +%FT%TZ) 健康检查失败 连续=$$n 阈值=$$THRESHOLD" > /proc/1/fd/1 2>/dev/null
+          if [ "$$n" -ge "$$THRESHOLD" ] && [ -f /tmp/.hc_ok ]; then
+            echo "[HEALTHCHECK] $$(date -u +%FT%TZ) 连续 $$n 次失败 向PID1发SIGTERM触发重启" > /proc/1/fd/1 2>/dev/null
+            kill 1
+          fi
+          exit 1
+      interval: 15s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"

@@ -1,0 +1,35 @@
+# Docker 构建上下文排除规则
+#
+# ⚠️ 以下目录**必须保留**，排除掉会直接导致构建失败或运行时缺东西：
+#   data/              要 COPY 进镜像（模板表 Tpl*.json + Lua 模块）
+#   console/ui/dist/   go:embed ui/dist/*     见 console/ui.go:24
+#   migrate/sql/       go:embed sql/*         见 migrate/migrate.go:36
+#   vendor/            go build -mod=vendor
+#
+# 排除后构建上下文由约 1.1GB 降到约 90MB。
+
+# --- 版本控制（220MB） ---
+.git
+.gitignore
+.gitattributes
+.github
+
+# --- 前端依赖与构建缓存（449MB + 344MB）：Go 构建完全不需要 ---
+# 注意：console/ui/dist 是 go:embed 的目标，不能排除
+console/ui/node_modules
+console/ui/.angular
+
+# --- 编辑器 ---
+.idea
+.vscode
+.cursor
+
+# --- 与本镜像无关的文档（README/CHANGELOG 等不参与构建） ---
+*.md
+docs
+
+# --- 密钥，防止误打包进镜像层 ---
+*.pem
+*.key
+local.yml
+local-*.yml

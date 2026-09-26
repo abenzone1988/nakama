@@ -56,6 +56,14 @@ RUN mkdir -p /nakama/data/modules && \
 
 WORKDIR /nakama/
 COPY --from=builder "/go/build-out/nakama" /nakama/
+
+# 模板表与 Lua 模块随镜像发布，更新它们 = 重新构建并推送镜像。
+# 容器启动时数据已就位，不需要在服务器上挂载 data 目录。
+# 只拷 Tpl*.json，不要 COPY data/.cookie —— 那是遥测用的实例 UUID，
+# 打进来会让所有实例共用同一个匿名 ID，应由容器首次启动时自行生成。
+COPY data/Tpl*.json /nakama/data/
+COPY data/modules/ /nakama/data/modules/
+
 EXPOSE 7349 7350 7351
 
 ENTRYPOINT ["tini", "--", "/nakama/nakama"]
