@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 
@@ -75,6 +76,10 @@ func (t *LocalTemplateManager) LoadData() {
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
+	if t.db == nil {
+		return nil
+	}
+
 	ids := []*api.ReadStorageObjectId{{
 		Collection: tplCollection,
 		Key:        key,
@@ -89,5 +94,13 @@ func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {
 		t.logger.Warn("数据库无此模板，回退本地文件", zap.String("table", key))
 		return nil
 	}
-	return []byte(readData.Objects[0].Value)
+
+	// 数据库中存在该对象但内容为空或全为空白时，同样视为数据库为空，
+	// 返回 nil 让各模板表的 LoadData 兜底读取 data 目录下的同名 JSON 文件。
+	content := bytes.TrimSpace([]byte(readData.Objects[0].Value))
+	if len(content) == 0 {
+		t.logger.Warn("数据库模板内容为空，回退本地文件", zap.String("table", key))
+		return nil
+	}
+	return content
 }

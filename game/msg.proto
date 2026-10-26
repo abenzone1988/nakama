@@ -19,6 +19,7 @@ message RedeemGiftRequest{
 message RedeemGiftResponse{
   int32 code = 1;
   string msg = 2;
+  repeated Reward reward = 3;    // 兑换码奖励，与 GainChallengeRewardResponse 保持一致
 }
 
 message FeedbackRequest {

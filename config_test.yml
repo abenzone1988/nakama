@@ -8,10 +8,6 @@ logger:
 
 
 
-
-
-
-
 session:
   encryption_key: "defaultencryptionkey"
   token_expiry_sec: 86400

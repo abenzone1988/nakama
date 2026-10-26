@@ -111,10 +111,9 @@ type ApiServer struct {
 	grpcGatewayServer    *http.Server
 	template             TemplateManager
 
-	// 批次号管理
+	// 批次号管理（每次分配时直接从存储读取最新值，修改后立即保存）
 	challengeBatchMutex sync.RWMutex
 	challengeBatch      *ChallengeBatch
-	challengeBatchDirty bool // 标记是否需要保存
 }
 
 func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, version string, socialClient *social.Client, storageIndex StorageIndex, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, matchmaker Matchmaker, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, pipeline *Pipeline, runtime *Runtime, templateManger TemplateManager) *ApiServer {
@@ -377,36 +376,14 @@ func StartApiServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, p
 		}
 	}()
 
-	// 初始化挑战赛批次号管理
+	// 初始化挑战赛批次号管理（仅用于启动时展示，实际分配时每次都会从存储读取最新值）
 	s.InitChallengeBatch()
-
-	// 启动定时保存挑战赛批次号的goroutine
-	go func() {
-		for {
-			time.Sleep(time.Second)
-			if s.challengeBatchDirty {
-				s.logger.Info("定时检测到挑战赛批次号有变化，尝试保存")
-				s.challengeBatchMutex.Lock()
-				if s.challengeBatchDirty {
-					err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, s.challengeBatch)
-					if err != nil {
-						s.logger.Error("定时保存挑战赛批次号数据失败", zap.Error(err))
-					} else {
-						s.challengeBatchDirty = false
-						s.logger.Info("定时保存挑战赛批次号数据成功", zap.Int("challenge_count", len(s.challengeBatch.Batch)))
-					}
-				}
-				s.challengeBatchMutex.Unlock()
-			}
-		}
-	}()
 
 	return s
 }
 
 func (s *ApiServer) Stop() {
-	// 0. 保存挑战赛批次号数据
-	s.SaveChallengeBatch()
+	// 批次号在每次分配时已同步保存，这里无需再落盘，避免用旧缓存覆盖其他实例的新值。
 
 	// 1. Stop GRPC Gateway server first as it sits above GRPC server. This also closes the underlying listener.
 	if err := s.grpcGatewayServer.Shutdown(context.Background()); err != nil {
@@ -739,47 +716,42 @@ func (s *ApiServer) InitChallengeBatch() {
 	s.logger.Info("挑战赛批次号管理器已初始化", zap.Int("loaded_challenges", len(s.challengeBatch.Batch)))
 }
 
-// GetNextChallengeBatch 获取下一个挑战赛批次号
-func (s *ApiServer) GetNextChallengeBatch(challengeID int32) int32 {
+// GetNextChallengeBatch 获取下一个挑战赛批次号。
+// 每次分配都从存储读取最新值，自增后立即写回，因此服务器可以随时停止/重启，
+// 不会因为重启而从 1 重新计数，也不会依赖定时保存或停机保存。
+func (s *ApiServer) GetNextChallengeBatch(challengeID int32) (int32, error) {
 	s.challengeBatchMutex.Lock()
 	defer s.challengeBatchMutex.Unlock()
 
-	// 获取当前批次号并自增
-	currentBatch, exists := s.challengeBatch.Batch[challengeID]
-	if !exists {
-		currentBatch = 0
+	// 每次分配都重新读取，保证使用的是存储中的最新批次号。
+	batch := &ChallengeBatch{}
+	batch.Init()
+	if err := LoadData(context.Background(), s.logger, s.db, uuid.Nil, batch); err != nil {
+		s.logger.Error("读取挑战赛批次号数据失败", zap.Int32("challenge_id", challengeID), zap.Error(err))
+		return 0, fmt.Errorf("读取挑战赛批次号失败: %w", err)
 	}
 
+	currentBatch := batch.Batch[challengeID]
 	nextBatch := currentBatch + 1
-	s.challengeBatch.Batch[challengeID] = nextBatch
-	s.challengeBatchDirty = true // 标记需要保存
+	batch.Batch[challengeID] = nextBatch
+
+	// 修改后立即保存，保存成功后才把批次号返回给调用方。
+	if err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, batch); err != nil {
+		s.logger.Error("保存挑战赛批次号数据失败",
+			zap.Int32("challenge_id", challengeID),
+			zap.Int32("next_batch", nextBatch),
+			zap.Error(err))
+		return 0, fmt.Errorf("保存挑战赛批次号失败: %w", err)
+	}
+
+	s.challengeBatch = batch
 
 	s.logger.Info("分配新的挑战赛批次号",
 		zap.Int32("challenge_id", challengeID),
 		zap.Int32("current_batch", currentBatch),
 		zap.Int32("next_batch", nextBatch))
 
-	return nextBatch
-}
-
-// SaveChallengeBatch 保存挑战赛批次号数据
-func (s *ApiServer) SaveChallengeBatch() {
-	s.challengeBatchMutex.Lock()
-	defer s.challengeBatchMutex.Unlock()
-
-	if !s.challengeBatchDirty {
-		s.logger.Debug("挑战赛批次号数据无变化，跳过保存")
-		return
-	}
-
-	err := SaveData(context.Background(), s.logger, s.db, s.metrics, s.storageIndex, uuid.Nil, s.challengeBatch)
-	if err != nil {
-		s.logger.Error("保存挑战赛批次号数据失败", zap.Error(err))
-		return
-	}
-
-	s.challengeBatchDirty = false
-	s.logger.Info("挑战赛批次号数据已保存", zap.Int("challenge_count", len(s.challengeBatch.Batch)))
+	return nextBatch, nil
 }
 
 // GetChallengeBatchInfo 获取挑战赛批次号信息（用于调试）

@@ -30,6 +30,9 @@ console:
   password: "password"
 
 
-
+social:
+  tiktok:
+    app_id: "ttc67fb0c2581929cf07"
+    app_secret: "180522af1be78200e89c5aa52fb6b192b5e61fb9"
 
 

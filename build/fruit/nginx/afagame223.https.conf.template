@@ -1,0 +1,51 @@
+server {
+    listen 80;
+    server_name fruit.afagame223.com fruit-admin.afagame223.com;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        try_files $uri =404;
+    }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    server_name fruit.afagame223.com;
+    ssl_certificate /etc/letsencrypt/live/fruit.afagame223.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/fruit.afagame223.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 16m;
+    location / {
+        proxy_pass http://nakama:7350;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $fruit_connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name fruit-admin.afagame223.com;
+    ssl_certificate /etc/letsencrypt/live/fruit.afagame223.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/fruit.afagame223.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 16m;
+    location / {
+        proxy_pass http://nakama:7351;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $fruit_connection_upgrade;
+        proxy_read_timeout 300s;
+    }
+}

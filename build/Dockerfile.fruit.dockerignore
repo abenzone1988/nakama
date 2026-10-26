@@ -1,0 +1,16 @@
+.git
+.vscode
+.idea
+**/.env
+**/.env.*
+**/*.key
+**/*.pem
+**/.cookie
+build/fruit/certbot
+build/fruit/backups
+build/fruit/nginx/conf.d
+config_test.yml
+nakama
+*.exe
+*.test
+*.log

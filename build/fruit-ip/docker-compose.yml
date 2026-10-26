@@ -1,0 +1,71 @@
+name: fruit-ip
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-bookworm}
+    environment:
+      POSTGRES_DB: fruit
+      POSTGRES_USER: fruit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run prepare.sh first}
+      TZ: Asia/Shanghai
+    volumes:
+      - type: bind
+        source: /data/fruit-ip/postgres
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U fruit -d fruit']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    mem_limit: 384m
+    restart: unless-stopped
+    logging: *logging
+
+  nakama:
+    image: ${NAKAMA_IMAGE:-docker.sparkinfi.com/nakama/fruit:latest}
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        /nakama/nakama migrate up --database.address "fruit:$${POSTGRES_PASSWORD}@postgres:5432/fruit?sslmode=disable"
+        exec /usr/bin/tini -- /nakama/nakama --config /nakama/config.yml \
+          --database.address "fruit:$${POSTGRES_PASSWORD}@postgres:5432/fruit?sslmode=disable" \
+          --socket.server_key "$${SOCKET_SERVER_KEY}" \
+          --session.encryption_key "$${SESSION_ENCRYPTION_KEY}" \
+          --session.refresh_encryption_key "$${SESSION_REFRESH_ENCRYPTION_KEY}" \
+          --console.username "$${CONSOLE_USERNAME}" --console.password "$${CONSOLE_PASSWORD}" \
+          --console.signing_key "$${CONSOLE_SIGNING_KEY}"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run prepare.sh first}
+      SOCKET_SERVER_KEY: ${SOCKET_SERVER_KEY:?Run prepare.sh first}
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:?Run prepare.sh first}
+      SESSION_REFRESH_ENCRYPTION_KEY: ${SESSION_REFRESH_ENCRYPTION_KEY:?Run prepare.sh first}
+      CONSOLE_USERNAME: ${CONSOLE_USERNAME:-admin}
+      CONSOLE_PASSWORD: ${CONSOLE_PASSWORD:?Run prepare.sh first}
+      CONSOLE_SIGNING_KEY: ${CONSOLE_SIGNING_KEY:?Run prepare.sh first}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./config.yml:/nakama/config.yml:ro
+    ports:
+      - "7550:7350"
+      - "7551:7351"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, /nakama/nakama, healthcheck]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    mem_limit: 384m
+    restart: unless-stopped
+    logging: *logging
+

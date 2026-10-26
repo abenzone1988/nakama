@@ -718,3 +718,7 @@ MigrationBackup/
 # End of https://www.toptal.com/developers/gitignore/api/go,angular,node,intellij+all,visualstudiocode,visualstudio,sublimetext,windows,linux,macos
 
 .cursor
+
+# TLS 证书与私钥：私钥绝不进仓库（见 AWS-部署运维说明.md 第 5.7 节）
+# 证书放到 build/hjzx.sfgames.io_nginx/，靠这条规则挡住误提交
+build/hjzx.sfgames.io_nginx/
