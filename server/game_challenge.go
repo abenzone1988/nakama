@@ -149,6 +149,63 @@ func (t *TopThreeStats) GetThirdPlaceCount() int32 {
 	return int32(len(t.ThirdPlaceTournaments))
 }
 
+// challengeTimeWindow 挑战赛在某一轮中的时间窗口。
+type challengeTimeWindow struct {
+	Open  time.Time // 开始时间
+	Close time.Time // 关闭时间
+	End   time.Time // 结束时间
+}
+
+// annualTime 将模板时间（忽略其年份）落到指定年份的同一“月-日 时:分”。
+func annualTime(t time.Time, year int) time.Time {
+	return time.Date(year, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.Local)
+}
+
+// parseChallengeTimes 解析挑战赛模板时间，并忽略模板中配置的年份。
+// 挑战赛表按年循环使用，因此以 ref（通常是 now 或玩家加入时间）为基准，
+// 返回与 ref 对应的一轮时间窗口；跨年赛程（如 12-31 开始、1-1 结束）会落到下一年。
+func parseChallengeTimes(tplChallenge template.TplChallenge, ref time.Time) (challengeTimeWindow, error) {
+	openTpl, err := parseDateTime(tplChallenge.OpenTime)
+	if err != nil {
+		return challengeTimeWindow{}, fmt.Errorf("解析开始时间失败: %w", err)
+	}
+	closeTpl, err := parseDateTime(tplChallenge.CloseTime)
+	if err != nil {
+		return challengeTimeWindow{}, fmt.Errorf("解析关闭时间失败: %w", err)
+	}
+	endTpl, err := parseDateTime(tplChallenge.EndTime)
+	if err != nil {
+		return challengeTimeWindow{}, fmt.Errorf("解析结束时间失败: %w", err)
+	}
+
+	open := annualTime(openTpl, ref.Year())
+	end := annualTime(endTpl, ref.Year())
+	// 结束时间早于开始时间说明赛程跨年（如 12-31 开始、1-1 结束）。
+	if !end.After(open) {
+		end = end.AddDate(1, 0, 0)
+	}
+
+	// ref 已在本轮结束之后，说明这一轮过期了，改用下一年的一轮。
+	if !ref.Before(end) {
+		open = open.AddDate(1, 0, 0)
+		end = end.AddDate(1, 0, 0)
+	}
+
+	// 跨年场景：ref 处于上一年开始、今年结束的那一轮中（如 1 月 1 日仍在 12-31 开始的比赛中）。
+	prevOpen := open.AddDate(-1, 0, 0)
+	prevEnd := end.AddDate(-1, 0, 0)
+	if !ref.Before(prevOpen) && ref.Before(prevEnd) {
+		open, end = prevOpen, prevEnd
+	}
+
+	close := annualTime(closeTpl, open.Year())
+	if close.Before(open) {
+		close = close.AddDate(1, 0, 0)
+	}
+
+	return challengeTimeWindow{Open: open, Close: close, End: end}, nil
+}
+
 func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.GetChallengeResponse, error) {
 	// 获取用户ID
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
@@ -188,57 +245,25 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			continue
 		}
 
-		// 解析开始时间
-		startTime, err := parseDateTime(tplChallenge.OpenTime)
+		// 解析时间：模板年份会被忽略，按“月-日 时:分”循环到当前这一轮。
+		window, err := parseChallengeTimes(tplChallenge, now)
 		if err != nil {
-			s.logger.Error("解析挑战赛开始时间失败",
+			s.logger.Error("解析挑战赛时间失败",
 				zap.Int32("id", tplChallenge.ID),
-				zap.String("OpenTime", tplChallenge.OpenTime),
 				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 				zap.Error(err))
-			continue
-		}
-
-		// 解析关闭时间
-		closeTime, err := parseDateTime(tplChallenge.CloseTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛关闭时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("CloseTime", tplChallenge.CloseTime),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		// 解析结束时间
-		endTime, err := parseDateTime(tplChallenge.EndTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛结束时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("end_date", tplChallenge.EndTime),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		// 时间逻辑验证
-		if startTime.After(endTime) {
-			s.logger.Warn("挑战赛时间配置错误：开始时间晚于结束时间",
-				zap.Int32("id", tplChallenge.ID),
-				zap.Time("start_time", startTime),
-				zap.Time("end_time", endTime))
 			continue
 		}
 
 		// 判断挑战赛状态
-		isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
-		isFuture := startTime.After(now)
+		isOngoing := !now.Before(window.Open) && now.Before(window.End)
+		isFuture := window.Open.After(now)
 
 		allChallenges = append(allChallenges, challengeInfo{
 			TplChallenge: &tplChallenge,
-			StartTime:    startTime,
-			EndTime:      endTime,
-			CloseTime:    closeTime,
+			StartTime:    window.Open,
+			EndTime:      window.End,
+			CloseTime:    window.Close,
 			IsOngoing:    isOngoing,
 			IsFuture:     isFuture,
 		})
@@ -315,35 +340,21 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			continue
 		}
 
-		// 从模板表中读取时间信息
-		openTime, err := parseDateTime(tplChallenge.OpenTime)
+		// 已参加的挑战赛按加入时间定位到对应的那一轮，避免循环到下一年的同日期。
+		ref := challengeStatus.Joined
+		if ref.IsZero() {
+			ref = now
+		}
+		window, err := parseChallengeTimes(tplChallenge, ref)
 		if err != nil {
-			s.logger.Error("解析挑战赛开始时间失败",
+			s.logger.Error("解析挑战赛时间失败",
 				zap.Int32("id", tplChallenge.ID),
 				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 				zap.Error(err))
 			continue
 		}
 
-		closeTime, err := parseDateTime(tplChallenge.CloseTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛关闭时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		endTime, err := parseDateTime(tplChallenge.EndTime)
-		if err != nil {
-			s.logger.Error("解析挑战赛结束时间失败",
-				zap.Int32("id", tplChallenge.ID),
-				zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-				zap.Error(err))
-			continue
-		}
-
-		overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
+		overTime := window.End.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 		if overTime.Before(now) { //已经结束的比赛不再显示
 			continue
@@ -354,9 +365,9 @@ func (s *ApiServer) GetChallenge(ctx context.Context, in *emptypb.Empty) (*game.
 			TournamentId:    challengeStatus.TournamentID,
 			ActivityId:      challengeStatus.ActivityID,
 			Joined:          timestamppb.New(challengeStatus.Joined),
-			Open:            timestamppb.New(openTime),
-			Close:           timestamppb.New(closeTime),
-			End:             timestamppb.New(endTime),
+			Open:            timestamppb.New(window.Open),
+			Close:           timestamppb.New(window.Close),
+			End:             timestamppb.New(window.End),
 			Over:            timestamppb.New(overTime),
 			RankReward:      challengeStatus.RankReward,
 			LowScoreReward:  challengeStatus.LowScoreReward,
@@ -408,40 +419,11 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	// 获取当前时间
 	now := time.Now()
 
-	// 解析开始时间
-	startTime, err := parseDateTime(tplChallenge.OpenTime)
+	// 解析时间：忽略模板年份，按“月-日 时:分”取当前这一轮。
+	window, err := parseChallengeTimes(tplChallenge, now)
 	if err != nil {
-		s.logger.Error("解析挑战赛开始时间失败",
+		s.logger.Error("解析挑战赛时间失败",
 			zap.Int32("id", tplChallenge.ID),
-			zap.String("start_time", tplChallenge.OpenTime),
-			zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-			zap.Error(err))
-		return &game.JoinChallengeResponse{
-			Code: 3,
-			Msg:  "配置错误",
-		}, nil
-	}
-
-	// 解析开始时间
-	closeTime, err := parseDateTime(tplChallenge.CloseTime)
-	if err != nil {
-		s.logger.Error("解析挑战赛关闭时间失败",
-			zap.Int32("id", tplChallenge.ID),
-			zap.String("close_time", tplChallenge.CloseTime),
-			zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
-			zap.Error(err))
-		return &game.JoinChallengeResponse{
-			Code: 3,
-			Msg:  "配置错误",
-		}, nil
-	}
-
-	// 解析结束时间
-	endTime, err := parseDateTime(tplChallenge.EndTime)
-	if err != nil {
-		s.logger.Error("解析挑战赛结束时间失败",
-			zap.Int32("id", tplChallenge.ID),
-			zap.String("end_time", tplChallenge.EndTime),
 			zap.String("tplChallenge", fmt.Sprintf("%+v", tplChallenge)),
 			zap.Error(err))
 		return &game.JoinChallengeResponse{
@@ -451,7 +433,7 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 	}
 
 	// 时间过滤逻辑：只允许参加正在进行的比赛
-	isOngoing := (now.After(startTime) || now.Equal(startTime)) && now.Before(endTime)
+	isOngoing := !now.Before(window.Open) && now.Before(window.End)
 	if !isOngoing {
 		return &game.JoinChallengeResponse{
 			Code: 4,
@@ -459,10 +441,10 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		}, nil
 	}
 
-	overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
+	overTime := window.End.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 	// 获取或分配玩家的竞标赛ID
-	tournamentID, err := s.assignPlayerToChallengeTournament(ctx, userID, &tplChallenge, startTime, endTime)
+	tournamentID, err := s.assignPlayerToChallengeTournament(ctx, userID, &tplChallenge, window.Open, window.End)
 	if err != nil || tournamentID == "" {
 		s.logger.Error("加入挑战赛失败",
 			zap.Int32("challenge_id", tplChallenge.ID),
@@ -497,9 +479,9 @@ func (s *ApiServer) JoinChallenge(ctx context.Context, in *game.JoinChallengeReq
 		Challenge: &game.Challenge{
 			Id:           tplChallenge.ID,
 			ActivityId:   tplChallenge.ActivityID,
-			Open:         timestamppb.New(startTime),
-			End:          timestamppb.New(endTime),
-			Close:        timestamppb.New(closeTime),
+			Open:         timestamppb.New(window.Open),
+			End:          timestamppb.New(window.End),
+			Close:        timestamppb.New(window.Close),
 			Over:         timestamppb.New(overTime),
 			MaxPart:      tplChallenge.MaxPart,
 			TournamentId: tournamentID,
@@ -735,14 +717,18 @@ func (s *ApiServer) checkAndSendExpiredChallengeRewards(ctx context.Context, use
 				continue
 			}
 
-			// 从模板表中读取时间信息
-			endTime, err := parseDateTime(tplChallenge.EndTime)
+			// 按玩家加入时间定位到对应的那一轮（表按年循环，忽略模板年份）。
+			ref := challenge.Joined
+			if ref.IsZero() {
+				ref = now
+			}
+			window, err := parseChallengeTimes(tplChallenge, ref)
 			if err != nil {
-				s.logger.Error("解析挑战赛结束时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
+				s.logger.Error("解析挑战赛时间失败", zap.Int32("id", tplChallenge.ID), zap.Error(err))
 				continue
 			}
 
-			overTime := endTime.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
+			overTime := window.End.Add(time.Duration(tplChallenge.RewardRemains) * time.Minute)
 
 			if now.After(overTime) {
 				// 获取用户在竞标赛中的记录
@@ -955,8 +941,11 @@ func (s *ApiServer) assignPlayerToChallengeTournament(ctx context.Context, userI
 	}
 
 	// 没有可用的竞标赛，创建新的
-	// 使用持久化的批次号管理系统确保唯一性
-	batchNumber := s.GetNextChallengeBatch(tplChallenge.ID)
+	// 批次号每次从存储读取最新值并立即保存，保证停服/重启后继续递增
+	batchNumber, err := s.GetNextChallengeBatch(tplChallenge.ID)
+	if err != nil {
+		return "", fmt.Errorf("分配竞标赛批次号失败: %v", err)
+	}
 
 	s.logger.Info("创建新竞标赛",
 		zap.String("user_id", userID.String()),

@@ -1,0 +1,9 @@
+server {
+    listen 80;
+    server_name fruit.afagame223.com fruit-admin.afagame223.com;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        try_files $uri =404;
+    }
+    location / { return 503; }
+}

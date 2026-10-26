@@ -1,0 +1,9 @@
+server {
+    listen 80;
+    server_name fruit.sparkgalaxy.cn fruit-admin.sparkgalaxy.cn;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        try_files $uri =404;
+    }
+    location / { return 503; }
+}

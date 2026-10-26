@@ -6658,6 +6658,14 @@
         },
         "msg": {
           "type": "string"
+        },
+        "reward": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/gameReward"
+          },
+          "title": "兑换码奖励，与 GainChallengeRewardResponse 保持一致"
         }
       }
     },

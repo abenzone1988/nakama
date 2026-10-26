@@ -101,16 +101,22 @@ func parseTime(timeStr string) (time.Time, error) {
 	return time.Parse("2006:01:02:15:04:05", timeStr)
 }
 
-// parseDateTime 解析日期和时间字符串为 time.Time
-// 适配格式如 "2025/7/11 10:00"
+// parseDateTime 解析日期和时间字符串为 time.Time。
+// 兼容带年份的 "2026-9-27 22:15" 与不带年份的 "9-27 22:15"；
+// 不带年份时返回的 year 为 0，调用方按“月-日 时:分”循环使用时不应依赖该年份。
 func parseDateTime(datetimeStr string) (time.Time, error) {
-	// 解析格式为 "2006/1/2 15:04"
-	parsedTime, err := time.ParseInLocation("2006-1-2 15:04", datetimeStr, time.Local)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("解析时间失败 '%s': %w", datetimeStr, err)
+	datetimeStr = strings.TrimSpace(datetimeStr)
+
+	var err error
+	for _, layout := range []string{"2006-1-2 15:04", "1-2 15:04"} {
+		var parsedTime time.Time
+		parsedTime, err = time.ParseInLocation(layout, datetimeStr, time.Local)
+		if err == nil {
+			return parsedTime, nil
+		}
 	}
 
-	return parsedTime, nil
+	return time.Time{}, fmt.Errorf("解析时间失败 '%s': %w", datetimeStr, err)
 }
 
 // ParseRewards 解析奖励ID数组，返回奖励对象数组

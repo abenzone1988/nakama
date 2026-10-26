@@ -124,9 +124,9 @@ func (OperateWalletRequest_WalletOperationOption) EnumDescriptor() ([]byte, []in
 type PayOrderRequest_PayAction int32
 
 const (
-	PayOrderRequest_PAY_VERIFY             PayOrderRequest_PayAction = 0 // 支付回调校验 + 发货
-	PayOrderRequest_PAY_CLAIM_FIRST_CHARGE PayOrderRequest_PayAction = 1 // 领取首充当日奖励
-	PayOrderRequest_PAY_CLAIM_CARD         PayOrderRequest_PayAction = 2 // 领取月卡当日奖励
+	PayOrderRequest_PAY_VERIFY             PayOrderRequest_PayAction = 0
+	PayOrderRequest_PAY_CLAIM_FIRST_CHARGE PayOrderRequest_PayAction = 1
+	PayOrderRequest_PAY_CLAIM_CARD         PayOrderRequest_PayAction = 2
 )
 
 // Enum value maps for PayOrderRequest_PayAction.
@@ -218,6 +218,7 @@ type RedeemGiftResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
 	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Reward        []*Reward              `protobuf:"bytes,3,rep,name=reward,proto3" json:"reward,omitempty"` // 兑换码奖励，与 GainChallengeRewardResponse 保持一致
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -264,6 +265,13 @@ func (x *RedeemGiftResponse) GetMsg() string {
 		return x.Msg
 	}
 	return ""
+}
+
+func (x *RedeemGiftResponse) GetReward() []*Reward {
+	if x != nil {
+		return x.Reward
+	}
+	return nil
 }
 
 type FeedbackRequest struct {
@@ -2766,6 +2774,9 @@ func (x *CheckVipStatusResponse) GetSignature() string {
 }
 
 // 支付订单请求：支付校验发货、每日领取共用
+// 支付回调校验 + 发货
+// 领取首充当日奖励
+// 领取月卡当日奖励
 type PayOrderRequest struct {
 	state           protoimpl.MessageState    `protogen:"open.v1"`
 	Action          PayOrderRequest_PayAction `protobuf:"varint,1,opt,name=action,proto3,enum=game.PayOrderRequest_PayAction" json:"action,omitempty"`
@@ -2956,10 +2967,11 @@ const file_msg_proto_rawDesc = "" +
 	"\n" +
 	"\tmsg.proto\x12\x04game\x1a\x1fgoogle/protobuf/timestamp.proto\"0\n" +
 	"\x11RedeemGiftRequest\x12\x1b\n" +
-	"\tgift_code\x18\x01 \x01(\tR\bgiftCode\":\n" +
+	"\tgift_code\x18\x01 \x01(\tR\bgiftCode\"`\n" +
 	"\x12RedeemGiftResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x10\n" +
-	"\x03msg\x18\x02 \x01(\tR\x03msg\"K\n" +
+	"\x03msg\x18\x02 \x01(\tR\x03msg\x12$\n" +
+	"\x06reward\x18\x03 \x03(\v2\f.game.RewardR\x06reward\"K\n" +
 	"\x0fFeedbackRequest\x12\x16\n" +
 	"\x06issues\x18\x01 \x01(\x05R\x06issues\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\"/\n" +
@@ -3258,46 +3270,47 @@ var file_msg_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),                   // 46: google.protobuf.Timestamp
 }
 var file_msg_proto_depIdxs = []int32{
-	46, // 0: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
-	46, // 1: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
-	46, // 2: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
-	13, // 3: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
-	16, // 4: game.Reward.wallet:type_name -> game.Wallet
-	17, // 5: game.Reward.items:type_name -> game.Item
-	46, // 6: game.HomeLevelData.update_time:type_name -> google.protobuf.Timestamp
-	19, // 7: game.GetHomeLevelDataResponse.level_data:type_name -> game.HomeLevelData
-	16, // 8: game.AddWalletResponse.wallet_updated:type_name -> game.Wallet
-	16, // 9: game.AddWalletResponse.wallet_previous:type_name -> game.Wallet
-	16, // 10: game.GetRewardResponse.wallet_updated:type_name -> game.Wallet
-	16, // 11: game.GetRewardResponse.wallet_previous:type_name -> game.Wallet
-	0,  // 12: game.UseWalletRequest.currency_type:type_name -> game.CurrencyType
-	16, // 13: game.UseWalletResponse.wallet_updated:type_name -> game.Wallet
-	16, // 14: game.UseWalletResponse.wallet_previous:type_name -> game.Wallet
-	1,  // 15: game.OperateWalletRequest.option:type_name -> game.OperateWalletRequest.WalletOperationOption
-	16, // 16: game.WalletResponse.wallet_updated:type_name -> game.Wallet
-	16, // 17: game.WalletResponse.wallet_previous:type_name -> game.Wallet
-	46, // 18: game.Challenge.open:type_name -> google.protobuf.Timestamp
-	46, // 19: game.Challenge.close:type_name -> google.protobuf.Timestamp
-	46, // 20: game.Challenge.end:type_name -> google.protobuf.Timestamp
-	46, // 21: game.Challenge.over:type_name -> google.protobuf.Timestamp
-	46, // 22: game.JoinChallengeStatus.joined:type_name -> google.protobuf.Timestamp
-	46, // 23: game.JoinChallengeStatus.over:type_name -> google.protobuf.Timestamp
-	46, // 24: game.JoinChallengeStatus.open:type_name -> google.protobuf.Timestamp
-	46, // 25: game.JoinChallengeStatus.close:type_name -> google.protobuf.Timestamp
-	46, // 26: game.JoinChallengeStatus.end:type_name -> google.protobuf.Timestamp
-	34, // 27: game.GetChallengeResponse.challenges:type_name -> game.Challenge
-	35, // 28: game.GetChallengeResponse.joined:type_name -> game.JoinChallengeStatus
-	34, // 29: game.JoinChallengeResponse.challenge:type_name -> game.Challenge
-	18, // 30: game.GainChallengeRewardResponse.reward:type_name -> game.Reward
-	41, // 31: game.GetChallengeTopStatsResponse.stats:type_name -> game.TopThreeStats
-	2,  // 32: game.PayOrderRequest.action:type_name -> game.PayOrderRequest.PayAction
-	16, // 33: game.PayOrderResponse.wallet:type_name -> game.Wallet
-	17, // 34: game.PayOrderResponse.items:type_name -> game.Item
-	35, // [35:35] is the sub-list for method output_type
-	35, // [35:35] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	18, // 0: game.RedeemGiftResponse.reward:type_name -> game.Reward
+	46, // 1: game.GetGameTimeResponse.game_time:type_name -> google.protobuf.Timestamp
+	46, // 2: game.AnnouncementInfo.create_time:type_name -> google.protobuf.Timestamp
+	46, // 3: game.AnnouncementInfo.update_time:type_name -> google.protobuf.Timestamp
+	13, // 4: game.ListPublishedAnnouncementsResponse.announcements:type_name -> game.AnnouncementInfo
+	16, // 5: game.Reward.wallet:type_name -> game.Wallet
+	17, // 6: game.Reward.items:type_name -> game.Item
+	46, // 7: game.HomeLevelData.update_time:type_name -> google.protobuf.Timestamp
+	19, // 8: game.GetHomeLevelDataResponse.level_data:type_name -> game.HomeLevelData
+	16, // 9: game.AddWalletResponse.wallet_updated:type_name -> game.Wallet
+	16, // 10: game.AddWalletResponse.wallet_previous:type_name -> game.Wallet
+	16, // 11: game.GetRewardResponse.wallet_updated:type_name -> game.Wallet
+	16, // 12: game.GetRewardResponse.wallet_previous:type_name -> game.Wallet
+	0,  // 13: game.UseWalletRequest.currency_type:type_name -> game.CurrencyType
+	16, // 14: game.UseWalletResponse.wallet_updated:type_name -> game.Wallet
+	16, // 15: game.UseWalletResponse.wallet_previous:type_name -> game.Wallet
+	1,  // 16: game.OperateWalletRequest.option:type_name -> game.OperateWalletRequest.WalletOperationOption
+	16, // 17: game.WalletResponse.wallet_updated:type_name -> game.Wallet
+	16, // 18: game.WalletResponse.wallet_previous:type_name -> game.Wallet
+	46, // 19: game.Challenge.open:type_name -> google.protobuf.Timestamp
+	46, // 20: game.Challenge.close:type_name -> google.protobuf.Timestamp
+	46, // 21: game.Challenge.end:type_name -> google.protobuf.Timestamp
+	46, // 22: game.Challenge.over:type_name -> google.protobuf.Timestamp
+	46, // 23: game.JoinChallengeStatus.joined:type_name -> google.protobuf.Timestamp
+	46, // 24: game.JoinChallengeStatus.over:type_name -> google.protobuf.Timestamp
+	46, // 25: game.JoinChallengeStatus.open:type_name -> google.protobuf.Timestamp
+	46, // 26: game.JoinChallengeStatus.close:type_name -> google.protobuf.Timestamp
+	46, // 27: game.JoinChallengeStatus.end:type_name -> google.protobuf.Timestamp
+	34, // 28: game.GetChallengeResponse.challenges:type_name -> game.Challenge
+	35, // 29: game.GetChallengeResponse.joined:type_name -> game.JoinChallengeStatus
+	34, // 30: game.JoinChallengeResponse.challenge:type_name -> game.Challenge
+	18, // 31: game.GainChallengeRewardResponse.reward:type_name -> game.Reward
+	41, // 32: game.GetChallengeTopStatsResponse.stats:type_name -> game.TopThreeStats
+	2,  // 33: game.PayOrderRequest.action:type_name -> game.PayOrderRequest.PayAction
+	16, // 34: game.PayOrderResponse.wallet:type_name -> game.Wallet
+	17, // 35: game.PayOrderResponse.items:type_name -> game.Item
+	36, // [36:36] is the sub-list for method output_type
+	36, // [36:36] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_msg_proto_init() }

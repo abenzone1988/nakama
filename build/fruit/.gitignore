@@ -1,0 +1,5 @@
+.env
+certbot/
+nginx/conf.d/
+backups/
+.deploy.lock

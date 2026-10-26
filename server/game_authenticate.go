@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"time"
+
 	credential "github.com/bytedance/douyin-openapi-credential-go/client"
 	openApiSdkClient "github.com/bytedance/douyin-openapi-sdk-go/client"
 	"github.com/heroiclabs/nakama/v3/game"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
@@ -86,29 +87,50 @@ func getWeChatOpenID(ctx context.Context, logger *zap.Logger, c Config, code str
 }
 
 // getByteGameOpenID 获取 TikTok OpenID 的函数
-func getByteGameOpenID(ctx context.Context, logger *zap.Logger, cfg Config, code, anonymousCode string) (string, error) {
+func getByteGameOpenID(logger *zap.Logger, cfg Config, code, anonymousCode string) (string, error) {
+	appID := cfg.GetSocial().GetTikTok().GetAppId()
+	appSecret := cfg.GetSocial().GetTikTok().GetAppSecret()
+
+	if appID == "" || appSecret == "" {
+		logger.Error("tiktok app_id/app_secret is not configured")
+		return "", fmt.Errorf("tiktok app_id/app_secret is not configured")
+	}
+
 	opt := new(credential.Config).
-		SetClientKey(cfg.GetSocial().GetTikTok().GetAppId()).       // 改成自己的app_id
-		SetClientSecret(cfg.GetSocial().GetTikTok().GetAppSecret()) // 改成自己的secret
+		SetClientKey(appID).
+		SetClientSecret(appSecret)
 
 	sdkClient, err := openApiSdkClient.NewClient(opt)
 	if err != nil {
-		logger.Error("tiktok sdk init err:", zap.Error(err))
+		logger.Error("tiktok sdk init err", zap.Error(err))
 		return "", err
 	}
 
 	sdkRequest := &openApiSdkClient.AppsJscode2sessionRequest{}
 	sdkRequest.SetAnonymousCode(anonymousCode)
 	sdkRequest.SetCode(code)
-	sdkRequest.SetSecret(cfg.GetSocial().GetTikTok().GetAppSecret())
-	sdkRequest.SetAppid(cfg.GetSocial().GetTikTok().GetAppId())
+	sdkRequest.SetSecret(appSecret)
+	sdkRequest.SetAppid(appID)
 
 	// sdk调用
 	sdkResponse, err := sdkClient.AppsJscode2session(sdkRequest)
 	if err != nil {
-		logger.Error("tiktok call err:", zap.Error(err))
+		logger.Error("tiktok jscode2session err", zap.Error(err))
 		return "", err
 	}
+	if sdkResponse == nil {
+		return "", fmt.Errorf("tiktok jscode2session returned nil response")
+	}
+
+	if sdkResponse.Openid == nil || *sdkResponse.Openid == "" {
+		errMsg := ""
+		if sdkResponse.Errmsg != nil {
+			errMsg = *sdkResponse.Errmsg
+		}
+		logger.Error("tiktok jscode2session returned no openid", zap.String("errmsg", errMsg))
+		return "", fmt.Errorf("tiktok jscode2session returned no openid (errmsg: %s)", errMsg)
+	}
+
 	return *sdkResponse.Openid, nil
 }
 
@@ -121,7 +143,7 @@ func (s *ApiServer) AuthenticateWechat(ctx context.Context, in *game.Authenticat
 }
 
 func (s *ApiServer) AuthenticateTikTok(ctx context.Context, in *game.AuthenticateTiktokRequest) (*api.Session, error) {
-	openID, err := getByteGameOpenID(ctx, s.logger, s.config, in.Code, in.AnonymousCode)
+	openID, err := getByteGameOpenID(s.logger, s.config, in.Code, in.AnonymousCode)
 	if err != nil || openID == "" {
 		return nil, err
 	}
