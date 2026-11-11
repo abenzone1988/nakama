@@ -19,6 +19,13 @@ import (
 var EnableAutoBan = true          // 是否启用自动封禁
 var SignatureFailBanThreshold = 5 // 阈值，5次失败才封禁
 
+// 防作弊总开关：暂时屏蔽防作弊处理（每日限额检测、作弊封禁、清空钱包、警告邮件）
+// 恢复防作弊时改回 true 即可
+var EnableAntiCheat = false
+
+// 签名校验开关：false 时跳过钱包操作的签名校验（仅用于临时联调，生产务必保持 true）
+var EnableWalletSignatureCheck = true
+
 // 内存计数器（生产建议用 Redis，防止多实例不一致）
 var signatureFailCounter = make(map[string]int)
 
@@ -390,7 +397,7 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 
 	//3. 签名校验
-	if !VerifyWalletSignatureV2(op.String(), coin, gem, ad, reason, in.GetSignature(), userID.String(), in.GetWalletId()) {
+	if EnableWalletSignatureCheck && !VerifyWalletSignatureV2(op.String(), coin, gem, ad, reason, in.GetSignature(), userID.String(), in.GetWalletId()) {
 		s.logger.Error("钱包操作签名验证失败", zap.String("user_id", userID.String()), zap.String("username", username), zap.Int64("coin", coin), zap.Int64("gem", gem), zap.Int64("ad", ad), zap.String("reason", reason), zap.String("signature", in.GetSignature()), zap.String("wallet_id", in.GetWalletId()))
 
 		// 计数+1
@@ -398,8 +405,8 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 		signatureFailCounter[failKey]++
 		failCount := signatureFailCounter[failKey]
 
-		// 判断是否封禁
-		if EnableAutoBan && failCount >= SignatureFailBanThreshold {
+		// 判断是否封禁（防作弊开关关闭时不封禁）
+		if EnableAntiCheat && EnableAutoBan && failCount >= SignatureFailBanThreshold {
 			BanUsers(ctx, s.logger, s.db, s.config, s.sessionCache, s.sessionRegistry, s.tracker, []uuid.UUID{userID})
 			s.logger.Warn("用户因签名多次失败被封禁", zap.String("user_id", userID.String()), zap.Int("fail_count", failCount))
 		}
@@ -407,8 +414,8 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 		return &game.WalletResponse{Code: 5, Msg: "签名验证失败"}, nil
 	}
 
-	// 3.5. 每日领取限制检测（仅检测GAIN操作）
-	if op == game.OperateWalletRequest_GAIN && (coinChange > 0 || gemChange > 0 || adChange > 0) {
+	// 3.5. 每日领取限制检测（仅检测GAIN操作，防作弊开关关闭时跳过）
+	if EnableAntiCheat && op == game.OperateWalletRequest_GAIN && (coinChange > 0 || gemChange > 0 || adChange > 0) {
 		isCheat, cheatReason, cheatCount := s.detectDailyClaimLimit(ctx, userID, coinChange, gemChange, adChange)
 		if isCheat {
 			s.logger.Warn("检测到超出每日领取限制",
@@ -509,12 +516,17 @@ func (s *ApiServer) OperateWallet(ctx context.Context, in *game.OperateWalletReq
 	}
 
 	result := results[0]
-	//5. 作弊检测和处理
-	finalWalletData, isCheatDetected, err := s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
-	if err != nil {
-		s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(err))
-		// 不返回错误，继续正常流程
-		finalWalletData = result.Updated
+	//5. 作弊检测和处理（防作弊开关关闭时跳过）
+	finalWalletData := result.Updated
+	isCheatDetected := false
+	if EnableAntiCheat {
+		var cheatErr error
+		finalWalletData, isCheatDetected, cheatErr = s.detectAndHandleCheatPlayer(ctx, userID, result.Updated)
+		if cheatErr != nil {
+			s.logger.Error("作弊检测处理失败", zap.String("user_id", userID.String()), zap.Error(cheatErr))
+			// 不返回错误，继续正常流程
+			finalWalletData = result.Updated
+		}
 	}
 
 	previousWallet := &game.Wallet{
