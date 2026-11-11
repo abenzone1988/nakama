@@ -90,18 +90,16 @@ func (t *TableTplRedemption) Release() {
 func (t *TableTplRedemption) LoadData(content []byte) {
 	if content != nil {
 		t.tableData = DeserializeStringToTplRedemptionMap(content, t.logger)
-		t.logger.Info("从数据库加载模板", zap.String("table", "TplRedemption"), zap.Int("count", len(t.tableData)))
 		return
 	}
 	path := filepath.Join(t.loadPath, "TplRedemption.json")
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		t.logger.Error("读取文件错误", zap.String("table", "TplRedemption"), zap.String("path", path), zap.Error(err))
+		t.logger.Error("读取文件错误", zap.Error(err))
 		return
 	}
 
 	t.tableData = DeserializeStringToTplRedemptionMap(fileContent, t.logger)
-	t.logger.Info("从文件加载模板", zap.String("table", "TplRedemption"), zap.String("path", path), zap.Int("count", len(t.tableData)))
 }
 
 func DeserializeStringToTplRedemptionMap(jsonStr []byte, logger *zap.Logger) map[string]TplRedemption {

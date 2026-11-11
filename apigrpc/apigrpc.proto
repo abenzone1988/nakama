@@ -908,5 +908,13 @@ service Nakama {
   rpc CheckVipStatus(google.protobuf.Empty) returns (game.CheckVipStatusResponse) {
     option (google.api.http).get = "/v2/game/activity/status";
   }
+
+  // Pay order: verify purchase / claim daily reward
+  rpc PayOrder(game.PayOrderRequest) returns (game.PayOrderResponse) {
+    option (google.api.http) = {
+      post: "/v2/game/pay/order"
+      body: "*"
+    };
+  }
 }
 

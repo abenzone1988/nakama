@@ -103,18 +103,16 @@ func (t *TableTplActivityInfo) Release() {
 func (t *TableTplActivityInfo) LoadData(content []byte) {
 	if content != nil {
 		t.tableData = DeserializeStringToTplActivityInfoMap(content, t.logger)
-		t.logger.Info("从数据库加载模板", zap.String("table", "TplActivityInfo"), zap.Int("count", len(t.tableData)))
 		return
 	}
 	path := filepath.Join(t.loadPath, "TplActivityInfo.json")
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		t.logger.Error("读取文件错误", zap.String("table", "TplActivityInfo"), zap.String("path", path), zap.Error(err))
+		t.logger.Error("读取文件错误", zap.Error(err))
 		return
 	}
 
 	t.tableData = DeserializeStringToTplActivityInfoMap(fileContent, t.logger)
-	t.logger.Info("从文件加载模板", zap.String("table", "TplActivityInfo"), zap.String("path", path), zap.Int("count", len(t.tableData)))
 }
 
 func DeserializeStringToTplActivityInfoMap(jsonStr []byte, logger *zap.Logger) map[string]TplActivityInfo {

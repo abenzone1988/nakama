@@ -309,3 +309,34 @@ message CheckVipStatusResponse {
   // Signature
   string signature = 2;
 }
+
+// ---------------- 支付订单 ----------------
+
+// 支付订单请求：支付校验发货、每日领取共用
+// 支付回调校验 + 发货
+// 领取首充当日奖励
+// 领取月卡当日奖励
+message PayOrderRequest {
+  enum PayAction {
+    PAY_VERIFY = 0;
+    PAY_CLAIM_FIRST_CHARGE = 1;
+    PAY_CLAIM_CARD = 2;
+  }
+  PayAction action = 1;
+  string order_id = 2;          // Google 订单号，仅用于订单记录
+  string product_id = 3;        // Google Play 商品ID（TplPay.googleId）
+  string purchase_token = 4;    // Google Play 购买 token，全局幂等键
+  string package_name = 5;      // 应用包名
+  int32 tz_offset_minutes = 6;  // 客户端本地时区相对 UTC 的偏移（分钟），用于自然日判定
+  bool is_test = 7;             // Debug 包，用于订单环境记录
+}
+
+message PayOrderResponse {
+  int32 code = 1;               // 0 成功；1001 首充已购买过；1002 订单校验失败；1003 不可领取；1004 商品未配置；1005 内部错误
+  string msg = 2;
+  Wallet wallet = 3;            // 发放后的钱包快照，仅在入账时返回
+  repeated Item items = 4;      // 需客户端入包的道具
+  string reward_ids = 5;        // 本次发放的 TplReward id，逗号分隔
+  string first_charge_json = 6; // Home/FirstCharge 最新内容
+  string card_json = 7;         // Home/SevenDayAdvCard 最新内容
+}

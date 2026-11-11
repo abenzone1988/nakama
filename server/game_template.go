@@ -19,6 +19,8 @@ type TemplateManager interface {
 	GetTplChallenge() *TableTplChallenge
 	GetTplActivityReward() *TableTplActivityReward
 	GetTplActivityInfo() *TableTplActivityInfo
+	GetTplPay() *TableTplPay
+	GetTplFirstCharge() *TableTplFirstCharge
 }
 
 type LocalTemplateManager struct {
@@ -29,6 +31,8 @@ type LocalTemplateManager struct {
 	tableTplChallenge      *TableTplChallenge
 	tableTplActivityReward *TableTplActivityReward
 	tableTplActivityInfo   *TableTplActivityInfo
+	tableTplPay            *TableTplPay
+	tableTplFirstCharge    *TableTplFirstCharge
 }
 
 func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) TemplateManager {
@@ -41,6 +45,8 @@ func NewLocalTemplateManager(logger *zap.Logger, db *sql.DB, config Config) Temp
 		tableTplChallenge:      NewTableTplChallenge(logger, jsonPath),
 		tableTplActivityReward: NewTableTplActivityReward(logger, jsonPath),
 		tableTplActivityInfo:   NewTableTplActivityInfo(logger, jsonPath),
+		tableTplPay:            NewTableTplPay(logger, jsonPath),
+		tableTplFirstCharge:    NewTableTplFirstCharge(logger, jsonPath),
 	}
 	t.LoadData()
 	return &t
@@ -66,12 +72,22 @@ func (t *LocalTemplateManager) GetTplChallenge() *TableTplChallenge {
 	return t.tableTplChallenge
 }
 
+func (t *LocalTemplateManager) GetTplPay() *TableTplPay {
+	return t.tableTplPay
+}
+
+func (t *LocalTemplateManager) GetTplFirstCharge() *TableTplFirstCharge {
+	return t.tableTplFirstCharge
+}
+
 func (t *LocalTemplateManager) LoadData() {
 	t.tableTplRedemption.LoadData(t.StorageReadTpl("TplRedemption"))
 	t.tableTplReward.LoadData(t.StorageReadTpl("TplReward"))
 	t.tableTplChallenge.LoadData(t.StorageReadTpl("TplChallenge"))
 	t.tableTplActivityReward.LoadData(t.StorageReadTpl("TplActivityReward"))
 	t.tableTplActivityInfo.LoadData(t.StorageReadTpl("TplActivityInfo"))
+	t.tableTplPay.LoadData(t.StorageReadTpl("TplPay"))
+	t.tableTplFirstCharge.LoadData(t.StorageReadTpl("TplFirstCharge"))
 }
 
 func (t *LocalTemplateManager) StorageReadTpl(key string) []byte {

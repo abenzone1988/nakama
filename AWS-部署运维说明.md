@@ -239,6 +239,28 @@ ssh -i ~/.nakama-deploy/game-app-key.pem ec2-user@13.221.177.184 \
 > 要更新模板表得往 `Tpl` 集合写数据（控制台或 runtime 接口），或者先清空该集合。
 > 空库首次启动会打 5 条 `Error reading storage object`，属正常回退，不是故障。
 
+#### 5.3.1 支付相关的模板表（首充 / 月卡）
+
+`PayOrder` 接口依赖 `TplPay`、`TplFirstCharge`、`TplReward` 三张表。上线顺序不能反：
+
+1. 发镜像（`data/TplPay.json`、`data/TplFirstCharge.json`、`data/TplReward.json` 已在镜像里）。
+2. **再往 DB 的 `Tpl` 集合写这三份内容**，否则线上仍然用 DB 里的旧数据：
+   - `TplReward`：必须包含 `FirstchargeReward001~003`、`SevenDayAdvCard` 四条，
+     缺了会走 `ParseRewards` 的空结果，表现为"付款成功但奖励为 0"，日志里是 `奖励配置不存在`。
+   - `TplPay`：新增，两行，`googleId` 必须是 Google Play 后台的真实商品 ID
+     （`hjzx.xslb.99_gp` / `hjzx.mggk.299_gp`），否则支付回调会返回 `1004 商品未配置`。
+   - `TplFirstCharge`：新增，决定首充能领几天。
+
+控制和核对方式（Console → Storage → collection `Tpl`，owner 为系统用户）：
+
+```sql
+-- 只读核对，确认线上 DB 里的内容
+SELECT key, length(value) FROM storage WHERE collection = 'Tpl' ORDER BY key;
+```
+
+> 排查口诀：`1002` 是 SF 校验没过（多半 token 或商品 ID 不对）；`1004` 是
+> `Tpl` 里没有这个 `googleId`；奖励为 0 但有 `领取成功` 是 `TplReward` 少了奖励行。
+
 ### 5.4 首次部署 / 更换服务器
 
 ```bash
